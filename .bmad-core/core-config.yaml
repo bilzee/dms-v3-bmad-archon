@@ -14,9 +14,12 @@ architecture:
   architectureShardedLocation: docs/architecture
 customTechnicalDocuments: null
 devLoadAlwaysFiles:
+  - docs/architecture/index.md
   - docs/architecture/coding-standards.md
-  - docs/architecture/tech-stack.md
-  - docs/architecture/source-tree.md
+  - docs/architecture/2-technology-stack.md
+  - docs/architecture/4-project-structure.md
+  - docs/prd/testing-strategy.md
+  - docs/CLAUDE.md
 devDebugLog: .ai/debug-log.md
 devStoryLocation: docs/stories
 slashPrefix: BMad
