@@ -33,10 +33,33 @@ rag_search_code_examples(query="React hooks", match_count=3)
 ```
 ### Tool Reference
 
-**Knowledge Base:**
+**Knowledge Base (Primary - MCP):**
 - `rag_get_available_sources()` - List all sources
 - `rag_search_knowledge_base(query="...", source_id="...")` - Search docs
 - `rag_search_code_examples(query="...", source_id="...")` - Find code
+
+**Fallback REST API (when MCP fails):**
+```bash
+# Get available sources
+curl -s http://localhost:8181/api/rag/sources
+
+# Search knowledge base (2-5 keywords)
+curl -s -X POST "http://localhost:8181/api/rag/query" \
+  -H "Content-Type: application/json" \
+  -d '{"query": "React hooks", "match_count": 5}'
+
+# Search code examples
+curl -s -X POST "http://localhost:8181/api/rag/code-examples" \
+  -H "Content-Type: application/json" \
+  -d '{"query": "useState useEffect", "match_count": 3}'
+
+# Search specific source (use source_id from /api/rag/sources)
+curl -s -X POST "http://localhost:8181/api/rag/query" \
+  -H "Content-Type: application/json" \
+  -d '{"query": "authentication", "match_count": 5, "source_id": "9529d5dabe8a726a"}'
+```
+
+**MCP Troubleshooting**: If MCP calls return "No valid session ID provided", use REST API fallback and report issue in `docs/to-troubleshoot/archon-mcp-session-error.md`
 
 # Fronten Development Guidelines
 
