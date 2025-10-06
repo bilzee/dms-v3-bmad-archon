@@ -1,7 +1,7 @@
 # General Instructions
 
 1. Do not mock values on the frontend; mock at the database with seeded data. 
-2. Dev agent and qa agent should always search the Archon Knowledge Base using the archon mcp 
+2. Dev agent and qa agent should always search the Archon Knowledge Base using the archon mcp or REST API (see below) 
 3. Testing strategy can be found in docs/prd/testing-strategy.md
 4. When troubleshooting, do not take shortcuts, instead, first search the Archon knowledge base for solution, and if no solution is found, create a detailed report on the problem and what has been tried in docs/to-toubleshoot/ so it can be fixed separately.
 
@@ -59,7 +59,7 @@ curl -s -X POST "http://localhost:8181/api/rag/query" \
   -d '{"query": "authentication", "match_count": 5, "source_id": "9529d5dabe8a726a"}'
 ```
 
-**MCP Troubleshooting**: If MCP calls return "No valid session ID provided", use REST API fallback and report issue in `docs/to-troubleshoot/archon-mcp-session-error.md`
+**MCP Troubleshooting**: If MCP calls return "No valid session ID provided", use REST API fallback
 
 # Fronten Development Guidelines
 
