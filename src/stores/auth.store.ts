@@ -1,6 +1,16 @@
 import { create } from 'zustand';
-import { persist } from 'zustand/middleware';
-import { AuthUser } from '@/types/auth';
+import { persist, createJSONStorage } from 'zustand/middleware';
+import { AuthUser, RoleName } from '@/types/auth';
+
+interface RoleSessionState {
+  [key: string]: {
+    activeDashboard?: string;
+    lastPage?: string;
+    formData?: Record<string, any>;
+    filters?: Record<string, any>;
+    selectedEntities?: string[];
+  }
+}
 
 interface AuthState {
   // Authentication state
@@ -10,6 +20,11 @@ interface AuthState {
   isLoading: boolean;
   permissions: string[];
   roles: string[];
+  currentRole: RoleName | null;
+  availableRoles: RoleName[];
+  
+  // Role session state
+  roleSessionState: RoleSessionState;
   
   // Actions
   login: (email: string, password: string) => Promise<void>;
@@ -17,10 +32,20 @@ interface AuthState {
   refresh: () => Promise<void>;
   setUser: (user: Omit<AuthUser, 'passwordHash'>, token: string) => void;
   
+  // Role switching
+  switchRole: (role: RoleName) => void;
+  canSwitchToRole: (role: RoleName) => boolean;
+  
+  // Role session management
+  saveRoleSession: (role: RoleName, sessionData: Partial<RoleSessionState[string]>) => void;
+  getRoleSession: (role: RoleName) => RoleSessionState[string] | undefined;
+  clearRoleSession: (role: RoleName) => void;
+  
   // Utility
   hasPermission: (permission: string) => boolean;
   hasRole: (role: string) => boolean;
   hasAnyRole: (...roles: string[]) => boolean;
+  getCurrentRolePermissions: () => string[];
 }
 
 export const useAuthStore = create<AuthState>()(
@@ -33,9 +58,12 @@ export const useAuthStore = create<AuthState>()(
       isLoading: false,
       permissions: [],
       roles: [],
+      currentRole: null,
+      availableRoles: [],
+      roleSessionState: {},
 
       setUser: (user, token) => {
-        const roles = user.roles.map(ur => ur.role.name)
+        const roles = user.roles.map(ur => ur.role.name) as RoleName[]
         const permissions = Array.from(
           new Set(
             user.roles.flatMap(ur => 
@@ -44,12 +72,17 @@ export const useAuthStore = create<AuthState>()(
           )
         )
 
+        // Set first available role as current if none is set
+        const currentRole = get().currentRole || roles[0] || null
+
         set({
           user,
           token,
           isAuthenticated: true,
           roles,
+          availableRoles: roles,
           permissions,
+          currentRole,
           isLoading: false
         })
       },
@@ -99,6 +132,9 @@ export const useAuthStore = create<AuthState>()(
           isAuthenticated: false,
           permissions: [],
           roles: [],
+          currentRole: null,
+          availableRoles: [],
+          roleSessionState: {},
           isLoading: false
         })
       },
@@ -137,6 +173,62 @@ export const useAuthStore = create<AuthState>()(
       hasAnyRole: (...roles: string[]) => {
         const userRoles = get().roles
         return roles.some(role => userRoles.includes(role))
+      },
+
+      // Role switching methods
+      switchRole: (role: RoleName) => {
+        const state = get()
+        
+        if (!state.canSwitchToRole(role)) {
+          throw new Error(`Cannot switch to role: ${role}. Role not assigned to user.`)
+        }
+
+        // Save current role session before switching
+        if (state.currentRole) {
+          state.saveRoleSession(state.currentRole, {
+            activeDashboard: window.location.pathname,
+            lastPage: window.location.pathname,
+          })
+        }
+
+        set({ currentRole: role })
+      },
+
+      canSwitchToRole: (role: RoleName) => {
+        return get().availableRoles.includes(role)
+      },
+
+      // Role session management
+      saveRoleSession: (role: RoleName, sessionData: Partial<RoleSessionState[string]>) => {
+        const state = get()
+        const currentSession = state.roleSessionState[role] || {}
+        
+        set({
+          roleSessionState: {
+            ...state.roleSessionState,
+            [role]: { ...currentSession, ...sessionData }
+          }
+        })
+      },
+
+      getRoleSession: (role: RoleName) => {
+        return get().roleSessionState[role]
+      },
+
+      clearRoleSession: (role: RoleName) => {
+        const state = get()
+        const newSessionState = { ...state.roleSessionState }
+        delete newSessionState[role]
+        
+        set({ roleSessionState: newSessionState })
+      },
+
+      getCurrentRolePermissions: () => {
+        const state = get()
+        if (!state.user || !state.currentRole) return []
+        
+        const userRole = state.user.roles.find(ur => ur.role.name === state.currentRole)
+        return userRole?.role.permissions.map(rp => rp.permission.code) || []
       }
     }),
     {
@@ -146,7 +238,10 @@ export const useAuthStore = create<AuthState>()(
         token: state.token,
         isAuthenticated: state.isAuthenticated,
         permissions: state.permissions,
-        roles: state.roles
+        roles: state.roles,
+        currentRole: state.currentRole,
+        availableRoles: state.availableRoles,
+        roleSessionState: state.roleSessionState
       })
     }
   )

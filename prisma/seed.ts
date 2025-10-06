@@ -268,9 +268,53 @@ async function main() {
     })
   }
 
+  // Create sample multi-role user for testing role switching
+  console.log('👤 Creating sample multi-role user...')
+  const multiRolePasswordHash = await bcrypt.hash('multirole123!', 10)
+  
+  const multiRoleUser = await prisma.user.upsert({
+    where: { email: 'multirole@dms.gov.ng' },
+    update: {},
+    create: {
+      email: 'multirole@dms.gov.ng',
+      username: 'multirole',
+      passwordHash: multiRolePasswordHash,
+      name: 'Multi Role Test User',
+      organization: 'Borno State Emergency Management Agency',
+    },
+  })
+
+  // Assign multiple roles to the multi-role user
+  const rolesToAssign = [assessorRole.id, coordinatorRole.id, donorRole.id]
+  for (const roleId of rolesToAssign) {
+    await prisma.userRole.upsert({
+      where: { userId_roleId: { userId: multiRoleUser.id, roleId } },
+      update: {},
+      create: {
+        userId: multiRoleUser.id,
+        roleId,
+        assignedBy: adminUser.id,
+      },
+    })
+  }
+
+  // Assign multi-role user to entities
+  if (maiduguri) {
+    await prisma.entityAssignment.upsert({
+      where: { userId_entityId: { userId: multiRoleUser.id, entityId: maiduguri.id } },
+      update: {},
+      create: {
+        userId: multiRoleUser.id,
+        entityId: maiduguri.id,
+        assignedBy: adminUser.id,
+      },
+    })
+  }
+
   console.log('✅ Database seed completed successfully!')
   console.log('📧 Admin credentials: admin@dms.gov.ng / admin123!')
   console.log('📧 Coordinator credentials: coordinator@dms.gov.ng / coordinator123!')
+  console.log('📧 Multi-role credentials: multirole@dms.gov.ng / multirole123! (ASSESSOR, COORDINATOR, DONOR)')
 }
 
 main()

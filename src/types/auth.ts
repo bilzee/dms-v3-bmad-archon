@@ -1,5 +1,7 @@
 import { User, Role, Permission } from '@prisma/client'
 
+export type RoleName = 'ASSESSOR' | 'COORDINATOR' | 'RESPONDER' | 'DONOR' | 'ADMIN'
+
 export interface AuthUser extends User {
   roles: Array<{
     role: Role & {
@@ -105,9 +107,23 @@ export interface UseAuthReturn {
   isAuthenticated: boolean
   permissions: string[]
   roles: string[]
+  currentRole: RoleName | null
+  availableRoles: RoleName[]
   login: (email: string, password: string) => Promise<void>
   logout: () => void
   refresh: () => Promise<void>
+  
+  // Role switching
+  switchRole: (role: RoleName) => void
+  canSwitchToRole: (role: RoleName) => boolean
+  
+  // Role session management
+  saveRoleSession: (role: RoleName, sessionData: any) => void
+  getRoleSession: (role: RoleName) => any
+  clearRoleSession: (role: RoleName) => void
+  getCurrentRolePermissions: () => string[]
+  
+  // Utility
   hasPermission: (permission: string) => boolean
   hasRole: (role: string) => boolean
   hasAnyRole: (...roles: string[]) => boolean

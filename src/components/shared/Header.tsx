@@ -1,6 +1,7 @@
 'use client';
 
 import { useAuth } from '@/hooks/useAuth';
+import { RoleSwitcher } from '@/components/layouts/RoleSwitcher';
 import { SyncIndicator } from './SyncIndicator';
 import { OfflineIndicator } from './OfflineIndicator';
 
@@ -27,7 +28,8 @@ export const Header = () => {
             <OfflineIndicator />
             {isAuthenticated && user && (
               <div className="flex items-center gap-3">
-                <span className="text-sm text-gray-600">
+                <RoleSwitcher />
+                <span className="text-sm text-gray-600 hidden sm:inline">
                   {user.name || user.email}
                 </span>
                 <button

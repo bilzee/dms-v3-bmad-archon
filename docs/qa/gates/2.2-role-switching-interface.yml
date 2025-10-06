@@ -1,0 +1,76 @@
+# <!-- Powered by BMAD™ Core -->
+# Quality Gate Decision for Story 2.2
+
+# Required fields (keep these first)
+schema: 1
+story: "2.2"
+story_title: "Role Switching Interface"
+gate: "FAIL"
+status_reason: "Critical authentication session management failure prevents access to all role switching functionality"
+reviewer: "Quinn (Test Architect)"
+updated: "2025-10-06T05:05:00Z"
+
+# Always present but only active when WAIVED
+waiver: { active: false }
+
+# Issues (if any) - Use fixed severity: low | medium | high
+top_issues:
+  - id: "AUTH-001"
+    severity: high
+    finding: "Authentication session management failure - users cannot stay logged in after successful login"
+    suggested_action: "Debug and fix client-side session persistence in auth store and login flow"
+    suggested_owner: "dev"
+  - id: "TEST-001"
+    severity: medium
+    finding: "Missing multi-role test user prevents comprehensive role switching testing"
+    suggested_action: "Create test user with multiple roles in database seed"
+    suggested_owner: "dev"
+
+# Risk summary (no formal risk assessment performed due to blocking issues)
+risk_summary:
+  totals: { critical: 0, high: 1, medium: 1, low: 0 }
+  recommendations:
+    must_fix: ["Fix authentication session persistence", "Create multi-role test user"]
+    monitor: []
+
+# Evidence from testing attempt
+evidence:
+  tests_reviewed: 0
+  risks_identified: 2
+  trace:
+    ac_covered: []  # Unable to validate due to authentication blocking
+    ac_gaps: [1, 2, 3, 4, 5, 6, 7]  # All ACs unvalidated
+
+# NFR validation - Limited assessment due to authentication issues
+nfr_validation:
+  security: { status: FAIL, notes: "Cannot validate - authentication blocks all protected access" }
+  performance: { status: CONCERNS, notes: "Cannot assess due to inability to access functionality" }
+  reliability: { status: FAIL, notes: "Authentication failure indicates reliability issues with core session management" }
+  maintainability: { status: PASS, notes: "Code structure appears well-organized for role switching features" }
+
+# Immediate and future recommendations
+recommendations:
+  immediate:
+    - action: "Debug authentication session persistence in auth.store.ts"
+      refs: ["src/stores/auth.store.ts:90-113"]
+    - action: "Verify login form token handling and storage"
+      refs: ["src/components/auth/LoginForm.tsx:35-43"]
+    - action: "Check protected route middleware authentication checks"
+      refs: ["src/middleware.ts"]
+  future:
+    - action: "Create comprehensive multi-role test user scenarios"
+      refs: ["prisma/seed.ts:203-270"]
+    - action: "Add E2E tests for complete role switching workflows"
+      refs: ["tests/e2e/role-switching-workflow.spec.ts"]
+
+# Quality score calculation
+quality_score: 60  # 100 - (20 × 1 FAIL) - (10 × 1 CONCERNS) = 70, reduced to 60 due to critical nature
+
+# Gate expiry
+expires: "2025-10-20T05:05:00Z"  # 2 weeks from review
+
+# History
+history:
+  - at: "2025-10-06T05:05:00Z"
+    gate: FAIL
+    note: "Initial review - critical authentication session management failure blocks all functionality testing"
