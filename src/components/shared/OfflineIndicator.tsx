@@ -6,8 +6,12 @@ import { useOfflineStore } from '@/stores/offline.store';
 export const OfflineIndicator = () => {
   const { isOnline, isConnecting, setOnlineStatus, setConnecting } = useOfflineStore();
   const [showTooltip, setShowTooltip] = useState(false);
+  const [isClient, setIsClient] = useState(false);
 
   useEffect(() => {
+    // Mark as client-side to avoid hydration mismatch
+    setIsClient(true);
+    
     const updateOnlineStatus = () => {
       setOnlineStatus(navigator.onLine);
     };
@@ -24,7 +28,7 @@ export const OfflineIndicator = () => {
       setOnlineStatus(false);
     };
 
-    // Set initial status
+    // Set initial status only on client-side
     updateOnlineStatus();
 
     // Add event listeners
@@ -36,6 +40,16 @@ export const OfflineIndicator = () => {
       window.removeEventListener('offline', handleOffline);
     };
   }, [setOnlineStatus, setConnecting]);
+
+  // Prevent hydration mismatch by showing loading state until client-side
+  if (!isClient) {
+    return (
+      <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-white shadow-sm border text-gray-600">
+        <div className="w-4 h-4 bg-gray-300 rounded animate-pulse"></div>
+        <span className="text-sm font-medium">Loading...</span>
+      </div>
+    );
+  }
 
   const getStatusIcon = () => {
     if (isConnecting) {

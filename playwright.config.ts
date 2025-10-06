@@ -4,7 +4,7 @@ import { defineConfig, devices } from '@playwright/test';
 const isPWATesting = process.env.PWA_TESTING === 'true';
 
 export default defineConfig({
-  testDir: './tests',
+  testDir: './tests/e2e',
   fullyParallel: true,
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 2 : 0,
@@ -15,9 +15,10 @@ export default defineConfig({
     trace: 'on-first-retry',
     // Additional context for PWA testing
     contextOptions: {
-      permissions: ['notifications', 'persistent-notification'],
+      permissions: ['notifications'],
       ...(isPWATesting && {
         serviceWorkers: 'allow',
+        permissions: ['notifications', 'background-sync'],
       }),
     },
   },

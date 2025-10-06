@@ -1,0 +1,87 @@
+schema: 1
+story: '2.1'
+story_title: 'User Authentication & Role Assignment'
+gate: FAIL
+status_reason: 'Critical security vulnerability - self-registration allows users to assign admin privileges to themselves'
+reviewer: 'Quinn (Test Architect)'
+updated: '2025-10-05T23:00:00Z'
+
+top_issues:
+  - id: "SEC-001"
+    severity: high
+    finding: "Self-registration form allows users to select ANY role including admin privileges"
+    suggested_action: "Remove role selection from public registration - only admins should assign roles"
+    suggested_owner: "dev"
+  - id: "SEC-002"
+    severity: high
+    finding: "Frontend bypass vulnerability - registration form bypasses backend MANAGE_USERS permission check"
+    suggested_action: "Separate public registration from admin user creation flows"
+    suggested_owner: "dev"
+  - id: "ARCH-001"
+    severity: medium
+    finding: "Story requirements contradict implementation - AC states admin assigns roles but implementation allows self-assignment"
+    suggested_action: "Clarify requirements and align implementation with story intent"
+    suggested_owner: "sm"
+
+waiver: 
+  active: false
+
+quality_score: 40
+expires: '2025-10-19T18:40:00Z'
+
+evidence:
+  tests_reviewed: 43
+  risks_identified: 3
+  playwright_tests_attempted: 40
+  playwright_execution_status: manual_testing_successful
+  trace:
+    ac_covered: [1, 3, 4, 5, 6, 7]
+    ac_gaps: [2]  # Role assignment security not properly implemented
+
+nfr_validation:
+  security:
+    status: FAIL
+    notes: 'CRITICAL: Privilege escalation vulnerability in self-registration allows users to grant themselves admin access'
+  performance:
+    status: PASS  
+    notes: 'Well-optimized with efficient Prisma queries, JWT caching, and proper database indexing'
+  reliability:
+    status: PASS
+    notes: 'Comprehensive error handling, input validation, and transaction management'
+  maintainability:
+    status: CONCERNS
+    notes: 'Mixed security models create technical debt - public registration mixed with admin flows'
+
+recommendations:
+  immediate:  # MUST FIX before production
+    - action: "Create separate public registration endpoint without role selection"
+      refs: ["src/app/register/page.tsx", "src/components/auth/RegisterForm.tsx"]
+      priority: "CRITICAL"
+    - action: "Restrict role assignment to admin-only user creation flow" 
+      refs: ["src/app/api/v1/users/route.ts"]
+      priority: "CRITICAL"
+    - action: "Add default role assignment logic for new public registrations"
+      refs: ["src/lib/auth/service.ts"]
+      priority: "HIGH"
+  completed:
+    - action: 'Manual E2E testing confirms authentication flow working'
+      refs: ['login flow', 'API endpoints', 'database integration']
+      date: '2025-10-05T22:35:00Z'
+    - action: 'Fixed Playwright browser installation and permissions'
+      refs: ['playwright.config.ts', 'tests/e2e/authentication-flow.spec.ts']
+    - action: 'Separated Playwright tests from Jest test runner'
+      refs: ['package.json', 'jest.config.js', 'tests/e2e/', 'tests/unit/', 'tests/integration/']
+  epic_planning:
+    - action: 'Address missing UI stories across Epic 1 & 2'
+      refs: ['docs/qa/handover-notes/epic-ui-gap-analysis.md']
+      owner: 'PM Agent'
+      priority: 'HIGH'
+  future:
+    - action: "Consider implementing role request/approval workflow"
+      refs: ["future-enhancement"]
+    - action: 'Add rate limiting to authentication endpoints'
+      refs: ['src/app/api/v1/auth/']
+    - action: 'Implement refresh token rotation'
+      refs: ['src/lib/auth/service.ts']
+    - action: 'Add comprehensive authorization audit logging'
+      refs: ['src/lib/auth/middleware.ts']

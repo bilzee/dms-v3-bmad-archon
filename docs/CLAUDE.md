@@ -1,8 +1,9 @@
 # General Instructions
 
-1. Do not over-engineer. 
+1. Do not mock values on the frontend; mock at the database with seeded data.
 2. Dev agent and qa agent should always search the Archon Knowledge Base using the archon mcp 
 3. Testing strategy can be found in docs/prd/testing-strategy.md
+4. When troubleshooting, do not take shortcuts, instead, first search the Archon knowledge base for solution, and if no solution is found, create a detailed report on the problem and what has been tried in docs/to-toubleshoot/ so it can be fixed separately.
 
 # Archon MCP Integration & Workflow
 

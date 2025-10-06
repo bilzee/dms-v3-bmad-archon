@@ -56,8 +56,8 @@ interface OfflineState {
 export const useOfflineStore = create<OfflineState>()(
   persist(
     (set, get) => ({
-      // Initial state
-      isOnline: typeof navigator !== 'undefined' ? navigator.onLine : false,
+      // Initial state - Use false to prevent hydration mismatch, will be updated in useEffect
+      isOnline: false,
       isConnecting: false,
       syncQueue: [],
       isSyncing: false,
