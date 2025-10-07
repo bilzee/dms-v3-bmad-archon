@@ -10,8 +10,7 @@ export interface EntityAssignment {
   user: {
     id: string;
     email: string;
-    firstName: string | null;
-    lastName: string | null;
+    name: string;
     roles: Array<{
       role: {
         id: string;
@@ -42,8 +41,7 @@ export interface Entity {
 export interface User {
   id: string;
   email: string;
-  firstName: string | null;
-  lastName: string | null;
+  name: string;
   roles: Array<{
     role: {
       id: string;

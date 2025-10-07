@@ -1,0 +1,102 @@
+import { NextRequest, NextResponse } from 'next/server'
+import { v4 as uuidv4 } from 'uuid'
+import { withAuth, requireRole } from '@/lib/auth/middleware'
+import { PreliminaryAssessmentService } from '@/lib/services/preliminary-assessment.service'
+import { 
+  CreatePreliminaryAssessmentSchema,
+  QueryPreliminaryAssessmentSchema 
+} from '@/lib/validation/preliminary-assessment'
+import { PreliminaryAssessmentListResponse } from '@/types/preliminary-assessment'
+
+export const GET = withAuth(async (request, context) => {
+  try {
+    const url = new URL(request.url)
+    const searchParams = Object.fromEntries(url.searchParams)
+    
+    const query = QueryPreliminaryAssessmentSchema.parse(searchParams)
+    
+    const { assessments, total, totalPages } = await PreliminaryAssessmentService.findAll(query)
+
+    const response: PreliminaryAssessmentListResponse = {
+      data: assessments,
+      pagination: {
+        page: query.page,
+        limit: query.limit,
+        total,
+        totalPages
+      },
+      meta: {
+        timestamp: new Date().toISOString(),
+        version: '1.0.0',
+        requestId: uuidv4()
+      }
+    }
+
+    return NextResponse.json(response, { status: 200 })
+  } catch (error) {
+    console.error('Get preliminary assessments error:', error)
+    
+    return NextResponse.json(
+      {
+        error: error instanceof Error ? error.message : 'Internal server error',
+        meta: {
+          timestamp: new Date().toISOString(),
+          version: '1.0.0',
+          requestId: uuidv4()
+        }
+      },
+      { status: 500 }
+    )
+  }
+})
+
+export const POST = withAuth(
+  requireRole('ASSESSOR')(async (request, context) => {
+    try {
+      const body = await request.json()
+      const input = CreatePreliminaryAssessmentSchema.parse(body)
+      
+      const assessment = await PreliminaryAssessmentService.create(input, context.user.userId)
+
+      return NextResponse.json(
+        {
+          data: assessment,
+          meta: {
+            timestamp: new Date().toISOString(),
+            version: '1.0.0',
+            requestId: uuidv4()
+          }
+        },
+        { status: 201 }
+      )
+    } catch (error) {
+      console.error('Create preliminary assessment error:', error)
+      
+      if (error instanceof Error && error.message.includes('validation')) {
+        return NextResponse.json(
+          {
+            error: error.message,
+            meta: {
+              timestamp: new Date().toISOString(),
+              version: '1.0.0',
+              requestId: uuidv4()
+            }
+          },
+          { status: 400 }
+        )
+      }
+      
+      return NextResponse.json(
+        {
+          error: 'Internal server error',
+          meta: {
+            timestamp: new Date().toISOString(),
+            version: '1.0.0',
+            requestId: uuidv4()
+          }
+        },
+        { status: 500 }
+      )
+    }
+  })
+)

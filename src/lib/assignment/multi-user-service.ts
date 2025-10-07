@@ -67,9 +67,7 @@ export class MultiUserAssignmentService {
       const assignedUsers = entity.assignments.map(assignment => ({
         userId: assignment.user.id,
         email: assignment.user.email,
-        name: assignment.user.firstName && assignment.user.lastName 
-          ? `${assignment.user.firstName} ${assignment.user.lastName}`
-          : assignment.user.email,
+        name: assignment.user.name || assignment.user.email,
         roles: assignment.user.roles.map(ur => ur.role.name),
         assignedAt: assignment.assignedAt,
         assignedBy: assignment.assignedBy
@@ -122,8 +120,7 @@ export class MultiUserAssignmentService {
                         select: {
                           id: true,
                           email: true,
-                          firstName: true,
-                          lastName: true
+                          name: true
                         }
                       }
                     }
@@ -145,10 +142,7 @@ export class MultiUserAssignmentService {
       const assignedEntities = user.assignments.map(assignment => {
         const sharedWith = assignment.entity.assignments
           .filter(a => a.userId !== userId)
-          .map(a => a.user.firstName && a.user.lastName 
-            ? `${a.user.firstName} ${a.user.lastName}`
-            : a.user.email
-          );
+          .map(a => a.user.name || a.user.email);
 
         return {
           entityId: assignment.entity.id,
@@ -166,9 +160,7 @@ export class MultiUserAssignmentService {
       return {
         userId: user.id,
         email: user.email,
-        name: user.firstName && user.lastName 
-          ? `${user.firstName} ${user.lastName}`
-          : user.email,
+        name: user.name || user.email,
         roles: user.roles.map(ur => ur.role.name),
         assignedEntities,
         collaborations
@@ -218,9 +210,7 @@ export class MultiUserAssignmentService {
           const assignedUsers = entity.assignments.map(assignment => ({
             userId: assignment.user.id,
             email: assignment.user.email,
-            name: assignment.user.firstName && assignment.user.lastName 
-              ? `${assignment.user.firstName} ${assignment.user.lastName}`
-              : assignment.user.email,
+            name: assignment.user.name || assignment.user.email,
             roles: assignment.user.roles.map(ur => ur.role.name),
             assignedAt: assignment.assignedAt,
             assignedBy: assignment.assignedBy
@@ -554,9 +544,7 @@ export class MultiUserAssignmentService {
         return {
           userId: user.id,
           email: user.email,
-          name: user.firstName && user.lastName 
-            ? `${user.firstName} ${user.lastName}`
-            : user.email,
+          name: user.name || user.email,
           roles: userRoles,
           reason: reasons.join(', '),
           priority

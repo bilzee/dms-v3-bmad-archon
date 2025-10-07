@@ -3,7 +3,18 @@
 import { useAuth } from '@/hooks/useAuth'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
+import { Badge } from '@/components/ui/badge'
 import Link from 'next/link'
+import { 
+  Users, 
+  FileText, 
+  AlertTriangle, 
+  UserCog, 
+  Activity, 
+  User,
+  MapPin,
+  ClipboardList 
+} from 'lucide-react'
 
 export default function DashboardPage() {
   const { user, hasPermission } = useAuth()
@@ -26,52 +37,142 @@ export default function DashboardPage() {
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        {/* Entity Assignment Management - Story 2.3 */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Users className="h-5 w-5" />
+              Entity Assignment
+            </CardTitle>
+            <CardDescription>
+              Manage entity assignments for assessors and responders
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-3">
+              <div className="flex items-center gap-2">
+                <Badge variant="outline" className="text-xs">Story 2.3</Badge>
+                <Badge variant="secondary" className="text-xs">Coordinator</Badge>
+              </div>
+              <Link href="/coordinator/entities">
+                <Button className="w-full">
+                  <UserCog className="h-4 w-4 mr-2" />
+                  Manage Assignments
+                </Button>
+              </Link>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Preliminary Assessment - Story 3.1 */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <ClipboardList className="h-5 w-5" />
+              Preliminary Assessment
+            </CardTitle>
+            <CardDescription>
+              Create preliminary disaster assessments with GPS capture
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-3">
+              <div className="flex items-center gap-2">
+                <Badge variant="outline" className="text-xs">Story 3.1</Badge>
+                <Badge variant="secondary" className="text-xs">Assessor</Badge>
+              </div>
+              <Link href="/assessor/preliminary-assessment">
+                <Button className="w-full">
+                  <AlertTriangle className="h-4 w-4 mr-2" />
+                  Create Assessment
+                </Button>
+              </Link>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* User Management - Admin only */}
         {hasPermission('MANAGE_USERS') && (
           <Card>
             <CardHeader>
-              <CardTitle>User Management</CardTitle>
+              <CardTitle className="flex items-center gap-2">
+                <UserCog className="h-5 w-5" />
+                User Management
+              </CardTitle>
               <CardDescription>
                 Manage system users and role assignments
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <Link href="/admin/users">
-                <Button className="w-full">Manage Users</Button>
-              </Link>
+              <div className="space-y-3">
+                <Badge variant="destructive" className="text-xs">Admin</Badge>
+                <Link href="/admin/users">
+                  <Button className="w-full">
+                    <Users className="h-4 w-4 mr-2" />
+                    Manage Users
+                  </Button>
+                </Link>
+              </div>
             </CardContent>
           </Card>
         )}
 
+        {/* Crisis Management Dashboard */}
         <Card>
           <CardHeader>
-            <CardTitle>Crisis Management</CardTitle>
+            <CardTitle className="flex items-center gap-2">
+              <Activity className="h-5 w-5" />
+              Crisis Management
+            </CardTitle>
             <CardDescription>
               Coordinate crisis response activities
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <Link href="/dashboard/crisis">
-              <Button className="w-full">View Crisis Dashboard</Button>
-            </Link>
+            <div className="space-y-3">
+              <Badge variant="outline" className="text-xs">Coming Soon</Badge>
+              <Link href="/dashboard/crisis">
+                <Button className="w-full" variant="outline">
+                  <AlertTriangle className="h-4 w-4 mr-2" />
+                  View Crisis Dashboard
+                </Button>
+              </Link>
+            </div>
           </CardContent>
         </Card>
 
+        {/* User Profile */}
         <Card>
           <CardHeader>
-            <CardTitle>Profile</CardTitle>
+            <CardTitle className="flex items-center gap-2">
+              <User className="h-5 w-5" />
+              Profile
+            </CardTitle>
             <CardDescription>
-              Manage your account settings
+              Manage your account settings and view role information
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="space-y-2 text-sm mb-4">
-              <p><strong>Name:</strong> {user.name}</p>
-              <p><strong>Email:</strong> {user.email}</p>
-              <p><strong>Role:</strong> {user.roles?.map(r => r.role.name).join(', ') || 'No roles assigned'}</p>
+            <div className="space-y-3">
+              <div className="space-y-2 text-sm">
+                <p><strong>Name:</strong> {user.name}</p>
+                <p><strong>Email:</strong> {user.email}</p>
+                <div className="flex items-center gap-2">
+                  <strong>Roles:</strong>
+                  {user.roles?.map(r => (
+                    <Badge key={r.role.id} variant="secondary" className="text-xs">
+                      {r.role.name}
+                    </Badge>
+                  )) || <Badge variant="outline" className="text-xs">No roles assigned</Badge>}
+                </div>
+              </div>
+              <Link href="/profile">
+                <Button className="w-full" variant="outline">
+                  <User className="h-4 w-4 mr-2" />
+                  Edit Profile
+                </Button>
+              </Link>
             </div>
-            <Link href="/profile">
-              <Button className="w-full">Edit Profile</Button>
-            </Link>
           </CardContent>
         </Card>
       </div>

@@ -314,7 +314,7 @@ export class AutoAssignmentService {
       const [user, entity] = await Promise.all([
         prisma.user.findUnique({
           where: { id: userId },
-          select: { email: true, firstName: true, lastName: true }
+          select: { email: true, name: true }
         }),
         prisma.entity.findUnique({
           where: { id: entityId },

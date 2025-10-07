@@ -74,8 +74,7 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
             select: {
               id: true,
               email: true,
-              firstName: true,
-              lastName: true,
+              name: true,
               roles: {
                 include: {
                   role: true

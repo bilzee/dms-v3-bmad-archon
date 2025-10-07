@@ -125,6 +125,54 @@ model EntityAssignment {
   @@map("entity_assignments")
 }
 
+// Incident Management
+model Incident {
+  id                   String   @id @default(cuid())
+  type                 String
+  subType              String?
+  severity             Priority @default(MEDIUM)
+  status               IncidentStatus @default(ACTIVE)
+  description          String
+  location             String
+  coordinates          Json?
+  createdBy            String
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime @updatedAt
+
+  // Relationships
+  preliminaryAssessments PreliminaryAssessment[]
+
+  @@map("incidents")
+}
+
+model PreliminaryAssessment {
+  id                              String   @id @default(cuid())
+  reportingDate                   DateTime
+  reportingLatitude               Float
+  reportingLongitude              Float
+  reportingLGA                    String
+  reportingWard                   String
+  numberLivesLost                 Int      @default(0)
+  numberInjured                   Int      @default(0)
+  numberDisplaced                 Int      @default(0)
+  numberHousesAffected            Int      @default(0)
+  numberSchoolsAffected           Int      @default(0)
+  schoolsAffected                 String?  // List of affected schools
+  numberMedicalFacilitiesAffected Int      @default(0)
+  medicalFacilitiesAffected       String?  // List of affected medical facilities
+  estimatedAgriculturalLandsAffected String? // Description/estimate of agricultural impact
+  reportingAgent                  String   // LEMC agent or staff name
+  additionalDetails               Json?
+  incidentId                      String?  // Nullable - preliminary assessments can predate incidents
+  createdAt                       DateTime @default(now())
+  updatedAt                       DateTime @updatedAt
+  
+  // Relationships
+  incident                        Incident? @relation(fields: [incidentId], references: [id])
+
+  @@map("preliminary_assessments")
+}
+
 // Assessment and Response Models
 model RapidAssessment {
   id              String          @id @default(cuid())
@@ -277,4 +325,10 @@ enum VerificationStatus {
   APPROVED
   REJECTED
   NEEDS_REVIEW
+}
+
+enum IncidentStatus {
+  ACTIVE
+  CONTAINED
+  RESOLVED
 }
