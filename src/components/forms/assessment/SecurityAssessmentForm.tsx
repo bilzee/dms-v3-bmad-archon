@@ -322,33 +322,20 @@ export function SecurityAssessmentForm({
         }
       }
 
-      const result = await fetch('/api/v1/rapid-assessments', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(assessmentData)
-      })
+      await createAssessment.mutateAsync(assessmentData)
       
-      const response = await result.json()
+      setSubmitMessage('Security assessment submitted successfully!')
+      setSubmitMessageType('success')
+      form.reset()
+      setPhotos([])
       
-      if (response.success) {
-        setSubmitMessage('Security assessment submitted successfully!')
-        setSubmitMessageType('success')
-        form.reset()
-        setPhotos([])
-        
-        // Redirect to assessments list after 2 seconds
-        setTimeout(() => {
-          window.location.href = '/assessor/rapid-assessments'
-        }, 2000)
-      } else {
-        setSubmitMessage(response.message || 'Failed to submit assessment')
-        setSubmitMessageType('error')
-      }
+      // Redirect to assessments list after 2 seconds
+      setTimeout(() => {
+        window.location.href = '/assessor/rapid-assessments'
+      }, 2000)
     } catch (error) {
       console.error('Form submission error:', error)
-      setSubmitMessage('Failed to submit assessment. Please try again.')
+      setSubmitMessage(error instanceof Error ? error.message : 'Failed to submit assessment. Please try again.')
       setSubmitMessageType('error')
     } finally {
       setIsFinalSubmitting(false)
@@ -502,11 +489,21 @@ export function SecurityAssessmentForm({
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
-                          {filteredEntities.map((entity) => (
-                            <SelectItem key={entity.id} value={entity.id}>
-                              {entity.name} ({entity.type})
+                          {entitiesLoading ? (
+                            <SelectItem value="loading" disabled>
+                              Loading entities...
                             </SelectItem>
-                          ))}
+                          ) : filteredEntities?.length === 0 ? (
+                            <SelectItem value="no-entities" disabled>
+                              No entities found
+                            </SelectItem>
+                          ) : (
+                            filteredEntities.map((entity) => (
+                              <SelectItem key={entity.id} value={entity.id}>
+                                {entity.name} ({entity.type})
+                              </SelectItem>
+                            ))
+                          )}
                         </SelectContent>
                       </Select>
                     </div>

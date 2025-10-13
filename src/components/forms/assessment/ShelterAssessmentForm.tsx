@@ -4,23 +4,33 @@ import { useState, useEffect, useMemo } from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
+
+// External libraries
+import { Home, AlertTriangle, Users, FileText, Save, CheckCircle, Loader2 } from 'lucide-react'
+
+// UI components
+import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { Checkbox } from '@/components/ui/checkbox'
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form'
 import { Input } from '@/components/ui/input'
-import { Checkbox } from '@/components/ui/checkbox'
-import { Textarea } from '@/components/ui/textarea'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { Badge } from '@/components/ui/badge'
+import { Textarea } from '@/components/ui/textarea'
 import { Alert, AlertDescription } from '@/components/ui/alert'
+
+// Internal components
 import { GPSCapture } from '@/components/shared/GPSCapture'
 import { MediaField } from '@/components/shared/MediaField'
-import { SHELTER_DAMAGE_OPTIONS, CreateShelterAssessmentRequest } from '@/types/rapid-assessment'
-import { ShelterAssessment } from '@/types/rapid-assessment'
-import { getCurrentUser } from '@/lib/auth/get-current-user'
-import { useEntityStore, Entity } from '@/stores/entity.store'
+
+// Stores and hooks
+import { useShelterAssessments, useCreateRapidAssessment } from '@/hooks/useRapidAssessments'
+import { useFilteredEntities, type Entity } from '@/hooks/useEntities'
 import { useShelterAssessment } from '@/hooks/useShelterAssessment'
-import { Home, AlertTriangle, Users, FileText, Save, CheckCircle, Loader2 } from 'lucide-react'
+
+// Utilities and types
+import { SHELTER_DAMAGE_OPTIONS, CreateShelterAssessmentRequest } from '@/types/rapid-assessment'
+import { getCurrentUser } from '@/lib/auth/get-current-user'
 
 // Form validation schema
 const shelterAssessmentSchema = z.object({
@@ -60,10 +70,13 @@ export function ShelterAssessmentForm({
   const [currentUser, setCurrentUser] = useState<any>(null)
   const [gpsLocation, setGpsLocation] = useState<any>(null)
 
-  // Hooks for enhanced functionality
-  const { recentAssessments, drafts, loadAssessments, loadDrafts, saveDraft, deleteDraft } = useShelterAssessment()
-  const { entities } = useEntityStore()
-  const [filteredEntities, setFilteredEntities] = useState<Entity[]>([])
+  // TanStack Query hooks for server state
+  const { data: recentAssessments, isLoading: assessmentsLoading } = useShelterAssessments()
+  const { data: filteredEntities, isLoading: entitiesLoading } = useFilteredEntities('')
+  const createAssessment = useCreateRapidAssessment()
+  
+  // Local hooks for drafts
+  const { drafts, loadAssessments, loadDrafts, saveDraft, deleteDraft } = useShelterAssessment()
 
   const form = useForm<ShelterAssessmentFormData>({
     resolver: zodResolver(shelterAssessmentSchema),
