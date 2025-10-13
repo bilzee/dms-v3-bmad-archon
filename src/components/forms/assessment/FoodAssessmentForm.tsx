@@ -66,7 +66,6 @@ export function FoodAssessmentForm({
   const [isDraftSaving, setIsDraftSaving] = useState(false)
   const [isFinalSubmitting, setIsFinalSubmitting] = useState(false)
   const [entitySearchTerm, setEntitySearchTerm] = useState('')
-  const [isMounted, setIsMounted] = useState(false)
   const [currentUser, setCurrentUser] = useState<any>(null)
   const [gpsLocation, setGpsLocation] = useState<any>(null)
 
@@ -92,7 +91,6 @@ export function FoodAssessmentForm({
 
   // Initialize data and side effects
   useEffect(() => {
-    setIsMounted(true)
     const initializeData = async () => {
       try {
         const user = await getCurrentUser()
@@ -144,6 +142,9 @@ export function FoodAssessmentForm({
   // Auto-save functionality
   useEffect(() => {
     const interval = setInterval(async () => {
+      // Don't auto-save during final submission
+      if (isFinalSubmitting) return
+      
       const formData = form.getValues()
       if (formData.affectedEntityId && (formData.foodSource.length > 0 || formData.additionalFoodDetails)) {
         await handleAutoSave(formData)
@@ -151,7 +152,7 @@ export function FoodAssessmentForm({
     }, 30000) // Auto-save every 30 seconds
 
     return () => clearInterval(interval)
-  }, [form])
+  }, [form, isFinalSubmitting])
 
   const handleAutoSave = async (formData: FoodAssessmentFormData) => {
     try {
@@ -234,17 +235,23 @@ export function FoodAssessmentForm({
       
       setSubmitMessage('Food assessment submitted successfully!')
       setSubmitMessageType('success')
-      form.reset()
-      setPhotos([])
-      setSelectedSources([])
       
-      // Redirect to assessments list after 2 seconds
+      // Wait a bit before resetting to ensure success message is seen
       setTimeout(() => {
-        window.location.href = '/assessor/rapid-assessments'
-      }, 2000)
+        form.reset()
+        setPhotos([])
+        setSelectedSources([])
+        setIsFinalSubmitting(false)
+        
+        // Redirect to assessments list after success message has been visible
+        setTimeout(() => {
+          window.location.href = '/assessor/rapid-assessments'
+        }, 1500)
+      }, 500)
     } catch (error) {
       console.error('Form submission error:', error)
-      setSubmitMessage(error instanceof Error ? error.message : 'An unexpected error occurred. Please try again.')
+      const errorMessage = error instanceof Error ? error.message : 'An unexpected error occurred. Please try again.'
+      setSubmitMessage(errorMessage)
       setSubmitMessageType('error')
     } finally {
       setIsFinalSubmitting(false)
@@ -606,13 +613,13 @@ export function FoodAssessmentForm({
                     <div>
                       <label className="text-sm font-medium">Assessment Date</label>
                       <p className="text-sm text-gray-600">
-                        {isMounted ? `${new Date().toLocaleDateString()} ${new Date().toLocaleTimeString()}` : 'Loading...'}
+                        {new Date().toLocaleDateString()} {new Date().toLocaleTimeString()}
                       </p>
                     </div>
                     <div>
                       <label className="text-sm font-medium">Assessor Name</label>
                       <p className="text-sm text-gray-600">
-                        {isMounted && currentUser ? currentUser.name : 'Loading user information...'}
+                        {currentUser?.name || 'Loading user information...'}
                       </p>
                     </div>
                   </div>
