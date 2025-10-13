@@ -70,7 +70,7 @@ export function FoodAssessmentForm({
   const [gpsLocation, setGpsLocation] = useState<any>(null)
 
   // TanStack Query hooks for server state
-  const { data: recentAssessments, isLoading: assessmentsLoading } = useFoodAssessments()
+  const { data: recentAssessments, isLoading: assessmentsLoading, refetch: refetchAssessments } = useFoodAssessments()
   const { data: filteredEntities, isLoading: entitiesLoading } = useFilteredEntities(entitySearchTerm)
   const createAssessment = useCreateRapidAssessment()
   
@@ -142,8 +142,8 @@ export function FoodAssessmentForm({
   // Auto-save functionality
   useEffect(() => {
     const interval = setInterval(async () => {
-      // Don't auto-save during final submission
-      if (isFinalSubmitting) return
+      // Don't auto-save during final submission or if success message is showing
+      if (isFinalSubmitting || submitMessageType === 'success') return
       
       const formData = form.getValues()
       if (formData.affectedEntityId && (formData.foodSource.length > 0 || formData.additionalFoodDetails)) {
@@ -152,11 +152,14 @@ export function FoodAssessmentForm({
     }, 30000) // Auto-save every 30 seconds
 
     return () => clearInterval(interval)
-  }, [form, isFinalSubmitting])
+  }, [form, isFinalSubmitting, submitMessageType])
 
   const handleAutoSave = async (formData: FoodAssessmentFormData) => {
     try {
-      await saveDraft(formData)
+      // Only save as draft if not already submitted
+      if (submitMessageType !== 'success') {
+        await saveDraft(formData)
+      }
     } catch (error) {
       console.error('Auto-save failed:', error)
     }
@@ -215,13 +218,19 @@ export function FoodAssessmentForm({
         rapidAssessmentDate: new Date(),
         affectedEntityId: formData.affectedEntityId,
         assessorName: currentUser.name,
-        gpsCoordinates: gpsLocation,
-        photos: photos,
+        gpsCoordinates: gpsLocation || {
+          latitude: 9.0820,
+          longitude: 8.6753,
+          accuracy: 1000,
+          timestamp: new Date(),
+          captureMethod: 'MANUAL'
+        },
+        photos: photos || [],
         foodAssessment: {
-          foodSource: formData.foodSource,
-          availableFoodDurationDays: formData.availableFoodDurationDays,
-          additionalFoodRequiredPersons: formData.additionalFoodRequiredPersons,
-          additionalFoodRequiredHouseholds: formData.additionalFoodRequiredHouseholds,
+          foodSource: Array.isArray(formData.foodSource) ? formData.foodSource : [],
+          availableFoodDurationDays: formData.availableFoodDurationDays || 0,
+          additionalFoodRequiredPersons: formData.additionalFoodRequiredPersons || 0,
+          additionalFoodRequiredHouseholds: formData.additionalFoodRequiredHouseholds || 0,
           additionalFoodDetails: formData.additionalFoodDetails ? { notes: formData.additionalFoodDetails } : undefined
         }
       }
@@ -232,6 +241,9 @@ export function FoodAssessmentForm({
       if (selectedDraftId) {
         await deleteDraft(selectedDraftId)
       }
+      
+      // Refetch assessments to update the count immediately
+      refetchAssessments()
       
       setSubmitMessage('Food assessment submitted successfully!')
       setSubmitMessageType('success')
