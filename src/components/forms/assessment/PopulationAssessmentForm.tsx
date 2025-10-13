@@ -4,24 +4,35 @@ import { useState, useEffect, useCallback, useMemo } from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
-import { useAuth } from '@/hooks/useAuth'
-import { usePopulationAssessment } from '@/hooks/usePopulationAssessment'
-import { useEntityStore, Entity } from '@/stores/entity.store'
-import { getCurrentUser } from '@/lib/auth/get-current-user'
-import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form'
-import { Input } from '@/components/ui/input'
-import { Textarea } from '@/components/ui/textarea'
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { Alert, AlertDescription } from '@/components/ui/alert'
-import { Badge } from '@/components/ui/badge'
-import { GPSCapture } from '@/components/shared/GPSCapture'
-import { MediaField } from '@/components/shared/MediaField'
+
+// External libraries
 import { 
   Users, AlertTriangle, Heart, Baby, Activity, Clock, MapPin, 
   FileText, Save, CheckCircle, Loader2, Camera, TrendingUp 
 } from 'lucide-react'
+
+// UI components
+import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form'
+import { Input } from '@/components/ui/input'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { Textarea } from '@/components/ui/textarea'
+import { Alert, AlertDescription } from '@/components/ui/alert'
+
+// Internal components
+import { GPSCapture } from '@/components/shared/GPSCapture'
+import { MediaField } from '@/components/shared/MediaField'
+
+// Stores and hooks
+import { useAuth } from '@/hooks/useAuth'
+import { usePopulationAssessments, useCreateRapidAssessment } from '@/hooks/useRapidAssessments'
+import { useFilteredEntities, type Entity } from '@/hooks/useEntities'
+import { usePopulationAssessment } from '@/hooks/usePopulationAssessment'
+
+// Utilities and types
+import { getCurrentUser } from '@/lib/auth/get-current-user'
 
 // Form validation schema
 const populationAssessmentSchema = z.object({
@@ -80,12 +91,16 @@ export function PopulationAssessmentForm({
     deleteDraft 
   } = usePopulationAssessment()
   
-  const { entities, searchEntities, fetchEntities } = useEntityStore()
+  // TanStack Query hooks for server state
+  const { data: recentAssessments, isLoading: assessmentsLoading } = usePopulationAssessments()
+  const { data: filteredEntities, isLoading: entitiesLoading } = useFilteredEntities(searchTerm)
+  const createAssessment = useCreateRapidAssessment()
+  
+  // Local state
   const [photos, setPhotos] = useState<string[]>(initialData?.photos || [])
   const [isAutoSaving, setIsAutoSaving] = useState(false)
   const [lastSaved, setLastSaved] = useState<Date | null>(null)
   const [searchTerm, setSearchTerm] = useState('')
-  const [filteredEntities, setFilteredEntities] = useState(entities)
   const [currentUser, setCurrentUser] = useState<any>(null)
   const [gpsLocation, setGpsLocation] = useState<any>(null)
   const [isFinalSubmitting, setIsFinalSubmitting] = useState(false)
@@ -115,22 +130,13 @@ export function PopulationAssessmentForm({
     }
   })
 
-  // Define loadEntities function following knowledge base best practices
-  const loadEntities = useCallback(async () => {
-    try {
-      await fetchEntities()
-    } catch (error) {
-      console.error('Error loading entities:', error)
-    }
-  }, [fetchEntities])
-
+  
   // Load data on mount following knowledge base Option 3 pattern
   useEffect(() => {
     const initialize = async () => {
       await Promise.all([
         loadAssessments(),
-        loadDrafts(), 
-        loadEntities()
+        loadDrafts()
       ]);
       
       // Initialize current user and GPS
@@ -177,22 +183,9 @@ export function PopulationAssessmentForm({
     };
     
     initialize();
-  }, [loadAssessments, loadDrafts, loadEntities])
+  }, [loadAssessments, loadDrafts])
 
-  // Update filtered entities based on search
-  useEffect(() => {
-    if (searchTerm) {
-      const filtered = entities.filter(entity => 
-        entity.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        entity.type.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        entity.description?.toLowerCase().includes(searchTerm.toLowerCase())
-      )
-      setFilteredEntities(filtered)
-    } else {
-      setFilteredEntities(entities)
-    }
-  }, [searchTerm, entities])
-
+  
   // Auto-save functionality
   const autoSave = useCallback(async () => {
     if (!form.formState.isDirty) return
@@ -217,7 +210,7 @@ export function PopulationAssessmentForm({
   }, [autoSave])
 
   // Calculate statistics
-  const recentAssessmentsCount = recentAssessments.length
+  const recentAssessmentsCount = recentAssessments?.length || 0
   const draftsCount = drafts.length
 
   // Calculate vulnerable groups percentage
@@ -394,33 +387,20 @@ export function PopulationAssessmentForm({
         }
       }
 
-      const result = await fetch('/api/v1/rapid-assessments', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(assessmentData)
-      })
+      await createAssessment.mutateAsync(assessmentData)
       
-      const response = await result.json()
+      setSubmitMessage('Population assessment submitted successfully!')
+      setSubmitMessageType('success')
+      form.reset()
+      setPhotos([])
       
-      if (response.success) {
-        setSubmitMessage('Population assessment submitted successfully!')
-        setSubmitMessageType('success')
-        form.reset()
-        setPhotos([])
-        
-        // Redirect to assessments list after 2 seconds
-        setTimeout(() => {
-          window.location.href = '/assessor/rapid-assessments'
-        }, 2000)
-      } else {
-        setSubmitMessage(response.message || 'Failed to submit assessment')
-        setSubmitMessageType('error')
-      }
+      // Redirect to assessments list after 2 seconds
+      setTimeout(() => {
+        window.location.href = '/assessor/rapid-assessments'
+      }, 2000)
     } catch (error) {
       console.error('Form submission error:', error)
-      setSubmitMessage('Failed to submit assessment. Please try again.')
+      setSubmitMessage(error instanceof Error ? error.message : 'Failed to submit assessment. Please try again.')
       setSubmitMessageType('error')
     } finally {
       setIsFinalSubmitting(false)
@@ -561,11 +541,21 @@ export function PopulationAssessmentForm({
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
-                          {filteredEntities.map((entity) => (
-                            <SelectItem key={entity.id} value={entity.id}>
-                              {entity.name} ({entity.type})
+                          {entitiesLoading ? (
+                            <SelectItem value="loading" disabled>
+                              Loading entities...
                             </SelectItem>
-                          ))}
+                          ) : filteredEntities?.length === 0 ? (
+                            <SelectItem value="no-entities" disabled>
+                              No entities found
+                            </SelectItem>
+                          ) : (
+                            filteredEntities.map((entity) => (
+                              <SelectItem key={entity.id} value={entity.id}>
+                                {entity.name} ({entity.type})
+                              </SelectItem>
+                            ))
+                          )}
                         </SelectContent>
                       </Select>
                     </div>
