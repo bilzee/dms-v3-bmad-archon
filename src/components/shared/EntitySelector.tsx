@@ -1,13 +1,22 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { Badge } from '@/components/ui/badge'
-import { Alert, AlertDescription } from '@/components/ui/alert'
-import { Button } from '@/components/ui/button'
+import { useQuery } from '@tanstack/react-query'
+
+// External libraries
 import { MapPin, Users, AlertCircle, RefreshCw } from 'lucide-react'
+
+// UI components
+import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { Alert, AlertDescription } from '@/components/ui/alert'
+
+// Internal services and hooks
 import { entityAssignmentService, Entity } from '@/lib/services/entity-assignment.service'
 import { useAuthStore } from '@/stores/auth.store'
+import { useFilteredEntities } from '@/hooks/useEntities'
+import { EntitySelectorSkeleton } from './EntitySelectorSkeleton'
 
 interface EntitySelectorProps {
   value?: string
@@ -29,23 +38,16 @@ export function EntitySelector({
   showAssignmentInfo = true,
   className 
 }: EntitySelectorProps) {
-  const [entities, setEntities] = useState<EntityWithAssignment[]>([])
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
+  const { user } = useAuthStore()
   const [selectedEntity, setSelectedEntity] = useState<EntityWithAssignment | null>(null)
   
-  const { user } = useAuthStore()
-
-  const loadEntities = async () => {
-    if (!user) {
-      setError('User not authenticated')
-      setLoading(false)
-      return
-    }
-
-    try {
-      setLoading(true)
-      setError(null)
+  // TanStack Query hook for entities with assignment info
+  const { data: entities = [], isLoading, error, refetch } = useQuery({
+    queryKey: ['entities', 'with-assignment-info', user?.id],
+    queryFn: async () => {
+      if (!user) {
+        throw new Error('User not authenticated')
+      }
 
       // Get entities available for assessment by this user
       const availableEntities = await entityAssignmentService.getAvailableEntitiesForAssessment(user.id)
@@ -73,24 +75,13 @@ export function EntitySelector({
         })
       )
 
-      setEntities(entitiesWithInfo)
+      return entitiesWithInfo
+    },
+    enabled: !!user,
+    staleTime: 5 * 60 * 1000, // 5 minutes
+    retry: 2
+  })
 
-      // Set selected entity if value is provided
-      if (value) {
-        const selected = entitiesWithInfo.find(e => e.id === value)
-        setSelectedEntity(selected || null)
-      }
-    } catch (err) {
-      console.error('Error loading entities:', err)
-      setError('Failed to load available entities')
-    } finally {
-      setLoading(false)
-    }
-  }
-
-  useEffect(() => {
-    loadEntities()
-  }, [user])
 
   useEffect(() => {
     if (value) {
@@ -146,13 +137,8 @@ export function EntitySelector({
     )
   }
 
-  if (loading) {
-    return (
-      <div className="flex items-center space-x-2 p-2">
-        <RefreshCw className="h-4 w-4 animate-spin" />
-        <span className="text-sm">Loading available entities...</span>
-      </div>
-    )
+  if (isLoading) {
+    return <EntitySelectorSkeleton className={className} />
   }
 
   if (error) {
@@ -160,7 +146,7 @@ export function EntitySelector({
       <Alert>
         <AlertCircle className="h-4 w-4" />
         <AlertDescription>{error}</AlertDescription>
-        <Button variant="outline" size="sm" onClick={loadEntities} className="ml-2">
+        <Button variant="outline" size="sm" onClick={() => refetch()} className="ml-2">
           <RefreshCw className="h-4 w-4 mr-1" />
           Retry
         </Button>
