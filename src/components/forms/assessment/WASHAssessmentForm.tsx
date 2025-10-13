@@ -4,23 +4,33 @@ import { useState, useEffect, useMemo } from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
+
+// External libraries
+import { Droplets, AlertTriangle, Users, FileText, Save, CheckCircle, Loader2 } from 'lucide-react'
+
+// UI components
+import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { Checkbox } from '@/components/ui/checkbox'
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form'
 import { Input } from '@/components/ui/input'
-import { Checkbox } from '@/components/ui/checkbox'
-import { Textarea } from '@/components/ui/textarea'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { Badge } from '@/components/ui/badge'
+import { Textarea } from '@/components/ui/textarea'
 import { Alert, AlertDescription } from '@/components/ui/alert'
+
+// Internal components
 import { GPSCapture } from '@/components/shared/GPSCapture'
 import { MediaField } from '@/components/shared/MediaField'
-import { WATER_SOURCE_OPTIONS, CreateWASHAssessmentRequest } from '@/types/rapid-assessment'
-import { WASHAssessment } from '@/types/rapid-assessment'
-import { getCurrentUser } from '@/lib/auth/get-current-user'
-import { useEntityStore } from '@/stores/entity.store'
+
+// Stores and hooks
+import { useWASHAssessments, useCreateRapidAssessment } from '@/hooks/useRapidAssessments'
+import { useFilteredEntities, type Entity } from '@/hooks/useEntities'
 import { useWASHAssessment } from '@/hooks/useWASHAssessment'
-import { Droplets, AlertTriangle, Users, FileText, Save, CheckCircle, Loader2 } from 'lucide-react'
+
+// Utilities and types
+import { WATER_SOURCE_OPTIONS, CreateWASHAssessmentRequest } from '@/types/rapid-assessment'
+import { getCurrentUser } from '@/lib/auth/get-current-user'
 
 // Form validation schema
 const washAssessmentSchema = z.object({
@@ -87,7 +97,13 @@ export function WASHAssessmentForm({
     captureMethod: 'GPS' | 'MANUAL';
   } | null>(null)
 
-  const { fetchEntities } = useEntityStore()
+  // TanStack Query hooks for server state
+  const { data: recentAssessments, isLoading: assessmentsLoading } = useWASHAssessments()
+  const { data: filteredEntities, isLoading: entitiesLoading } = useFilteredEntities('')
+  const createAssessment = useCreateRapidAssessment()
+  
+  // Local hooks for drafts
+  const { drafts, loadAssessments, loadDrafts, saveDraft, deleteDraft } = useWASHAssessment()
 
   const form = useForm<WASHAssessmentFormData>({
     resolver: zodResolver(washAssessmentSchema),
@@ -551,7 +567,7 @@ export function WASHAssessmentForm({
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-medium text-blue-600">Recent Assessments</p>
-                <p className="text-2xl font-bold text-blue-900">{recentAssessments.length}</p>
+                <p className="text-2xl font-bold text-blue-900">{recentAssessments?.length || 0}</p>
               </div>
               <FileText className="h-8 w-8 text-blue-500" />
             </div>

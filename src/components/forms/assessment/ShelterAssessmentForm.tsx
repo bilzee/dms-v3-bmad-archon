@@ -270,39 +270,26 @@ export function ShelterAssessmentForm({
         }
       }
 
-      const result = await fetch('/api/v1/rapid-assessments', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(assessmentData)
-      })
+      await createAssessment.mutateAsync(assessmentData)
       
-      const response = await result.json()
-      
-      if (response.success) {
-        // Delete the draft if this was submitted from a draft
-        if (selectedDraftId) {
-          await deleteDraft(selectedDraftId)
-        }
-        
-        setSubmitMessage('Shelter assessment submitted successfully!')
-        setSubmitMessageType('success')
-        form.reset()
-        setPhotos([])
-        setSelectedDamages([])
-        
-        // Redirect to assessments list after 2 seconds
-        setTimeout(() => {
-          window.location.href = '/assessor/rapid-assessments'
-        }, 2000)
-      } else {
-        setSubmitMessage(response.message || 'Failed to submit assessment')
-        setSubmitMessageType('error')
+      // Delete the draft if this was submitted from a draft
+      if (selectedDraftId) {
+        await deleteDraft(selectedDraftId)
       }
+      
+      setSubmitMessage('Shelter assessment submitted successfully!')
+      setSubmitMessageType('success')
+      form.reset()
+      setPhotos([])
+      setSelectedDamages([])
+      
+      // Redirect to assessments list after 2 seconds
+      setTimeout(() => {
+        window.location.href = '/assessor/rapid-assessments'
+      }, 2000)
     } catch (error) {
       console.error('Form submission error:', error)
-      setSubmitMessage('An unexpected error occurred. Please try again.')
+      setSubmitMessage(error instanceof Error ? error.message : 'An unexpected error occurred. Please try again.')
       setSubmitMessageType('error')
     } finally {
       setIsFinalSubmitting(false)
@@ -371,7 +358,7 @@ export function ShelterAssessmentForm({
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-medium text-blue-600">Recent Assessments</p>
-                <p className="text-2xl font-bold text-blue-900">{recentAssessments.length}</p>
+                <p className="text-2xl font-bold text-blue-900">{recentAssessments?.length || 0}</p>
               </div>
               <FileText className="h-8 w-8 text-blue-500" />
             </div>
@@ -451,11 +438,21 @@ export function ShelterAssessmentForm({
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
-                          {filteredEntities.map((entity) => (
-                            <SelectItem key={entity.id} value={entity.id}>
-                              {entity.name} ({entity.type}) {entity.location && `- ${entity.location}`}
+                          {entitiesLoading ? (
+                            <SelectItem value="loading" disabled>
+                              Loading entities...
                             </SelectItem>
-                          ))}
+                          ) : filteredEntities?.length === 0 ? (
+                            <SelectItem value="no-entities" disabled>
+                              No entities found
+                            </SelectItem>
+                          ) : (
+                            filteredEntities.map((entity) => (
+                              <SelectItem key={entity.id} value={entity.id}>
+                                {entity.name} ({entity.type}) {entity.location && `- ${entity.location}`}
+                              </SelectItem>
+                            ))
+                          )}
                         </SelectContent>
                       </Select>
                       <FormDescription>
