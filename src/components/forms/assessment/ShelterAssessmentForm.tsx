@@ -72,7 +72,7 @@ export function ShelterAssessmentForm({
 
   // TanStack Query hooks for server state
   const { data: recentAssessments, isLoading: assessmentsLoading } = useShelterAssessments()
-  const { data: filteredEntities, isLoading: entitiesLoading } = useFilteredEntities('')
+  const { data: filteredEntities, isLoading: entitiesLoading } = useFilteredEntities(entitySearchTerm)
   const createAssessment = useCreateRapidAssessment()
   
   // Local hooks for drafts
@@ -106,51 +106,7 @@ export function ShelterAssessmentForm({
     initializeData()
   }, [loadAssessments, loadDrafts])
 
-  // Load entities from API
-  useEffect(() => {
-    const loadEntities = async () => {
-      try {
-        const result = await fetch('/api/v1/entities/public')
-        const response = await result.json()
-        
-        if (response.success) {
-          const fetchedEntities: Entity[] = response.data.map((entity: any) => ({
-            id: entity.id,
-            name: entity.name,
-            type: entity.type,
-            location: entity.location
-          }))
-          setFilteredEntities(fetchedEntities)
-        } else {
-          console.error('Failed to load entities:', response.error)
-          setFilteredEntities([])
-        }
-      } catch (error) {
-        console.error('Error loading entities:', error)
-        setFilteredEntities([])
-      }
-    }
-    loadEntities()
-  }, [])
-
-  // Filter entities based on search term
-  useEffect(() => {
-    if (entitySearchTerm.trim() === '') {
-      // If entities were loaded, use them; otherwise keep filteredEntities as is
-      if (entities.length > 0) {
-        setFilteredEntities(entities)
-      }
-    } else {
-      const sourceList = entities.length > 0 ? entities : filteredEntities
-      const filtered = sourceList.filter(entity => 
-        entity.name.toLowerCase().includes(entitySearchTerm.toLowerCase()) ||
-        entity.type.toLowerCase().includes(entitySearchTerm.toLowerCase()) ||
-        (entity.location && entity.location.toLowerCase().includes(entitySearchTerm.toLowerCase()))
-      )
-      setFilteredEntities(filtered)
-    }
-  }, [entitySearchTerm, entities])
-
+  
   // Auto-capture GPS location
   useEffect(() => {
     const captureGPS = () => {

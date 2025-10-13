@@ -59,12 +59,6 @@ interface WASHAssessmentFormProps {
   onCancel?: () => void
 }
 
-interface Entity {
-  id: string;
-  name: string;
-  type: string;
-  location: string | null;
-}
 
 export function WASHAssessmentForm({ 
   onDataChange, 
@@ -76,11 +70,9 @@ export function WASHAssessmentForm({
   const [selectedSources, setSelectedSources] = useState<string[]>(
     initialData?.waterSource || []
   )
+  const [entitySearchTerm, setEntitySearchTerm] = useState('')
   const [photos, setPhotos] = useState<string[]>([])
   const [currentUser, setCurrentUser] = useState<any>(null)
-  const [entities, setEntities] = useState<Entity[]>([])
-  const [filteredEntities, setFilteredEntities] = useState<Entity[]>([])
-  const [entitySearchTerm, setEntitySearchTerm] = useState('')
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [submitMessage, setSubmitMessage] = useState('')
   const [submitMessageType, setSubmitMessageType] = useState<'success' | 'error'>('success')
@@ -88,7 +80,7 @@ export function WASHAssessmentForm({
   const [isFinalSubmitting, setIsFinalSubmitting] = useState(false)
   const [isMounted, setIsMounted] = useState(false)
   
-  const { recentAssessments, saveDraft, deleteDraft, drafts } = useWASHAssessment()
+  const { saveDraft, deleteDraft, drafts } = useWASHAssessment()
   const [gpsLocation, setGpsLocation] = useState<{
     latitude: number;
     longitude: number;
@@ -98,12 +90,12 @@ export function WASHAssessmentForm({
   } | null>(null)
 
   // TanStack Query hooks for server state
-  const { data: recentAssessments, isLoading: assessmentsLoading } = useWASHAssessments()
-  const { data: filteredEntities, isLoading: entitiesLoading } = useFilteredEntities('')
+  const { data: serverAssessments, isLoading: assessmentsLoading } = useWASHAssessments()
+  const { data: filteredEntities, isLoading: entitiesLoading } = useFilteredEntities(entitySearchTerm)
   const createAssessment = useCreateRapidAssessment()
   
   // Local hooks for drafts
-  const { drafts, loadAssessments, loadDrafts, saveDraft, deleteDraft } = useWASHAssessment()
+  const { loadAssessments, loadDrafts } = useWASHAssessment()
 
   const form = useForm<WASHAssessmentFormData>({
     resolver: zodResolver(washAssessmentSchema),
@@ -216,52 +208,7 @@ export function WASHAssessmentForm({
     captureGPS()
   }, [])
 
-  // Load entities from API
-  useEffect(() => {
-    const loadEntities = async () => {
-      try {
-        const result = await fetch('/api/v1/entities/public')
-        const response = await result.json()
-        
-        if (response.success) {
-          const fetchedEntities: Entity[] = response.data.map((entity: any) => ({
-            id: entity.id,
-            name: entity.name,
-            type: entity.type,
-            location: entity.location
-          }))
-          setEntities(fetchedEntities)
-          setFilteredEntities(fetchedEntities)
-        } else {
-          console.error('Failed to load entities:', response.error)
-          // Set empty arrays if API fails - no mock fallback to avoid ID mismatches
-          setEntities([])
-          setFilteredEntities([])
-        }
-      } catch (error) {
-        console.error('Error loading entities:', error)
-        // Set empty arrays if fetch fails - no mock fallback to avoid ID mismatches
-        setEntities([])
-        setFilteredEntities([])
-      }
-    }
-    loadEntities()
-  }, [])
-
-  // Filter entities based on search term
-  useEffect(() => {
-    if (entitySearchTerm.trim() === '') {
-      setFilteredEntities(entities)
-    } else {
-      const filtered = entities.filter(entity => 
-        entity.name.toLowerCase().includes(entitySearchTerm.toLowerCase()) ||
-        entity.type.toLowerCase().includes(entitySearchTerm.toLowerCase()) ||
-        (entity.location && entity.location.toLowerCase().includes(entitySearchTerm.toLowerCase()))
-      )
-      setFilteredEntities(filtered)
-    }
-  }, [entitySearchTerm, entities])
-
+  
   // Watch form changes and notify parent
   useEffect(() => {
     const subscription = form.watch((value) => {
@@ -567,7 +514,7 @@ export function WASHAssessmentForm({
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-medium text-blue-600">Recent Assessments</p>
-                <p className="text-2xl font-bold text-blue-900">{recentAssessments?.length || 0}</p>
+                <p className="text-2xl font-bold text-blue-900">{serverAssessments?.length || 0}</p>
               </div>
               <FileText className="h-8 w-8 text-blue-500" />
             </div>

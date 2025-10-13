@@ -162,11 +162,12 @@ export function FoodAssessmentForm({
   }
 
   const handleSourceToggle = (source: string, checked: boolean) => {
-    if (checked) {
-      setSelectedSources([...selectedSources, source])
-    } else {
-      setSelectedSources(selectedSources.filter(s => s !== source))
-    }
+    const newSources = checked 
+      ? [...selectedSources, source]
+      : selectedSources.filter(s => s !== source)
+    
+    setSelectedSources(newSources)
+    form.setValue('foodSource', newSources as any) // Sync with form field
   }
 
   const handleLocationCapture = (location: any) => {

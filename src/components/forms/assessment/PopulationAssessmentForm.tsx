@@ -83,7 +83,6 @@ export function PopulationAssessmentForm({
 }: PopulationAssessmentFormProps) {
   const { user } = useAuth()
   const { 
-    recentAssessments, 
     drafts, 
     loadAssessments, 
     loadDrafts, 
@@ -91,16 +90,16 @@ export function PopulationAssessmentForm({
     deleteDraft 
   } = usePopulationAssessment()
   
+  // Local state
+  const [searchTerm, setSearchTerm] = useState('')
+  
   // TanStack Query hooks for server state
-  const { data: recentAssessments, isLoading: assessmentsLoading } = usePopulationAssessments()
+  const { data: serverAssessments, isLoading: assessmentsLoading } = usePopulationAssessments()
   const { data: filteredEntities, isLoading: entitiesLoading } = useFilteredEntities(searchTerm)
   const createAssessment = useCreateRapidAssessment()
-  
-  // Local state
-  const [photos, setPhotos] = useState<string[]>(initialData?.photos || [])
+  const [photos, setPhotos] = useState<string[]>([])
   const [isAutoSaving, setIsAutoSaving] = useState(false)
   const [lastSaved, setLastSaved] = useState<Date | null>(null)
-  const [searchTerm, setSearchTerm] = useState('')
   const [currentUser, setCurrentUser] = useState<any>(null)
   const [gpsLocation, setGpsLocation] = useState<any>(null)
   const [isFinalSubmitting, setIsFinalSubmitting] = useState(false)
@@ -210,7 +209,7 @@ export function PopulationAssessmentForm({
   }, [autoSave])
 
   // Calculate statistics
-  const recentAssessmentsCount = recentAssessments?.length || 0
+  const recentAssessmentsCount = serverAssessments?.length || 0
   const draftsCount = drafts.length
 
   // Calculate vulnerable groups percentage

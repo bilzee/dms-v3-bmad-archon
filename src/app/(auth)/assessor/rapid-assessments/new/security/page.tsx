@@ -294,7 +294,6 @@ export default function SecurityAssessmentPage() {
           <CardContent>
             <SecurityAssessmentForm
               key={formKey}
-              onSubmit={handleSecuritySubmit}
               onCancel={() => setShowForm(false)}
             />
           </CardContent>

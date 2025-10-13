@@ -294,7 +294,6 @@ export default function PopulationAssessmentPage() {
           <CardContent>
             <PopulationAssessmentForm
               key={formKey}
-              onSubmit={handlePopulationSubmit}
               onCancel={() => setShowForm(false)}
             />
           </CardContent>
