@@ -1,0 +1,346 @@
+import { prisma } from '@/lib/db/client';
+
+export interface EntityAssignmentService {
+  /**
+   * Check if a user is assigned to a specific entity
+   */
+  isUserAssigned(userId: string, entityId: string): Promise<boolean>;
+
+  /**
+   * Get all entities assigned to a user
+   */
+  getUserAssignedEntities(userId: string): Promise<EntityAssignmentSummary[]>;
+
+  /**
+   * Get all users assigned to an entity
+   */
+  getEntityAssignedUsers(entityId: string): Promise<UserAssignmentSummary[]>;
+
+  /**
+   * Validate if user can create assessment for entity
+   */
+  canCreateAssessment(userId: string, entityId: string): Promise<boolean>;
+
+  /**
+   * Filter entities based on user assignments
+   */
+  filterEntitiesByAssignment(userId: string, entities: Entity[]): Promise<Entity[]>;
+}
+
+export interface EntityAssignmentSummary {
+  id: string;
+  name: string;
+  type: string;
+  location: string | null;
+  assignedAt: Date;
+  assignedBy: string;
+}
+
+export interface UserAssignmentSummary {
+  id: string;
+  email: string;
+  name: string;
+  roles: string[];
+  assignedAt: Date;
+  assignedBy: string;
+}
+
+export interface Entity {
+  id: string;
+  name: string;
+  type: string;
+  location: string | null;
+  coordinates?: any;
+  metadata?: any;
+  isActive: boolean;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+export class EntityAssignmentServiceImpl implements EntityAssignmentService {
+  /**
+   * Check if a user is assigned to a specific entity
+   */
+  async isUserAssigned(userId: string, entityId: string): Promise<boolean> {
+    try {
+      const assignment = await prisma.entityAssignment.findFirst({
+        where: {
+          userId,
+          entityId,
+          user: {
+            roles: {
+              some: {
+                role: {
+                  name: 'ASSESSOR'
+                }
+              }
+            }
+          }
+        }
+      });
+
+      return !!assignment;
+    } catch (error) {
+      console.error('Error checking user assignment:', error);
+      return false;
+    }
+  }
+
+  /**
+   * Get all entities assigned to a user with assessor role
+   */
+  async getUserAssignedEntities(userId: string): Promise<EntityAssignmentSummary[]> {
+    try {
+      const assignments = await prisma.entityAssignment.findMany({
+        where: {
+          userId,
+          user: {
+            roles: {
+              some: {
+                role: {
+                  name: 'ASSESSOR'
+                }
+              }
+            }
+          },
+          entity: {
+            isActive: true
+          }
+        },
+        include: {
+          entity: true
+        },
+        orderBy: {
+          assignedAt: 'desc'
+        }
+      });
+
+      return assignments.map(assignment => ({
+        id: assignment.entity.id,
+        name: assignment.entity.name,
+        type: assignment.entity.type,
+        location: assignment.entity.location,
+        assignedAt: assignment.assignedAt,
+        assignedBy: assignment.assignedBy
+      }));
+    } catch (error) {
+      console.error('Error getting user assigned entities:', error);
+      return [];
+    }
+  }
+
+  /**
+   * Get all users assigned to an entity
+   */
+  async getEntityAssignedUsers(entityId: string): Promise<UserAssignmentSummary[]> {
+    try {
+      const assignments = await prisma.entityAssignment.findMany({
+        where: {
+          entityId,
+          user: {
+            isActive: true
+          }
+        },
+        include: {
+          user: {
+            include: {
+              roles: {
+                include: {
+                  role: true
+                }
+              }
+            }
+          }
+        },
+        orderBy: {
+          assignedAt: 'desc'
+        }
+      });
+
+      return assignments.map(assignment => ({
+        id: assignment.user.id,
+        email: assignment.user.email,
+        name: assignment.user.name,
+        roles: assignment.user.roles.map(r => r.role.name),
+        assignedAt: assignment.assignedAt,
+        assignedBy: assignment.assignedBy
+      }));
+    } catch (error) {
+      console.error('Error getting entity assigned users:', error);
+      return [];
+    }
+  }
+
+  /**
+   * Validate if user can create assessment for entity
+   * User must be assigned to entity and have assessor role
+   */
+  async canCreateAssessment(userId: string, entityId: string): Promise<boolean> {
+    try {
+      // Check if user has assessor role
+      const userWithRole = await prisma.user.findFirst({
+        where: {
+          id: userId,
+          isActive: true,
+          roles: {
+            some: {
+              role: {
+                name: 'ASSESSOR'
+              }
+            }
+          }
+        }
+      });
+
+      if (!userWithRole) {
+        return false;
+      }
+
+      // Check if user is assigned to the entity
+      const assignment = await prisma.entityAssignment.findFirst({
+        where: {
+          userId,
+          entityId
+        }
+      });
+
+      return !!assignment;
+    } catch (error) {
+      console.error('Error checking assessment permission:', error);
+      return false;
+    }
+  }
+
+  /**
+   * Filter entities based on user assignments
+   * Return only entities that the user is assigned to
+   */
+  async filterEntitiesByAssignment(userId: string, entities: Entity[]): Promise<Entity[]> {
+    try {
+      // Get user's assigned entity IDs
+      const assignedEntities = await this.getUserAssignedEntities(userId);
+      const assignedEntityIds = assignedEntities.map(e => e.id);
+
+      // Filter entities to only include assigned ones
+      return entities.filter(entity => assignedEntityIds.includes(entity.id));
+    } catch (error) {
+      console.error('Error filtering entities by assignment:', error);
+      return [];
+    }
+  }
+
+  /**
+   * Get entities available for assessment by user
+   * This combines entity filtering with assignment validation
+   */
+  async getAvailableEntitiesForAssessment(userId: string): Promise<Entity[]> {
+    try {
+      // Get all active entities
+      const allEntities = await prisma.entity.findMany({
+        where: {
+          isActive: true
+        },
+        orderBy: [
+          { type: 'asc' },
+          { name: 'asc' }
+        ]
+      });
+
+      // Filter by user assignments
+      const assignedEntities = await this.filterEntitiesByAssignment(userId, allEntities);
+
+      return assignedEntities.map(entity => ({
+        id: entity.id,
+        name: entity.name,
+        type: entity.type,
+        location: entity.location,
+        coordinates: entity.coordinates,
+        metadata: entity.metadata,
+        isActive: entity.isActive,
+        createdAt: entity.createdAt,
+        updatedAt: entity.updatedAt
+      }));
+    } catch (error) {
+      console.error('Error getting available entities for assessment:', error);
+      return [];
+    }
+  }
+
+  /**
+   * Check if user can access a specific assessment
+   * User can access if they are assigned to the assessment's entity
+   */
+  async canAccessAssessment(userId: string, assessmentId: string): Promise<boolean> {
+    try {
+      // Get the assessment and its entity
+      const assessment = await prisma.rapidAssessment.findUnique({
+        where: { id: assessmentId },
+        include: {
+          affectedEntity: true
+        }
+      });
+
+      if (!assessment) {
+        return false;
+      }
+
+      // Check if user is assigned to the assessment's entity
+      return await this.isUserAssigned(userId, assessment.affectedEntityId);
+    } catch (error) {
+      console.error('Error checking assessment access:', error);
+      return false;
+    }
+  }
+
+  /**
+   * Get assessment statistics for a user's assigned entities
+   */
+  async getUserAssessmentStats(userId: string): Promise<{
+    totalEntities: number;
+    entitiesWithAssessments: number;
+    totalAssessments: number;
+    assessmentsByType: Record<string, number>;
+  }> {
+    try {
+      const assignedEntities = await this.getUserAssignedEntities(userId);
+      const entityIds = assignedEntities.map(e => e.id);
+
+      // Get assessments for user's assigned entities
+      const assessments = await prisma.rapidAssessment.findMany({
+        where: {
+          affectedEntityId: {
+            in: entityIds
+          }
+        }
+      });
+
+      // Group assessments by type
+      const assessmentsByType: Record<string, number> = {};
+      assessments.forEach(assessment => {
+        const type = assessment.rapidAssessmentType;
+        assessmentsByType[type] = (assessmentsByType[type] || 0) + 1;
+      });
+
+      // Count unique entities with assessments
+      const entitiesWithAssessments = new Set(assessments.map(a => a.affectedEntityId)).size;
+
+      return {
+        totalEntities: assignedEntities.length,
+        entitiesWithAssessments,
+        totalAssessments: assessments.length,
+        assessmentsByType
+      };
+    } catch (error) {
+      console.error('Error getting user assessment stats:', error);
+      return {
+        totalEntities: 0,
+        entitiesWithAssessments: 0,
+        totalAssessments: 0,
+        assessmentsByType: {}
+      };
+    }
+  }
+}
+
+// Export singleton instance
+export const entityAssignmentService = new EntityAssignmentServiceImpl();

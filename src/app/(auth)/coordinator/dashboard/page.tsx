@@ -5,7 +5,8 @@ import { RoleBasedRoute } from '@/components/shared/RoleBasedRoute';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Users, AlertTriangle, CheckCircle, Clock } from 'lucide-react';
+import { Users, AlertTriangle, CheckCircle, Clock, FileText, Activity, PlusCircle } from 'lucide-react';
+import Link from 'next/link';
 
 export default function CoordinatorDashboard() {
   const { currentRole, user } = useAuth();
@@ -81,6 +82,32 @@ export default function CoordinatorDashboard() {
             </CardContent>
           </Card>
         </div>
+
+        {/* Rapid Assessments Access */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Rapid Assessments</CardTitle>
+            <CardDescription>
+              Access and monitor rapid assessment activities
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="grid gap-4 md:grid-cols-2">
+              <Link href="/assessor/rapid-assessments">
+                <Button variant="outline" className="w-full justify-start">
+                  <Activity className="mr-2 h-4 w-4" />
+                  View All Assessments
+                </Button>
+              </Link>
+              <Link href="/assessor/rapid-assessments/new">
+                <Button className="w-full justify-start">
+                  <PlusCircle className="mr-2 h-4 w-4" />
+                  Create New Assessment
+                </Button>
+              </Link>
+            </div>
+          </CardContent>
+        </Card>
 
         {/* Response Management */}
         <div className="grid gap-6 md:grid-cols-2">

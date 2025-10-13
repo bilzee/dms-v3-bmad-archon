@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import './globals.css';
 import { Header } from '@/components/shared/Header';
+import { QueryProvider } from '@/components/providers/QueryProvider';
 
 export const metadata: Metadata = {
   title: 'Disaster Management System - Borno State',
@@ -33,13 +34,14 @@ export default function RootLayout({
         <link rel="apple-touch-icon" href="/icons/icon-192x192.png" />
       </head>
       <body className="bg-gray-50 min-h-screen">
-        <div className="min-h-screen flex flex-col">
-          <Header />
+        <QueryProvider>
+          <div className="min-h-screen flex flex-col">
+            <Header />
 
-          {/* Main content */}
-          <main className="flex-1">
-            {children}
-          </main>
+            {/* Main content */}
+            <main className="flex-1">
+              {children}
+            </main>
 
           {/* Footer */}
           <footer className="bg-white border-t border-gray-200">
@@ -48,8 +50,9 @@ export default function RootLayout({
                 Disaster Management System - Borno State, Nigeria
               </p>
             </div>
-          </footer>
-        </div>
+            </footer>
+          </div>
+        </QueryProvider>
       </body>
     </html>
   );

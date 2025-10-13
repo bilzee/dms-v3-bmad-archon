@@ -1,9 +1,13 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect, useCallback, useMemo } from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
+import { useAuth } from '@/hooks/useAuth'
+import { usePopulationAssessment } from '@/hooks/usePopulationAssessment'
+import { useEntityStore, Entity } from '@/stores/entity.store'
+import { getCurrentUser } from '@/lib/auth/get-current-user'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form'
@@ -14,11 +18,13 @@ import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Badge } from '@/components/ui/badge'
 import { GPSCapture } from '@/components/shared/GPSCapture'
 import { MediaField } from '@/components/shared/MediaField'
-import { Users, AlertTriangle, Heart, Baby } from 'lucide-react'
+import { 
+  Users, AlertTriangle, Heart, Baby, Activity, Clock, MapPin, 
+  FileText, Save, CheckCircle, Loader2, Camera, TrendingUp 
+} from 'lucide-react'
 
 // Form validation schema
 const populationAssessmentSchema = z.object({
-  // Base assessment fields
   rapidAssessmentDate: z.date(),
   affectedEntityId: z.string().min(1, 'Entity is required'),
   assessorName: z.string().min(1, 'Assessor name is required'),
@@ -54,28 +60,44 @@ const populationAssessmentSchema = z.object({
 type PopulationAssessmentFormData = z.infer<typeof populationAssessmentSchema>
 
 interface PopulationAssessmentFormProps {
-  onSubmit: (data: PopulationAssessmentFormData) => Promise<void>
-  onCancel: () => void
+  onCancel?: () => void
   initialData?: Partial<PopulationAssessmentFormData>
   isLoading?: boolean
-  entities?: Array<{ id: string; name: string; type: string }>
 }
 
 export function PopulationAssessmentForm({ 
-  onSubmit, 
   onCancel, 
   initialData,
-  isLoading = false,
-  entities = []
+  isLoading = false
 }: PopulationAssessmentFormProps) {
+  const { user } = useAuth()
+  const { 
+    recentAssessments, 
+    drafts, 
+    loadAssessments, 
+    loadDrafts, 
+    saveDraft, 
+    deleteDraft 
+  } = usePopulationAssessment()
+  
+  const { entities, searchEntities, fetchEntities } = useEntityStore()
   const [photos, setPhotos] = useState<string[]>(initialData?.photos || [])
+  const [isAutoSaving, setIsAutoSaving] = useState(false)
+  const [lastSaved, setLastSaved] = useState<Date | null>(null)
+  const [searchTerm, setSearchTerm] = useState('')
+  const [filteredEntities, setFilteredEntities] = useState(entities)
+  const [currentUser, setCurrentUser] = useState<any>(null)
+  const [gpsLocation, setGpsLocation] = useState<any>(null)
+  const [isFinalSubmitting, setIsFinalSubmitting] = useState(false)
+  const [submitMessage, setSubmitMessage] = useState('')
+  const [submitMessageType, setSubmitMessageType] = useState<'success' | 'error'>('success')
 
   const form = useForm<PopulationAssessmentFormData>({
     resolver: zodResolver(populationAssessmentSchema),
     defaultValues: {
       rapidAssessmentDate: initialData?.rapidAssessmentDate || new Date(),
       affectedEntityId: initialData?.affectedEntityId || '',
-      assessorName: initialData?.assessorName || '',
+      assessorName: initialData?.assessorName || user?.name || '',
       gpsCoordinates: initialData?.gpsCoordinates,
       totalHouseholds: initialData?.totalHouseholds || 0,
       totalPopulation: initialData?.totalPopulation || 0,
@@ -93,28 +115,113 @@ export function PopulationAssessmentForm({
     }
   })
 
-  const handleLocationCapture = (lat: number, lng: number) => {
-    form.setValue('gpsCoordinates', {
-      latitude: lat,
-      longitude: lng,
-      timestamp: new Date(),
-      captureMethod: 'GPS'
-    })
-  }
-
-  const handleFormSubmit = async (data: PopulationAssessmentFormData) => {
+  // Define loadEntities function following knowledge base best practices
+  const loadEntities = useCallback(async () => {
     try {
-      await onSubmit({
-        ...data,
-        photos
-      })
+      await fetchEntities()
     } catch (error) {
-      console.error('Form submission error:', error)
+      console.error('Error loading entities:', error)
     }
-  }
+  }, [fetchEntities])
+
+  // Load data on mount following knowledge base Option 3 pattern
+  useEffect(() => {
+    const initialize = async () => {
+      await Promise.all([
+        loadAssessments(),
+        loadDrafts(), 
+        loadEntities()
+      ]);
+      
+      // Initialize current user and GPS
+      const initializeUserAndGPS = async () => {
+        try {
+          const user = await getCurrentUser()
+          setCurrentUser(user)
+          
+          // Try to get GPS location
+          if ('geolocation' in navigator) {
+            navigator.geolocation.getCurrentPosition(
+              (position) => {
+                setGpsLocation({
+                  latitude: position.coords.latitude,
+                  longitude: position.coords.longitude,
+                  accuracy: position.coords.accuracy,
+                  timestamp: new Date(),
+                  captureMethod: 'GPS'
+                })
+              },
+              () => {
+                // Set default location
+                setGpsLocation({
+                  latitude: 9.0820, // Default Nigeria coordinates
+                  longitude: 8.6753,
+                  accuracy: 1000,
+                  timestamp: new Date(),
+                  captureMethod: 'MANUAL'
+                })
+              },
+              {
+                enableHighAccuracy: true,
+                timeout: 10000,
+                maximumAge: 60000
+              }
+            )
+          }
+        } catch (error) {
+          console.error('Error initializing user:', error)
+        }
+      }
+      
+      initializeUserAndGPS()
+    };
+    
+    initialize();
+  }, [loadAssessments, loadDrafts, loadEntities])
+
+  // Update filtered entities based on search
+  useEffect(() => {
+    if (searchTerm) {
+      const filtered = entities.filter(entity => 
+        entity.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        entity.type.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        entity.description?.toLowerCase().includes(searchTerm.toLowerCase())
+      )
+      setFilteredEntities(filtered)
+    } else {
+      setFilteredEntities(entities)
+    }
+  }, [searchTerm, entities])
+
+  // Auto-save functionality
+  const autoSave = useCallback(async () => {
+    if (!form.formState.isDirty) return
+    
+    try {
+      setIsAutoSaving(true)
+      const currentValues = form.getValues()
+      await saveDraft(currentValues)
+      setLastSaved(new Date())
+      form.reset(form.getValues()) // Mark as clean
+    } catch (error) {
+      console.error('Auto-save failed:', error)
+    } finally {
+      setIsAutoSaving(false)
+    }
+  }, [form, saveDraft])
+
+  // Set up auto-save interval
+  useEffect(() => {
+    const interval = setInterval(autoSave, 30000) // Auto-save every 30 seconds
+    return () => clearInterval(interval)
+  }, [autoSave])
+
+  // Calculate statistics
+  const recentAssessmentsCount = recentAssessments.length
+  const draftsCount = drafts.length
 
   // Calculate vulnerable groups percentage
-  const calculateVulnerablePercentage = () => {
+  const calculateVulnerablePercentage = useMemo(() => {
     const totalPop = form.getValues('totalPopulation')
     if (totalPop === 0) return 0
     
@@ -126,10 +233,28 @@ export function PopulationAssessmentForm({
       form.getValues('elderlyPersons')
     
     return Math.round((vulnerable / totalPop) * 100)
-  }
+  }, [form.watch()])
+
+  const criticalGapsCount = useMemo(() => {
+    let count = 0
+    const values = form.getValues()
+    if (values.numberLivesLost > 0) count++
+    if (values.numberInjured > 20) count++ // High injury threshold
+    if (values.separatedChildren > 0) count++
+    if (calculateVulnerablePercentage > 40) count++ // High vulnerable percentage
+    return count
+  }, [form.watch(), calculateVulnerablePercentage])
+
+  // Calculate population density
+  const populationDensity = useMemo(() => {
+    const households = form.getValues('totalHouseholds')
+    const population = form.getValues('totalPopulation')
+    if (households === 0) return 0
+    return Math.round(population / households)
+  }, [form.watch()])
 
   // Get severity level for casualties
-  const getSeverityLevel = (field: 'numberLivesLost' | 'numberInjured') => {
+  const getSeverityLevel = useCallback((field: 'numberLivesLost' | 'numberInjured') => {
     const value = form.watch(field)
     
     if (field === 'numberLivesLost') {
@@ -143,10 +268,215 @@ export function PopulationAssessmentForm({
       if (value <= 50) return { level: 'medium', color: 'default', text: 'Medium Injuries' }
       return { level: 'high', color: 'destructive', text: 'High Injuries' }
     }
+  }, [form.watch])
+
+  // Get population status
+  const getPopulationStatus = useMemo(() => {
+    const totalPop = form.getValues('totalPopulation')
+    const vulnerablePercentage = calculateVulnerablePercentage
+    const casualties = form.getValues('numberLivesLost')
+    const injured = form.getValues('numberInjured')
+    
+    if (casualties > 20 || injured > 100) {
+      return { 
+        status: 'critical', 
+        color: 'destructive', 
+        text: 'Critical Emergency',
+        description: 'High casualty count requiring immediate response'
+      }
+    } else if (casualties > 0 || vulnerablePercentage > 50) {
+      return { 
+        status: 'high', 
+        color: 'destructive', 
+        text: 'High Risk Population',
+        description: 'Significant vulnerable population or casualties present'
+      }
+    } else if (vulnerablePercentage > 30) {
+      return { 
+        status: 'medium', 
+        color: 'default', 
+        text: 'Moderate Vulnerability',
+        description: 'Moderate percentage of vulnerable groups'
+      }
+    } else if (totalPop > 0) {
+      return { 
+        status: 'stable', 
+        color: 'default', 
+        text: 'Stable Population',
+        description: 'Population baseline established'
+      }
+    } else {
+      return { 
+        status: 'unknown', 
+        color: 'secondary', 
+        text: 'Population Unknown',
+        description: 'Population data needed'
+      }
+    }
+  }, [form.watch(), calculateVulnerablePercentage])
+
+  // Gap analysis
+  const getGapStatus = useCallback((field: keyof PopulationAssessmentFormData) => {
+    const value = form.watch(field)
+    const totalPop = form.getValues('totalPopulation')
+    
+    switch (field) {
+      case 'numberLivesLost':
+        return value > 0 ? 'gap_identified' : 'no_gap'
+      case 'numberInjured':
+        return value > 10 ? 'gap_identified' : 'no_gap'
+      case 'separatedChildren':
+        return value > 0 ? 'gap_identified' : 'no_gap'
+      case 'populationUnder5':
+        return totalPop > 0 && (value / totalPop) > 0.15 ? 'gap_identified' : 'no_gap'
+      default:
+        return 'neutral'
+    }
+  }, [form.watch])
+
+  const gapStatuses = useMemo(() => ({
+    numberLivesLost: getGapStatus('numberLivesLost'),
+    numberInjured: getGapStatus('numberInjured'),
+    separatedChildren: getGapStatus('separatedChildren'),
+    populationUnder5: getGapStatus('populationUnder5')
+  }), [form.watch(), getGapStatus])
+
+  const handleLocationCapture = useCallback((lat: number, lng: number) => {
+    form.setValue('gpsCoordinates', {
+      latitude: lat,
+      longitude: lng,
+      timestamp: new Date(),
+      captureMethod: 'GPS'
+    })
+  }, [form])
+
+  const handleFinalSubmit = async () => {
+    if (!currentUser || !gpsLocation) {
+      setSubmitMessage('User authentication or GPS location not available')
+      setSubmitMessageType('error')
+      return
+    }
+
+    // Validate form first
+    const isValid = await form.trigger()
+    if (!isValid) {
+      setSubmitMessage('Please fill in all required fields before submitting.')
+      setSubmitMessageType('error')
+      return
+    }
+
+    setIsFinalSubmitting(true)
+    setSubmitMessage('')
+
+    try {
+      const formData = form.getValues()
+      const assessmentData = {
+        rapidAssessmentType: 'POPULATION' as any,
+        rapidAssessmentDate: new Date(),
+        affectedEntityId: formData.affectedEntityId,
+        assessorName: currentUser.name,
+        gpsCoordinates: gpsLocation,
+        photos: photos,
+        populationAssessment: {
+          totalHouseholds: formData.totalHouseholds,
+          totalPopulation: formData.totalPopulation,
+          populationMale: formData.populationMale,
+          populationFemale: formData.populationFemale,
+          populationUnder5: formData.populationUnder5,
+          pregnantWomen: formData.pregnantWomen,
+          lactatingMothers: formData.lactatingMothers,
+          personWithDisability: formData.personWithDisability,
+          elderlyPersons: formData.elderlyPersons,
+          separatedChildren: formData.separatedChildren,
+          numberLivesLost: formData.numberLivesLost,
+          numberInjured: formData.numberInjured,
+          additionalPopulationDetails: formData.additionalPopulationDetails ? { notes: formData.additionalPopulationDetails } : undefined
+        }
+      }
+
+      const result = await fetch('/api/v1/rapid-assessments', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(assessmentData)
+      })
+      
+      const response = await result.json()
+      
+      if (response.success) {
+        setSubmitMessage('Population assessment submitted successfully!')
+        setSubmitMessageType('success')
+        form.reset()
+        setPhotos([])
+        
+        // Redirect to assessments list after 2 seconds
+        setTimeout(() => {
+          window.location.href = '/assessor/rapid-assessments'
+        }, 2000)
+      } else {
+        setSubmitMessage(response.message || 'Failed to submit assessment')
+        setSubmitMessageType('error')
+      }
+    } catch (error) {
+      console.error('Form submission error:', error)
+      setSubmitMessage('Failed to submit assessment. Please try again.')
+      setSubmitMessageType('error')
+    } finally {
+      setIsFinalSubmitting(false)
+    }
+  }
+
+  const handleSaveDraft = async () => {
+    await autoSave()
+  }
+
+  const getStatusVariant = (status: string) => {
+    switch (status) {
+      case 'no_gap': return 'default'
+      case 'gap_identified': return 'destructive'
+      default: return 'outline'
+    }
   }
 
   return (
     <div className="space-y-6">
+      {/* Statistics Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Recent Assessments</CardTitle>
+            <FileText className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{recentAssessmentsCount}</div>
+            <p className="text-xs text-muted-foreground">Population assessments in last 30 days</p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Drafts</CardTitle>
+            <Save className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{draftsCount}</div>
+            <p className="text-xs text-muted-foreground">Saved drafts</p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Critical Gaps</CardTitle>
+            <AlertTriangle className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-red-600">{criticalGapsCount}</div>
+            <p className="text-xs text-muted-foreground">Issues identified</p>
+          </CardContent>
+        </Card>
+      </div>
+
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
@@ -156,10 +486,24 @@ export function PopulationAssessmentForm({
           <CardDescription>
             Document demographic information and population impact in the affected area
           </CardDescription>
+          <div className="flex items-center gap-2 text-sm text-gray-600">
+            {lastSaved && (
+              <span className="flex items-center gap-1">
+                <CheckCircle className="h-4 w-4 text-green-600" />
+                Last saved: {lastSaved.toLocaleTimeString()}
+              </span>
+            )}
+            {isAutoSaving && (
+              <span className="flex items-center gap-1">
+                <Loader2 className="h-4 w-4 animate-spin" />
+                Auto-saving...
+              </span>
+            )}
+          </div>
         </CardHeader>
         <CardContent>
           <Form {...form}>
-            <form onSubmit={form.handleSubmit(handleFormSubmit)} className="space-y-6">
+            <form className="space-y-6">
               
               {/* Basic Information */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -197,26 +541,34 @@ export function PopulationAssessmentForm({
                 />
               </div>
 
+              {/* Entity Search */}
               <FormField
                 control={form.control}
                 name="affectedEntityId"
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Affected Entity</FormLabel>
-                    <Select onValueChange={field.onChange} defaultValue={field.value}>
-                      <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select affected entity" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        {entities.map((entity) => (
-                          <SelectItem key={entity.id} value={entity.id}>
-                            {entity.name} ({entity.type})
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                    <div className="space-y-2">
+                      <Input
+                        placeholder="Search entities..."
+                        value={searchTerm}
+                        onChange={(e) => setSearchTerm(e.target.value)}
+                      />
+                      <Select onValueChange={field.onChange} defaultValue={field.value}>
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select affected entity" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          {filteredEntities.map((entity) => (
+                            <SelectItem key={entity.id} value={entity.id}>
+                              {entity.name} ({entity.type})
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
                     <FormMessage />
                   </FormItem>
                 )}
@@ -236,12 +588,46 @@ export function PopulationAssessmentForm({
 
               {/* Media Attachments */}
               <div className="space-y-2">
-                <FormLabel>Photos</FormLabel>
+                <FormLabel className="flex items-center gap-2">
+                  <Camera className="h-4 w-4" />
+                  Photos
+                </FormLabel>
                 <MediaField
                   onPhotosChange={setPhotos}
                   initialPhotos={photos}
                   maxPhotos={5}
                 />
+              </div>
+
+              {/* Population Status Overview */}
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div className="p-4 border rounded-lg">
+                  <div className="flex items-center justify-between mb-2">
+                    <h4 className="font-medium">Population Status</h4>
+                    <Badge variant={getPopulationStatus.color as any}>
+                      {getPopulationStatus.text}
+                    </Badge>
+                  </div>
+                  <p className="text-sm text-gray-600">{getPopulationStatus.description}</p>
+                </div>
+
+                <div className="p-4 border rounded-lg">
+                  <div className="flex items-center justify-between mb-2">
+                    <h4 className="font-medium">Vulnerable Groups</h4>
+                    <TrendingUp className="h-4 w-4 text-amber-500" />
+                  </div>
+                  <div className="text-2xl font-bold text-amber-600">{calculateVulnerablePercentage}%</div>
+                  <p className="text-sm text-gray-600">of total population</p>
+                </div>
+
+                <div className="p-4 border rounded-lg">
+                  <div className="flex items-center justify-between mb-2">
+                    <h4 className="font-medium">Population Density</h4>
+                    <Users className="h-4 w-4 text-blue-500" />
+                  </div>
+                  <div className="text-2xl font-bold text-blue-600">{populationDensity}</div>
+                  <p className="text-sm text-gray-600">persons per household</p>
+                </div>
               </div>
 
               {/* Population Overview */}
@@ -295,10 +681,10 @@ export function PopulationAssessmentForm({
                       <div className="flex-1 h-2 bg-gray-200 rounded-full">
                         <div 
                           className="h-2 bg-amber-500 rounded-full transition-all"
-                          style={{ width: `${calculateVulnerablePercentage()}%` }}
+                          style={{ width: `${calculateVulnerablePercentage}%` }}
                         />
                       </div>
-                      <span className="text-sm font-medium">{calculateVulnerablePercentage()}%</span>
+                      <span className="text-sm font-medium">{calculateVulnerablePercentage}%</span>
                     </div>
                     <FormDescription>
                       Percentage of vulnerable population (under 5, pregnant, elderly, disabled)
@@ -375,6 +761,11 @@ export function PopulationAssessmentForm({
                             onChange={(e) => field.onChange(parseInt(e.target.value) || 0)}
                           />
                         </FormControl>
+                        <div className="mt-2">
+                          <Badge variant={getStatusVariant(gapStatuses.populationUnder5)}>
+                            {gapStatuses.populationUnder5 === 'gap_identified' ? 'High Percentage' : 'Normal'}
+                          </Badge>
+                        </div>
                         <FormMessage />
                       </FormItem>
                     )}
@@ -475,6 +866,11 @@ export function PopulationAssessmentForm({
                             onChange={(e) => field.onChange(parseInt(e.target.value) || 0)}
                           />
                         </FormControl>
+                        <div className="mt-2">
+                          <Badge variant={getStatusVariant(gapStatuses.separatedChildren)}>
+                            {gapStatuses.separatedChildren === 'gap_identified' ? 'Protection Issue' : 'None Identified'}
+                          </Badge>
+                        </div>
                         <FormMessage />
                       </FormItem>
                     )}
@@ -513,6 +909,11 @@ export function PopulationAssessmentForm({
                               className={severity.level === 'high' ? 'border-red-300' : ''}
                             />
                           </FormControl>
+                          <div className="mt-2">
+                            <Badge variant={getStatusVariant(gapStatuses.numberLivesLost)}>
+                              {gapStatuses.numberLivesLost === 'gap_identified' ? 'Critical Response Needed' : 'No Lives Lost'}
+                            </Badge>
+                          </div>
                           <FormMessage />
                         </FormItem>
                       )
@@ -542,6 +943,11 @@ export function PopulationAssessmentForm({
                               className={severity.level === 'high' ? 'border-red-300' : ''}
                             />
                           </FormControl>
+                          <div className="mt-2">
+                            <Badge variant={getStatusVariant(gapStatuses.numberInjured)}>
+                              {gapStatuses.numberInjured === 'gap_identified' ? 'Medical Response Required' : 'Low Injuries'}
+                            </Badge>
+                          </div>
                           <FormMessage />
                         </FormItem>
                       )
@@ -583,22 +989,89 @@ export function PopulationAssessmentForm({
                 )}
               />
 
+              {/* Auto-captured Information */}
+              <div className="mt-6 p-4 bg-gray-50 rounded-lg">
+                <h4 className="font-medium mb-2 flex items-center gap-2">
+                  <Activity className="h-4 w-4" />
+                  Auto-captured Information
+                </h4>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
+                  <div className="flex items-center gap-2">
+                    <Users className="h-4 w-4 text-gray-500" />
+                    <span className="font-medium">User:</span> {user?.name || 'Unknown'}
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Clock className="h-4 w-4 text-gray-500" />
+                    <span className="font-medium">Date:</span> {new Date().toLocaleDateString()}
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <MapPin className="h-4 w-4 text-gray-500" />
+                    <span className="font-medium">GPS:</span> 
+                    {form.getValues('gpsCoordinates') 
+                      ? `${form.getValues('gpsCoordinates').latitude.toFixed(6)}, ${form.getValues('gpsCoordinates').longitude.toFixed(6)}`
+                      : 'Not captured'
+                    }
+                  </div>
+                </div>
+              </div>
+
+              {/* Submit Message */}
+              {submitMessage && (
+                <Alert className={submitMessageType === 'error' ? 'border-red-200 bg-red-50' : 'border-green-200 bg-green-50'}>
+                  <AlertDescription className={submitMessageType === 'error' ? 'text-red-800' : 'text-green-800'}>
+                    {submitMessage}
+                  </AlertDescription>
+                </Alert>
+              )}
+
               {/* Form Actions */}
-              <div className="flex justify-end space-x-4">
+              <div className="flex justify-between">
                 <Button
                   type="button"
                   variant="outline"
-                  onClick={onCancel}
-                  disabled={isLoading}
+                  onClick={handleSaveDraft}
+                  disabled={isAutoSaving}
                 >
-                  Cancel
+                  {isAutoSaving ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Saving...
+                    </>
+                  ) : (
+                    <>
+                      <Save className="mr-2 h-4 w-4" />
+                      Save Draft
+                    </>
+                  )}
                 </Button>
-                <Button
-                  type="submit"
-                  disabled={isLoading}
-                >
-                  {isLoading ? 'Saving...' : 'Save Assessment'}
-                </Button>
+                
+                <div className="flex space-x-4">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={onCancel}
+                    disabled={isLoading}
+                  >
+                    Cancel
+                  </Button>
+                  <Button
+                    type="button"
+                    onClick={handleFinalSubmit}
+                    disabled={isLoading || isFinalSubmitting}
+                  >
+                    {isFinalSubmitting ? (
+                      <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        Submitting...
+                      </>
+                    ) : (
+                      <>
+                        <CheckCircle className="mr-2 h-4 w-4" />
+                        Submit Assessment
+                      </>
+                    )}
+                  </Button>
+                </div>
               </div>
             </form>
           </Form>

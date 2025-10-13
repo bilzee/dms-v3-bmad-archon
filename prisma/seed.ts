@@ -178,6 +178,13 @@ async function main() {
 
   // Create sample entities
   console.log('🏢 Creating sample entities...')
+  
+  // Delete existing entities to avoid conflicts (in order of dependency)
+  await prisma.entityAssignment.deleteMany({})
+  await prisma.rapidResponse.deleteMany({})
+  await prisma.rapidAssessment.deleteMany({})
+  await prisma.entity.deleteMany({})
+  
   const entities = [
     { name: 'Maiduguri Metropolitan', type: 'LGA', location: 'Borno State', coordinates: { lat: 11.8311, lng: 13.1511 } },
     { name: 'Jere Local Government', type: 'LGA', location: 'Borno State', coordinates: { lat: 11.8822, lng: 13.2143 } },
@@ -187,11 +194,8 @@ async function main() {
   ]
 
   for (const entityData of entities) {
-    await prisma.entity.upsert({
-      where: { id: entityData.name.toLowerCase().replace(/\s+/g, '-') },
-      update: {},
-      create: {
-        id: entityData.name.toLowerCase().replace(/\s+/g, '-'),
+    await prisma.entity.create({
+      data: {
         name: entityData.name,
         type: entityData.type as any,
         location: entityData.location,

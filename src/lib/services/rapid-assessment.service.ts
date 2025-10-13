@@ -7,6 +7,7 @@ import {
   RapidAssessmentListResponse,
   GapAnalysis
 } from '@/types/rapid-assessment';
+import { entityService } from './entity.service';
 
 export class RapidAssessmentService {
   private prisma: PrismaClient;
@@ -23,6 +24,16 @@ export class RapidAssessmentService {
     assessmentType: RapidAssessmentType
   ): Promise<RapidAssessmentResponse> {
     try {
+      // Validate that the entity exists before creating assessment
+      const entityValidation = await entityService.getEntityById(assessmentData.affectedEntityId);
+      if (!entityValidation.success || !entityValidation.data) {
+        return {
+          success: false,
+          message: 'Invalid entity specified',
+          errors: [`Entity with ID "${assessmentData.affectedEntityId}" does not exist`]
+        };
+      }
+
       const result = await this.prisma.$transaction(async (tx) => {
         // Create the base rapid assessment
         const rapidAssessment = await tx.rapidAssessment.create({
@@ -36,20 +47,79 @@ export class RapidAssessmentService {
 
         // Create type-specific assessment data
         let typeSpecificAssessment = null;
-        const typeKey = this.getTypeKey(assessmentType);
 
-        if (typeKey && assessmentData[typeKey as keyof T]) {
-          const assessmentSpecificData = assessmentData[typeKey as keyof T] as any;
-          
-          // Convert arrays to JSON strings for database storage
-          const processedData = this.processArraysToJson(assessmentSpecificData);
-
-          typeSpecificAssessment = await tx[typeKey].create({
-            data: {
-              ...processedData,
-              rapidAssessmentId: rapidAssessment.id
+        switch (assessmentType) {
+          case RapidAssessmentType.HEALTH:
+            if (assessmentData.healthAssessment) {
+              const processedData = this.processArraysToJson(assessmentData.healthAssessment as any);
+              typeSpecificAssessment = await tx.HealthAssessment.create({
+                data: {
+                  ...processedData,
+                  rapidAssessmentId: rapidAssessment.id
+                }
+              });
             }
-          });
+            break;
+
+          case RapidAssessmentType.POPULATION:
+            if (assessmentData.populationAssessment) {
+              const processedData = this.processArraysToJson(assessmentData.populationAssessment as any);
+              typeSpecificAssessment = await tx.PopulationAssessment.create({
+                data: {
+                  ...processedData,
+                  rapidAssessmentId: rapidAssessment.id
+                }
+              });
+            }
+            break;
+
+          case RapidAssessmentType.FOOD:
+            if (assessmentData.foodAssessment) {
+              const processedData = this.processArraysToJson(assessmentData.foodAssessment as any);
+              typeSpecificAssessment = await tx.FoodAssessment.create({
+                data: {
+                  ...processedData,
+                  rapidAssessmentId: rapidAssessment.id
+                }
+              });
+            }
+            break;
+
+          case RapidAssessmentType.WASH:
+            if (assessmentData.washAssessment) {
+              const processedData = this.processArraysToJson(assessmentData.washAssessment as any);
+              typeSpecificAssessment = await tx.WASHAssessment.create({
+                data: {
+                  ...processedData,
+                  rapidAssessmentId: rapidAssessment.id
+                }
+              });
+            }
+            break;
+
+          case RapidAssessmentType.SHELTER:
+            if (assessmentData.shelterAssessment) {
+              const processedData = this.processArraysToJson(assessmentData.shelterAssessment as any);
+              typeSpecificAssessment = await tx.ShelterAssessment.create({
+                data: {
+                  ...processedData,
+                  rapidAssessmentId: rapidAssessment.id
+                }
+              });
+            }
+            break;
+
+          case RapidAssessmentType.SECURITY:
+            if (assessmentData.securityAssessment) {
+              const processedData = this.processArraysToJson(assessmentData.securityAssessment as any);
+              typeSpecificAssessment = await tx.SecurityAssessment.create({
+                data: {
+                  ...processedData,
+                  rapidAssessmentId: rapidAssessment.id
+                }
+              });
+            }
+            break;
         }
 
         return { rapidAssessment, typeSpecificAssessment };
@@ -64,6 +134,37 @@ export class RapidAssessmentService {
       };
     } catch (error) {
       console.error('Error creating rapid assessment:', error);
+      
+      // Handle specific database errors
+      if (error instanceof Error) {
+        // Prisma foreign key constraint error
+        if (error.message.includes('Foreign key constraint')) {
+          return {
+            success: false,
+            message: 'Entity validation failed',
+            errors: [`The specified entity does not exist in the database. Please select a valid entity and try again.`]
+          };
+        }
+        
+        // Prisma unique constraint error
+        if (error.message.includes('Unique constraint')) {
+          return {
+            success: false,
+            message: 'Duplicate assessment detected',
+            errors: ['An assessment with these details already exists.']
+          };
+        }
+        
+        // Prisma validation error
+        if (error.message.includes('Invalid value')) {
+          return {
+            success: false,
+            message: 'Data validation failed',
+            errors: ['Some provided data is invalid. Please check your input and try again.']
+          };
+        }
+      }
+      
       return {
         success: false,
         message: error instanceof Error ? error.message : 'Failed to create assessment',
@@ -121,17 +222,25 @@ export class RapidAssessmentService {
   async getAssessmentsByUserId(
     userId: string, 
     page: number = 1, 
-    limit: number = 10
+    limit: number = 10,
+    assessmentType?: RapidAssessmentType
   ): Promise<RapidAssessmentListResponse> {
     try {
       const skip = (page - 1) * limit;
       
+      const whereClause: any = {
+        // Note: In the current schema, we don't have a direct userId relationship
+        // This would need to be added or derived from entity assignments
+      };
+      
+      // Add assessment type filter if provided
+      if (assessmentType) {
+        whereClause.rapidAssessmentType = assessmentType;
+      }
+
       const [assessments, total] = await Promise.all([
         this.prisma.rapidAssessment.findMany({
-          where: {
-            // Note: In the current schema, we don't have a direct userId relationship
-            // This would need to be added or derived from entity assignments
-          },
+          where: whereClause,
           include: {
             healthAssessment: true,
             populationAssessment: true,
@@ -145,7 +254,7 @@ export class RapidAssessmentService {
           skip,
           take: limit
         }),
-        this.prisma.rapidAssessment.count()
+        this.prisma.rapidAssessment.count({ where: whereClause })
       ]);
 
       // Process JSON strings back to arrays
@@ -182,6 +291,18 @@ export class RapidAssessmentService {
     assessmentType: RapidAssessmentType
   ): Promise<RapidAssessmentResponse> {
     try {
+      // Validate that the entity exists if entityId is being updated
+      if (updateData.affectedEntityId) {
+        const entityValidation = await entityService.getEntityById(updateData.affectedEntityId);
+        if (!entityValidation.success || !entityValidation.data) {
+          return {
+            success: false,
+            message: 'Invalid entity specified',
+            errors: [`Entity with ID "${updateData.affectedEntityId}" does not exist`]
+          };
+        }
+      }
+
       const result = await this.prisma.$transaction(async (tx) => {
         // Update the base rapid assessment
         const updatedBaseAssessment = await tx.rapidAssessment.update({
@@ -194,19 +315,68 @@ export class RapidAssessmentService {
         });
 
         // Update type-specific assessment data
-        const typeKey = this.getTypeKey(assessmentType);
         let updatedTypeAssessment = null;
 
-        if (typeKey && updateData[typeKey as keyof T]) {
-          const assessmentSpecificData = updateData[typeKey as keyof T] as any;
-          
-          // Convert arrays to JSON strings for database storage
-          const processedData = this.processArraysToJson(assessmentSpecificData);
+        switch (assessmentType) {
+          case RapidAssessmentType.HEALTH:
+            if (updateData.healthAssessment) {
+              const processedData = this.processArraysToJson(updateData.healthAssessment as any);
+              updatedTypeAssessment = await tx.HealthAssessment.update({
+                where: { rapidAssessmentId: id },
+                data: processedData
+              });
+            }
+            break;
 
-          updatedTypeAssessment = await tx[typeKey].update({
-            where: { rapidAssessmentId: id },
-            data: processedData
-          });
+          case RapidAssessmentType.POPULATION:
+            if (updateData.populationAssessment) {
+              const processedData = this.processArraysToJson(updateData.populationAssessment as any);
+              updatedTypeAssessment = await tx.PopulationAssessment.update({
+                where: { rapidAssessmentId: id },
+                data: processedData
+              });
+            }
+            break;
+
+          case RapidAssessmentType.FOOD:
+            if (updateData.foodAssessment) {
+              const processedData = this.processArraysToJson(updateData.foodAssessment as any);
+              updatedTypeAssessment = await tx.FoodAssessment.update({
+                where: { rapidAssessmentId: id },
+                data: processedData
+              });
+            }
+            break;
+
+          case RapidAssessmentType.WASH:
+            if (updateData.washAssessment) {
+              const processedData = this.processArraysToJson(updateData.washAssessment as any);
+              updatedTypeAssessment = await tx.WASHAssessment.update({
+                where: { rapidAssessmentId: id },
+                data: processedData
+              });
+            }
+            break;
+
+          case RapidAssessmentType.SHELTER:
+            if (updateData.shelterAssessment) {
+              const processedData = this.processArraysToJson(updateData.shelterAssessment as any);
+              updatedTypeAssessment = await tx.ShelterAssessment.update({
+                where: { rapidAssessmentId: id },
+                data: processedData
+              });
+            }
+            break;
+
+          case RapidAssessmentType.SECURITY:
+            if (updateData.securityAssessment) {
+              const processedData = this.processArraysToJson(updateData.securityAssessment as any);
+              updatedTypeAssessment = await tx.SecurityAssessment.update({
+                where: { rapidAssessmentId: id },
+                data: processedData
+              });
+            }
+            break;
         }
 
         return { updatedBaseAssessment, updatedTypeAssessment };
@@ -428,6 +598,22 @@ export class RapidAssessmentService {
 
     arrayFields.forEach(field => {
       if (processed[field] && Array.isArray(processed[field])) {
+        processed[field] = JSON.stringify(processed[field]);
+      }
+    });
+
+    // Process object fields that need to be stored as JSON strings
+    const objectFields = [
+      'additionalHealthDetails',
+      'additionalPopulationDetails',
+      'additionalFoodDetails',
+      'additionalWashDetails',
+      'additionalShelterDetails',
+      'additionalSecurityDetails'
+    ];
+
+    objectFields.forEach(field => {
+      if (processed[field] && typeof processed[field] === 'object') {
         processed[field] = JSON.stringify(processed[field]);
       }
     });

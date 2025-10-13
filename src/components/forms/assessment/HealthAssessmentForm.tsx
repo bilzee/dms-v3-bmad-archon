@@ -1,25 +1,35 @@
 'use client'
 
-import { useState, useEffect, useMemo } from 'react'
+import { useState, useEffect, useMemo, useCallback } from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
+
+// External libraries - None needed for this component
+
+// UI components
+import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { Checkbox } from '@/components/ui/checkbox'
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form'
 import { Input } from '@/components/ui/input'
-import { Checkbox } from '@/components/ui/checkbox'
-import { Textarea } from '@/components/ui/textarea'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { Badge } from '@/components/ui/badge'
+import { Textarea } from '@/components/ui/textarea'
 import { Alert, AlertDescription } from '@/components/ui/alert'
+
+// Internal components
 import { GPSCapture } from '@/components/shared/GPSCapture'
 import { MediaField } from '@/components/shared/MediaField'
-import { HEALTH_ISSUES_OPTIONS, CreateHealthAssessmentRequest } from '@/types/rapid-assessment'
-import { HealthAssessment } from '@/types/rapid-assessment'
-import { getCurrentUser } from '@/lib/auth/get-current-user'
-import { useEntityStore } from '@/stores/entity.store'
+
+// Stores and hooks
+import { useHealthAssessments, useCreateRapidAssessment } from '@/hooks/useRapidAssessments'
+import { useFilteredEntities, type Entity } from '@/hooks/useEntities'
 import { useHealthAssessment } from '@/hooks/useHealthAssessment'
+
+// Utilities and types
+import { HEALTH_ISSUES_OPTIONS, CreateHealthAssessmentRequest } from '@/types/rapid-assessment'
+import { getCurrentUser } from '@/lib/auth/get-current-user'
 
 // Form validation schema
 const healthAssessmentSchema = z.object({
@@ -70,8 +80,6 @@ export function HealthAssessmentForm({
   )
   const [photos, setPhotos] = useState<string[]>([])
   const [currentUser, setCurrentUser] = useState<any>(null)
-  const [entities, setEntities] = useState<Entity[]>([])
-  const [filteredEntities, setFilteredEntities] = useState<Entity[]>([])
   const [entitySearchTerm, setEntitySearchTerm] = useState('')
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [submitMessage, setSubmitMessage] = useState('')
@@ -79,6 +87,12 @@ export function HealthAssessmentForm({
   const [isDraftSaving, setIsDraftSaving] = useState(false)
   const [isFinalSubmitting, setIsFinalSubmitting] = useState(false)
   
+  // TanStack Query hooks for server state
+  const { data: recentAssessments, isLoading: assessmentsLoading } = useHealthAssessments()
+  const { data: filteredEntities, isLoading: entitiesLoading } = useFilteredEntities(entitySearchTerm)
+  const createAssessment = useCreateRapidAssessment()
+  
+  // Local hooks for drafts
   const { saveDraft, deleteDraft, drafts } = useHealthAssessment()
   const [gpsLocation, setGpsLocation] = useState<{
     latitude: number;
@@ -89,7 +103,6 @@ export function HealthAssessmentForm({
   } | null>(null)
   const [isMounted, setIsMounted] = useState(false)
 
-  const { fetchEntities } = useEntityStore()
 
   const form = useForm<HealthAssessmentFormData>({
     resolver: zodResolver(healthAssessmentSchema),
@@ -212,66 +225,7 @@ export function HealthAssessmentForm({
     captureGPS()
   }, [])
 
-  // Load entities from API
-  useEffect(() => {
-    const loadEntities = async () => {
-      try {
-        const result = await fetch('/api/v1/entities')
-        const response = await result.json()
-        
-        if (response.success) {
-          const fetchedEntities: Entity[] = response.data.map((entity: any) => ({
-            id: entity.id,
-            name: entity.name,
-            type: entity.type,
-            location: entity.location
-          }))
-          setEntities(fetchedEntities)
-          setFilteredEntities(fetchedEntities)
-        } else {
-          console.error('Failed to load entities:', response.error)
-          // Fallback to mock entities if API fails
-          const mockEntities: Entity[] = [
-            { id: 'maiduguri-metropolitan', name: 'Maiduguri Metropolitan', type: 'LGA', location: 'Borno State' },
-            { id: 'jere-local-government', name: 'Jere Local Government', type: 'LGA', location: 'Borno State' },
-            { id: 'gwoza-local-government', name: 'Gwoza Local Government', type: 'LGA', location: 'Borno State' },
-            { id: 'primary-health-center-maiduguri', name: 'Primary Health Center Maiduguri', type: 'FACILITY', location: 'Maiduguri' },
-            { id: 'idp-camp-dalori', name: 'IDP Camp Dalori', type: 'CAMP', location: 'Maiduguri' },
-          ]
-          setEntities(mockEntities)
-          setFilteredEntities(mockEntities)
-        }
-      } catch (error) {
-        console.error('Error loading entities:', error)
-        // Fallback to mock entities if fetch fails
-        const mockEntities: Entity[] = [
-          { id: 'maiduguri-metropolitan', name: 'Maiduguri Metropolitan', type: 'LGA', location: 'Borno State' },
-          { id: 'jere-local-government', name: 'Jere Local Government', type: 'LGA', location: 'Borno State' },
-          { id: 'gwoza-local-government', name: 'Gwoza Local Government', type: 'LGA', location: 'Borno State' },
-          { id: 'primary-health-center-maiduguri', name: 'Primary Health Center Maiduguri', type: 'FACILITY', location: 'Maiduguri' },
-          { id: 'idp-camp-dalori', name: 'IDP Camp Dalori', type: 'CAMP', location: 'Maiduguri' },
-        ]
-        setEntities(mockEntities)
-        setFilteredEntities(mockEntities)
-      }
-    }
-    loadEntities()
-  }, [])
-
-  // Filter entities based on search term
-  useEffect(() => {
-    if (entitySearchTerm.trim() === '') {
-      setFilteredEntities(entities)
-    } else {
-      const filtered = entities.filter(entity => 
-        entity.name.toLowerCase().includes(entitySearchTerm.toLowerCase()) ||
-        entity.type.toLowerCase().includes(entitySearchTerm.toLowerCase()) ||
-        (entity.location && entity.location.toLowerCase().includes(entitySearchTerm.toLowerCase()))
-      )
-      setFilteredEntities(filtered)
-    }
-  }, [entitySearchTerm, entities])
-
+  
   // Watch form changes and notify parent
   useEffect(() => {
     const subscription = form.watch((value) => {
@@ -453,39 +407,26 @@ export function HealthAssessmentForm({
         }
       }
 
-      const result = await fetch('/api/v1/rapid-assessments', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(assessmentData)
-      })
+      await createAssessment.mutateAsync(assessmentData)
       
-      const response = await result.json()
-      
-      if (response.success) {
-        // Delete the draft if this was submitted from a draft
-        if (selectedDraftId) {
-          await deleteDraft(selectedDraftId)
-        }
-        
-        setSubmitMessage('Health assessment submitted successfully!')
-        setSubmitMessageType('success')
-        form.reset()
-        setPhotos([])
-        setSelectedIssues([])
-        
-        // Redirect to assessments list after 2 seconds
-        setTimeout(() => {
-          window.location.href = '/assessor/rapid-assessments'
-        }, 2000)
-      } else {
-        setSubmitMessage(response.message || 'Failed to submit assessment')
-        setSubmitMessageType('error')
+      // Delete the draft if this was submitted from a draft
+      if (selectedDraftId) {
+        await deleteDraft(selectedDraftId)
       }
+      
+      setSubmitMessage('Health assessment submitted successfully!')
+      setSubmitMessageType('success')
+      form.reset()
+      setPhotos([])
+      setSelectedIssues([])
+      
+      // Redirect to assessments list after 2 seconds
+      setTimeout(() => {
+        window.location.href = '/assessor/rapid-assessments'
+      }, 2000)
     } catch (error) {
       console.error('Form submission error:', error)
-      setSubmitMessage('An unexpected error occurred. Please try again.')
+      setSubmitMessage(error instanceof Error ? error.message : 'An unexpected error occurred. Please try again.')
       setSubmitMessageType('error')
     } finally {
       setIsFinalSubmitting(false)
@@ -574,11 +515,21 @@ export function HealthAssessmentForm({
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
-                          {filteredEntities.map((entity) => (
+                          {entitiesLoading ? (
+                            <SelectItem value="loading" disabled>
+                              Loading entities...
+                            </SelectItem>
+                          ) : filteredEntities?.length === 0 ? (
+                            <SelectItem value="no-entities" disabled>
+                              No entities found
+                            </SelectItem>
+                          ) : (
+                            filteredEntities.map((entity) => (
                             <SelectItem key={entity.id} value={entity.id}>
                               {entity.name} ({entity.type}) {entity.location && `- ${entity.location}`}
                             </SelectItem>
-                          ))}
+                            ))
+                          )}
                         </SelectContent>
                       </Select>
                       <FormDescription>

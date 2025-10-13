@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
@@ -15,24 +15,17 @@ import { Badge } from '@/components/ui/badge'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { GPSCapture } from '@/components/shared/GPSCapture'
 import { MediaField } from '@/components/shared/MediaField'
-import { WATER_SOURCE_OPTIONS } from '@/types/rapid-assessment'
-import { Droplets, AlertTriangle, Users } from 'lucide-react'
+import { WATER_SOURCE_OPTIONS, CreateWASHAssessmentRequest } from '@/types/rapid-assessment'
+import { WASHAssessment } from '@/types/rapid-assessment'
+import { getCurrentUser } from '@/lib/auth/get-current-user'
+import { useEntityStore } from '@/stores/entity.store'
+import { useWASHAssessment } from '@/hooks/useWASHAssessment'
+import { Droplets, AlertTriangle, Users, FileText, Save, CheckCircle, Loader2 } from 'lucide-react'
 
 // Form validation schema
 const washAssessmentSchema = z.object({
   // Base assessment fields
-  rapidAssessmentDate: z.date(),
   affectedEntityId: z.string().min(1, 'Entity is required'),
-  assessorName: z.string().min(1, 'Assessor name is required'),
-  
-  // GPS coordinates
-  gpsCoordinates: z.object({
-    latitude: z.number().min(-90).max(90),
-    longitude: z.number().min(-180).max(180),
-    accuracy: z.number().positive().optional(),
-    timestamp: z.date(),
-    captureMethod: z.enum(['GPS', 'MANUAL'])
-  }).optional(),
   
   // WASH assessment specific fields
   waterSource: z.array(z.enum(WATER_SOURCE_OPTIONS)).min(1, 'At least one water source is required'),
@@ -40,56 +33,295 @@ const washAssessmentSchema = z.object({
   functionalLatrinesAvailable: z.number().int().min(0),
   areLatrinesSufficient: z.boolean(),
   hasOpenDefecationConcerns: z.boolean(),
-  additionalWashDetails: z.string().optional()
+  additionalWashDetails: z.string().optional(),
+  
+  // Media (optional)
+  photos: z.array(z.string()).optional()
 })
 
 type WASHAssessmentFormData = z.infer<typeof washAssessmentSchema>
 
 interface WASHAssessmentFormProps {
-  onSubmit: (data: WASHAssessmentFormData) => Promise<void>
-  onCancel: () => void
+  onDataChange?: (data: WASHAssessmentFormData) => void
   initialData?: Partial<WASHAssessmentFormData>
   isLoading?: boolean
-  entities?: Array<{ id: string; name: string; type: string }>
+  selectedDraftId?: string | null
+  onCancel?: () => void
+}
+
+interface Entity {
+  id: string;
+  name: string;
+  type: string;
+  location: string | null;
 }
 
 export function WASHAssessmentForm({ 
-  onSubmit, 
-  onCancel, 
+  onDataChange, 
   initialData,
   isLoading = false,
-  entities = []
+  selectedDraftId,
+  onCancel
 }: WASHAssessmentFormProps) {
   const [selectedSources, setSelectedSources] = useState<string[]>(
     initialData?.waterSource || []
   )
-  const [photos, setPhotos] = useState<string[]>(initialData?.photos || [])
+  const [photos, setPhotos] = useState<string[]>([])
+  const [currentUser, setCurrentUser] = useState<any>(null)
+  const [entities, setEntities] = useState<Entity[]>([])
+  const [filteredEntities, setFilteredEntities] = useState<Entity[]>([])
+  const [entitySearchTerm, setEntitySearchTerm] = useState('')
+  const [isSubmitting, setIsSubmitting] = useState(false)
+  const [submitMessage, setSubmitMessage] = useState('')
+  const [submitMessageType, setSubmitMessageType] = useState<'success' | 'error'>('success')
+  const [isDraftSaving, setIsDraftSaving] = useState(false)
+  const [isFinalSubmitting, setIsFinalSubmitting] = useState(false)
+  const [isMounted, setIsMounted] = useState(false)
+  
+  const { recentAssessments, saveDraft, deleteDraft, drafts } = useWASHAssessment()
+  const [gpsLocation, setGpsLocation] = useState<{
+    latitude: number;
+    longitude: number;
+    accuracy?: number;
+    timestamp: Date;
+    captureMethod: 'GPS' | 'MANUAL';
+  } | null>(null)
+
+  const { fetchEntities } = useEntityStore()
 
   const form = useForm<WASHAssessmentFormData>({
     resolver: zodResolver(washAssessmentSchema),
     defaultValues: {
-      rapidAssessmentDate: initialData?.rapidAssessmentDate || new Date(),
       affectedEntityId: initialData?.affectedEntityId || '',
-      assessorName: initialData?.assessorName || '',
-      gpsCoordinates: initialData?.gpsCoordinates,
       waterSource: initialData?.waterSource || [],
       isWaterSufficient: initialData?.isWaterSufficient || false,
       functionalLatrinesAvailable: initialData?.functionalLatrinesAvailable || 0,
       areLatrinesSufficient: initialData?.areLatrinesSufficient || false,
       hasOpenDefecationConcerns: initialData?.hasOpenDefecationConcerns || false,
-      additionalWashDetails: initialData?.additionalWashDetails || ''
+      additionalWashDetails: initialData?.additionalWashDetails || '',
+      photos: initialData?.photos || []
     }
   })
 
-  const handleLocationCapture = (lat: number, lng: number) => {
-    form.setValue('gpsCoordinates', {
-      latitude: lat,
-      longitude: lng,
-      timestamp: new Date(),
-      captureMethod: 'GPS'
-    })
-  }
+  // Load draft data when selectedDraftId changes
+  useEffect(() => {
+    if (selectedDraftId) {
+      try {
+        const draft = drafts.find((d: any) => d.id === selectedDraftId)
+        
+        if (draft && draft.data) {
+          const draftData = draft.data
+          
+          console.log('Loading draft data:', draftData) // Debug log
+          
+          // Ensure form is properly initialized before resetting
+          setTimeout(() => {
+            // Update form with draft data
+            form.reset({
+              affectedEntityId: draftData.affectedEntityId || '',
+              waterSource: draftData.washAssessment?.waterSource || [],
+              isWaterSufficient: draftData.washAssessment?.isWaterSufficient || false,
+              functionalLatrinesAvailable: draftData.washAssessment?.functionalLatrinesAvailable || 0,
+              areLatrinesSufficient: draftData.washAssessment?.areLatrinesSufficient || false,
+              hasOpenDefecationConcerns: draftData.washAssessment?.hasOpenDefecationConcerns || false,
+              additionalWashDetails: draftData.washAssessment?.additionalWashDetails?.notes || '',
+              photos: draftData.photos || []
+            })
+            
+            setSelectedSources(draftData.washAssessment?.waterSource || [])
+            setPhotos(draftData.photos || [])
+          }, 100) // Small delay to ensure form is properly initialized
+        }
+      } catch (error) {
+        console.error('Error loading draft:', error)
+      }
+    }
+  }, [selectedDraftId, form, drafts])
 
+  // Load current user and auto-populate assessor name
+  useEffect(() => {
+    const loadUser = async () => {
+      try {
+        const user = await getCurrentUser()
+        if (user && user.roles.includes('ASSESSOR')) {
+          setCurrentUser(user)
+          console.log('User loaded successfully:', user.name)
+        } else {
+          console.error('User does not have ASSESSOR role')
+          setSubmitMessage('You must have ASSESSOR role to access this form')
+          setSubmitMessageType('error')
+        }
+      } catch (error) {
+        console.error('Error loading current user:', error)
+        setSubmitMessage('Failed to load user information')
+        setSubmitMessageType('error')
+      }
+    }
+    loadUser()
+  }, [])
+
+  // Set mounted state to prevent hydration issues
+  useEffect(() => {
+    setIsMounted(true)
+  }, [])
+
+  // Auto-capture GPS location
+  useEffect(() => {
+    const captureGPS = () => {
+      if ('geolocation' in navigator) {
+        navigator.geolocation.getCurrentPosition(
+          (position) => {
+            setGpsLocation({
+              latitude: position.coords.latitude,
+              longitude: position.coords.longitude,
+              accuracy: position.coords.accuracy,
+              timestamp: new Date(),
+              captureMethod: 'GPS'
+            })
+          },
+          (error) => {
+            console.error('Error getting GPS location:', error)
+            // Fall back to manual location or use entity location
+            setGpsLocation({
+              latitude: 0,
+              longitude: 0,
+              timestamp: new Date(),
+              captureMethod: 'MANUAL'
+            })
+          },
+          {
+            enableHighAccuracy: true,
+            timeout: 10000,
+            maximumAge: 60000 // 1 minute
+          }
+        )
+      }
+    }
+    captureGPS()
+  }, [])
+
+  // Load entities from API
+  useEffect(() => {
+    const loadEntities = async () => {
+      try {
+        const result = await fetch('/api/v1/entities/public')
+        const response = await result.json()
+        
+        if (response.success) {
+          const fetchedEntities: Entity[] = response.data.map((entity: any) => ({
+            id: entity.id,
+            name: entity.name,
+            type: entity.type,
+            location: entity.location
+          }))
+          setEntities(fetchedEntities)
+          setFilteredEntities(fetchedEntities)
+        } else {
+          console.error('Failed to load entities:', response.error)
+          // Set empty arrays if API fails - no mock fallback to avoid ID mismatches
+          setEntities([])
+          setFilteredEntities([])
+        }
+      } catch (error) {
+        console.error('Error loading entities:', error)
+        // Set empty arrays if fetch fails - no mock fallback to avoid ID mismatches
+        setEntities([])
+        setFilteredEntities([])
+      }
+    }
+    loadEntities()
+  }, [])
+
+  // Filter entities based on search term
+  useEffect(() => {
+    if (entitySearchTerm.trim() === '') {
+      setFilteredEntities(entities)
+    } else {
+      const filtered = entities.filter(entity => 
+        entity.name.toLowerCase().includes(entitySearchTerm.toLowerCase()) ||
+        entity.type.toLowerCase().includes(entitySearchTerm.toLowerCase()) ||
+        (entity.location && entity.location.toLowerCase().includes(entitySearchTerm.toLowerCase()))
+      )
+      setFilteredEntities(filtered)
+    }
+  }, [entitySearchTerm, entities])
+
+  // Watch form changes and notify parent
+  useEffect(() => {
+    const subscription = form.watch((value) => {
+      if (onDataChange) {
+        onDataChange(value as WASHAssessmentFormData)
+      }
+    })
+    return () => subscription.unsubscribe()
+  }, [form, onDataChange])
+
+  // Prevent hydration mismatch
+  useEffect(() => {
+    setIsMounted(true)
+  }, [])
+
+  // Auto-save draft every 30 seconds or when form data changes
+  useEffect(() => {
+    if (!currentUser) return
+
+    const saveDraftToLocalStorage = async () => {
+      try {
+        const formData = form.getValues()
+        const draftData: Partial<CreateWASHAssessmentRequest> = {
+          rapidAssessmentType: 'WASH' as any,
+          rapidAssessmentDate: new Date(),
+          affectedEntityId: formData.affectedEntityId,
+          assessorName: currentUser.name,
+          gpsCoordinates: gpsLocation,
+          photos: photos,
+          washAssessment: {
+            waterSource: formData.waterSource,
+            isWaterSufficient: formData.isWaterSufficient,
+            functionalLatrinesAvailable: formData.functionalLatrinesAvailable,
+            areLatrinesSufficient: formData.areLatrinesSufficient,
+            hasOpenDefecationConcerns: formData.hasOpenDefecationConcerns,
+            additionalWashDetails: formData.additionalWashDetails ? { notes: formData.additionalWashDetails } : undefined
+          }
+        }
+
+        const newDraft = {
+          id: selectedDraftId || `draft-${Date.now()}`,
+          data: draftData,
+          timestamp: Date.now(),
+          autoSaved: true
+        }
+
+        let existingDrafts = JSON.parse(localStorage.getItem('wash-assessment-drafts') || '[]')
+        
+        if (selectedDraftId) {
+          // Update existing draft
+          existingDrafts = existingDrafts.map((draft: any) => 
+            draft.id === selectedDraftId ? newDraft : draft
+          )
+        } else {
+          // Add new draft only if form has some data
+          const hasData = formData.affectedEntityId || 
+            formData.isWaterSufficient || 
+            formData.functionalLatrinesAvailable > 0
+
+          if (hasData) {
+            existingDrafts.push(newDraft)
+          }
+        }
+        
+        localStorage.setItem('wash-assessment-drafts', JSON.stringify(existingDrafts))
+      } catch (error) {
+        console.error('Error auto-saving draft:', error)
+      }
+    }
+
+    // Set up auto-save interval
+    const interval = setInterval(saveDraftToLocalStorage, 30000) // Every 30 seconds
+
+    return () => clearInterval(interval)
+  }, [form, currentUser, gpsLocation, photos, selectedDraftId])
+  
   const handleSourceToggle = (source: string, checked: boolean) => {
     const updatedSources = checked
       ? [...selectedSources, source]
@@ -99,72 +331,267 @@ export function WASHAssessmentForm({
     form.setValue('waterSource', updatedSources as any)
   }
 
-  const handleFormSubmit = async (data: WASHAssessmentFormData) => {
+  const handleSaveDraft = async () => {
+    if (!currentUser || !gpsLocation) {
+      setSubmitMessage('User authentication or GPS location not available')
+      setSubmitMessageType('error')
+      return
+    }
+
+    setIsDraftSaving(true)
+    setSubmitMessage('')
+
     try {
-      await onSubmit({
-        ...data,
-        photos
+      const formData = form.getValues()
+      const assessmentData: CreateWASHAssessmentRequest = {
+        rapidAssessmentType: 'WASH' as any,
+        rapidAssessmentDate: new Date(),
+        affectedEntityId: formData.affectedEntityId,
+        assessorName: currentUser.name,
+        gpsCoordinates: gpsLocation,
+        photos: photos,
+        washAssessment: {
+          waterSource: formData.waterSource,
+          isWaterSufficient: formData.isWaterSufficient,
+          functionalLatrinesAvailable: formData.functionalLatrinesAvailable,
+          areLatrinesSufficient: formData.areLatrinesSufficient,
+          hasOpenDefecationConcerns: formData.hasOpenDefecationConcerns,
+          additionalWashDetails: formData.additionalWashDetails ? { notes: formData.additionalWashDetails } : undefined
+        }
+      }
+
+      // Delete the existing draft if we're editing one
+      if (selectedDraftId) {
+        await deleteDraft(selectedDraftId)
+      }
+
+      // Save to localStorage using the hook
+      await saveDraft(assessmentData)
+      
+      setSubmitMessage('Draft saved successfully!')
+      setSubmitMessageType('success')
+    } catch (error) {
+      console.error('Draft save error:', error)
+      setSubmitMessage('Failed to save draft. Please try again.')
+      setSubmitMessageType('error')
+    } finally {
+      setIsDraftSaving(false)
+    }
+  }
+
+  const handleFinalSubmit = async () => {
+    if (!currentUser || !gpsLocation) {
+      setSubmitMessage('User authentication or GPS location not available')
+      setSubmitMessageType('error')
+      return
+    }
+
+    // Validate form first
+    const isValid = await form.trigger()
+    if (!isValid) {
+      setSubmitMessage('Please fill in all required fields before submitting.')
+      setSubmitMessageType('error')
+      return
+    }
+
+    setIsFinalSubmitting(true)
+    setSubmitMessage('')
+
+    try {
+      const formData = form.getValues()
+      const assessmentData: CreateWASHAssessmentRequest = {
+        rapidAssessmentType: 'WASH' as any,
+        rapidAssessmentDate: new Date(),
+        affectedEntityId: formData.affectedEntityId,
+        assessorName: currentUser.name,
+        gpsCoordinates: gpsLocation,
+        photos: photos,
+        washAssessment: {
+          waterSource: formData.waterSource,
+          isWaterSufficient: formData.isWaterSufficient,
+          functionalLatrinesAvailable: formData.functionalLatrinesAvailable,
+          areLatrinesSufficient: formData.areLatrinesSufficient,
+          hasOpenDefecationConcerns: formData.hasOpenDefecationConcerns,
+          additionalWashDetails: formData.additionalWashDetails ? { notes: formData.additionalWashDetails } : undefined
+        }
+      }
+
+      const result = await fetch('/api/v1/rapid-assessments', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(assessmentData)
       })
+      
+      const response = await result.json()
+      
+      if (response.success) {
+        // Delete the draft if this was submitted from a draft
+        if (selectedDraftId) {
+          await deleteDraft(selectedDraftId)
+        }
+        
+        setSubmitMessage('WASH assessment submitted successfully!')
+        setSubmitMessageType('success')
+        form.reset()
+        setPhotos([])
+        setSelectedSources([])
+        
+        // Redirect to assessments list after 2 seconds
+        setTimeout(() => {
+          window.location.href = '/assessor/rapid-assessments'
+        }, 2000)
+      } else {
+        setSubmitMessage(response.message || 'Failed to submit assessment')
+        setSubmitMessageType('error')
+      }
     } catch (error) {
       console.error('Form submission error:', error)
+      setSubmitMessage('An unexpected error occurred. Please try again.')
+      setSubmitMessageType('error')
+    } finally {
+      setIsFinalSubmitting(false)
     }
   }
 
-  // Calculate latrine coverage
-  const calculateLatrineCoverage = () => {
-    const latrines = form.getValues('functionalLatrinesAvailable')
-    const population = 1000 // This would ideally come from population data
-    
-    if (latrines === 0) return { coverage: 0, status: 'critical', text: 'No Latrines' }
-    
-    const coverage = Math.round((latrines * 50 / population) * 100) // Assuming 50 people per latrine
-    
-    if (coverage < 20) {
-      return { coverage, status: 'critical', text: 'Critical Coverage' }
-    } else if (coverage < 50) {
-      return { coverage, status: 'inadequate', text: 'Inadequate Coverage' }
-    } else if (coverage < 75) {
-      return { coverage, status: 'acceptable', text: 'Acceptable Coverage' }
+  const handleCancel = () => {
+    if (onCancel) {
+      onCancel()
     } else {
-      return { coverage, status: 'good', text: 'Good Coverage' }
+      // Navigate back to assessment type selection
+      window.location.href = '/assessor/rapid-assessments/new'
     }
   }
 
-  const latrineCoverage = calculateLatrineCoverage()
-
-  // Get gap status for key WASH indicators
-  const getWASHStatus = (field: keyof WASHAssessmentFormData) => {
-    const value = form.watch(field)
-    
-    switch (field) {
-      case 'isWaterSufficient':
-        return value ? 'success' : 'danger'
-      case 'areLatrinesSufficient':
-        return value ? 'success' : 'danger'
-      case 'hasOpenDefecationConcerns':
-        return value ? 'danger' : 'success'
-      default:
-        return 'neutral'
-    }
-  }
-
-  const getStatusVariant = (status: string) => {
-    switch (status) {
-      case 'success': return 'default'
-      case 'danger': return 'destructive'
-      case 'warning': return 'secondary'
-      default: return 'outline'
-    }
+  // Gap analysis visualization - watch specific fields to avoid infinite loops
+  const isWaterSufficient = form.watch('isWaterSufficient')
+  const areLatrinesSufficient = form.watch('areLatrinesSufficient')
+  const hasOpenDefecationConcerns = form.watch('hasOpenDefecationConcerns')
+  const functionalLatrinesAvailable = form.watch('functionalLatrinesAvailable')
+  
+  const gapStatuses = {
+    isWaterSufficient: isWaterSufficient ? 'no_gap' : 'gap_identified',
+    areLatrinesSufficient: areLatrinesSufficient ? 'no_gap' : 'gap_identified',
+    hasOpenDefecationConcerns: hasOpenDefecationConcerns ? 'gap_identified' : 'no_gap'  // Reverse logic for concerns
   }
 
   const hasCriticalGaps = () => {
-    return !form.getValues('isWaterSufficient') || 
-           !form.getValues('areLatrinesSufficient') || 
-           form.getValues('hasOpenDefecationConcerns')
+    return !isWaterSufficient || !areLatrinesSufficient || hasOpenDefecationConcerns
+  }
+
+  // Calculate latrine coverage (WHO standard: 1 latrine per 50 people, minimum 3 per 1000)
+  const latrineCoverage = useMemo(() => {
+    // For rapid assessment, we'll estimate based on a standard population size of 500
+    const estimatedPopulation = 500
+    const latrinesRequired = Math.ceil(estimatedPopulation / 50)
+    
+    if (functionalLatrinesAvailable === 0) {
+      return {
+        coverage: 0,
+        status: 'critical',
+        text: 'Critical'
+      }
+    }
+    
+    const coveragePercentage = (functionalLatrinesAvailable / latrinesRequired) * 100
+    
+    let status: string
+    let text: string
+    
+    if (coveragePercentage < 25) {
+      status = 'critical'
+      text = 'Critical'
+    } else if (coveragePercentage < 50) {
+      status = 'inadequate' 
+      text = 'Inadequate'
+    } else if (coveragePercentage < 75) {
+      status = 'acceptable'
+      text = 'Acceptable'
+    } else {
+      status = 'good'
+      text = 'Good'
+    }
+    
+    return {
+      coverage: Math.min(100, Math.round(coveragePercentage)),
+      status,
+      text
+    }
+  }, [functionalLatrinesAvailable])
+
+  const getGapText = (status: string) => {
+    switch (status) {
+      case 'no_gap':
+        return 'No Gap'
+      case 'gap_identified':
+        return 'Gap Identified'
+      default:
+        return ''
+    }
+  }
+
+  const getGapColor = (status: string) => {
+    switch (status) {
+      case 'no_gap':
+        return 'text-green-600 bg-green-50 border-green-200'
+      case 'gap_identified':
+        return 'text-red-600 bg-red-50 border-red-200'
+      default:
+        return 'text-gray-600 bg-gray-50 border-gray-200'
+    }
   }
 
   return (
     <div className="space-y-6">
+      {/* Statistics Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <Card className="bg-blue-50 border-blue-200">
+          <CardContent className="p-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-blue-600">Recent Assessments</p>
+                <p className="text-2xl font-bold text-blue-900">{recentAssessments.length}</p>
+              </div>
+              <FileText className="h-8 w-8 text-blue-500" />
+            </div>
+          </CardContent>
+        </Card>
+        
+        <Card className="bg-orange-50 border-orange-200">
+          <CardContent className="p-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-orange-600">Drafts</p>
+                <p className="text-2xl font-bold text-orange-900">{drafts.length}</p>
+              </div>
+              <Save className="h-8 w-8 text-orange-500" />
+            </div>
+          </CardContent>
+        </Card>
+        
+        <Card className="bg-green-50 border-green-200">
+          <CardContent className="p-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-green-600">Critical Gaps</p>
+                <p className="text-2xl font-bold text-green-900">
+                  {hasCriticalGaps() ? (
+                    <span className="text-red-600 flex items-center gap-1">
+                      <AlertTriangle className="h-5 w-5" />
+                      Active
+                    </span>
+                  ) : (
+                    'None'
+                  )}
+                </p>
+              </div>
+              <CheckCircle className="h-8 w-8 text-green-500" />
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
@@ -177,90 +604,48 @@ export function WASHAssessmentForm({
         </CardHeader>
         <CardContent>
           <Form {...form}>
-            <form onSubmit={form.handleSubmit(handleFormSubmit)} className="space-y-6">
+            <form className="space-y-6">
               
-              {/* Basic Information */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <FormField
-                  control={form.control}
-                  name="rapidAssessmentDate"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Assessment Date</FormLabel>
-                      <FormControl>
-                        <Input
-                          type="datetime-local"
-                          {...field}
-                          value={field.value ? new Date(field.value).toISOString().slice(0, 16) : ''}
-                          onChange={(e) => field.value && field.onChange(new Date(e.target.value))}
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                <FormField
-                  control={form.control}
-                  name="assessorName"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Assessor Name</FormLabel>
-                      <FormControl>
-                        <Input placeholder="Enter your name" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              </div>
-
+              {/* Affected Entity Selection */}
               <FormField
                 control={form.control}
                 name="affectedEntityId"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Affected Entity</FormLabel>
-                    <Select onValueChange={field.onChange} defaultValue={field.value}>
+                    <FormLabel>Affected Entity *</FormLabel>
+                    <div className="space-y-2">
                       <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select affected entity" />
-                        </SelectTrigger>
+                        <Input
+                          placeholder="Search entities..."
+                          value={entitySearchTerm}
+                          onChange={(e) => setEntitySearchTerm(e.target.value)}
+                        />
                       </FormControl>
-                      <SelectContent>
-                        {entities.map((entity) => (
-                          <SelectItem key={entity.id} value={entity.id}>
-                            {entity.name} ({entity.type})
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                      <Select 
+                        onValueChange={field.onChange} 
+                        defaultValue={field.value}
+                      >
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select affected entity" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          {filteredEntities.map((entity) => (
+                            <SelectItem key={entity.id} value={entity.id}>
+                              {entity.name} ({entity.type}) {entity.location && `- ${entity.location}`}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <FormDescription>
+                        Start typing to filter entities by name, type, or location
+                      </FormDescription>
+                    </div>
                     <FormMessage />
                   </FormItem>
                 )}
               />
-
-              {/* GPS Location */}
-              <div className="space-y-2">
-                <FormLabel>GPS Location</FormLabel>
-                <GPSCapture
-                  onLocationCapture={handleLocationCapture}
-                  initialLocation={form.getValues('gpsCoordinates') ? {
-                    lat: form.getValues('gpsCoordinates')!.latitude,
-                    lng: form.getValues('gpsCoordinates')!.longitude
-                  } : undefined}
-                />
-              </div>
-
-              {/* Media Attachments */}
-              <div className="space-y-2">
-                <FormLabel>Photos</FormLabel>
-                <MediaField
-                  onPhotosChange={setPhotos}
-                  initialPhotos={photos}
-                  maxPhotos={5}
-                />
-              </div>
 
               {/* Water Supply Assessment */}
               <div className="space-y-4">
@@ -284,8 +669,8 @@ export function WASHAssessmentForm({
                             Is available water sufficient for the population?
                           </FormDescription>
                           <div className="mt-2">
-                            <Badge variant={getStatusVariant(getWASHStatus('isWaterSufficient'))}>
-                              {getWASHStatus('isWaterSufficient') === 'success' ? 'No Gap' : 'Critical Gap'}
+                            <Badge className={getGapColor(gapStatuses.isWaterSufficient)}>
+                              {getGapText(gapStatuses.isWaterSufficient)}
                             </Badge>
                           </div>
                         </div>
@@ -310,8 +695,8 @@ export function WASHAssessmentForm({
                             Are there open defecation concerns?
                           </FormDescription>
                           <div className="mt-2">
-                            <Badge variant={getStatusVariant(getWASHStatus('hasOpenDefecationConcerns'))}>
-                              {getWASHStatus('hasOpenDefecationConcerns') === 'success' ? 'No Concerns' : 'Health Risk'}
+                            <Badge className={getGapColor(gapStatuses.hasOpenDefecationConcerns)}>
+                              {getGapText(gapStatuses.hasOpenDefecationConcerns)}
                             </Badge>
                           </div>
                         </div>
@@ -399,8 +784,8 @@ export function WASHAssessmentForm({
                             Are latrine facilities sufficient for the population?
                           </FormDescription>
                           <div className="mt-2">
-                            <Badge variant={getStatusVariant(getWASHStatus('areLatrinesSufficient'))}>
-                              {getWASHStatus('areLatrinesSufficient') === 'success' ? 'Adequate' : 'Insufficient'}
+                            <Badge className={getGapColor(gapStatuses.areLatrinesSufficient)}>
+                              {getGapText(gapStatuses.areLatrinesSufficient)}
                             </Badge>
                           </div>
                         </div>
@@ -477,22 +862,107 @@ export function WASHAssessmentForm({
                 )}
               />
 
+              {/* Photos Section */}
+              <div className="space-y-2">
+                <FormLabel>Photos</FormLabel>
+                <MediaField
+                  onPhotosChange={setPhotos}
+                  initialPhotos={photos}
+                  maxPhotos={5}
+                />
+              </div>
+
+              {/* Auto-captured Information */}
+              <Card className="bg-gray-50">
+                <CardHeader>
+                  <CardTitle className="text-sm">Automatically Captured Information</CardTitle>
+                  <CardDescription className="text-xs">
+                    This information is captured automatically and cannot be edited
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <label className="text-sm font-medium">Assessment Date</label>
+                      <p className="text-sm text-gray-600">
+                        {isMounted ? `${new Date().toLocaleDateString()} ${new Date().toLocaleTimeString()}` : 'Loading...'}
+                      </p>
+                    </div>
+                    <div>
+                      <label className="text-sm font-medium">Assessor Name</label>
+                      <p className="text-sm text-gray-600">
+                        {isMounted && currentUser ? currentUser.name : 'Loading user information...'}
+                      </p>
+                    </div>
+                  </div>
+                  <div suppressHydrationWarning>
+                    <label className="text-sm font-medium">GPS Location</label>
+                    <p className="text-sm text-gray-600">
+                      {isMounted && gpsLocation ? 
+                        `${gpsLocation.latitude.toFixed(6)}, ${gpsLocation.longitude.toFixed(6)}${gpsLocation.accuracy ? ` (±${gpsLocation.accuracy.toFixed(0)}m)` : ''}` 
+                        : 'Capturing location...'
+                      }
+                    </p>
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Success/Error Message */}
+              {submitMessage && (
+                <Alert className={submitMessageType === 'success' ? 'border-green-200 bg-green-50' : 'border-red-200 bg-red-50'}>
+                  <AlertDescription className={submitMessageType === 'success' ? 'text-green-800' : 'text-red-800'}>
+                    {submitMessage}
+                  </AlertDescription>
+                </Alert>
+              )}
+
               {/* Form Actions */}
-              <div className="flex justify-end space-x-4">
+              <div className="flex justify-between items-center">
                 <Button
                   type="button"
                   variant="outline"
-                  onClick={onCancel}
-                  disabled={isLoading}
+                  onClick={handleCancel}
+                  disabled={isDraftSaving || isFinalSubmitting}
                 >
                   Cancel
                 </Button>
-                <Button
-                  type="submit"
-                  disabled={isLoading}
-                >
-                  {isLoading ? 'Saving...' : 'Save Assessment'}
-                </Button>
+                <div className="flex gap-2">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={handleSaveDraft}
+                    disabled={isDraftSaving || isFinalSubmitting}
+                  >
+                    {isDraftSaving ? (
+                      <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        Saving Draft...
+                      </>
+                    ) : (
+                      <>
+                        <Save className="mr-2 h-4 w-4" />
+                        Save Draft
+                      </>
+                    )}
+                  </Button>
+                  <Button
+                    type="button"
+                    onClick={handleFinalSubmit}
+                    disabled={isDraftSaving || isFinalSubmitting}
+                  >
+                    {isFinalSubmitting ? (
+                      <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        Submitting...
+                      </>
+                    ) : (
+                      <>
+                        <CheckCircle className="mr-2 h-4 w-4" />
+                        Submit Assessment
+                      </>
+                    )}
+                  </Button>
+                </div>
               </div>
             </form>
           </Form>

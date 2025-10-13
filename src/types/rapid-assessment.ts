@@ -207,3 +207,10 @@ export const SHELTER_TYPE_OPTIONS = [
   'Communal structure',
   'Other'
 ] as const;
+
+export const SHELTER_DAMAGE_OPTIONS = [
+  'No damage',
+  'Minor damage',
+  'Major damage',
+  'Completely destroyed'
+] as const;

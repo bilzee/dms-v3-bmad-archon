@@ -40,10 +40,10 @@ export async function GET(request: NextRequest) {
 
     let result;
     if (userId) {
-      result = await rapidAssessmentService.getAssessmentsByUserId(userId, pagination.page, pagination.limit);
+      result = await rapidAssessmentService.getAssessmentsByUserId(userId, pagination.page, pagination.limit, assessmentType);
     } else {
       // For now, return all assessments (can be filtered by user assignments later)
-      result = await rapidAssessmentService.getAssessmentsByUserId('temp', pagination.page, pagination.limit);
+      result = await rapidAssessmentService.getAssessmentsByUserId('temp', pagination.page, pagination.limit, assessmentType);
     }
 
     return NextResponse.json(result);

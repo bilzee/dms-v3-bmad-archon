@@ -5,7 +5,8 @@ import { RoleBasedRoute } from '@/components/shared/RoleBasedRoute';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { FileText, Users, MapPin, TrendingUp } from 'lucide-react';
+import { FileText, Users, MapPin, TrendingUp, Activity, PlusCircle } from 'lucide-react';
+import Link from 'next/link';
 
 export default function AssessorDashboard() {
   const { currentRole, user } = useAuth();
@@ -21,10 +22,12 @@ export default function AssessorDashboard() {
               Welcome back, {user?.name}. Your current role is: <Badge variant="outline">{currentRole}</Badge>
             </p>
           </div>
-          <Button>
-            <FileText className="h-4 w-4 mr-2" />
-            New Assessment
-          </Button>
+          <Link href="/assessor/rapid-assessments/new">
+            <Button>
+              <PlusCircle className="h-4 w-4 mr-2" />
+              New Assessment
+            </Button>
+          </Link>
         </div>
 
         {/* Stats Cards */}
@@ -81,6 +84,32 @@ export default function AssessorDashboard() {
             </CardContent>
           </Card>
         </div>
+
+        {/* Quick Actions */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Quick Actions</CardTitle>
+            <CardDescription>
+              Rapid access to assessment tools
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="grid gap-4 md:grid-cols-2">
+              <Link href="/assessor/rapid-assessments">
+                <Button variant="outline" className="w-full justify-start">
+                  <Activity className="mr-2 h-4 w-4" />
+                  View All Assessments
+                </Button>
+              </Link>
+              <Link href="/assessor/rapid-assessments/new">
+                <Button className="w-full justify-start">
+                  <PlusCircle className="mr-2 h-4 w-4" />
+                  Create New Assessment
+                </Button>
+              </Link>
+            </div>
+          </CardContent>
+        </Card>
 
         {/* Recent Activity */}
         <div className="grid gap-6 md:grid-cols-2">

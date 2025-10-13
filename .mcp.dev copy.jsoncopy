@@ -1,0 +1,17 @@
+{
+    "mcpServers": {
+
+        "sequential-thinking": {
+            "command": "uvx",
+            "args": [
+                "--from",
+                "git+https://github.com/arben-adm/mcp-sequential-thinking",
+                "--with",
+                "portalocker",
+                "mcp-sequential-thinking"
+            ]
+        }
+    }
+}
+            "command": "mcp-sequential-thinking",
+            "args": [],

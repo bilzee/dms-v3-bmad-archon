@@ -64,6 +64,41 @@ export default function DashboardPage() {
           </CardContent>
         </Card>
 
+        {/* Rapid Assessments */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <FileText className="h-5 w-5" />
+              Rapid Assessments
+            </CardTitle>
+            <CardDescription>
+              Manage rapid assessments for disaster response coordination
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-3">
+              <div className="flex items-center gap-2">
+                <Badge variant="outline" className="text-xs">Story 3.2</Badge>
+                <Badge variant="secondary" className="text-xs">Assessor</Badge>
+              </div>
+              <div className="grid grid-cols-1 gap-2">
+                <Link href="/assessor/rapid-assessments">
+                  <Button variant="outline" className="w-full justify-start">
+                    <Activity className="h-4 w-4 mr-2" />
+                    View All Assessments
+                  </Button>
+                </Link>
+                <Link href="/assessor/rapid-assessments/new">
+                  <Button className="w-full justify-start">
+                    <ClipboardList className="h-4 w-4 mr-2" />
+                    Create New Assessment
+                  </Button>
+                </Link>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
         {/* Preliminary Assessment - Story 3.1 */}
         <Card>
           <CardHeader>
