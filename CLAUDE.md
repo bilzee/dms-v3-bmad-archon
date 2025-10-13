@@ -5,6 +5,31 @@
 3. Testing strategy can be found in docs/prd/testing-strategy.md
 4. When troubleshooting, do not take shortcuts, instead, first search the Archon knowledge base for solution, and if no solution is found, create a detailed report on the problem and what has been tried in docs/to-toubleshoot/ so it can be fixed separately.
 
+# 📚 Sharded Coding Standards
+
+The coding standards are **sharded** for optimal context usage (8-13KB per shard vs 63KB total).
+
+## **📁 Available Shards**
+ - **Core & TypeScript**: `01-core-typescript.md` - TypeScript, file organization, imports
+ - **React & Next.js**: `02-react-nextjs.md` - Components, server/client patterns
+ - **State & Performance**: `03-state-performance.md` - Zustand, TanStack Query, PWA
+ - **Database & API**: `04-database-api.md` - Prisma, Supabase, API routes
+ - **Testing**: `05-testing.md` - Unit tests, integration tests, E2E patterns
+ - **Anti-Patterns**: `06-anti-patterns.md` - Common issues to avoid
+
+## **🎯 Quick Reference**
+ - **🚨 Debugging Issues**: Load `06-anti-patterns.md` first
+ - **⚛️ Component Work**: Load `02-react-nextjs.md` + `01-core-typescript.md`
+ - **🗄️ Database/API**: Load `04-database-api.md` + `01-core-typescript.md`
+ - **🧪 Testing**: Load `05-testing.md` + `01-core-typescript.md`
+ - **📊 Performance**: Load `03-state-performance.md` + `06-anti-patterns.md`
+
+## **💡 Usage Tips**
+ - **Dev agents** automatically load essential shards via core-config.yaml
+ - **Manual work** - Load only relevant shards for your current task
+ - **Start with anti-patterns** when debugging unfamiliar code
+ - **Reference**: `docs/architecture/coding-standards/README.md` for complete index
+
 # Archon MCP Integration & Workflow
 
 **CRITICAL: This project uses Archon MCP server for knowledge management.**
@@ -62,56 +87,12 @@ curl -s -X POST "http://localhost:8181/api/rag/query" \
 **MCP Troubleshooting**: If MCP calls return "No valid session ID provided", use REST API fallback
 
 # Fronten Development Guidelines
-
-## Project Context
-Disaster Management PWA for Nigeria - offline-first humanitarian assessment and response coordination.
-
-**Tech Stack**: Next.js 14, TypeScript, Shadcn/ui, Zustand, PostgreSQL/Prisma, IndexedDB
-
-## Essential Reading
-- **Requirements**: [`docs/prd/index.md`](docs/prd/index.md)
-- **Architecture**: [`docs/architecture/index.md`](docs/architecture/index.md)
-- **🎨 Design System**: [`docs/design-system/index.md`](docs/design-system/index.md) - Complete UI/UX reference
-
-## Development Workflow
-1. Load story from `docs/stories/`
-2. Reference design system for UI components and patterns
-3. Follow architecture guidelines for data/API patterns
-4. Implement offline-first with Zustand + IndexedDB
-
 ## Core Principles
 - **Design System First**: Always check [`docs/design-system/`](docs/design-system/) before creating components
 - **Offline-First**: IndexedDB → sync when online
 - **Role-Based**: Assessor, Coordinator, Responder, Donor workflows
 - **Context Optimized**: All docs sharded for 200k window efficiency
-
-## Package Manager
-**Use pnpm for this project** (PWA optimization + Windows performance):
-```bash
-# Setup (if needed)
-npm install -g pnpm
-pnpm import  # Converts existing package-lock.json
-
-# Install dependencies
-pnpm install
-```
-
-## Quick Commands
-```bash
-# Development
-pnpm dev
-pnpm dlx shadcn-ui@latest add [component]
-
-# Database  
-pnpm dlx prisma generate && pnpm dlx prisma db push
-
-# Quality
-pnpm type-check && pnpm lint && pnpm test
-```
-
-*See [`docs/design-system/index.md`](docs/design-system/index.md) for detailed implementation guidance.*
-
-
+- **Use pnpm for this project** (PWA optimization + Windows performance):
 
 
 

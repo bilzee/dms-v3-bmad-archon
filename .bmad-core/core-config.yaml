@@ -15,7 +15,9 @@ architecture:
 customTechnicalDocuments: null
 devLoadAlwaysFiles:
   - docs/architecture/index.md
-  - docs/architecture/coding-standards.md
+  - docs/architecture/coding-standards/README.md
+  - docs/architecture/coding-standards/01-core-typescript.md
+  - docs/architecture/coding-standards/06-anti-patterns.md
   - docs/architecture/2-technology-stack.md
   - docs/architecture/4-project-structure.md
   - docs/prd/testing-strategy.md
