@@ -1,23 +1,52 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { z } from 'zod'
-import { RapidAssessment, CreateRapidAssessmentRequest } from '@/types/rapid-assessment'
+import { RapidAssessmentType, HEALTH_ISSUES_OPTIONS, FOOD_SOURCE_OPTIONS, WATER_SOURCE_OPTIONS, SHELTER_TYPE_OPTIONS } from '@/types/rapid-assessment'
+import { 
+  gpsCoordinatesSchema,
+  healthAssessmentSchema,
+  populationAssessmentSchema,
+  foodAssessmentSchema,
+  washAssessmentSchema,
+  shelterAssessmentSchema,
+  securityAssessmentSchema
+} from '@/lib/validation/rapid-assessment'
 
-// API response schema
+// Complete RapidAssessment schema for API responses
+const rapidAssessmentSchema = z.object({
+  id: z.string(),
+  rapidAssessmentType: z.nativeEnum(RapidAssessmentType),
+  rapidAssessmentDate: z.date(),
+  affectedEntityId: z.string(),
+  assessorName: z.string(),
+  gpsCoordinates: gpsCoordinatesSchema.nullable(),
+  photos: z.array(z.string()).nullable(),
+  createdAt: z.date(),
+  updatedAt: z.date(),
+  healthAssessment: healthAssessmentSchema.optional(),
+  populationAssessment: populationAssessmentSchema.optional(),
+  foodAssessment: foodAssessmentSchema.optional(),
+  washAssessment: washAssessmentSchema.optional(),
+  shelterAssessment: shelterAssessmentSchema.optional(),
+  securityAssessment: securityAssessmentSchema.optional(),
+})
+
+// API response schemas
 const RapidAssessmentsResponseSchema = z.object({
   success: z.boolean(),
-  data: z.array(RapidAssessment),
+  data: z.array(rapidAssessmentSchema),
   error: z.string().optional(),
 })
 
 const CreateAssessmentResponseSchema = z.object({
   success: z.boolean(),
-  data: RapidAssessment.optional(),
+  data: rapidAssessmentSchema.optional(),
   message: z.string(),
   error: z.string().optional(),
 })
 
 type RapidAssessmentsResponse = z.infer<typeof RapidAssessmentsResponseSchema>
 type CreateAssessmentResponse = z.infer<typeof CreateAssessmentResponseSchema>
+export type RapidAssessment = z.infer<typeof rapidAssessmentSchema>
 
 // Query keys
 export const rapidAssessmentKeys = {
