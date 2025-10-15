@@ -30,6 +30,7 @@ model User {
   entityAssignments EntityAssignment[]
   auditLogs        AuditLog[]
   responses        RapidResponse[]
+  assessments      RapidAssessment[]
   
   @@map("users")
 }
@@ -176,13 +177,29 @@ model PreliminaryAssessment {
 // Assessment and Response Models
 model RapidAssessment {
   id                    String   @id @default(cuid())
-  rapidAssessmentType   String   // Health, WASH, Shelter, Security, Food, Population, Other
+  rapidAssessmentType   AssessmentType
   rapidAssessmentDate   DateTime
-  affectedEntityId      String
+  assessorId            String
+  entityId              String
   assessorName          String
+  location              String?
+  coordinates           Json? // GPS data: { latitude, longitude, accuracy, timestamp, captureMethod }
+  status                AssessmentStatus @default(DRAFT)
+  priority              Priority @default(MEDIUM)
+  versionNumber         Int @default(1)
+  isOfflineCreated      Boolean @default(false)
+  syncStatus            SyncStatus @default(PENDING)
+  verificationStatus    VerificationStatus @default(PENDING)
+  verifiedAt            DateTime?
+  verifiedBy            String?
+  mediaAttachments      Json? // Array of media files with metadata
   createdAt             DateTime @default(now())
   updatedAt             DateTime @updatedAt
-  affectedEntity        Entity   @relation(fields: [affectedEntityId], references: [id])
+
+  // Relationships
+  assessor                User       @relation(fields: [assessorId], references: [id])
+  entity                  Entity     @relation(fields: [entityId], references: [id])
+  responses              RapidResponse[]
   
   // Related assessment details (one-to-one relationships)
   healthAssessment      HealthAssessment?
@@ -193,10 +210,13 @@ model RapidAssessment {
   securityAssessment    SecurityAssessment?
 
   // Enhanced indexes for assessment queries
-  @@index([rapidAssessmentType, rapidAssessmentDate, affectedEntityId])
-  @@index([affectedEntityId, rapidAssessmentDate])
+  @@index([rapidAssessmentType, rapidAssessmentDate, entityId])
+  @@index([entityId, rapidAssessmentDate])
+  @@index([assessorId, createdAt])
+  @@index([status, priority])
   @@index([createdAt, rapidAssessmentType])
   @@index([rapidAssessmentDate, rapidAssessmentType])
+  @@index([syncStatus, isOfflineCreated])
   @@map("rapid_assessments")
 }
 
@@ -205,14 +225,16 @@ model RapidAssessment {
 model HealthAssessment {
   rapidAssessmentId         String   @id
   hasFunctionalClinic       Boolean
+  hasEmergencyServices       Boolean
   numberHealthFacilities    Int
   healthFacilityType        String
   qualifiedHealthWorkers    Int
+  hasTrainedStaff           Boolean
   hasMedicineSupply         Boolean
   hasMedicalSupplies        Boolean
   hasMaternalChildServices  Boolean
-  commonHealthIssues        String   @default("[]") // JSON string array: Diarrhea, Malaria, Respiratory, Malnutrition, Other
-  additionalHealthDetails   String   @default("{}")
+  commonHealthIssues        String[] // Array of: Diarrhea, Malaria, Respiratory, Malnutrition, Other
+  additionalHealthDetails   Json     @default("{}")
   rapidAssessment           RapidAssessment @relation(fields: [rapidAssessmentId], references: [id], onDelete: Cascade)
   @@map("health_assessments")
 }
@@ -238,23 +260,28 @@ model PopulationAssessment {
 
 model FoodAssessment {
   rapidAssessmentId                   String   @id
-  foodSource                          String   @default("[]") // JSON string array: Government kitchen, Humanitarian Partners, Community, Individuals, Other
+  isFoodSufficient                    Boolean
+  hasRegularMealAccess                Boolean
+  hasInfantNutrition                  Boolean
+  foodSource                          String[] // Array of: Government kitchen, Humanitarian Partners, Community, Individuals, Other
   availableFoodDurationDays           Int      // How long will available food last
   additionalFoodRequiredPersons       Int      // Additional food needed in terms of persons
   additionalFoodRequiredHouseholds    Int      // Additional food needed in terms of households
-  additionalFoodDetails               String   @default("{}")
+  additionalFoodDetails               Json     @default("{}")
   rapidAssessment                     RapidAssessment @relation(fields: [rapidAssessmentId], references: [id], onDelete: Cascade)
   @@map("food_assessments")
 }
 
 model WASHAssessment {
   rapidAssessmentId           String   @id
-  waterSource                 String   @default("[]") // JSON string array: Borehole, River/Stream, Water trucks, Tap water, Sachet water, Other
+  waterSource                 String[] // Array of: Borehole, River/Stream, Water trucks, Tap water, Sachet water, Other
   isWaterSufficient           Boolean  // Available water sufficiency
+  hasCleanWaterAccess         Boolean
   functionalLatrinesAvailable Int      // Number of functional latrines
   areLatrinesSufficient       Boolean
+  hasHandwashingFacilities    Boolean
   hasOpenDefecationConcerns   Boolean
-  additionalWashDetails       String   @default("{}")
+  additionalWashDetails       Json     @default("{}")
   rapidAssessment             RapidAssessment @relation(fields: [rapidAssessmentId], references: [id], onDelete: Cascade)
   @@map("wash_assessments")
 }
@@ -262,22 +289,26 @@ model WASHAssessment {
 model ShelterAssessment {
   rapidAssessmentId         String   @id
   areSheltersSufficient     Boolean
-  shelterTypes              String   @default("[]") // JSON string array: Trampoline, Open space, Local materials, Communal structure, Other
-  requiredShelterType       String   @default("[]") // JSON string array: Required shelter types
+  hasSafeStructures         Boolean
+  shelterTypes              String[] // Array of: Trampoline, Open space, Local materials, Communal structure, Other
+  requiredShelterType       String[] // Array of: Trampoline, Open space, Local materials, Communal structure, Other
   numberSheltersRequired    Int      // Estimated number required if insufficient
   areOvercrowded            Boolean
   provideWeatherProtection  Boolean
-  additionalShelterDetails  String   @default("{}")
+  additionalShelterDetails  Json     @default("{}")
   rapidAssessment           RapidAssessment @relation(fields: [rapidAssessmentId], references: [id], onDelete: Cascade)
   @@map("shelter_assessments")
 }
 
 model SecurityAssessment {
   rapidAssessmentId                 String   @id
+  isSafeFromViolence                Boolean
   gbvCasesReported                  Boolean
+  hasSecurityPresence               Boolean
   hasProtectionReportingMechanism   Boolean
   vulnerableGroupsHaveAccess        Boolean
-  additionalSecurityDetails         String   @default("{}")
+  hasLighting                       Boolean
+  additionalSecurityDetails         Json     @default("{}")
   rapidAssessment                   RapidAssessment @relation(fields: [rapidAssessmentId], references: [id], onDelete: Cascade)
   @@map("security_assessments")
 }
@@ -406,6 +437,14 @@ enum VerificationStatus {
   APPROVED
   REJECTED
   NEEDS_REVIEW
+}
+
+enum SyncStatus {
+  PENDING
+  SYNCING
+  SYNCED
+  FAILED
+  CONFLICT
 }
 
 enum IncidentStatus {
