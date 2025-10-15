@@ -233,8 +233,8 @@ model HealthAssessment {
   hasMedicineSupply         Boolean
   hasMedicalSupplies        Boolean
   hasMaternalChildServices  Boolean
-  commonHealthIssues        String[] // Array of: Diarrhea, Malaria, Respiratory, Malnutrition, Other
-  additionalHealthDetails   Json     @default("{}")
+  commonHealthIssues        String   @default("[]") // JSON string array: Diarrhea, Malaria, Respiratory, Malnutrition, Other
+  additionalHealthDetails   Json?
   rapidAssessment           RapidAssessment @relation(fields: [rapidAssessmentId], references: [id], onDelete: Cascade)
   @@map("health_assessments")
 }
@@ -253,7 +253,7 @@ model PopulationAssessment {
   separatedChildren             Int
   numberLivesLost               Int
   numberInjured                 Int
-  additionalPopulationDetails   String   @default("{}")
+  additionalPopulationDetails   String?
   rapidAssessment               RapidAssessment @relation(fields: [rapidAssessmentId], references: [id], onDelete: Cascade)
   @@map("population_assessments")
 }
@@ -263,25 +263,25 @@ model FoodAssessment {
   isFoodSufficient                    Boolean
   hasRegularMealAccess                Boolean
   hasInfantNutrition                  Boolean
-  foodSource                          String[] // Array of: Government kitchen, Humanitarian Partners, Community, Individuals, Other
+  foodSource                          String   @default("[]") // JSON string array: Government kitchen, Humanitarian Partners, Community, Individuals, Other
   availableFoodDurationDays           Int      // How long will available food last
   additionalFoodRequiredPersons       Int      // Additional food needed in terms of persons
   additionalFoodRequiredHouseholds    Int      // Additional food needed in terms of households
-  additionalFoodDetails               Json     @default("{}")
+  additionalFoodDetails               Json?
   rapidAssessment                     RapidAssessment @relation(fields: [rapidAssessmentId], references: [id], onDelete: Cascade)
   @@map("food_assessments")
 }
 
 model WASHAssessment {
   rapidAssessmentId           String   @id
-  waterSource                 String[] // Array of: Borehole, River/Stream, Water trucks, Tap water, Sachet water, Other
+  waterSource                 String @default("[]") // JSON string array: Borehole, River/Stream, Water trucks, Tap water, Sachet water, Other
   isWaterSufficient           Boolean  // Available water sufficiency
   hasCleanWaterAccess         Boolean
   functionalLatrinesAvailable Int      // Number of functional latrines
   areLatrinesSufficient       Boolean
   hasHandwashingFacilities    Boolean
   hasOpenDefecationConcerns   Boolean
-  additionalWashDetails       Json     @default("{}")
+  additionalWashDetails       Json?
   rapidAssessment             RapidAssessment @relation(fields: [rapidAssessmentId], references: [id], onDelete: Cascade)
   @@map("wash_assessments")
 }
@@ -290,12 +290,12 @@ model ShelterAssessment {
   rapidAssessmentId         String   @id
   areSheltersSufficient     Boolean
   hasSafeStructures         Boolean
-  shelterTypes              String[] // Array of: Trampoline, Open space, Local materials, Communal structure, Other
-  requiredShelterType       String[] // Array of: Trampoline, Open space, Local materials, Communal structure, Other
+  shelterTypes              String @default("[]") // JSON string array: Trampoline, Open space, Local materials, Communal structure, Other
+  requiredShelterType       String @default("[]") // JSON string array: Trampoline, Open space, Local materials, Communal structure, Other
   numberSheltersRequired    Int      // Estimated number required if insufficient
   areOvercrowded            Boolean
   provideWeatherProtection  Boolean
-  additionalShelterDetails  Json     @default("{}")
+  additionalShelterDetails  Json?
   rapidAssessment           RapidAssessment @relation(fields: [rapidAssessmentId], references: [id], onDelete: Cascade)
   @@map("shelter_assessments")
 }
@@ -308,7 +308,7 @@ model SecurityAssessment {
   hasProtectionReportingMechanism   Boolean
   vulnerableGroupsHaveAccess        Boolean
   hasLighting                       Boolean
-  additionalSecurityDetails         Json     @default("{}")
+  additionalSecurityDetails         Json?
   rapidAssessment                   RapidAssessment @relation(fields: [rapidAssessmentId], references: [id], onDelete: Cascade)
   @@map("security_assessments")
 }
@@ -335,6 +335,7 @@ model RapidResponse {
   // Relationships
   responder       User     @relation(fields: [responderId], references: [id])
   entity          Entity   @relation(fields: [entityId], references: [id])
+  assessment      RapidAssessment? @relation(fields: [assessmentId], references: [id])
 
   @@map("rapid_responses")
 }
@@ -393,21 +394,21 @@ enum EntityType {
 }
 
 enum AssessmentType {
-  RAPID_HEALTH
-  RAPID_WASH
-  RAPID_SHELTER
-  RAPID_FOOD
-  RAPID_PROTECTION
-  RAPID_EDUCATION
-}
-
-enum ResponseType {
-  MEDICAL
+  HEALTH
   WASH
   SHELTER
   FOOD
-  PROTECTION
-  EDUCATION
+  SECURITY
+  POPULATION
+}
+
+enum ResponseType {
+  HEALTH
+  WASH
+  SHELTER
+  FOOD
+  SECURITY
+  POPULATION
   LOGISTICS
 }
 

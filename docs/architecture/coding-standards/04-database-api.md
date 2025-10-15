@@ -661,6 +661,64 @@ export const POST = withValidation(
 
 ---
 
+## Enum Usage Pattern
+
+**CRITICAL**: Keep enums in schema, use string literals in code to avoid monorepo import issues.
+
+### Schema (Keep Enums)
+```prisma
+enum AssessmentType {
+  HEALTH
+  WASH
+  SHELTER
+  FOOD
+  SECURITY
+  POPULATION
+}
+```
+
+### Application Code (Use String Literals)
+```typescript
+// ❌ DON'T import enums
+import { AssessmentType } from '@prisma/client';
+const type = AssessmentType.WASH; // Causes monorepo issues
+
+// ✅ USE string literals
+const type = 'WASH'; // Works reliably
+```
+
+### Validation with Zod
+```typescript
+export const ASSESSMENT_TYPES = [
+  'HEALTH', 'WASH', 'SHELTER', 'FOOD', 'SECURITY', 'POPULATION'
+] as const;
+
+export const assessmentTypeSchema = z.enum(ASSESSMENT_TYPES);
+
+// API route validation
+export const createAssessmentSchema = z.object({
+  type: assessmentTypeSchema,
+  title: z.string().min(1),
+});
+```
+
+### Database Operations
+```typescript
+// Prisma handles string literals automatically
+const assessment = await db.rapidAssessment.create({
+  data: {
+    rapidAssessmentType: 'WASH', // String literal -> enum conversion
+  }
+});
+```
+
+### Benefits
+- **Database Integrity**: Enums maintain consistency
+- **Monorepo Compatible**: No import resolution issues
+- **Type Safe**: Zod validation at boundaries
+
+---
+
 ## Summary
 
 These database and API standards ensure:
@@ -670,3 +728,4 @@ These database and API standards ensure:
 - **Performance**: Optimized queries and proper indexing
 - **API Consistency**: Standardized response formats and error handling
 - **Data Integrity**: Comprehensive validation and type safety
+- **Monorepo Compatibility**: Enum usage pattern prevents import issues

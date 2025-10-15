@@ -30,6 +30,20 @@ The coding standards are **sharded** for optimal context usage (8-13KB per shard
  - **Start with anti-patterns** when debugging unfamiliar code
  - **Reference**: `docs/architecture/coding-standards/README.md` for complete index
 
+
+# Enum Usage Pattern
+
+  ## Database Schema
+  - Keep enums defined in Prisma schema for database integrity
+
+  ## Application Code
+  - Use string literals instead of importing enum values
+  - Pattern: `AssessmentType.WASH` → `'WASH'`
+
+  ## Validation Strategy
+  - Use Zod schemas with enum values for request/response validation
+  - Example: `z.enum(['HEALTH', 'WASH', 'SHELTER', 'FOOD', 'SECURITY', 'POPULATION'])`
+
 # Archon MCP Integration & Workflow
 
 **CRITICAL: This project uses Archon MCP server for knowledge management.**
