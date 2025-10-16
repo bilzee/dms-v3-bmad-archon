@@ -1,0 +1,75 @@
+import { NextRequest, NextResponse } from 'next/server'
+import { v4 as uuidv4 } from 'uuid'
+import { withAuth, AuthContext } from '@/lib/auth/middleware'
+import { RapidAssessmentService } from '@/lib/services/rapid-assessment.service'
+import { RapidAssessmentResponse } from '@/types/rapid-assessment'
+
+interface RouteParams {
+  params: Promise<{ id: string }>
+}
+
+export const POST = withAuth(
+  async (request: NextRequest, context: AuthContext, { params }: RouteParams) => {
+    try {
+      const { id } = await params
+      
+      const assessment = await RapidAssessmentService.submit(
+        id,
+        context.user.userId
+      )
+
+      const response: RapidAssessmentResponse = {
+        data: assessment,
+        meta: {
+          timestamp: new Date().toISOString(),
+          version: '1.0.0',
+          requestId: uuidv4()
+        }
+      }
+
+      return NextResponse.json(response, { status: 200 })
+    } catch (error) {
+      console.error('Submit rapid assessment error:', error)
+      
+      if (error instanceof Error && error.message.includes('not found')) {
+        return NextResponse.json(
+          {
+            error: error.message,
+            meta: {
+              timestamp: new Date().toISOString(),
+              version: '1.0.0',
+              requestId: uuidv4()
+            }
+          },
+          { status: 404 }
+        )
+      }
+      
+      if (error instanceof Error && error.message.includes('authorized')) {
+        return NextResponse.json(
+          {
+            error: error.message,
+            meta: {
+              timestamp: new Date().toISOString(),
+              version: '1.0.0',
+              requestId: uuidv4()
+            }
+          },
+          { status: 403 }
+        )
+      }
+      
+      return NextResponse.json(
+        {
+          error: error instanceof Error ? error.message : 'Internal server error',
+          meta: {
+            timestamp: new Date().toISOString(),
+            version: '1.0.0',
+            requestId: uuidv4()
+          }
+        },
+        { status: 500 }
+      )
+    }
+  }
+)

@@ -1,0 +1,216 @@
+'use client'
+
+import { useState, useEffect } from 'react'
+import { useRouter, useSearchParams } from 'next/navigation'
+import { RoleBasedRoute } from '@/components/shared/RoleBasedRoute'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { Button } from '@/components/ui/button'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { ArrowLeft, CheckCircle } from 'lucide-react'
+import Link from 'next/link'
+import { AssessmentType } from '@/types/rapid-assessment'
+import { useAuth } from '@/hooks/useAuth'
+
+// Import assessment forms
+import { HealthAssessmentForm } from '@/components/forms/assessment/HealthAssessmentForm'
+import { PopulationAssessmentForm } from '@/components/forms/assessment/PopulationAssessmentForm'
+import { FoodAssessmentForm } from '@/components/forms/assessment/FoodAssessmentForm'
+import { WASHAssessmentForm } from '@/components/forms/assessment/WASHAssessmentForm'
+import { ShelterAssessmentForm } from '@/components/forms/assessment/ShelterAssessmentForm'
+import { SecurityAssessmentForm } from '@/components/forms/assessment/SecurityAssessmentForm'
+
+const assessmentTypes = [
+  { value: 'HEALTH', label: 'Health Assessment', description: 'Assess healthcare facilities and services' },
+  { value: 'POPULATION', label: 'Population Assessment', description: 'Assess population demographics and needs' },
+  { value: 'FOOD', label: 'Food Security Assessment', description: 'Assess food availability and access' },
+  { value: 'WASH', label: 'WASH Assessment', description: 'Assess water, sanitation, and hygiene' },
+  { value: 'SHELTER', label: 'Shelter Assessment', description: 'Assess shelter and living conditions' },
+  { value: 'SECURITY', label: 'Security Assessment', description: 'Assess security and protection' }
+]
+
+export default function NewRapidAssessmentPage() {
+  const router = useRouter()
+  const searchParams = useSearchParams()
+  const { token, user } = useAuth()
+  const [selectedType, setSelectedType] = useState<AssessmentType | ''>(searchParams.get('type') as AssessmentType || '')
+  const [isSubmitting, setIsSubmitting] = useState(false)
+  const [showSuccess, setShowSuccess] = useState(false)
+  const [assessmentId, setAssessmentId] = useState<string | null>(null)
+  const [selectedEntityId, setSelectedEntityId] = useState<string | null>(null)
+
+  const handleTypeSelect = (type: AssessmentType) => {
+    setSelectedType(type)
+    router.push(`/rapid-assessments/new?type=${type}`)
+  }
+
+  const handleSubmit = async (data: any) => {
+    setIsSubmitting(true)
+    try {
+      if (!token || !user) {
+        throw new Error('Not authenticated')
+      }
+
+      // Prepare assessment data with proper entity ID
+      const assessmentData = {
+        ...data,
+        entityId: selectedEntityId || data.entityId,
+        assessorId: user.id,
+        assessorName: user.name,
+        rapidAssessmentDate: new Date().toISOString()
+      }
+
+      const response = await fetch('/api/v1/rapid-assessments', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify(assessmentData)
+      })
+
+      if (!response.ok) {
+        const errorData = await response.json()
+        throw new Error(errorData.error || 'Failed to submit assessment')
+      }
+
+      const result = await response.json()
+      const assessmentId = result.data?.id
+      
+      setAssessmentId(assessmentId)
+      setShowSuccess(true)
+    } catch (error) {
+      console.error('Error submitting assessment:', error)
+      throw error
+    } finally {
+      setIsSubmitting(false)
+    }
+  }
+
+  const handleCancel = () => {
+    router.push('/rapid-assessments')
+  }
+
+  const renderAssessmentForm = () => {
+    if (!selectedType) return null
+
+    const formProps = {
+      entityId: selectedEntityId || '', // Use selected entity ID
+      initialData: null,
+      onSubmit: handleSubmit,
+      onCancel: handleCancel,
+      isSubmitting,
+      disabled: isSubmitting
+    }
+
+    switch (selectedType) {
+      case 'HEALTH':
+        return <HealthAssessmentForm {...formProps} />
+      case 'POPULATION':
+        return <PopulationAssessmentForm {...formProps} />
+      case 'FOOD':
+        return <FoodAssessmentForm {...formProps} />
+      case 'WASH':
+        return <WASHAssessmentForm {...formProps} />
+      case 'SHELTER':
+        return <ShelterAssessmentForm {...formProps} />
+      case 'SECURITY':
+        return <SecurityAssessmentForm {...formProps} />
+      default:
+        return null
+    }
+  }
+
+  if (showSuccess) {
+    return (
+      <RoleBasedRoute requiredRole="ASSESSOR">
+        <div className="max-w-2xl mx-auto py-8">
+          <Card>
+            <CardHeader className="text-center">
+              <CheckCircle className="h-16 w-16 text-green-500 mx-auto mb-4" />
+              <CardTitle className="text-2xl">Assessment Submitted Successfully!</CardTitle>
+              <CardDescription>
+                Your {selectedType} assessment has been submitted and is being processed.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {assessmentId && (
+                <div className="text-center p-4 bg-gray-50 rounded-lg">
+                  <p className="text-sm text-gray-600">Assessment ID:</p>
+                  <p className="font-mono text-lg" data-testid="assessment-id">{assessmentId}</p>
+                </div>
+              )}
+              <div className="flex gap-4">
+                <Link href="/rapid-assessments">
+                  <Button variant="outline" className="flex-1">
+                    Back to Assessments
+                  </Button>
+                </Link>
+                <Button 
+                  className="flex-1" 
+                  onClick={() => {
+                    setShowSuccess(false)
+                    setSelectedType('')
+                    setAssessmentId(null)
+                  }}
+                >
+                  Create Another Assessment
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      </RoleBasedRoute>
+    )
+  }
+
+  return (
+    <RoleBasedRoute requiredRole="ASSESSOR">
+      <div className="max-w-4xl mx-auto py-8">
+        {/* Header */}
+        <div className="flex items-center gap-4 mb-8">
+          <Link href="/rapid-assessments">
+            <Button variant="outline" size="sm">
+              <ArrowLeft className="h-4 w-4 mr-2" />
+              Back to Assessments
+            </Button>
+          </Link>
+          <div>
+            <h1 className="text-3xl font-bold text-gray-900">New Rapid Assessment</h1>
+            <p className="text-gray-600 mt-1">
+              Create a new rapid assessment for affected communities
+            </p>
+          </div>
+        </div>
+
+        {!selectedType ? (
+          /* Assessment Type Selection */
+          <Card>
+            <CardHeader>
+              <CardTitle>Select Assessment Type</CardTitle>
+              <CardDescription>
+                Choose the type of assessment you want to conduct
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="grid gap-4 md:grid-cols-2">
+                {assessmentTypes.map((type) => (
+                  <div
+                    key={type.value}
+                    onClick={() => handleTypeSelect(type.value as AssessmentType)}
+                    className="p-4 border rounded-lg cursor-pointer hover:bg-gray-50 transition-colors"
+                  >
+                    <h3 className="font-medium mb-2">{type.label}</h3>
+                    <p className="text-sm text-gray-600">{type.description}</p>
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+        ) : (
+          /* Assessment Form */
+          renderAssessmentForm()
+        )}
+      </div>
+    </RoleBasedRoute>
+  )
+}
