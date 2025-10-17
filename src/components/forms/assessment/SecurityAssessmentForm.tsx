@@ -1,0 +1,502 @@
+'use client'
+
+import { useState } from 'react'
+import { useForm } from 'react-hook-form'
+import { zodResolver } from '@hookform/resolvers/zod'
+import { z } from 'zod'
+import { Button } from '@/components/ui/button'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form'
+import { Textarea } from '@/components/ui/textarea'
+import { Checkbox } from '@/components/ui/checkbox'
+import { Alert, AlertDescription } from '@/components/ui/alert'
+import { Badge } from '@/components/ui/badge'
+import { GPSCapture } from '@/components/shared/GPSCapture'
+import { MediaField } from '@/components/shared/MediaField'
+import { EntitySelector } from '@/components/shared/EntitySelector'
+import { SecurityAssessmentFormProps, SecurityAssessmentInput } from '@/types/rapid-assessment'
+import { getCurrentUserName, getAssessmentLocationData } from '@/utils/assessment-utils'
+import { Shield, AlertTriangle, Users, Lightbulb, Phone } from 'lucide-react'
+
+const SecurityAssessmentSchema = z.object({
+  isSafeFromViolence: z.boolean(),
+  gbvCasesReported: z.boolean(),
+  hasSecurityPresence: z.boolean(),
+  hasProtectionReportingMechanism: z.boolean(),
+  vulnerableGroupsHaveAccess: z.boolean(),
+  hasLighting: z.boolean(),
+  additionalSecurityDetails: z.string().optional()
+})
+
+type FormData = z.infer<typeof SecurityAssessmentSchema>
+
+export function SecurityAssessmentForm({ 
+  entityId, 
+  initialData, 
+  onSubmit, 
+  onCancel, 
+  isSubmitting = false,
+  disabled = false 
+}: SecurityAssessmentFormProps) {
+  const [gpsCoordinates, setGpsCoordinates] = useState<{ lat: number; lng: number } | null>(null)
+  const [mediaFiles, setMediaFiles] = useState<string[]>(initialData?.mediaAttachments || [])
+  const [selectedEntity, setSelectedEntity] = useState<string>(entityId)
+  const [selectedEntityData, setSelectedEntityData] = useState<any>(null)
+
+  const form = useForm<FormData>({
+    resolver: zodResolver(SecurityAssessmentSchema),
+    defaultValues: {
+      isSafeFromViolence: initialData?.isSafeFromViolence || false,
+      gbvCasesReported: initialData?.gbvCasesReported || false,
+      hasSecurityPresence: initialData?.hasSecurityPresence || false,
+      hasProtectionReportingMechanism: initialData?.hasProtectionReportingMechanism || false,
+      vulnerableGroupsHaveAccess: initialData?.vulnerableGroupsHaveAccess || false,
+      hasLighting: initialData?.hasLighting || false,
+      additionalSecurityDetails: initialData?.additionalSecurityDetails || ''
+    }
+  })
+
+  const watchedValues = form.watch()
+
+  // Calculate security risks
+  const violenceRisk = !watchedValues.isSafeFromViolence
+  const gbvRisk = watchedValues.gbvCasesReported
+  const securityGap = !watchedValues.hasSecurityPresence
+  const protectionGap = !watchedValues.hasProtectionReportingMechanism
+  const vulnerableGroupRisk = !watchedValues.vulnerableGroupsHaveAccess
+  const lightingRisk = !watchedValues.hasLighting
+  
+  const criticalRisks = [violenceRisk, gbvRisk].filter(Boolean).length
+  const hasSecurityRisks = criticalRisks > 0 || securityGap || protectionGap || vulnerableGroupRisk || lightingRisk
+
+  const handleSubmit = async (data: FormData) => {
+    if (!selectedEntity) {
+      return
+    }
+
+    const assessmentData = {
+      type: 'SECURITY' as const,
+      rapidAssessmentDate: new Date(),
+      assessorName: getCurrentUserName(),
+      entityId: selectedEntity,
+      ...getAssessmentLocationData(selectedEntityData, gpsCoordinates ? { latitude: gpsCoordinates.lat, longitude: gpsCoordinates.lng } : undefined),
+      mediaAttachments: mediaFiles,
+      securityData: data
+    }
+
+    await onSubmit(assessmentData)
+  }
+
+  return (
+    <div className="space-y-6 max-w-4xl mx-auto">
+      {/* Header */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Shield className="h-5 w-5" />
+            Security & Protection Assessment
+            {criticalRisks > 0 && (
+              <Badge variant="destructive">
+                {criticalRisks} Critical Risk{criticalRisks > 1 ? 's' : ''}
+              </Badge>
+            )}
+            {hasSecurityRisks && (
+              <Badge variant="destructive">
+                Protection Gaps
+              </Badge>
+            )}
+          </CardTitle>
+          <CardDescription>
+            Assess safety, security conditions, and protection mechanisms for vulnerable populations
+          </CardDescription>
+        </CardHeader>
+        {criticalRisks > 0 && (
+          <CardContent>
+            <Alert variant="destructive">
+              <AlertTriangle className="h-4 w-4" />
+              <AlertDescription>
+                <strong>Critical Protection Risks Identified:</strong> Immediate intervention required to ensure population safety
+              </AlertDescription>
+            </Alert>
+          </CardContent>
+        )}
+      </Card>
+
+      <Form {...form}>
+        <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-6">
+          {/* Entity Selection */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Assessment Location</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <EntitySelector
+                value={selectedEntity}
+                onValueChange={(value) => {
+                  setSelectedEntity(value)
+                  setSelectedEntityData(null)
+                }}
+                disabled={disabled}
+              />
+            </CardContent>
+          </Card>
+
+          {/* Violence & Safety Assessment */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <AlertTriangle className="h-5 w-5 text-red-500" />
+                Violence & Safety Assessment
+              </CardTitle>
+              <CardDescription>
+                Evaluate violence risks and general safety conditions
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <FormField
+                control={form.control}
+                name="isSafeFromViolence"
+                render={({ field }) => (
+                  <FormItem className="flex flex-row items-start space-x-3 space-y-0 rounded-md border p-4 border-red-200">
+                    <FormControl>
+                      <Checkbox
+                        checked={field.value}
+                        onCheckedChange={field.onChange}
+                        disabled={disabled}
+                      />
+                    </FormControl>
+                    <div className="space-y-1 leading-none">
+                      <FormLabel className="flex items-center gap-2 text-red-600">
+                        Safe from Violence
+                        {!field.value && <Badge variant="destructive">Critical Risk</Badge>}
+                      </FormLabel>
+                      <FormDescription>
+                        Population is safe from violence and armed conflict
+                      </FormDescription>
+                    </div>
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="gbvCasesReported"
+                render={({ field }) => (
+                  <FormItem className="flex flex-row items-start space-x-3 space-y-0 rounded-md border p-4 border-red-200">
+                    <FormControl>
+                      <Checkbox
+                        checked={field.value}
+                        onCheckedChange={field.onChange}
+                        disabled={disabled}
+                      />
+                    </FormControl>
+                    <div className="space-y-1 leading-none">
+                      <FormLabel className="flex items-center gap-2 text-red-600">
+                        GBV Cases Reported
+                        {field.value && <Badge variant="destructive">High Risk</Badge>}
+                      </FormLabel>
+                      <FormDescription>
+                        Cases of gender-based violence have been reported
+                      </FormDescription>
+                    </div>
+                  </FormItem>
+                )}
+              />
+            </CardContent>
+          </Card>
+
+          {/* Security & Protection Services */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Shield className="h-5 w-5" />
+                Security & Protection Services
+              </CardTitle>
+              <CardDescription>
+                Assess available security and protection services
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <FormField
+                control={form.control}
+                name="hasSecurityPresence"
+                render={({ field }) => (
+                  <FormItem className="flex flex-row items-start space-x-3 space-y-0 rounded-md border p-4">
+                    <FormControl>
+                      <Checkbox
+                        checked={field.value}
+                        onCheckedChange={field.onChange}
+                        disabled={disabled}
+                      />
+                    </FormControl>
+                    <div className="space-y-1 leading-none">
+                      <FormLabel className="flex items-center gap-2">
+                        Security Presence
+                        {!field.value && <Badge variant="destructive">Gap</Badge>}
+                      </FormLabel>
+                      <FormDescription>
+                        Security personnel or forces are present in the area
+                      </FormDescription>
+                    </div>
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="hasProtectionReportingMechanism"
+                render={({ field }) => (
+                  <FormItem className="flex flex-row items-start space-x-3 space-y-0 rounded-md border p-4">
+                    <FormControl>
+                      <Checkbox
+                        checked={field.value}
+                        onCheckedChange={field.onChange}
+                        disabled={disabled}
+                      />
+                    </FormControl>
+                    <div className="space-y-1 leading-none">
+                      <FormLabel className="flex items-center gap-2">
+                        <Phone className="h-4 w-4" />
+                        Protection Reporting Mechanism
+                        {!field.value && <Badge variant="destructive">Critical Gap</Badge>}
+                      </FormLabel>
+                      <FormDescription>
+                        Mechanisms exist for reporting protection concerns
+                      </FormDescription>
+                    </div>
+                  </FormItem>
+                )}
+              />
+            </CardContent>
+          </Card>
+
+          {/* Vulnerable Groups Protection */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Users className="h-5 w-5" />
+                Vulnerable Groups Protection
+              </CardTitle>
+              <CardDescription>
+                Assess protection access for vulnerable populations
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <FormField
+                control={form.control}
+                name="vulnerableGroupsHaveAccess"
+                render={({ field }) => (
+                  <FormItem className="flex flex-row items-start space-x-3 space-y-0 rounded-md border p-4">
+                    <FormControl>
+                      <Checkbox
+                        checked={field.value}
+                        onCheckedChange={field.onChange}
+                        disabled={disabled}
+                      />
+                    </FormControl>
+                    <div className="space-y-1 leading-none">
+                      <FormLabel className="flex items-center gap-2">
+                        Vulnerable Groups Have Access
+                        {!field.value && <Badge variant="destructive">Critical Gap</Badge>}
+                      </FormLabel>
+                      <FormDescription>
+                        Vulnerable groups have access to protection services
+                      </FormDescription>
+                    </div>
+                  </FormItem>
+                )}
+              />
+            </CardContent>
+          </Card>
+
+          {/* Environmental Safety */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Lightbulb className="h-5 w-5" />
+                Environmental Safety
+              </CardTitle>
+              <CardDescription>
+                Assess environmental safety conditions
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <FormField
+                control={form.control}
+                name="hasLighting"
+                render={({ field }) => (
+                  <FormItem className="flex flex-row items-start space-x-3 space-y-0 rounded-md border p-4">
+                    <FormControl>
+                      <Checkbox
+                        checked={field.value}
+                        onCheckedChange={field.onChange}
+                        disabled={disabled}
+                      />
+                    </FormControl>
+                    <div className="space-y-1 leading-none">
+                      <FormLabel className="flex items-center gap-2">
+                        Adequate Lighting
+                        {!field.value && <Badge variant="destructive">Safety Risk</Badge>}
+                      </FormLabel>
+                      <FormDescription>
+                        Sufficient lighting available for safety and security
+                      </FormDescription>
+                    </div>
+                  </FormItem>
+                )}
+              />
+            </CardContent>
+          </Card>
+
+          {/* Security Risk Assessment */}
+          {hasSecurityRisks && (
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2 text-red-600">
+                  <AlertTriangle className="h-5 w-5" />
+                  Security Risk Assessment
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-4">
+                  {violenceRisk && (
+                    <Alert variant="destructive">
+                      <AlertTriangle className="h-4 w-4" />
+                      <AlertDescription>
+                        <strong>Violence Risk:</strong> Population exposed to violence and conflict. Immediate protection measures required.
+                      </AlertDescription>
+                    </Alert>
+                  )}
+                  
+                  {gbvRisk && (
+                    <Alert className="border-red-200 bg-red-50">
+                      <AlertTriangle className="h-4 w-4 text-red-600" />
+                      <AlertDescription className="text-red-800">
+                        <strong>GBV Risk:</strong> Gender-based violence reported. Specialized protection services urgently needed.
+                      </AlertDescription>
+                    </Alert>
+                  )}
+                  
+                  {securityGap && (
+                    <Alert variant="destructive">
+                      <Shield className="h-4 w-4" />
+                      <AlertDescription>
+                        <strong>Security Gap:</strong> No security presence increases vulnerability of affected population
+                      </AlertDescription>
+                    </Alert>
+                  )}
+                  
+                  {protectionGap && (
+                    <Alert variant="destructive">
+                      <Phone className="h-4 w-4" />
+                      <AlertDescription>
+                        <strong>Protection Gap:</strong> No reporting mechanisms for protection concerns
+                      </AlertDescription>
+                    </Alert>
+                  )}
+                  
+                  {vulnerableGroupRisk && (
+                    <Alert variant="destructive">
+                      <Users className="h-4 w-4" />
+                      <AlertDescription>
+                        <strong>Vulnerable Group Risk:</strong> Vulnerable groups lack access to protection services
+                      </AlertDescription>
+                    </Alert>
+                  )}
+                  
+                  {lightingRisk && (
+                    <Alert>
+                      <Lightbulb className="h-4 w-4" />
+                      <AlertDescription>
+                        <strong>Safety Risk:</strong> Inadequate lighting increases security risks, especially at night
+                      </AlertDescription>
+                    </Alert>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* GPS Location */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Location Information</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <GPSCapture
+                onLocationCapture={(lat, lng) => setGpsCoordinates({ lat, lng })}
+                disabled={disabled}
+                required={false}
+              />
+            </CardContent>
+          </Card>
+
+          {/* Media Attachments */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Photo Documentation</CardTitle>
+              <CardDescription>
+                Add photos of security conditions, protection facilities, and vulnerable areas (ensure no subjects are identifiable)
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <MediaField
+                onPhotosChange={setMediaFiles}
+                initialPhotos={mediaFiles}
+                maxPhotos={5}
+                maxFileSize={10}
+              />
+            </CardContent>
+          </Card>
+
+          {/* Additional Details */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Additional Details</CardTitle>
+              <CardDescription>
+                Any additional security or protection-related information
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <FormField
+                control={form.control}
+                name="additionalSecurityDetails"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormControl>
+                      <Textarea
+                        placeholder="Provide any additional security assessment details (avoid sensitive personal information)..."
+                        className="min-h-[100px]"
+                        {...field}
+                        disabled={disabled}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </CardContent>
+          </Card>
+
+          {/* Form Actions */}
+          <div className="flex justify-end gap-4">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={onCancel}
+              disabled={isSubmitting}
+            >
+              Cancel
+            </Button>
+            <Button
+              type="submit"
+              disabled={isSubmitting || disabled || !selectedEntity}
+            >
+              {isSubmitting ? 'Submitting...' : 'Submit Security Assessment'}
+            </Button>
+          </div>
+        </form>
+      </Form>
+    </div>
+  )
+}

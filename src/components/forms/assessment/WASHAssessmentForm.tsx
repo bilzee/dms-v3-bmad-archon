@@ -1,0 +1,577 @@
+'use client'
+
+import { useState } from 'react'
+import { useForm } from 'react-hook-form'
+import { zodResolver } from '@hookform/resolvers/zod'
+import { z } from 'zod'
+import { Button } from '@/components/ui/button'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form'
+import { Input } from '@/components/ui/input'
+import { Textarea } from '@/components/ui/textarea'
+import { Checkbox } from '@/components/ui/checkbox'
+import { Alert, AlertDescription } from '@/components/ui/alert'
+import { Badge } from '@/components/ui/badge'
+import { GPSCapture } from '@/components/shared/GPSCapture'
+import { MediaField } from '@/components/shared/MediaField'
+import { EntitySelector } from '@/components/shared/EntitySelector'
+import { WASHAssessmentFormProps, WASHAssessmentInput } from '@/types/rapid-assessment'
+import { getCurrentUserName, getAssessmentLocationData } from '@/utils/assessment-utils'
+import { cn } from '@/lib/utils'
+import { Droplets, AlertTriangle, Toilet, Waves } from 'lucide-react'
+
+const WASHAssessmentSchema = z.object({
+  waterSource: z.array(z.string()).default([]),
+  isWaterSufficient: z.boolean(),
+  hasCleanWaterAccess: z.boolean(),
+  functionalLatrinesAvailable: z.number().int().min(0),
+  areLatrinesSufficient: z.boolean(),
+  hasHandwashingFacilities: z.boolean(),
+  hasOpenDefecationConcerns: z.boolean(),
+  additionalWashDetails: z.string().optional()
+})
+
+type FormData = z.infer<typeof WASHAssessmentSchema>
+
+interface WaterSourceOption {
+  id: string
+  label: string
+  description: string
+  icon?: any
+}
+
+const waterSourceOptions: WaterSourceOption[] = [
+  {
+    id: 'Borehole',
+    label: 'Borehole',
+    description: 'Groundwater extraction through borehole'
+  },
+  {
+    id: 'River/Stream',
+    label: 'River/Stream',
+    description: 'Surface water from rivers or streams'
+  },
+  {
+    id: 'Water trucks',
+    label: 'Water Trucks',
+    description: 'Trucked water supply'
+  },
+  {
+    id: 'Tap water',
+    label: 'Tap Water',
+    description: 'Piped water supply system'
+  },
+  {
+    id: 'Sachet water',
+    label: 'Sachet Water',
+    description: 'Commercially packaged water'
+  },
+  {
+    id: 'Other',
+    label: 'Other',
+    description: 'Other water sources'
+  }
+]
+
+export function WASHAssessmentForm({ 
+  entityId, 
+  initialData, 
+  onSubmit, 
+  onCancel, 
+  isSubmitting = false,
+  disabled = false 
+}: WASHAssessmentFormProps) {
+  const [gpsCoordinates, setGpsCoordinates] = useState<{ lat: number; lng: number } | null>(null)
+  const [mediaFiles, setMediaFiles] = useState<string[]>(initialData?.mediaAttachments || [])
+  const [selectedEntity, setSelectedEntity] = useState<string>(entityId)
+  const [selectedEntityData, setSelectedEntityData] = useState<any>(null)
+
+  const form = useForm<FormData>({
+    resolver: zodResolver(WASHAssessmentSchema),
+    defaultValues: {
+      waterSource: initialData?.waterSource || [],
+      isWaterSufficient: initialData?.isWaterSufficient || false,
+      hasCleanWaterAccess: initialData?.hasCleanWaterAccess || false,
+      functionalLatrinesAvailable: initialData?.functionalLatrinesAvailable || 0,
+      areLatrinesSufficient: initialData?.areLatrinesSufficient || false,
+      hasHandwashingFacilities: initialData?.hasHandwashingFacilities || false,
+      hasOpenDefecationConcerns: initialData?.hasOpenDefecationConcerns || false,
+      additionalWashDetails: initialData?.additionalWashDetails || ''
+    }
+  })
+
+  const watchedValues = form.watch()
+
+  // Calculate WASH gaps and needs
+  const waterGaps = !watchedValues.isWaterSufficient || !watchedValues.hasCleanWaterAccess
+  const sanitationGaps = !watchedValues.areLatrinesSufficient || watchedValues.functionalLatrinesAvailable === 0
+  const hygieneGaps = !watchedValues.hasHandwashingFacilities
+  const hasWashGaps = waterGaps || sanitationGaps || hygieneGaps
+  const hasDefecationIssues = watchedValues.hasOpenDefecationConcerns
+
+  // Calculate latrine coverage (assuming 50 people per latrine as SPHERE standard)
+  const estimatedPopulation = 1000 // This should come from entity data
+  const latrineCoverage = watchedValues.functionalLatrinesAvailable > 0 
+    ? Math.round((watchedValues.functionalLatrinesAvailable * 50) / estimatedPopulation * 100)
+    : 0
+
+  const handleSubmit = async (data: FormData) => {
+    if (!selectedEntity) {
+      return
+    }
+
+    const assessmentData = {
+      type: 'WASH' as const,
+      rapidAssessmentDate: new Date(),
+      assessorName: getCurrentUserName(),
+      entityId: selectedEntity,
+      ...getAssessmentLocationData(
+        selectedEntityData,
+        gpsCoordinates ? {
+          latitude: gpsCoordinates.lat,
+          longitude: gpsCoordinates.lng
+        } : undefined
+      ),
+      mediaAttachments: mediaFiles,
+      washData: data
+    }
+
+    await onSubmit(assessmentData)
+  }
+
+  const handleWaterSourceChange = (sourceId: string, checked: boolean) => {
+    const currentSources = form.getValues('waterSource')
+    if (checked) {
+      form.setValue('waterSource', [...currentSources, sourceId])
+    } else {
+      form.setValue('waterSource', currentSources.filter(id => id !== sourceId))
+    }
+  }
+
+  return (
+    <div className="space-y-6 max-w-4xl mx-auto">
+      {/* Header */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Droplets className="h-5 w-5" />
+            WASH Assessment
+            {hasWashGaps && (
+              <Badge variant="destructive">
+                WASH Gaps Identified
+              </Badge>
+            )}
+            {hasDefecationIssues && (
+              <Badge variant="destructive">
+                Public Health Risk
+              </Badge>
+            )}
+          </CardTitle>
+          <CardDescription>
+            Assess water, sanitation, and hygiene (WASH) facilities and practices
+          </CardDescription>
+        </CardHeader>
+        {hasWashGaps && (
+          <CardContent>
+            <Alert variant="destructive">
+              <AlertTriangle className="h-4 w-4" />
+              <AlertDescription>
+                <strong>Critical WASH Issues:</strong> {[
+                  waterGaps && 'Water access',
+                  sanitationGaps && 'Sanitation facilities',
+                  hygieneGaps && 'Handwashing facilities'
+                ].filter(Boolean).join(', ')} require immediate attention
+              </AlertDescription>
+            </Alert>
+          </CardContent>
+        )}
+      </Card>
+
+      <Form {...form}>
+        <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-6">
+          {/* Entity Selection */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Assessment Location</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <EntitySelector
+                value={selectedEntity}
+                onValueChange={(entityId) => {
+                  setSelectedEntity(entityId)
+                  // Reset entity data when selection changes
+                  setSelectedEntityData(null)
+                }}
+                disabled={disabled}
+                data-testid="entity-select"
+              />
+            </CardContent>
+          </Card>
+
+          {/* Water Sources */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Water Sources</CardTitle>
+              <CardDescription>
+                Identify available water sources for the affected population
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {waterSourceOptions.map((source) => (
+                  <FormField
+                    key={source.id}
+                    control={form.control}
+                    name="waterSource"
+                    render={({ field }) => (
+                      <FormItem className="flex flex-row items-start space-x-3 space-y-0 rounded-md border p-4">
+                        <FormControl>
+                          <Checkbox
+                            checked={field.value.includes(source.id)}
+                            onCheckedChange={(checked) => handleWaterSourceChange(source.id, checked as boolean)}
+                            disabled={disabled}
+                          />
+                        </FormControl>
+                        <div className="space-y-1 leading-none flex-1">
+                          <FormLabel>{source.label}</FormLabel>
+                          <FormDescription className="text-xs">
+                            {source.description}
+                          </FormDescription>
+                        </div>
+                      </FormItem>
+                    )}
+                  />
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Water Access */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Water Access and Availability</CardTitle>
+              <CardDescription>
+                Evaluate water access and sufficiency
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <FormField
+                  control={form.control}
+                  name="isWaterSufficient"
+                  render={({ field }) => (
+                    <FormItem className="flex flex-row items-start space-x-3 space-y-0 rounded-md border p-4">
+                      <FormControl>
+                        <Checkbox
+                          checked={field.value}
+                          onCheckedChange={field.onChange}
+                          disabled={disabled}
+                        />
+                      </FormControl>
+                      <div className="space-y-1 leading-none">
+                        <FormLabel className="flex items-center gap-2">
+                          Water Sufficient
+                          {!field.value && <Badge variant="destructive">Gap</Badge>}
+                        </FormLabel>
+                        <FormDescription>
+                          Water quantity is sufficient for basic needs
+                        </FormDescription>
+                      </div>
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="hasCleanWaterAccess"
+                  render={({ field }) => (
+                    <FormItem className="flex flex-row items-start space-x-3 space-y-0 rounded-md border p-4">
+                      <FormControl>
+                        <Checkbox
+                          checked={field.value}
+                          onCheckedChange={field.onChange}
+                          disabled={disabled}
+                        />
+                      </FormControl>
+                      <div className="space-y-1 leading-none">
+                        <FormLabel className="flex items-center gap-2">
+                          Clean Water Access
+                          {!field.value && <Badge variant="destructive">Critical Gap</Badge>}
+                        </FormLabel>
+                        <FormDescription>
+                          Population has access to safe drinking water
+                        </FormDescription>
+                      </div>
+                    </FormItem>
+                  )}
+                />
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Sanitation Facilities */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Toilet className="h-5 w-5" />
+                Sanitation Facilities
+              </CardTitle>
+              <CardDescription>
+                Assess toilet and sanitation facilities
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <FormField
+                  control={form.control}
+                  name="functionalLatrinesAvailable"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="flex items-center gap-2">
+                        Functional Latrines
+                        <Badge variant="outline">{latrineCoverage}% coverage</Badge>
+                      </FormLabel>
+                      <FormControl>
+                        <Input
+                          type="number"
+                          min="0"
+                          placeholder="0"
+                          {...field}
+                          onChange={(e) => field.onChange(parseInt(e.target.value) || 0)}
+                          disabled={disabled}
+                        />
+                      </FormControl>
+                      <FormDescription>
+                        Number of functional latrines available
+                      </FormDescription>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="areLatrinesSufficient"
+                  render={({ field }) => (
+                    <FormItem className="flex flex-row items-start space-x-3 space-y-0 rounded-md border p-4">
+                      <FormControl>
+                        <Checkbox
+                          checked={field.value}
+                          onCheckedChange={field.onChange}
+                          disabled={disabled}
+                        />
+                      </FormControl>
+                      <div className="space-y-1 leading-none">
+                        <FormLabel className="flex items-center gap-2">
+                          Latrines Sufficient
+                          {!field.value && <Badge variant="destructive">Gap</Badge>}
+                        </FormLabel>
+                        <FormDescription>
+                          Number of latrines is sufficient for population
+                        </FormDescription>
+                      </div>
+                    </FormItem>
+                  )}
+                />
+              </div>
+
+              <FormField
+                control={form.control}
+                name="hasOpenDefecationConcerns"
+                render={({ field }) => (
+                    <FormItem className="flex flex-row items-start space-x-3 space-y-0 rounded-md border p-4 border-red-200">
+                      <FormControl>
+                        <Checkbox
+                          checked={field.value}
+                          onCheckedChange={field.onChange}
+                          disabled={disabled}
+                        />
+                      </FormControl>
+                      <div className="space-y-1 leading-none">
+                        <FormLabel className="flex items-center gap-2 text-red-600">
+                          Open Defecation Concerns
+                          {field.value && <Badge variant="destructive">Public Health Risk</Badge>}
+                        </FormLabel>
+                        <FormDescription>
+                          Open defecation practices observed (disease transmission risk)
+                        </FormDescription>
+                      </div>
+                    </FormItem>
+                  )}
+                />
+            </CardContent>
+          </Card>
+
+          {/* Hygiene Facilities */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Waves className="h-5 w-5" />
+                Hygiene Practices
+              </CardTitle>
+              <CardDescription>
+                Assess handwashing and hygiene facilities
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <FormField
+                control={form.control}
+                name="hasHandwashingFacilities"
+                render={({ field }) => (
+                  <FormItem className="flex flex-row items-start space-x-3 space-y-0 rounded-md border p-4">
+                    <FormControl>
+                      <Checkbox
+                        checked={field.value}
+                        onCheckedChange={field.onChange}
+                        disabled={disabled}
+                      />
+                    </FormControl>
+                    <div className="space-y-1 leading-none">
+                      <FormLabel className="flex items-center gap-2">
+                        Handwashing Facilities Available
+                        {!field.value && <Badge variant="destructive">Critical Gap</Badge>}
+                      </FormLabel>
+                      <FormDescription>
+                        Handwashing facilities with soap/water are available
+                      </FormDescription>
+                    </div>
+                  </FormItem>
+                )}
+              />
+            </CardContent>
+          </Card>
+
+          {/* WASH Risk Assessment */}
+          {(hasWashGaps || hasDefecationIssues) && (
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2 text-red-600">
+                  <AlertTriangle className="h-5 w-5" />
+                  WASH Risk Assessment
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-4">
+                  {waterGaps && (
+                    <Alert variant="destructive">
+                      <Droplets className="h-4 w-4" />
+                      <AlertDescription>
+                        <strong>Water Security Risk:</strong> Insufficient or unsafe water access increases risk of waterborne diseases
+                      </AlertDescription>
+                    </Alert>
+                  )}
+                  
+                  {sanitationGaps && (
+                    <Alert variant="destructive">
+                      <Toilet className="h-4 w-4" />
+                      <AlertDescription>
+                        <strong>Sanitation Risk:</strong> Inadequate toilet facilities increases disease transmission risk
+                      </AlertDescription>
+                    </Alert>
+                  )}
+                  
+                  {hygieneGaps && (
+                    <Alert variant="destructive">
+                      <Waves className="h-4 w-4" />
+                      <AlertDescription>
+                        <strong>Hygiene Risk:</strong> Lack of handwashing facilities increases infection risk
+                      </AlertDescription>
+                    </Alert>
+                  )}
+                  
+                  {hasDefecationIssues && (
+                    <Alert className="border-red-200 bg-red-50">
+                      <AlertTriangle className="h-4 w-4 text-red-600" />
+                      <AlertDescription className="text-red-800">
+                        <strong>High Public Health Risk:</strong> Open defecation practices create significant disease transmission risk. Immediate intervention required.
+                      </AlertDescription>
+                    </Alert>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* GPS Location */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Location Information</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <GPSCapture
+                onLocationCapture={(lat, lng) => setGpsCoordinates({ lat, lng })}
+                disabled={disabled}
+                required={false}
+              />
+            </CardContent>
+          </Card>
+
+          {/* Media Attachments */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Photo Documentation</CardTitle>
+              <CardDescription>
+                Add photos of water sources, sanitation facilities, and hygiene stations
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <MediaField
+                onPhotosChange={setMediaFiles}
+                initialPhotos={mediaFiles}
+                maxPhotos={5}
+                maxFileSize={10}
+              />
+            </CardContent>
+          </Card>
+
+          {/* Additional Details */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Additional Details</CardTitle>
+              <CardDescription>
+                Any additional WASH-related information
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <FormField
+                control={form.control}
+                name="additionalWashDetails"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormControl>
+                      <Textarea
+                        placeholder="Provide any additional WASH assessment details..."
+                        className="min-h-[100px]"
+                        {...field}
+                        disabled={disabled}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </CardContent>
+          </Card>
+
+          {/* Form Actions */}
+          <div className="flex justify-end gap-4">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={onCancel}
+              disabled={isSubmitting}
+            >
+              Cancel
+            </Button>
+            <Button
+              type="submit"
+              disabled={isSubmitting || disabled || !selectedEntity}
+            >
+              {isSubmitting ? 'Submitting...' : 'Submit WASH Assessment'}
+            </Button>
+          </div>
+        </form>
+      </Form>
+    </div>
+  )
+}

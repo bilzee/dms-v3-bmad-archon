@@ -50,10 +50,21 @@ export default function NewRapidAssessmentPage() {
         throw new Error('Not authenticated')
       }
 
+      // Extract entity ID from form data if available
+      const formEntityId = data.entityId
+      if (formEntityId && formEntityId !== selectedEntityId) {
+        setSelectedEntityId(formEntityId)
+      }
+
       // Prepare assessment data with proper entity ID
+      const finalEntityId = selectedEntityId || formEntityId
+      if (!finalEntityId) {
+        throw new Error('Please select an entity for the assessment')
+      }
+      
       const assessmentData = {
         ...data,
-        entityId: selectedEntityId || data.entityId,
+        entityId: finalEntityId,
         assessorId: user.id,
         assessorName: user.name,
         rapidAssessmentDate: new Date().toISOString()
@@ -69,11 +80,27 @@ export default function NewRapidAssessmentPage() {
       })
 
       if (!response.ok) {
-        const errorData = await response.json()
-        throw new Error(errorData.error || 'Failed to submit assessment')
+        let errorMessage = 'Failed to submit assessment'
+        try {
+          const responseText = await response.text()
+          if (responseText) {
+            const errorData = JSON.parse(responseText)
+            errorMessage = errorData.error || errorMessage
+          }
+        } catch (parseError) {
+          console.warn('Failed to parse error response:', parseError)
+        }
+        throw new Error(errorMessage)
       }
 
-      const result = await response.json()
+      let result
+      try {
+        const responseText = await response.text()
+        result = responseText ? JSON.parse(responseText) : {}
+      } catch (parseError) {
+        console.error('Failed to parse success response:', parseError)
+        throw new Error('Invalid response from server')
+      }
       const assessmentId = result.data?.id
       
       setAssessmentId(assessmentId)

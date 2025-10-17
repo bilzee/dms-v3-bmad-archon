@@ -83,17 +83,22 @@ export class RapidAssessmentService {
           typeSpecificAssessment = await tx.foodAssessment.create({
             data: {
               rapidAssessmentId: rapidAssessment.id,
-              ...foodData
+              ...foodData,
+              foodSource: JSON.stringify(foodData.foodSource || [])
             }
           })
           break
 
         case 'WASH':
           const washData = (input as any).washData
+          if (!washData) {
+            throw new Error('WASH assessment data (washData) is required but missing from input')
+          }
           typeSpecificAssessment = await tx.washAssessment.create({
             data: {
               rapidAssessmentId: rapidAssessment.id,
-              ...washData
+              ...washData,
+              waterSource: JSON.stringify(washData.waterSource || [])
             }
           })
           break
@@ -103,7 +108,9 @@ export class RapidAssessmentService {
           typeSpecificAssessment = await tx.shelterAssessment.create({
             data: {
               rapidAssessmentId: rapidAssessment.id,
-              ...shelterData
+              ...shelterData,
+              shelterTypes: JSON.stringify(shelterData.shelterTypes || []),
+              requiredShelterType: JSON.stringify(shelterData.requiredShelterType || [])
             }
           })
           break

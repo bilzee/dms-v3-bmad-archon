@@ -82,7 +82,7 @@ export default function DashboardPage() {
                 <Badge variant="secondary" className="text-xs">Assessor</Badge>
               </div>
               <div className="grid grid-cols-1 gap-2">
-                <Link href="/assessor/rapid-assessments">
+                <Link href="/rapid-assessments" data-testid="rapid-assessments-nav">
                   <Button variant="outline" className="w-full justify-start">
                     <Activity className="h-4 w-4 mr-2" />
                     View All Assessments

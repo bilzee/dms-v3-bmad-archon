@@ -186,16 +186,17 @@ async function main() {
   await prisma.entity.deleteMany({})
   
   const entities = [
-    { name: 'Maiduguri Metropolitan', type: 'LGA', location: 'Borno State', coordinates: { lat: 11.8311, lng: 13.1511 } },
-    { name: 'Jere Local Government', type: 'LGA', location: 'Borno State', coordinates: { lat: 11.8822, lng: 13.2143 } },
-    { name: 'Gwoza Local Government', type: 'LGA', location: 'Borno State', coordinates: { lat: 11.0417, lng: 13.6875 } },
-    { name: 'Primary Health Center Maiduguri', type: 'FACILITY', location: 'Maiduguri', coordinates: { lat: 11.8467, lng: 13.1569 } },
-    { name: 'IDP Camp Dalori', type: 'CAMP', location: 'Maiduguri', coordinates: { lat: 11.7833, lng: 13.2167 } },
+    { id: 'entity-1', name: 'Maiduguri Metropolitan', type: 'LGA', location: 'Borno State', coordinates: { lat: 11.8311, lng: 13.1511 } },
+    { id: 'entity-2', name: 'Jere Local Government', type: 'LGA', location: 'Borno State', coordinates: { lat: 11.8822, lng: 13.2143 } },
+    { id: 'entity-3', name: 'Gwoza Local Government', type: 'LGA', location: 'Borno State', coordinates: { lat: 11.0417, lng: 13.6875 } },
+    { id: 'entity-4', name: 'Primary Health Center Maiduguri', type: 'FACILITY', location: 'Maiduguri', coordinates: { lat: 11.8467, lng: 13.1569 } },
+    { id: 'entity-5', name: 'IDP Camp Dalori', type: 'CAMP', location: 'Maiduguri', coordinates: { lat: 11.7833, lng: 13.2167 } },
   ]
 
   for (const entityData of entities) {
     await prisma.entity.create({
       data: {
+        id: entityData.id,
         name: entityData.name,
         type: entityData.type as any,
         location: entityData.location,
@@ -259,7 +260,7 @@ async function main() {
   })
 
   // Assign coordinator to entities
-  const maiduguri = await prisma.entity.findFirst({ where: { name: 'Maiduguri Metropolitan' } })
+  const maiduguri = await prisma.entity.findUnique({ where: { id: 'entity-1' } })
   if (maiduguri) {
     await prisma.entityAssignment.upsert({
       where: { userId_entityId: { userId: coordinatorUser.id, entityId: maiduguri.id } },
@@ -315,9 +316,50 @@ async function main() {
     })
   }
 
+  // Create sample assessor user for testing
+  console.log('👤 Creating sample assessor user...')
+  const assessorPasswordHash = await bcrypt.hash('test-password', 10)
+  
+  const assessorUser = await prisma.user.upsert({
+    where: { email: 'assessor@test.com' },
+    update: {},
+    create: {
+      email: 'assessor@test.com',
+      username: 'assessor',
+      passwordHash: assessorPasswordHash,
+      name: 'Field Assessor',
+      organization: 'Borno State Emergency Management Agency',
+    },
+  })
+
+  // Assign assessor role
+  await prisma.userRole.upsert({
+    where: { userId_roleId: { userId: assessorUser.id, roleId: assessorRole.id } },
+    update: {},
+    create: {
+      userId: assessorUser.id,
+      roleId: assessorRole.id,
+      assignedBy: adminUser.id,
+    },
+  })
+
+  // Assign assessor to entities
+  if (maiduguri) {
+    await prisma.entityAssignment.upsert({
+      where: { userId_entityId: { userId: assessorUser.id, entityId: maiduguri.id } },
+      update: {},
+      create: {
+        userId: assessorUser.id,
+        entityId: maiduguri.id,
+        assignedBy: adminUser.id,
+      },
+    })
+  }
+
   console.log('✅ Database seed completed successfully!')
   console.log('📧 Admin credentials: admin@dms.gov.ng / admin123!')
   console.log('📧 Coordinator credentials: coordinator@dms.gov.ng / coordinator123!')
+  console.log('📧 Assessor credentials: assessor@test.com / test-password')
   console.log('📧 Multi-role credentials: multirole@dms.gov.ng / multirole123! (ASSESSOR, COORDINATOR, DONOR)')
 }
 

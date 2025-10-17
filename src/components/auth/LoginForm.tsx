@@ -43,6 +43,15 @@ const DEV_TEST_USERS = [
     description: 'Verifies assessments, manages entities'
   },
   {
+    id: 'assessor',
+    name: 'Field Assessor',
+    email: 'assessor@test.com',
+    password: 'test-password',
+    roles: ['Assessor'],
+    icon: Heart,
+    description: 'Conducts rapid assessments in the field'
+  },
+  {
     id: 'multirole',
     name: 'Multi Role Test User',
     email: 'multirole@dms.gov.ng',
@@ -152,6 +161,7 @@ export function LoginForm() {
               name="email"
               type="email"
               placeholder="your@email.com"
+              data-testid="email"
               {...register('email')}
               aria-invalid={errors.email ? 'true' : 'false'}
             />
@@ -169,6 +179,7 @@ export function LoginForm() {
               name="password"
               type="password"
               placeholder="Enter your password"
+              data-testid="password"
               {...register('password')}
               aria-invalid={errors.password ? 'true' : 'false'}
             />
@@ -183,6 +194,7 @@ export function LoginForm() {
             type="submit" 
             className="w-full" 
             disabled={isSubmitting}
+            data-testid="login-button"
           >
             {isSubmitting ? 'Signing in...' : 'Sign in'}
           </Button>

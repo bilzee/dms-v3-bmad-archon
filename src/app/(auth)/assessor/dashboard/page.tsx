@@ -95,7 +95,7 @@ export default function AssessorDashboard() {
           </CardHeader>
           <CardContent>
             <div className="grid gap-4 md:grid-cols-2">
-              <Link href="/assessor/rapid-assessments">
+              <Link href="/assessor/rapid-assessments" data-testid="rapid-assessments-nav">
                 <Button variant="outline" className="w-full justify-start">
                   <Activity className="mr-2 h-4 w-4" />
                   View All Assessments

@@ -11,7 +11,7 @@ export default defineConfig({
   workers: process.env.CI ? 1 : undefined,
   reporter: 'html',
   use: {
-    baseURL: 'http://127.0.0.1:3000',
+    baseURL: 'http://127.0.0.1:3004',
     trace: 'on-first-retry',
     // Additional context for PWA testing
     contextOptions: {
@@ -48,7 +48,7 @@ export default defineConfig({
 
   webServer: {
     command: isPWATesting ? 'npm run dev:pwa' : 'npm run dev',
-    url: 'http://127.0.0.1:3000',
+    url: 'http://127.0.0.1:3004',
     reuseExistingServer: !process.env.CI,
     env: {
       ...(isPWATesting && { PWA_TESTING: 'true' }),

@@ -294,7 +294,9 @@ export class ConflictResolver {
         existingLogs.splice(0, existingLogs.length - 100);
       }
       
-      localStorage.setItem('dms_conflict_logs', JSON.stringify(existingLogs));
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('dms_conflict_logs', JSON.stringify(existingLogs));
+      }
 
       console.log(`Logged conflict resolution for ${conflict.entityType} ${conflict.entityUuid}`);
     } catch (error) {
@@ -304,6 +306,9 @@ export class ConflictResolver {
 
   private getStoredConflictLogs(): ConflictRecord[] {
     try {
+      if (typeof window === 'undefined') {
+        return [];
+      }
       const logs = localStorage.getItem('dms_conflict_logs');
       return logs ? JSON.parse(logs) : [];
     } catch (error) {
@@ -396,7 +401,9 @@ export class ConflictResolver {
 
       const clearedCount = logs.length - remainingLogs.length;
       
-      localStorage.setItem('dms_conflict_logs', JSON.stringify(remainingLogs));
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('dms_conflict_logs', JSON.stringify(remainingLogs));
+      }
 
       console.log(`Cleared ${clearedCount} conflict logs older than ${olderThanDays} days`);
       return clearedCount;

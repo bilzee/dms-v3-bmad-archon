@@ -49,33 +49,16 @@ export function EntitySelector({
         throw new Error('User not authenticated')
       }
 
-      // Get entities available for assessment by this user
-      const availableEntities = await entityAssignmentService.getAvailableEntitiesForAssessment(user.id)
+      // Get entities available for assessment by this user via API
+      const response = await fetch(`/api/entities/available-for-assessment?userId=${user.id}`)
       
-      // Enhance with assignment information
-      const entitiesWithInfo: EntityWithAssignment[] = await Promise.all(
-        availableEntities.map(async (entity) => {
-          try {
-            const assignedUsers = await entityAssignmentService.getEntityAssignedUsers(entity.id)
-            const canCreate = await entityAssignmentService.canCreateAssessment(user.id, entity.id)
-            
-            return {
-              ...entity,
-              assignedUsersCount: assignedUsers.length,
-              canCreateAssessment: canCreate
-            }
-          } catch (err) {
-            console.error(`Error loading assignment info for entity ${entity.id}:`, err)
-            return {
-              ...entity,
-              assignedUsersCount: 0,
-              canCreateAssessment: false
-            }
-          }
-        })
-      )
-
-      return entitiesWithInfo
+      if (!response.ok) {
+        const errorData = await response.json()
+        throw new Error(errorData.error || 'Failed to fetch available entities')
+      }
+      
+      const data = await response.json()
+      return data.entities || []
     },
     enabled: !!user,
     staleTime: 5 * 60 * 1000, // 5 minutes
@@ -96,6 +79,10 @@ export function EntitySelector({
     const selected = entities.find(e => e.id === entityId)
     setSelectedEntity(selected || null)
     onValueChange(entityId)
+  }
+
+  const loadEntities = () => {
+    refetch()
   }
 
   const getEntityTypeColor = (type: string) => {
@@ -173,7 +160,7 @@ export function EntitySelector({
   return (
     <div className="space-y-3">
       <Select value={value} onValueChange={handleEntityChange} disabled={disabled}>
-        <SelectTrigger className={className}>
+        <SelectTrigger className={className} data-testid="entity-select">
           <SelectValue placeholder="Select an entity to assess">
             {selectedEntity ? (
               <div className="flex items-center justify-between w-full">

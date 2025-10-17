@@ -1,0 +1,231 @@
+# Page snapshot
+
+```yaml
+- generic [active] [ref=e1]:
+  - generic [ref=e2]:
+    - banner [ref=e3]:
+      - generic [ref=e5]:
+        - heading "DMS Borno" [level=1] [ref=e7]
+        - generic [ref=e8]:
+          - generic [ref=e9]:
+            - img [ref=e10]
+            - generic [ref=e12]: Synced
+          - generic [ref=e14]:
+            - img [ref=e15]
+            - generic [ref=e17]: Online
+          - generic [ref=e18]:
+            - generic [ref=e19]: Field Assessor
+            - button "Logout" [ref=e20] [cursor=pointer]
+    - main [ref=e21]:
+      - generic [ref=e22]:
+        - generic [ref=e23]:
+          - link "Back to Assessments" [ref=e24] [cursor=pointer]:
+            - /url: /rapid-assessments
+            - button "Back to Assessments" [ref=e25] [cursor=pointer]:
+              - img
+              - text: Back to Assessments
+          - generic [ref=e26]:
+            - heading "New Rapid Assessment" [level=1] [ref=e27]
+            - paragraph [ref=e28]: Create a new rapid assessment for affected communities
+        - generic [ref=e29]:
+          - generic [ref=e30]:
+            - generic [ref=e31]:
+              - generic [ref=e32]:
+                - img [ref=e33]
+                - text: Health Assessment
+                - generic [ref=e39]: 6 Critical Gaps
+              - generic [ref=e40]: Assess healthcare facilities, services, and common health issues in the affected area
+            - alert [ref=e42]:
+              - img [ref=e43]
+              - generic [ref=e47]:
+                - strong [ref=e48]: "Critical Gaps Identified:"
+                - text: Functional Clinic, Emergency Services, Trained Staff, Medicine Supply, Medical Supplies, Maternal/Child Services
+          - generic [ref=e49]:
+            - generic [ref=e50]:
+              - generic [ref=e51]:
+                - generic [ref=e52]: Assessment Location
+                - generic [ref=e53]: Select the entity being assessed
+              - alert [ref=e55]:
+                - img [ref=e56]
+                - generic [ref=e60]: No entities are currently assigned to you for assessment. Please contact your coordinator to get entity assignments.
+                - button "Refresh" [ref=e61] [cursor=pointer]:
+                  - img
+                  - text: Refresh
+            - generic [ref=e62]:
+              - generic [ref=e63]:
+                - generic [ref=e64]: Healthcare Facilities
+                - generic [ref=e65]: Evaluate the availability and functionality of healthcare facilities
+              - generic [ref=e66]:
+                - generic [ref=e67]:
+                  - generic [ref=e68]:
+                    - checkbox "Functional Clinic Gap" [ref=e69] [cursor=pointer]
+                    - checkbox
+                    - generic [ref=e70]:
+                      - generic [ref=e71]:
+                        - text: Functional Clinic
+                        - generic [ref=e72]: Gap
+                      - paragraph [ref=e73]: At least one functional healthcare facility exists
+                  - generic [ref=e74]:
+                    - checkbox "Emergency Services Gap" [ref=e75] [cursor=pointer]
+                    - checkbox
+                    - generic [ref=e76]:
+                      - generic [ref=e77]:
+                        - text: Emergency Services
+                        - generic [ref=e78]: Gap
+                      - paragraph [ref=e79]: Emergency medical services are available
+                - generic [ref=e80]:
+                  - generic [ref=e81]:
+                    - generic [ref=e82]: Number of Health Facilities
+                    - spinbutton "Number of Health Facilities" [ref=e83]: "0"
+                    - paragraph [ref=e84]: Total number of healthcare facilities in the area
+                  - generic [ref=e85]:
+                    - generic [ref=e86]: Qualified Health Workers
+                    - spinbutton "Qualified Health Workers" [ref=e87]: "0"
+                    - paragraph [ref=e88]: Number of qualified healthcare workers available
+                - generic [ref=e89]:
+                  - generic [ref=e90]: Primary Facility Type
+                  - combobox "Primary Facility Type" [ref=e91]:
+                    - option "Select facility type" [selected]
+                    - option "Hospital"
+                    - option "Primary Health Center"
+                    - option "Clinic"
+                    - option "Dispensary"
+                    - option "Mobile Clinic"
+                    - option "Community Health Post"
+                    - option "Other"
+                  - paragraph [ref=e92]: Main type of healthcare facility available
+            - generic [ref=e93]:
+              - generic [ref=e94]:
+                - generic [ref=e95]: Services and Supplies
+                - generic [ref=e96]: Assess available medical services and supplies
+              - generic [ref=e98]:
+                - generic [ref=e99]:
+                  - checkbox "Trained Staff Gap" [ref=e100] [cursor=pointer]
+                  - checkbox
+                  - generic [ref=e101]:
+                    - generic [ref=e102]:
+                      - text: Trained Staff
+                      - generic [ref=e103]: Gap
+                    - paragraph [ref=e104]: Sufficient trained medical staff available
+                - generic [ref=e105]:
+                  - checkbox "Medicine Supply Gap" [ref=e106] [cursor=pointer]
+                  - checkbox
+                  - generic [ref=e107]:
+                    - generic [ref=e108]:
+                      - text: Medicine Supply
+                      - generic [ref=e109]: Gap
+                    - paragraph [ref=e110]: Essential medicines are available
+                - generic [ref=e111]:
+                  - checkbox "Medical Supplies Gap" [ref=e112] [cursor=pointer]
+                  - checkbox
+                  - generic [ref=e113]:
+                    - generic [ref=e114]:
+                      - text: Medical Supplies
+                      - generic [ref=e115]: Gap
+                    - paragraph [ref=e116]: Medical equipment and supplies available
+                - generic [ref=e117]:
+                  - checkbox "Maternal & Child Services Gap" [ref=e118] [cursor=pointer]
+                  - checkbox
+                  - generic [ref=e119]:
+                    - generic [ref=e120]:
+                      - text: Maternal & Child Services
+                      - generic [ref=e121]: Gap
+                    - paragraph [ref=e122]: Maternal and child health services available
+            - generic [ref=e123]:
+              - generic [ref=e124]:
+                - generic [ref=e125]: Common Health Issues
+                - generic [ref=e126]: Select the most common health issues observed
+              - generic [ref=e128]:
+                - generic [ref=e129]:
+                  - checkbox "Diarrhea" [ref=e130] [cursor=pointer]
+                  - checkbox
+                  - generic [ref=e131]:
+                    - generic [ref=e132]:
+                      - img [ref=e133]
+                      - text: Diarrhea
+                    - paragraph [ref=e135]: Cases of acute watery diarrhea
+                - generic [ref=e136]:
+                  - checkbox "Malaria" [ref=e137] [cursor=pointer]
+                  - checkbox
+                  - generic [ref=e138]:
+                    - generic [ref=e139]:
+                      - img [ref=e140]
+                      - text: Malaria
+                    - paragraph [ref=e142]: Malaria cases and fever outbreaks
+                - generic [ref=e143]:
+                  - checkbox "Respiratory Infections" [ref=e144] [cursor=pointer]
+                  - checkbox
+                  - generic [ref=e145]:
+                    - generic [ref=e146]:
+                      - img [ref=e147]
+                      - text: Respiratory Infections
+                    - paragraph [ref=e149]: Acute respiratory infections
+                - generic [ref=e150]:
+                  - checkbox "Malnutrition" [ref=e151] [cursor=pointer]
+                  - checkbox
+                  - generic [ref=e152]:
+                    - generic [ref=e153]:
+                      - img [ref=e154]
+                      - text: Malnutrition
+                    - paragraph [ref=e158]: Severe acute malnutrition cases
+                - generic [ref=e159]:
+                  - checkbox "Other" [ref=e160] [cursor=pointer]
+                  - checkbox
+                  - generic [ref=e161]:
+                    - generic [ref=e162]:
+                      - img [ref=e163]
+                      - text: Other
+                    - paragraph [ref=e165]: Other health concerns
+            - generic [ref=e166]:
+              - generic [ref=e167]:
+                - generic [ref=e168]: Location Information
+                - generic [ref=e169]: Capture GPS coordinates of the assessment location
+              - generic [ref=e171]:
+                - generic [ref=e172]:
+                  - generic [ref=e173]:
+                    - img [ref=e174]
+                    - text: GPS Location Capture
+                  - generic [ref=e177]: Capture GPS coordinates automatically or enter them manually
+                - generic [ref=e179]:
+                  - button "Capture GPS" [ref=e180] [cursor=pointer]:
+                    - img
+                    - text: Capture GPS
+                  - button "Manual Entry" [ref=e181] [cursor=pointer]
+            - generic [ref=e182]:
+              - generic [ref=e183]:
+                - generic [ref=e184]: Photo Documentation
+                - generic [ref=e185]: Add photos of healthcare facilities and conditions
+              - generic [ref=e187]:
+                - generic [ref=e188]: Media Attachments
+                - generic [ref=e191]:
+                  - img [ref=e192]
+                  - generic [ref=e196]:
+                    - button "Select Photos" [ref=e197] [cursor=pointer]
+                    - paragraph [ref=e198]: or drag and drop images here
+                    - paragraph [ref=e199]: PNG, JPG, WebP up to 10MB each. Max 5 files.
+                - alert [ref=e200]:
+                  - img [ref=e201]
+                  - generic [ref=e205]:
+                    - strong [ref=e206]: "Photo Guidelines:"
+                    - list [ref=e207]:
+                      - listitem [ref=e208]: Take clear, well-lit photos of the affected area
+                      - listitem [ref=e209]: Include damage to infrastructure if visible
+                      - listitem [ref=e210]: Show context and scale when possible
+                      - listitem [ref=e211]: Location data will be automatically embedded when available
+                - generic [ref=e213]: 0 / 5 photos
+            - generic [ref=e214]:
+              - generic [ref=e215]:
+                - generic [ref=e216]: Additional Details
+                - generic [ref=e217]: Any additional health-related information
+              - textbox "Provide any additional health assessment details..." [ref=e220]
+            - generic [ref=e221]:
+              - button "Cancel" [ref=e222] [cursor=pointer]
+              - button "Submit Health Assessment" [ref=e223] [cursor=pointer]
+    - contentinfo [ref=e224]:
+      - paragraph [ref=e226]: Disaster Management System - Borno State, Nigeria
+  - generic [ref=e227]:
+    - img [ref=e229]
+    - button "Open Tanstack query devtools" [ref=e278] [cursor=pointer]:
+      - img [ref=e279] [cursor=pointer]
+  - alert [ref=e328]
+```
