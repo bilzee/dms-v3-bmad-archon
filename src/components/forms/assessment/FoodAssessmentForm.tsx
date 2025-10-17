@@ -97,7 +97,16 @@ export function FoodAssessmentForm({
   const watchedValues = form.watch()
 
   // Calculate food security status
-  const hasFoodGaps = !watchedValues.isFoodSufficient || !watchedValues.hasRegularMealAccess || !watchedValues.hasInfantNutrition
+  const gapFields = [
+    { key: 'isFoodSufficient', label: 'Food Sufficiency' },
+    { key: 'hasRegularMealAccess', label: 'Regular Meal Access' },
+    { key: 'hasInfantNutrition', label: 'Infant Nutrition' }
+  ]
+
+  const gaps = gapFields.filter(field => !watchedValues[field.key as keyof FormData])
+  const gapCount = gaps.length
+
+  const hasFoodGaps = gapCount > 0
   const foodDaysRemaining = watchedValues.availableFoodDurationDays
   const urgentNeed = foodDaysRemaining < 7 || watchedValues.additionalFoodRequiredPersons > 0
 
@@ -148,9 +157,9 @@ export function FoodAssessmentForm({
           <CardTitle className="flex items-center gap-2">
             <Utensils className="h-5 w-5" />
             Food Security Assessment
-            {hasFoodGaps && (
+            {gapCount > 0 && (
               <Badge variant="destructive">
-                Food Security Gaps
+                {gapCount} Gap{gapCount > 1 ? 's' : ''}
               </Badge>
             )}
             {urgentNeed && (
@@ -163,12 +172,12 @@ export function FoodAssessmentForm({
             Assess food availability, access, and nutrition security in the affected area
           </CardDescription>
         </CardHeader>
-        {hasFoodGaps && (
+        {gapCount > 0 && (
           <CardContent>
             <Alert variant="destructive">
               <AlertTriangle className="h-4 w-4" />
               <AlertDescription>
-                <strong>Food Security Issues Identified:</strong> Immediate attention required for food assistance programs
+                <strong>Gaps Identified:</strong> {gaps.map(g => g.label).join(', ')}
               </AlertDescription>
             </Alert>
           </CardContent>
@@ -221,6 +230,7 @@ export function FoodAssessmentForm({
                         <FormLabel className="flex items-center gap-2">
                           Food Sufficient
                           {!field.value && <Badge variant="destructive">Gap</Badge>}
+                          {field.value && <Badge variant="default" className="bg-green-100 text-green-800 border-green-200">No Gap</Badge>}
                         </FormLabel>
                         <FormDescription>
                           Food supplies are sufficient to meet the population's needs
@@ -246,6 +256,7 @@ export function FoodAssessmentForm({
                         <FormLabel className="flex items-center gap-2">
                           Regular Meal Access
                           {!field.value && <Badge variant="destructive">Gap</Badge>}
+                          {field.value && <Badge variant="default" className="bg-green-100 text-green-800 border-green-200">No Gap</Badge>}
                         </FormLabel>
                         <FormDescription>
                           Population has regular access to meals (at least 2 per day)
@@ -270,7 +281,8 @@ export function FoodAssessmentForm({
                       <div className="space-y-1 leading-none">
                         <FormLabel className="flex items-center gap-2">
                           Infant Nutrition Available
-                          {!field.value && <Badge variant="destructive">Critical Gap</Badge>}
+                          {!field.value && <Badge variant="destructive">Gap</Badge>}
+                          {field.value && <Badge variant="default" className="bg-green-100 text-green-800 border-green-200">No Gap</Badge>}
                         </FormLabel>
                         <FormDescription>
                           Adequate nutrition available for infants and young children
@@ -321,12 +333,15 @@ export function FoodAssessmentForm({
             </CardContent>
           </Card>
 
-          {/* Food Duration and Needs */}
+          {/* Risk Assessment */}
           <Card>
             <CardHeader>
-              <CardTitle>Food Supply Duration</CardTitle>
+              <CardTitle className="flex items-center gap-2 text-red-600">
+                <AlertTriangle className="h-5 w-5" />
+                Risk Assessment
+              </CardTitle>
               <CardDescription>
-                Estimate how long current food supplies will last and additional needs
+                Food security risks and supply duration assessment
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">

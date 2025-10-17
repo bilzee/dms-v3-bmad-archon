@@ -180,7 +180,7 @@ export function HealthAssessmentForm({
             Health Assessment
             {gapCount > 0 && (
               <Badge variant="destructive">
-                {gapCount} Critical Gap{gapCount > 1 ? 's' : ''}
+                {gapCount} Gap{gapCount > 1 ? 's' : ''}
               </Badge>
             )}
           </CardTitle>
@@ -193,7 +193,7 @@ export function HealthAssessmentForm({
             <Alert variant="destructive">
               <AlertTriangle className="h-4 w-4" />
               <AlertDescription data-testid="gap-summary">
-                <strong>Critical Gaps Identified:</strong> {gaps.map(g => g.label).join(', ')}
+                <strong>Gaps Identified:</strong> {gaps.map(g => g.label).join(', ')}
               </AlertDescription>
             </Alert>
           </CardContent>
@@ -252,7 +252,7 @@ export function HealthAssessmentForm({
                         <FormLabel className="flex items-center gap-2">
                           Functional Clinic
                           {field.value ? (
-                            <Badge variant="default">No Gap</Badge>
+                            <Badge variant="default" className="bg-green-100 text-green-800 border-green-200">No Gap</Badge>
                           ) : (
                             <Badge variant="destructive">Gap</Badge>
                           )}
@@ -282,7 +282,7 @@ export function HealthAssessmentForm({
                         <FormLabel className="flex items-center gap-2">
                           Emergency Services
                           {field.value ? (
-                            <Badge variant="default">No Gap</Badge>
+                            <Badge variant="default" className="bg-green-100 text-green-800 border-green-200">No Gap</Badge>
                           ) : (
                             <Badge variant="destructive">Gap</Badge>
                           )}
@@ -405,7 +405,7 @@ export function HealthAssessmentForm({
                         <FormLabel className="flex items-center gap-2">
                           Trained Staff
                           {field.value ? (
-                            <Badge variant="default">No Gap</Badge>
+                            <Badge variant="default" className="bg-green-100 text-green-800 border-green-200">No Gap</Badge>
                           ) : (
                             <Badge variant="destructive">Gap</Badge>
                           )}
@@ -435,7 +435,7 @@ export function HealthAssessmentForm({
                         <FormLabel className="flex items-center gap-2">
                           Medicine Supply
                           {field.value ? (
-                            <Badge variant="default">No Gap</Badge>
+                            <Badge variant="default" className="bg-green-100 text-green-800 border-green-200">No Gap</Badge>
                           ) : (
                             <Badge variant="destructive">Gap</Badge>
                           )}
@@ -465,7 +465,7 @@ export function HealthAssessmentForm({
                         <FormLabel className="flex items-center gap-2">
                           Medical Supplies
                           {field.value ? (
-                            <Badge variant="default">No Gap</Badge>
+                            <Badge variant="default" className="bg-green-100 text-green-800 border-green-200">No Gap</Badge>
                           ) : (
                             <Badge variant="destructive">Gap</Badge>
                           )}
@@ -495,7 +495,7 @@ export function HealthAssessmentForm({
                         <FormLabel className="flex items-center gap-2">
                           Maternal & Child Services
                           {field.value ? (
-                            <Badge variant="default">No Gap</Badge>
+                            <Badge variant="default" className="bg-green-100 text-green-800 border-green-200">No Gap</Badge>
                           ) : (
                             <Badge variant="destructive">Gap</Badge>
                           )}
@@ -557,6 +557,30 @@ export function HealthAssessmentForm({
               </div>
             </CardContent>
           </Card>
+
+          {/* Risk Assessment */}
+          {gapCount > 0 && (
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2 text-red-600">
+                  <AlertTriangle className="h-5 w-5" />
+                  Risk Assessment
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-4">
+                  {gaps.map((gap) => (
+                    <Alert key={gap.key} variant="destructive">
+                      <AlertTriangle className="h-4 w-4" />
+                      <AlertDescription>
+                        <strong>{gap.label} Gap:</strong> {gap.label} services are not available or insufficient
+                      </AlertDescription>
+                    </Alert>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          )}
 
           {/* GPS Location */}
           <Card>

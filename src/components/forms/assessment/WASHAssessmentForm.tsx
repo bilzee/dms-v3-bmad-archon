@@ -103,10 +103,21 @@ export function WASHAssessmentForm({
   const watchedValues = form.watch()
 
   // Calculate WASH gaps and needs
+  const gapFields = [
+    { key: 'isWaterSufficient', label: 'Water Sufficiency' },
+    { key: 'hasCleanWaterAccess', label: 'Clean Water Access' },
+    { key: 'areLatrinesSufficient', label: 'Latrine Sufficiency' },
+    { key: 'hasHandwashingFacilities', label: 'Handwashing Facilities' }
+  ]
+
+  const gaps = gapFields.filter(field => !watchedValues[field.key as keyof FormData])
+  const gapCount = gaps.length
+
+  // Legacy variables for compatibility with existing logic
   const waterGaps = !watchedValues.isWaterSufficient || !watchedValues.hasCleanWaterAccess
   const sanitationGaps = !watchedValues.areLatrinesSufficient || watchedValues.functionalLatrinesAvailable === 0
   const hygieneGaps = !watchedValues.hasHandwashingFacilities
-  const hasWashGaps = waterGaps || sanitationGaps || hygieneGaps
+  const hasWashGaps = gapCount > 0
   const hasDefecationIssues = watchedValues.hasOpenDefecationConcerns
 
   // Calculate latrine coverage (assuming 50 people per latrine as SPHERE standard)
@@ -156,9 +167,9 @@ export function WASHAssessmentForm({
           <CardTitle className="flex items-center gap-2">
             <Droplets className="h-5 w-5" />
             WASH Assessment
-            {hasWashGaps && (
+            {gapCount > 0 && (
               <Badge variant="destructive">
-                WASH Gaps Identified
+                {gapCount} Gap{gapCount > 1 ? 's' : ''}
               </Badge>
             )}
             {hasDefecationIssues && (
@@ -171,16 +182,12 @@ export function WASHAssessmentForm({
             Assess water, sanitation, and hygiene (WASH) facilities and practices
           </CardDescription>
         </CardHeader>
-        {hasWashGaps && (
+        {gapCount > 0 && (
           <CardContent>
             <Alert variant="destructive">
               <AlertTriangle className="h-4 w-4" />
               <AlertDescription>
-                <strong>Critical WASH Issues:</strong> {[
-                  waterGaps && 'Water access',
-                  sanitationGaps && 'Sanitation facilities',
-                  hygieneGaps && 'Handwashing facilities'
-                ].filter(Boolean).join(', ')} require immediate attention
+                <strong>Gaps Identified:</strong> {gaps.map(g => g.label).join(', ')}
               </AlertDescription>
             </Alert>
           </CardContent>
@@ -272,6 +279,7 @@ export function WASHAssessmentForm({
                         <FormLabel className="flex items-center gap-2">
                           Water Sufficient
                           {!field.value && <Badge variant="destructive">Gap</Badge>}
+                          {field.value && <Badge variant="default" className="bg-green-100 text-green-800 border-green-200">No Gap</Badge>}
                         </FormLabel>
                         <FormDescription>
                           Water quantity is sufficient for basic needs
@@ -296,7 +304,8 @@ export function WASHAssessmentForm({
                       <div className="space-y-1 leading-none">
                         <FormLabel className="flex items-center gap-2">
                           Clean Water Access
-                          {!field.value && <Badge variant="destructive">Critical Gap</Badge>}
+                          {!field.value && <Badge variant="destructive">Gap</Badge>}
+                          {field.value && <Badge variant="default" className="bg-green-100 text-green-800 border-green-200">No Gap</Badge>}
                         </FormLabel>
                         <FormDescription>
                           Population has access to safe drinking water
@@ -365,6 +374,7 @@ export function WASHAssessmentForm({
                         <FormLabel className="flex items-center gap-2">
                           Latrines Sufficient
                           {!field.value && <Badge variant="destructive">Gap</Badge>}
+                          {field.value && <Badge variant="default" className="bg-green-100 text-green-800 border-green-200">No Gap</Badge>}
                         </FormLabel>
                         <FormDescription>
                           Number of latrines is sufficient for population
@@ -429,7 +439,8 @@ export function WASHAssessmentForm({
                     <div className="space-y-1 leading-none">
                       <FormLabel className="flex items-center gap-2">
                         Handwashing Facilities Available
-                        {!field.value && <Badge variant="destructive">Critical Gap</Badge>}
+                        {!field.value && <Badge variant="destructive">Gap</Badge>}
+                          {field.value && <Badge variant="default" className="bg-green-100 text-green-800 border-green-200">No Gap</Badge>}
                       </FormLabel>
                       <FormDescription>
                         Handwashing facilities with soap/water are available
@@ -441,13 +452,13 @@ export function WASHAssessmentForm({
             </CardContent>
           </Card>
 
-          {/* WASH Risk Assessment */}
+          {/* Risk Assessment */}
           {(hasWashGaps || hasDefecationIssues) && (
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2 text-red-600">
                   <AlertTriangle className="h-5 w-5" />
-                  WASH Risk Assessment
+                  Risk Assessment
                 </CardTitle>
               </CardHeader>
               <CardContent>

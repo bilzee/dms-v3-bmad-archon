@@ -66,8 +66,19 @@ export function SecurityAssessmentForm({
   const vulnerableGroupRisk = !watchedValues.vulnerableGroupsHaveAccess
   const lightingRisk = !watchedValues.hasLighting
   
+  // Gap fields for consistency with other assessment forms
+  const gapFields = [
+    { key: 'hasSecurityPresence', label: 'Security Presence' },
+    { key: 'hasProtectionReportingMechanism', label: 'Protection Reporting Mechanism' },
+    { key: 'vulnerableGroupsHaveAccess', label: 'Vulnerable Group Access' },
+    { key: 'hasLighting', label: 'Lighting' }
+  ]
+
+  const gaps = gapFields.filter(field => !watchedValues[field.key as keyof FormData])
+  const gapCount = gaps.length
+  
   const criticalRisks = [violenceRisk, gbvRisk].filter(Boolean).length
-  const hasSecurityRisks = criticalRisks > 0 || securityGap || protectionGap || vulnerableGroupRisk || lightingRisk
+  const hasSecurityRisks = criticalRisks > 0 || gapCount > 0
 
   const handleSubmit = async (data: FormData) => {
     if (!selectedEntity) {
@@ -100,9 +111,9 @@ export function SecurityAssessmentForm({
                 {criticalRisks} Critical Risk{criticalRisks > 1 ? 's' : ''}
               </Badge>
             )}
-            {hasSecurityRisks && (
+            {gapCount > 0 && (
               <Badge variant="destructive">
-                Protection Gaps
+                {gapCount} Gap{gapCount > 1 ? 's' : ''}
               </Badge>
             )}
           </CardTitle>
@@ -116,6 +127,16 @@ export function SecurityAssessmentForm({
               <AlertTriangle className="h-4 w-4" />
               <AlertDescription>
                 <strong>Critical Protection Risks Identified:</strong> Immediate intervention required to ensure population safety
+              </AlertDescription>
+            </Alert>
+          </CardContent>
+        )}
+        {gapCount > 0 && (
+          <CardContent>
+            <Alert variant="destructive">
+              <AlertTriangle className="h-4 w-4" />
+              <AlertDescription>
+                <strong>Gaps Identified:</strong> {gaps.map(g => g.label).join(', ')}
               </AlertDescription>
             </Alert>
           </CardContent>
@@ -233,6 +254,7 @@ export function SecurityAssessmentForm({
                       <FormLabel className="flex items-center gap-2">
                         Security Presence
                         {!field.value && <Badge variant="destructive">Gap</Badge>}
+                        {field.value && <Badge variant="default" className="bg-green-100 text-green-800 border-green-200">No Gap</Badge>}
                       </FormLabel>
                       <FormDescription>
                         Security personnel or forces are present in the area
@@ -258,7 +280,8 @@ export function SecurityAssessmentForm({
                       <FormLabel className="flex items-center gap-2">
                         <Phone className="h-4 w-4" />
                         Protection Reporting Mechanism
-                        {!field.value && <Badge variant="destructive">Critical Gap</Badge>}
+                        {!field.value && <Badge variant="destructive">Gap</Badge>}
+                        {field.value && <Badge variant="default" className="bg-green-100 text-green-800 border-green-200">No Gap</Badge>}
                       </FormLabel>
                       <FormDescription>
                         Mechanisms exist for reporting protection concerns
@@ -297,7 +320,8 @@ export function SecurityAssessmentForm({
                     <div className="space-y-1 leading-none">
                       <FormLabel className="flex items-center gap-2">
                         Vulnerable Groups Have Access
-                        {!field.value && <Badge variant="destructive">Critical Gap</Badge>}
+                        {!field.value && <Badge variant="destructive">Gap</Badge>}
+                        {field.value && <Badge variant="default" className="bg-green-100 text-green-800 border-green-200">No Gap</Badge>}
                       </FormLabel>
                       <FormDescription>
                         Vulnerable groups have access to protection services
@@ -348,13 +372,13 @@ export function SecurityAssessmentForm({
             </CardContent>
           </Card>
 
-          {/* Security Risk Assessment */}
+          {/* Risk Assessment */}
           {hasSecurityRisks && (
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2 text-red-600">
                   <AlertTriangle className="h-5 w-5" />
-                  Security Risk Assessment
+                  Risk Assessment
                 </CardTitle>
               </CardHeader>
               <CardContent>
@@ -377,41 +401,14 @@ export function SecurityAssessmentForm({
                     </Alert>
                   )}
                   
-                  {securityGap && (
-                    <Alert variant="destructive">
+                  {gaps.map((gap) => (
+                    <Alert key={gap.key} variant="destructive">
                       <Shield className="h-4 w-4" />
                       <AlertDescription>
-                        <strong>Security Gap:</strong> No security presence increases vulnerability of affected population
+                        <strong>{gap.label} Gap:</strong> {gap.label} is not available or insufficient, increasing security risks
                       </AlertDescription>
                     </Alert>
-                  )}
-                  
-                  {protectionGap && (
-                    <Alert variant="destructive">
-                      <Phone className="h-4 w-4" />
-                      <AlertDescription>
-                        <strong>Protection Gap:</strong> No reporting mechanisms for protection concerns
-                      </AlertDescription>
-                    </Alert>
-                  )}
-                  
-                  {vulnerableGroupRisk && (
-                    <Alert variant="destructive">
-                      <Users className="h-4 w-4" />
-                      <AlertDescription>
-                        <strong>Vulnerable Group Risk:</strong> Vulnerable groups lack access to protection services
-                      </AlertDescription>
-                    </Alert>
-                  )}
-                  
-                  {lightingRisk && (
-                    <Alert>
-                      <Lightbulb className="h-4 w-4" />
-                      <AlertDescription>
-                        <strong>Safety Risk:</strong> Inadequate lighting increases security risks, especially at night
-                      </AlertDescription>
-                    </Alert>
-                  )}
+                  ))}
                 </div>
               </CardContent>
             </Card>

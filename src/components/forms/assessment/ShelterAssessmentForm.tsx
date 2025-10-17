@@ -97,7 +97,16 @@ export function ShelterAssessmentForm({
   const watchedValues = form.watch()
 
   // Calculate shelter gaps and risks
-  const shelterGaps = !watchedValues.areSheltersSufficient || !watchedValues.hasSafeStructures || !watchedValues.provideWeatherProtection
+  const gapFields = [
+    { key: 'areSheltersSufficient', label: 'Shelter Sufficiency' },
+    { key: 'hasSafeStructures', label: 'Safe Structures' },
+    { key: 'provideWeatherProtection', label: 'Weather Protection' }
+  ]
+
+  const gaps = gapFields.filter(field => !watchedValues[field.key as keyof FormData])
+  const gapCount = gaps.length
+
+  const shelterGaps = gapCount > 0
   const overcrowdingRisk = watchedValues.areOvercrowded
   const urgentShelterNeed = watchedValues.numberSheltersRequired > 0
   const hasShelterRisks = shelterGaps || overcrowdingRisk
@@ -143,9 +152,9 @@ export function ShelterAssessmentForm({
           <CardTitle className="flex items-center gap-2">
             <Home className="h-5 w-5" />
             Shelter Assessment
-            {hasShelterRisks && (
+            {gapCount > 0 && (
               <Badge variant="destructive">
-                Shelter Risks
+                {gapCount} Gap{gapCount > 1 ? 's' : ''}
               </Badge>
             )}
             {urgentShelterNeed && (
@@ -158,15 +167,12 @@ export function ShelterAssessmentForm({
             Assess shelter conditions, capacity, and protection from elements
           </CardDescription>
         </CardHeader>
-        {hasShelterRisks && (
+        {gapCount > 0 && (
           <CardContent>
             <Alert variant="destructive">
               <AlertTriangle className="h-4 w-4" />
               <AlertDescription>
-                <strong>Shelter Risks Identified:</strong> {[
-                  shelterGaps && 'Inadequate shelter',
-                  overcrowdingRisk && 'Overcrowding conditions'
-                ].filter(Boolean).join(', ')} require immediate attention
+                <strong>Gaps Identified:</strong> {gaps.map(g => g.label).join(', ')}
               </AlertDescription>
             </Alert>
           </CardContent>
@@ -218,6 +224,7 @@ export function ShelterAssessmentForm({
                         <FormLabel className="flex items-center gap-2">
                           Shelters Sufficient
                           {!field.value && <Badge variant="destructive">Gap</Badge>}
+                          {field.value && <Badge variant="default" className="bg-green-100 text-green-800 border-green-200">No Gap</Badge>}
                         </FormLabel>
                         <FormDescription>
                           Available shelters are sufficient for the affected population
@@ -242,7 +249,8 @@ export function ShelterAssessmentForm({
                       <div className="space-y-1 leading-none">
                         <FormLabel className="flex items-center gap-2">
                           Safe Structures
-                          {!field.value && <Badge variant="destructive">Critical Gap</Badge>}
+                          {!field.value && <Badge variant="destructive">Gap</Badge>}
+                          {field.value && <Badge variant="default" className="bg-green-100 text-green-800 border-green-200">No Gap</Badge>}
                         </FormLabel>
                         <FormDescription>
                           Existing shelters are structurally safe and secure
@@ -269,6 +277,7 @@ export function ShelterAssessmentForm({
                           <Cloud className="h-4 w-4" />
                           Weather Protection
                           {!field.value && <Badge variant="destructive">Gap</Badge>}
+                          {field.value && <Badge variant="default" className="bg-green-100 text-green-800 border-green-200">No Gap</Badge>}
                         </FormLabel>
                         <FormDescription>
                           Shelters provide adequate protection from weather elements
@@ -417,13 +426,13 @@ export function ShelterAssessmentForm({
             </CardContent>
           </Card>
 
-          {/* Shelter Risk Assessment */}
+          {/* Risk Assessment */}
           {hasShelterRisks && (
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2 text-red-600">
                   <AlertTriangle className="h-5 w-5" />
-                  Shelter Risk Assessment
+                  Risk Assessment
                 </CardTitle>
               </CardHeader>
               <CardContent>
