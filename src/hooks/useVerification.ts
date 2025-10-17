@@ -1,0 +1,239 @@
+import { useState } from 'react';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { toast } from 'sonner';
+import type { 
+  VerificationQueueResponse, 
+  VerificationQueueFilters,
+  VerifyAssessmentRequest,
+  RejectAssessmentRequest,
+  VerificationMetrics 
+} from '@/types/verification';
+
+// API functions
+async function fetchVerificationQueue(
+  filters: VerificationQueueFilters & { page?: number; limit?: number }
+): Promise<VerificationQueueResponse> {
+  const params = new URLSearchParams();
+  
+  if (filters.page) params.append('page', filters.page.toString());
+  if (filters.limit) params.append('limit', filters.limit.toString());
+  if (filters.status) params.append('status', filters.status);
+  if (filters.entityId) params.append('entityId', filters.entityId);
+  if (filters.assessmentType) params.append('assessmentType', filters.assessmentType);
+  
+  const response = await fetch(`/api/v1/verification/queue/assessments?${params}`, {
+    headers: {
+      'Authorization': `Bearer ${localStorage.getItem('token')}`
+    }
+  });
+  
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.error || 'Failed to fetch verification queue');
+  }
+  
+  return response.json();
+}
+
+async function verifyAssessment(
+  assessmentId: string, 
+  data: VerifyAssessmentRequest
+): Promise<any> {
+  const response = await fetch(`/api/v1/assessments/${assessmentId}/verify`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(data),
+  });
+  
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.error || 'Failed to verify assessment');
+  }
+  
+  return response.json();
+}
+
+async function rejectAssessment(
+  assessmentId: string, 
+  data: RejectAssessmentRequest
+): Promise<any> {
+  const response = await fetch(`/api/v1/assessments/${assessmentId}/reject`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(data),
+  });
+  
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.error || 'Failed to reject assessment');
+  }
+  
+  return response.json();
+}
+
+// Hook for verification queue
+export function useVerificationQueue(
+  filters: VerificationQueueFilters & { page?: number; limit?: number } = {}
+) {
+  return useQuery({
+    queryKey: ['verification-queue', filters],
+    queryFn: () => fetchVerificationQueue(filters),
+    staleTime: 30000, // 30 seconds - refresh frequently for real-time updates
+    refetchInterval: 60000, // Auto-refresh every minute
+  });
+}
+
+// Hook for verification actions
+export function useVerificationActions() {
+  const queryClient = useQueryClient();
+  
+  const verifyMutation = useMutation({
+    mutationFn: ({ assessmentId, data }: { assessmentId: string; data: VerifyAssessmentRequest }) =>
+      verifyAssessment(assessmentId, data),
+    onSuccess: (data) => {
+      // Invalidate and refetch verification queue
+      queryClient.invalidateQueries({ queryKey: ['verification-queue'] });
+      
+      toast.success('Assessment verified successfully', {
+        description: `Assessment for ${data.data.entity?.name} has been approved.`
+      });
+    },
+    onError: (error: Error) => {
+      toast.error('Failed to verify assessment', {
+        description: error.message
+      });
+    },
+  });
+  
+  const rejectMutation = useMutation({
+    mutationFn: ({ assessmentId, data }: { assessmentId: string; data: RejectAssessmentRequest }) =>
+      rejectAssessment(assessmentId, data),
+    onSuccess: (data) => {
+      // Invalidate and refetch verification queue
+      queryClient.invalidateQueries({ queryKey: ['verification-queue'] });
+      
+      toast.success('Assessment rejected', {
+        description: `Assessment for ${data.data.entity?.name} has been rejected.`
+      });
+    },
+    onError: (error: Error) => {
+      toast.error('Failed to reject assessment', {
+        description: error.message
+      });
+    },
+  });
+  
+  return {
+    verifyAssessment: verifyMutation.mutate,
+    rejectAssessment: rejectMutation.mutate,
+    isVerifying: verifyMutation.isPending,
+    isRejecting: rejectMutation.isPending,
+    isLoading: verifyMutation.isPending || rejectMutation.isPending,
+  };
+}
+
+// Hook for verification metrics (dashboard overview)
+export function useVerificationMetrics() {
+  return useQuery({
+    queryKey: ['verification-metrics'],
+    queryFn: async (): Promise<VerificationMetrics> => {
+      const response = await fetch('/api/v1/verification/metrics', {
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('token')}`
+        }
+      });
+      
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || 'Failed to fetch verification metrics');
+      }
+      
+      return response.json();
+    },
+    staleTime: 300000, // 5 minutes
+    refetchInterval: 300000, // Auto-refresh every 5 minutes
+  });
+}
+
+// Hook for real-time verification updates (WebSocket or polling)
+export function useVerificationUpdates() {
+  const queryClient = useQueryClient();
+  
+  // For now, using polling - can be enhanced with WebSocket later
+  useQuery({
+    queryKey: ['verification-updates'],
+    queryFn: async () => {
+      // Check for updates and invalidate queries if needed
+      queryClient.invalidateQueries({ queryKey: ['verification-queue'] });
+      queryClient.invalidateQueries({ queryKey: ['verification-metrics'] });
+      return null;
+    },
+    refetchInterval: 30000, // Poll every 30 seconds
+    enabled: true,
+  });
+}
+
+// Hook for bulk verification actions
+export function useBulkVerificationActions() {
+  const queryClient = useQueryClient();
+  
+  const bulkVerifyMutation = useMutation({
+    mutationFn: async (assessmentIds: string[]) => {
+      const promises = assessmentIds.map(id => 
+        verifyAssessment(id, { notes: 'Bulk verification' })
+      );
+      return Promise.all(promises);
+    },
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ['verification-queue'] });
+      
+      toast.success(`Successfully verified ${data.length} assessments`, {
+        description: 'All selected assessments have been approved.'
+      });
+    },
+    onError: (error: Error) => {
+      toast.error('Bulk verification failed', {
+        description: error.message
+      });
+    },
+  });
+  
+  return {
+    bulkVerify: bulkVerifyMutation.mutate,
+    isBulkVerifying: bulkVerifyMutation.isPending,
+  };
+}
+
+// Custom hook for verification queue filters management
+export function useVerificationFilters() {
+  const [filters, setFilters] = useState<VerificationQueueFilters>({
+    status: 'SUBMITTED', // Default to pending verification
+  });
+  
+  const updateFilter = (key: keyof VerificationQueueFilters, value: any) => {
+    setFilters(prev => ({
+      ...prev,
+      [key]: value
+    }));
+  };
+  
+  const clearFilters = () => {
+    setFilters({ status: 'SUBMITTED' });
+  };
+  
+  const resetToDefaults = () => {
+    setFilters({ status: 'SUBMITTED' });
+  };
+  
+  return {
+    filters,
+    updateFilter,
+    clearFilters,
+    resetToDefaults,
+    setFilters
+  };
+}

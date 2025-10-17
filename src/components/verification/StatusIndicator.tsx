@@ -1,0 +1,243 @@
+import { cn } from '@/lib/utils';
+import { CheckCircle, Clock, XCircle, Shield, FileText } from 'lucide-react';
+import type { StatusIndicatorProps, VerificationStatus } from '@/types/verification';
+
+const statusConfig: Record<VerificationStatus, {
+  label: string;
+  icon: React.ComponentType<{ className?: string }>;
+  className: string;
+  bgClassName: string;
+}> = {
+  DRAFT: {
+    label: 'Draft',
+    icon: FileText,
+    className: 'text-gray-600',
+    bgClassName: 'bg-gray-100 border-gray-300'
+  },
+  SUBMITTED: {
+    label: 'Pending Verification',
+    icon: Clock,
+    className: 'text-amber-600',
+    bgClassName: 'bg-amber-50 border-amber-300'
+  },
+  VERIFIED: {
+    label: 'Verified',
+    icon: CheckCircle,
+    className: 'text-green-600',
+    bgClassName: 'bg-green-50 border-green-300'
+  },
+  AUTO_VERIFIED: {
+    label: 'Auto-Verified',
+    icon: Shield,
+    className: 'text-blue-600',
+    bgClassName: 'bg-blue-50 border-blue-300'
+  },
+  REJECTED: {
+    label: 'Rejected',
+    icon: XCircle,
+    className: 'text-red-600',
+    bgClassName: 'bg-red-50 border-red-300'
+  }
+};
+
+const sizeConfig = {
+  sm: {
+    container: 'px-2 py-1 text-xs',
+    icon: 'h-3 w-3',
+    text: 'text-xs'
+  },
+  md: {
+    container: 'px-3 py-1.5 text-sm',
+    icon: 'h-4 w-4',
+    text: 'text-sm'
+  },
+  lg: {
+    container: 'px-4 py-2 text-base',
+    icon: 'h-5 w-5',
+    text: 'text-base'
+  }
+};
+
+export function StatusIndicator({ 
+  status, 
+  size = 'md', 
+  showText = true, 
+  className 
+}: StatusIndicatorProps) {
+  const config = statusConfig[status];
+  const sizes = sizeConfig[size];
+  const IconComponent = config.icon;
+
+  return (
+    <div
+      className={cn(
+        'inline-flex items-center gap-1.5 rounded-full border font-medium',
+        config.bgClassName,
+        sizes.container,
+        className
+      )}
+    >
+      <IconComponent 
+        className={cn(
+          sizes.icon,
+          config.className
+        )} 
+      />
+      {showText && (
+        <span className={cn(
+          sizes.text,
+          config.className
+        )}>
+          {config.label}
+        </span>
+      )}
+    </div>
+  );
+}
+
+// Helper function to get status color for other components
+export function getStatusColor(status: VerificationStatus): string {
+  return statusConfig[status].className;
+}
+
+// Helper function to get status label
+export function getStatusLabel(status: VerificationStatus): string {
+  return statusConfig[status].label;
+}
+
+// Verification status badge with animation for status changes
+interface StatusBadgeProps extends StatusIndicatorProps {
+  previousStatus?: VerificationStatus;
+  animate?: boolean;
+}
+
+export function StatusBadge({ 
+  status, 
+  previousStatus, 
+  animate = false, 
+  ...props 
+}: StatusBadgeProps) {
+  return (
+    <div className={cn(
+      'transition-all duration-300',
+      animate && previousStatus !== status && 'animate-pulse'
+    )}>
+      <StatusIndicator status={status} {...props} />
+    </div>
+  );
+}
+
+// Status progress indicator for verification workflow
+interface StatusProgressProps {
+  currentStatus: VerificationStatus;
+  className?: string;
+}
+
+export function StatusProgress({ currentStatus, className }: StatusProgressProps) {
+  const steps: VerificationStatus[] = ['DRAFT', 'SUBMITTED', 'VERIFIED'];
+  const currentIndex = steps.indexOf(currentStatus);
+  
+  // Handle rejected status separately
+  if (currentStatus === 'REJECTED') {
+    return (
+      <div className={cn('flex items-center space-x-2', className)}>
+        <div className="flex-1">
+          <div className="flex items-center">
+            {steps.map((step, index) => {
+              const isCompleted = index <= 1; // Draft and submitted are complete for rejected
+              const isRejected = index === 1; // Mark submitted as rejected
+              
+              return (
+                <React.Fragment key={step}>
+                  <div
+                    className={cn(
+                      'flex h-8 w-8 items-center justify-center rounded-full border-2',
+                      isRejected
+                        ? 'border-red-500 bg-red-50'
+                        : isCompleted
+                        ? 'border-green-500 bg-green-50'
+                        : 'border-gray-300 bg-gray-50'
+                    )}
+                  >
+                    {isRejected ? (
+                      <XCircle className="h-4 w-4 text-red-500" />
+                    ) : isCompleted ? (
+                      <CheckCircle className="h-4 w-4 text-green-500" />
+                    ) : (
+                      <div className="h-2 w-2 rounded-full bg-gray-400" />
+                    )}
+                  </div>
+                  {index < steps.length - 1 && (
+                    <div
+                      className={cn(
+                        'h-1 w-full mx-2',
+                        isRejected && index === 1
+                          ? 'bg-red-200'
+                          : isCompleted
+                          ? 'bg-green-200'
+                          : 'bg-gray-200'
+                      )}
+                    />
+                  )}
+                </React.Fragment>
+              );
+            })}
+          </div>
+        </div>
+        <StatusIndicator status="REJECTED" size="sm" />
+      </div>
+    );
+  }
+  
+  // Handle auto-verified status
+  if (currentStatus === 'AUTO_VERIFIED') {
+    return (
+      <div className={cn('flex items-center space-x-2', className)}>
+        <Shield className="h-5 w-5 text-blue-500" />
+        <span className="text-sm font-medium text-blue-600">Auto-Verified</span>
+      </div>
+    );
+  }
+  
+  // Normal verification progress
+  return (
+    <div className={cn('flex items-center space-x-2', className)}>
+      <div className="flex-1">
+        <div className="flex items-center">
+          {steps.map((step, index) => {
+            const isCompleted = index <= currentIndex;
+            const isCurrent = index === currentIndex;
+            
+            return (
+              <React.Fragment key={step}>
+                <div
+                  className={cn(
+                    'flex h-8 w-8 items-center justify-center rounded-full border-2',
+                    isCompleted
+                      ? 'border-green-500 bg-green-50'
+                      : 'border-gray-300 bg-gray-50'
+                  )}
+                >
+                  {isCompleted ? (
+                    <CheckCircle className="h-4 w-4 text-green-500" />
+                  ) : (
+                    <div className="h-2 w-2 rounded-full bg-gray-400" />
+                  )}
+                </div>
+                {index < steps.length - 1 && (
+                  <div
+                    className={cn(
+                      'h-1 w-full mx-2',
+                      isCompleted ? 'bg-green-200' : 'bg-gray-200'
+                    )}
+                  />
+                )}
+              </React.Fragment>
+            );
+          })}
+        </div>
+      </div>
+      <StatusIndicator status={currentStatus} size="sm" />
+    </div>
+  );
+}

@@ -99,6 +99,7 @@ model Entity {
   coordinates Json?
   metadata    Json?
   isActive    Boolean    @default(true)
+  autoApproveEnabled Boolean @default(false)
   createdAt   DateTime   @default(now())
   updatedAt   DateTime   @updatedAt
 
@@ -189,9 +190,11 @@ model RapidAssessment {
   versionNumber         Int @default(1)
   isOfflineCreated      Boolean @default(false)
   syncStatus            SyncStatus @default(PENDING)
-  verificationStatus    VerificationStatus @default(PENDING)
+  verificationStatus    VerificationStatus @default(DRAFT)
   verifiedAt            DateTime?
   verifiedBy            String?
+  rejectionReason       String?
+  rejectionFeedback     String?
   mediaAttachments      Json? // Array of media files with metadata
   createdAt             DateTime @default(now())
   updatedAt             DateTime @updatedAt
@@ -326,7 +329,7 @@ model RapidResponse {
   timeline        Json?
   versionNumber   Int             @default(1)
   isOfflineCreated Boolean        @default(false)
-  verificationStatus VerificationStatus @default(PENDING)
+  verificationStatus VerificationStatus @default(DRAFT)
   verifiedAt      DateTime?
   verifiedBy      String?
   createdAt       DateTime        @default(now())
@@ -434,10 +437,11 @@ enum ResponseStatus {
 }
 
 enum VerificationStatus {
-  PENDING
-  APPROVED
-  REJECTED
-  NEEDS_REVIEW
+  DRAFT         // Initial state
+  SUBMITTED     // Awaiting verification
+  VERIFIED      // Approved by coordinator
+  AUTO_VERIFIED // Automatically approved
+  REJECTED      // Rejected by coordinator
 }
 
 enum SyncStatus {

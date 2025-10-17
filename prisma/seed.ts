@@ -356,11 +356,84 @@ async function main() {
     })
   }
 
+  // Create sample rapid assessments for verification workflow testing
+  console.log('📋 Creating sample rapid assessments for verification testing...')
+  
+  const sampleAssessments = [
+    {
+      rapidAssessmentType: 'HEALTH',
+      rapidAssessmentDate: new Date('2025-10-15'),
+      assessorId: assessorUser.id,
+      entityId: 'entity-1', // Maiduguri Metropolitan
+      assessorName: 'Field Assessor',
+      location: 'Maiduguri Metropolitan',
+      status: 'SUBMITTED',
+      priority: 'HIGH',
+      verificationStatus: 'SUBMITTED',
+      coordinates: { latitude: 11.8311, longitude: 13.1511, accuracy: 10, timestamp: new Date().toISOString(), captureMethod: 'GPS' }
+    },
+    {
+      rapidAssessmentType: 'WASH',
+      rapidAssessmentDate: new Date('2025-10-16'),
+      assessorId: assessorUser.id,
+      entityId: 'entity-2', // Jere Local Government
+      assessorName: 'Field Assessor',
+      location: 'Jere Local Government',
+      status: 'SUBMITTED',
+      priority: 'CRITICAL',
+      verificationStatus: 'SUBMITTED',
+      coordinates: { latitude: 11.8822, longitude: 13.2143, accuracy: 8, timestamp: new Date().toISOString(), captureMethod: 'GPS' }
+    },
+    {
+      rapidAssessmentType: 'SHELTER',
+      rapidAssessmentDate: new Date('2025-10-16'),
+      assessorId: multiRoleUser.id,
+      entityId: 'entity-5', // IDP Camp Dalori
+      assessorName: 'Multi Role Test User',
+      location: 'IDP Camp Dalori',
+      status: 'SUBMITTED',
+      priority: 'MEDIUM',
+      verificationStatus: 'SUBMITTED',
+      coordinates: { latitude: 11.7833, longitude: 13.2167, accuracy: 12, timestamp: new Date().toISOString(), captureMethod: 'GPS' }
+    },
+    {
+      rapidAssessmentType: 'FOOD',
+      rapidAssessmentDate: new Date('2025-10-17'),
+      assessorId: assessorUser.id,
+      entityId: 'entity-3', // Gwoza Local Government
+      assessorName: 'Field Assessor',
+      location: 'Gwoza Local Government',
+      status: 'SUBMITTED',
+      priority: 'HIGH',
+      verificationStatus: 'SUBMITTED',
+      coordinates: { latitude: 11.0417, longitude: 13.6875, accuracy: 15, timestamp: new Date().toISOString(), captureMethod: 'GPS' }
+    },
+    {
+      rapidAssessmentType: 'SECURITY',
+      rapidAssessmentDate: new Date('2025-10-17'),
+      assessorId: multiRoleUser.id,
+      entityId: 'entity-4', // Primary Health Center Maiduguri
+      assessorName: 'Multi Role Test User',
+      location: 'Primary Health Center Maiduguri',
+      status: 'SUBMITTED',
+      priority: 'LOW',
+      verificationStatus: 'SUBMITTED',
+      coordinates: { latitude: 11.8467, longitude: 13.1569, accuracy: 5, timestamp: new Date().toISOString(), captureMethod: 'GPS' }
+    }
+  ]
+
+  for (const assessment of sampleAssessments) {
+    await prisma.rapidAssessment.create({
+      data: assessment as any
+    })
+  }
+
   console.log('✅ Database seed completed successfully!')
   console.log('📧 Admin credentials: admin@dms.gov.ng / admin123!')
   console.log('📧 Coordinator credentials: coordinator@dms.gov.ng / coordinator123!')
   console.log('📧 Assessor credentials: assessor@test.com / test-password')
   console.log('📧 Multi-role credentials: multirole@dms.gov.ng / multirole123! (ASSESSOR, COORDINATOR, DONOR)')
+  console.log('📋 Created 5 sample assessments for verification workflow testing')
 }
 
 main()

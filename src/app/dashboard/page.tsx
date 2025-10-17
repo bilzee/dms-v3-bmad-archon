@@ -13,7 +13,10 @@ import {
   Activity, 
   User,
   MapPin,
-  ClipboardList 
+  ClipboardList,
+  CheckCircle,
+  Settings,
+  BarChart3
 } from 'lucide-react'
 
 export default function DashboardPage() {
@@ -37,7 +40,7 @@ export default function DashboardPage() {
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {/* Entity Assignment Management - Story 2.3 */}
+        {/* Entity Assignment Management - Story 2.3 & 3.3 */}
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
@@ -45,14 +48,15 @@ export default function DashboardPage() {
               Entity Assignment
             </CardTitle>
             <CardDescription>
-              Manage entity assignments for assessors and responders
+              Manage entity assignments and auto-approval settings
             </CardDescription>
           </CardHeader>
           <CardContent>
             <div className="space-y-3">
               <div className="flex items-center gap-2">
                 <Badge variant="outline" className="text-xs">Story 2.3</Badge>
-                <Badge variant="secondary" className="text-xs">Coordinator</Badge>
+                <Badge variant="outline" className="text-xs">Story 3.3</Badge>
+                <Badge variant="secondary" className="text-xs">All Users</Badge>
               </div>
               <Link href="/coordinator/entities">
                 <Button className="w-full">
@@ -120,6 +124,68 @@ export default function DashboardPage() {
                 <Button className="w-full">
                   <AlertTriangle className="h-4 w-4 mr-2" />
                   Create Assessment
+                </Button>
+              </Link>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Assessment Verification - Story 3.3 */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <CheckCircle className="h-5 w-5" />
+              Assessment Verification
+            </CardTitle>
+            <CardDescription>
+              Verify or reject submitted assessments to maintain data quality
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-3">
+              <div className="flex items-center gap-2">
+                <Badge variant="outline" className="text-xs">Story 3.3</Badge>
+                <Badge variant="secondary" className="text-xs">All Users</Badge>
+              </div>
+              <div className="grid grid-cols-1 gap-2">
+                <Link href="/coordinator/verification">
+                  <Button className="w-full justify-start">
+                    <CheckCircle className="h-4 w-4 mr-2" />
+                    Verification Queue
+                  </Button>
+                </Link>
+                <Link href="/coordinator/verification/auto-approval">
+                  <Button variant="outline" className="w-full justify-start">
+                    <Settings className="h-4 w-4 mr-2" />
+                    Auto-Approval Settings
+                  </Button>
+                </Link>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Verification Metrics - Story 3.3 */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <BarChart3 className="h-5 w-5" />
+              Verification Metrics
+            </CardTitle>
+            <CardDescription>
+              Monitor verification performance and queue statistics
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-3">
+              <div className="flex items-center gap-2">
+                <Badge variant="outline" className="text-xs">Story 3.3</Badge>
+                <Badge variant="secondary" className="text-xs">All Users</Badge>
+              </div>
+              <Link href="/verification/metrics">
+                <Button className="w-full">
+                  <BarChart3 className="h-4 w-4 mr-2" />
+                  View Metrics Dashboard
                 </Button>
               </Link>
             </div>

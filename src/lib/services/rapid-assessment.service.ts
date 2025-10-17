@@ -50,7 +50,7 @@ export class RapidAssessmentService {
           versionNumber: 1,
           isOfflineCreated: false,
           syncStatus: 'SYNCED',
-          verificationStatus: 'PENDING'
+          verificationStatus: 'SUBMITTED'
         }
       })
 
