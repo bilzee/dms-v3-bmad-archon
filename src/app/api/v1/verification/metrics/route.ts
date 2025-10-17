@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { withAuth, requireRole } from '@/lib/auth/middleware';
 import { prisma } from '@/lib/db/client';
 
-export const GET = withAuth(requireRole('COORDINATOR')(async (request, context) => {
+export const GET = withAuth(async (request, context) => {
   try {
     // Get current date range (today)
     const today = new Date();
@@ -137,4 +137,4 @@ export const GET = withAuth(requireRole('COORDINATOR')(async (request, context) 
       { status: 500 }
     );
   }
-}));
+});

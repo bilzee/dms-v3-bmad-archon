@@ -8,14 +8,14 @@ import { BarChart3, CheckCircle, XCircle, Clock, Users, FileText } from 'lucide-
 import { useAuth } from '@/hooks/useAuth'
 
 interface VerificationMetrics {
-  totalAssessments: number
-  pendingVerification: number
-  verified: number
-  rejected: number
-  autoVerified: number
+  totalPending: number
+  totalVerified: number
+  totalRejected: number
+  totalAutoVerified: number
   verificationRate: number
-  avgVerificationTime: number
-  activeCoordinators: number
+  rejectionRate: number
+  averageProcessingTime: number
+  pendingByType: Record<string, number>
 }
 
 export default function VerificationMetricsPage() {
@@ -116,7 +116,7 @@ export default function VerificationMetricsPage() {
             <FileText className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{metrics.totalAssessments}</div>
+            <div className="text-2xl font-bold">{(metrics.totalPending + metrics.totalVerified + metrics.totalRejected + metrics.totalAutoVerified)}</div>
             <p className="text-xs text-muted-foreground">All submitted assessments</p>
           </CardContent>
         </Card>
@@ -127,7 +127,7 @@ export default function VerificationMetricsPage() {
             <Clock className="h-4 w-4 text-yellow-500" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-yellow-600">{metrics.pendingVerification}</div>
+            <div className="text-2xl font-bold text-yellow-600">{metrics.totalPending}</div>
             <p className="text-xs text-muted-foreground">Awaiting coordinator review</p>
           </CardContent>
         </Card>
@@ -138,7 +138,7 @@ export default function VerificationMetricsPage() {
             <CheckCircle className="h-4 w-4 text-green-500" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-green-600">{metrics.verified}</div>
+            <div className="text-2xl font-bold text-green-600">{metrics.totalVerified}</div>
             <p className="text-xs text-muted-foreground">Manually approved</p>
           </CardContent>
         </Card>
@@ -149,7 +149,7 @@ export default function VerificationMetricsPage() {
             <XCircle className="h-4 w-4 text-red-500" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-red-600">{metrics.rejected}</div>
+            <div className="text-2xl font-bold text-red-600">{metrics.totalRejected}</div>
             <p className="text-xs text-muted-foreground">Quality control rejections</p>
           </CardContent>
         </Card>
@@ -167,27 +167,24 @@ export default function VerificationMetricsPage() {
               <div className="flex justify-between items-center">
                 <span className="text-sm font-medium">Auto-Verified</span>
                 <div className="flex items-center gap-2">
-                  <span className="text-sm text-blue-600 font-bold">{metrics.autoVerified}</span>
+                  <span className="text-sm text-blue-600 font-bold">{metrics.totalAutoVerified}</span>
                   <Badge variant="secondary" className="text-xs">Auto</Badge>
                 </div>
               </div>
               
               <div className="flex justify-between items-center">
                 <span className="text-sm font-medium">Verification Rate</span>
-                <span className="text-sm font-bold">{metrics.verificationRate.toFixed(1)}%</span>
+                <span className="text-sm font-bold">{(metrics.verificationRate * 100).toFixed(1)}%</span>
               </div>
 
               <div className="flex justify-between items-center">
-                <span className="text-sm font-medium">Avg. Verification Time</span>
-                <span className="text-sm font-bold">{metrics.avgVerificationTime.toFixed(1)} hours</span>
+                <span className="text-sm font-medium">Avg. Processing Time</span>
+                <span className="text-sm font-bold">{metrics.averageProcessingTime.toFixed(1)} hours</span>
               </div>
 
               <div className="flex justify-between items-center">
-                <span className="text-sm font-medium">Active Coordinators</span>
-                <div className="flex items-center gap-2">
-                  <Users className="h-4 w-4 text-gray-500" />
-                  <span className="text-sm font-bold">{metrics.activeCoordinators}</span>
-                </div>
+                <span className="text-sm font-medium">Rejection Rate</span>
+                <span className="text-sm font-bold">{(metrics.rejectionRate * 100).toFixed(1)}%</span>
               </div>
             </div>
           </CardContent>
@@ -203,13 +200,13 @@ export default function VerificationMetricsPage() {
               <div className="space-y-2">
                 <div className="flex justify-between text-sm">
                   <span>Approved (Manual)</span>
-                  <span className="font-medium text-green-600">{metrics.verified}</span>
+                  <span className="font-medium text-green-600">{metrics.totalVerified}</span>
                 </div>
                 <div className="w-full bg-gray-200 rounded-full h-2">
                   <div 
                     className="bg-green-500 h-2 rounded-full" 
                     style={{ 
-                      width: `${metrics.totalAssessments > 0 ? (metrics.verified / metrics.totalAssessments) * 100 : 0}%` 
+                      width: `${(metrics.totalPending + metrics.totalVerified + metrics.totalRejected + metrics.totalAutoVerified) > 0 ? (metrics.totalVerified / (metrics.totalPending + metrics.totalVerified + metrics.totalRejected + metrics.totalAutoVerified)) * 100 : 0}%` 
                     }}
                   ></div>
                 </div>
@@ -218,13 +215,13 @@ export default function VerificationMetricsPage() {
               <div className="space-y-2">
                 <div className="flex justify-between text-sm">
                   <span>Auto-Approved</span>
-                  <span className="font-medium text-blue-600">{metrics.autoVerified}</span>
+                  <span className="font-medium text-blue-600">{metrics.totalAutoVerified}</span>
                 </div>
                 <div className="w-full bg-gray-200 rounded-full h-2">
                   <div 
                     className="bg-blue-500 h-2 rounded-full" 
                     style={{ 
-                      width: `${metrics.totalAssessments > 0 ? (metrics.autoVerified / metrics.totalAssessments) * 100 : 0}%` 
+                      width: `${(metrics.totalPending + metrics.totalVerified + metrics.totalRejected + metrics.totalAutoVerified) > 0 ? (metrics.totalAutoVerified / (metrics.totalPending + metrics.totalVerified + metrics.totalRejected + metrics.totalAutoVerified)) * 100 : 0}%` 
                     }}
                   ></div>
                 </div>
@@ -233,13 +230,13 @@ export default function VerificationMetricsPage() {
               <div className="space-y-2">
                 <div className="flex justify-between text-sm">
                   <span>Rejected</span>
-                  <span className="font-medium text-red-600">{metrics.rejected}</span>
+                  <span className="font-medium text-red-600">{metrics.totalRejected}</span>
                 </div>
                 <div className="w-full bg-gray-200 rounded-full h-2">
                   <div 
                     className="bg-red-500 h-2 rounded-full" 
                     style={{ 
-                      width: `${metrics.totalAssessments > 0 ? (metrics.rejected / metrics.totalAssessments) * 100 : 0}%` 
+                      width: `${(metrics.totalPending + metrics.totalVerified + metrics.totalRejected + metrics.totalAutoVerified) > 0 ? (metrics.totalRejected / (metrics.totalPending + metrics.totalVerified + metrics.totalRejected + metrics.totalAutoVerified)) * 100 : 0}%` 
                     }}
                   ></div>
                 </div>
