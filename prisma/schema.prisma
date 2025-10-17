@@ -6,13 +6,13 @@ generator client {
 }
 
 datasource db {
-  provider = "sqlite"
+  provider = "postgresql"
   url      = env("DATABASE_URL")
 }
 
 // User Management Models
 model User {
-  id           String   @id @default(cuid())
+  id           String   @id @default(uuid())
   email        String   @unique
   username     String   @unique
   passwordHash String
@@ -36,7 +36,7 @@ model User {
 }
 
 model Role {
-  id          String @id @default(cuid())
+  id          String @id @default(uuid())
   name        RoleName @unique
   description String
   createdAt   DateTime @default(now())
@@ -49,7 +49,7 @@ model Role {
 }
 
 model UserRole {
-  id         String   @id @default(cuid())
+  id         String   @id @default(uuid())
   userId     String
   roleId     String
   assignedAt DateTime @default(now())
@@ -64,7 +64,7 @@ model UserRole {
 }
 
 model Permission {
-  id          String @id @default(cuid())
+  id          String @id @default(uuid())
   name        String
   code        String @unique
   category    String
@@ -78,7 +78,7 @@ model Permission {
 }
 
 model RolePermission {
-  id           String @id @default(cuid())
+  id           String @id @default(uuid())
   roleId       String
   permissionId String
 
@@ -92,7 +92,7 @@ model RolePermission {
 
 // Entity Management
 model Entity {
-  id          String     @id @default(cuid())
+  id          String     @id @default(uuid())
   name        String
   type        EntityType
   location    String?
@@ -112,7 +112,7 @@ model Entity {
 }
 
 model EntityAssignment {
-  id       String @id @default(cuid())
+  id       String @id @default(uuid())
   userId   String
   entityId String
   assignedAt DateTime @default(now())
@@ -128,7 +128,7 @@ model EntityAssignment {
 
 // Incident Management
 model Incident {
-  id                   String   @id @default(cuid())
+  id                   String   @id @default(uuid())
   type                 String
   subType              String?
   severity             Priority @default(MEDIUM)
@@ -147,7 +147,7 @@ model Incident {
 }
 
 model PreliminaryAssessment {
-  id                              String   @id @default(cuid())
+  id                              String   @id @default(uuid())
   reportingDate                   DateTime
   reportingLatitude               Float
   reportingLongitude              Float
@@ -176,7 +176,7 @@ model PreliminaryAssessment {
 
 // Assessment and Response Models
 model RapidAssessment {
-  id                    String   @id @default(cuid())
+  id                    String   @id @default(uuid())
   rapidAssessmentType   AssessmentType
   rapidAssessmentDate   DateTime
   assessorId            String
@@ -253,7 +253,7 @@ model PopulationAssessment {
   separatedChildren             Int
   numberLivesLost               Int
   numberInjured                 Int
-  additionalPopulationDetails   String?
+  additionalPopulationDetails   String?   @db.Text
   rapidAssessment               RapidAssessment @relation(fields: [rapidAssessmentId], references: [id], onDelete: Cascade)
   @@map("population_assessments")
 }
@@ -314,7 +314,7 @@ model SecurityAssessment {
 }
 
 model RapidResponse {
-  id              String          @id @default(cuid())
+  id              String          @id @default(uuid())
   responderId     String
   entityId        String
   assessmentId    String?
@@ -342,7 +342,7 @@ model RapidResponse {
 
 // Synchronization and Conflict Management
 model SyncConflict {
-  id                    String   @id @default(cuid())
+  id                    String   @id @default(uuid())
   entityType            String
   entityId              String
   conflictDate          DateTime @default(now())
@@ -358,7 +358,7 @@ model SyncConflict {
 
 // Audit and Logging
 model AuditLog {
-  id        String   @id @default(cuid())
+  id        String   @id @default(uuid())
   userId    String?
   action    String
   resource  String
