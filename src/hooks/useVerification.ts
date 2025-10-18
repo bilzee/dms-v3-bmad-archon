@@ -43,6 +43,7 @@ async function verifyAssessment(
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
+      'Authorization': `Bearer ${localStorage.getItem('token')}`
     },
     body: JSON.stringify(data),
   });
@@ -152,7 +153,8 @@ export function useVerificationMetrics() {
         throw new Error(error.error || 'Failed to fetch verification metrics');
       }
       
-      return response.json();
+      const result = await response.json();
+      return result.data; // Extract the data property from API response
     },
     staleTime: 300000, // 5 minutes
     refetchInterval: 300000, // Auto-refresh every 5 minutes

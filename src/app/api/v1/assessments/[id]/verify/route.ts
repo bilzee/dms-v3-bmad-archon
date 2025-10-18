@@ -1,52 +1,26 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth';
+import { withAuth } from '@/lib/auth/middleware';
 import { z } from 'zod';
-import { db } from '@/lib/db/client';
-import { authConfig } from '@/lib/auth/config';
+import { prisma } from '@/lib/db/client';
 
 const verifyAssessmentSchema = z.object({
   notes: z.string().optional(),
   metadata: z.record(z.any()).optional()
 });
 
-export async function POST(
+export const POST = withAuth(async (
   request: NextRequest,
-  { params }: { params: { id: string } }
-) {
+  context: { params: { id: string } }
+) => {
   try {
-    const session = await getServerSession(authConfig);
-    
-    if (!session?.user?.id) {
-      return NextResponse.json(
-        { success: false, error: 'Unauthorized' },
-        { status: 401 }
-      );
-    }
-
-    // Check if user is coordinator
-    const user = await db.user.findUnique({
-      where: { id: session.user.id },
-      include: { roles: { include: { role: true } } }
-    });
-
-    const hasCoordinatorRole = user?.roles.some(
-      userRole => userRole.role.name === 'COORDINATOR'
-    );
-
-    if (!hasCoordinatorRole) {
-      return NextResponse.json(
-        { success: false, error: 'Insufficient permissions. Coordinator role required.' },
-        { status: 403 }
-      );
-    }
-
+    const { user } = context;
     const body = await request.json();
     const validatedData = verifyAssessmentSchema.parse(body);
 
-    const assessmentId = params.id;
+    const assessmentId = context.params.id;
 
     // Start transaction for verification
-    const result = await db.$transaction(async (tx) => {
+    const result = await prisma.$transaction(async (tx) => {
       // Get assessment with current status
       const assessment = await tx.rapidAssessment.findUnique({
         where: { id: assessmentId },
@@ -75,7 +49,7 @@ export async function POST(
         data: {
           verificationStatus: 'VERIFIED',
           verifiedAt: new Date(),
-          verifiedBy: session.user.id
+          verifiedBy: user.id
         },
         include: {
           entity: {
@@ -99,7 +73,7 @@ export async function POST(
       // Create audit log entry
       await tx.auditLog.create({
         data: {
-          userId: session.user.id,
+          userId: user.id,
           action: 'ASSESSMENT_VERIFIED',
           entityType: 'RapidAssessment',
           entityId: assessmentId,
@@ -152,4 +126,4 @@ export async function POST(
       { status: 500 }
     );
   }
-}
+});

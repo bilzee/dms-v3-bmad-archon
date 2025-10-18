@@ -1,8 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth';
+import { withAuth } from '@/lib/auth/middleware';
 import { z } from 'zod';
-import { db } from '@/lib/db/client';
-import { authConfig } from '@/lib/auth/config';
+import { prisma } from '@/lib/db/client';
 
 const bulkUpdateSchema = z.object({
   entityIds: z.array(z.string()),
@@ -15,34 +14,9 @@ const bulkUpdateSchema = z.object({
 });
 
 // GET - Get all auto-approval configurations
-export async function GET(request: NextRequest) {
+export const GET = withAuth(async (request: NextRequest, context) => {
   try {
-    const session = await getServerSession(authConfig);
-    
-    if (!session?.user?.id) {
-      return NextResponse.json(
-        { success: false, error: 'Unauthorized' },
-        { status: 401 }
-      );
-    }
-
-    // Check if user is coordinator
-    const user = await db.user.findUnique({
-      where: { id: session.user.id },
-      include: { roles: { include: { role: true } } }
-    });
-
-    const hasCoordinatorRole = user?.roles.some(
-      userRole => userRole.role.name === 'COORDINATOR'
-    );
-
-    if (!hasCoordinatorRole) {
-      return NextResponse.json(
-        { success: false, error: 'Insufficient permissions. Coordinator role required.' },
-        { status: 403 }
-      );
-    }
-
+    const { user } = context;
     const { searchParams } = new URL(request.url);
     const entityType = searchParams.get('entityType');
     const enabledOnly = searchParams.get('enabledOnly') === 'true';
@@ -61,7 +35,7 @@ export async function GET(request: NextRequest) {
     }
 
     // Get entities with auto-approval configurations
-    const entities = await db.entity.findMany({
+    const entities = await prisma.entity.findMany({
       where: whereClause,
       select: {
         id: true,
@@ -136,37 +110,12 @@ export async function GET(request: NextRequest) {
       { status: 500 }
     );
   }
-}
+});
 
 // PUT - Bulk update auto-approval configurations
-export async function PUT(request: NextRequest) {
+export const PUT = withAuth(async (request: NextRequest, context) => {
   try {
-    const session = await getServerSession(authConfig);
-    
-    if (!session?.user?.id) {
-      return NextResponse.json(
-        { success: false, error: 'Unauthorized' },
-        { status: 401 }
-      );
-    }
-
-    // Check if user is coordinator
-    const user = await db.user.findUnique({
-      where: { id: session.user.id },
-      include: { roles: { include: { role: true } } }
-    });
-
-    const hasCoordinatorRole = user?.roles.some(
-      userRole => userRole.role.name === 'COORDINATOR'
-    );
-
-    if (!hasCoordinatorRole) {
-      return NextResponse.json(
-        { success: false, error: 'Insufficient permissions. Coordinator role required.' },
-        { status: 403 }
-      );
-    }
-
+    const { user } = context;
     const body = await request.json();
     const validatedData = bulkUpdateSchema.parse(body);
 
@@ -178,7 +127,7 @@ export async function PUT(request: NextRequest) {
     }
 
     // Start transaction for bulk auto-approval configuration update
-    const result = await db.$transaction(async (tx) => {
+    const result = await prisma.$transaction(async (tx) => {
       // Get entities to update
       const entities = await tx.entity.findMany({
         where: {
@@ -204,7 +153,7 @@ export async function PUT(request: NextRequest) {
             assessmentTypes: validatedData.conditions?.assessmentTypes || [],
             maxPriority: validatedData.conditions?.maxPriority || 'MEDIUM',
             requiresDocumentation: validatedData.conditions?.requiresDocumentation || false,
-            lastModifiedBy: session.user.id,
+            lastModifiedBy: user.id,
             lastModifiedAt: new Date().toISOString(),
           }
         };
@@ -231,7 +180,7 @@ export async function PUT(request: NextRequest) {
         // Create audit log entry for each entity
         await tx.auditLog.create({
           data: {
-            userId: session.user.id,
+            userId: user.id,
             action: 'BULK_AUTO_APPROVAL_CONFIG_UPDATED',
             entityType: 'Entity',
             entityId: entity.id,
@@ -242,7 +191,7 @@ export async function PUT(request: NextRequest) {
               conditions: validatedData.conditions,
               bulkUpdate: true,
               totalEntitiesUpdated: entities.length,
-              configuredBy: user?.name || session.user.id
+              configuredBy: user.name || user.id
             }
           }
         });
@@ -304,4 +253,4 @@ export async function PUT(request: NextRequest) {
       { status: 500 }
     );
   }
-}
+});
