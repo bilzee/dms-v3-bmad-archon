@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { useAuthStore } from '@/stores/auth.store';
+import { useAuth } from '@/hooks/useAuth';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -53,7 +53,7 @@ interface Assignment {
 }
 
 export default function CoordinatorEntitiesPage() {
-  const { currentRole, user } = useAuthStore();
+  const { currentRole, user, token, hasRole } = useAuth();
   const [entities, setEntities] = useState<Entity[]>([]);
   const [users, setUsers] = useState<User[]>([]);
   const [assignments, setAssignments] = useState<Assignment[]>([]);
@@ -65,15 +65,10 @@ export default function CoordinatorEntitiesPage() {
   const [roleFilter, setRoleFilter] = useState('ALL');
   const [activeTab, setActiveTab] = useState('assign');
 
-  const getAuthToken = () => {
-    const authStorage = localStorage.getItem('auth-storage');
-    return authStorage ? JSON.parse(authStorage).state.token : null;
-  };
-
   const fetchData = async () => {
     setIsLoading(true);
     try {
-      const token = getAuthToken();
+      if (!token) throw new Error('No authentication token available');
       const headers = { 'Authorization': `Bearer ${token}` };
 
       const [entitiesRes, usersRes, assignmentsRes] = await Promise.all([
@@ -107,7 +102,7 @@ export default function CoordinatorEntitiesPage() {
 
     setIsAssigning(true);
     try {
-      const token = getAuthToken();
+      if (!token) throw new Error('No authentication token available');
       
       // Create assignments for each selected user
       const assignmentPromises = selectedUserIds.map(userId =>
@@ -120,7 +115,7 @@ export default function CoordinatorEntitiesPage() {
           body: JSON.stringify({
             userId,
             entityId: selectedEntity,
-            assignedBy: user?.id
+            assignedBy: user?.userId
           })
         })
       );
@@ -147,7 +142,7 @@ export default function CoordinatorEntitiesPage() {
     if (!confirm('Are you sure you want to remove this assignment?')) return;
 
     try {
-      const token = getAuthToken();
+      if (!token) throw new Error('No authentication token available');
       const response = await fetch(`/api/v1/entity-assignments/${assignmentId}`, {
         method: 'DELETE',
         headers: { 'Authorization': `Bearer ${token}` }
@@ -168,7 +163,7 @@ export default function CoordinatorEntitiesPage() {
     fetchData();
   }, []);
 
-  if (currentRole !== 'COORDINATOR' && currentRole !== 'ADMIN') {
+  if (!hasRole('COORDINATOR') && !hasRole('ADMIN')) {
     return (
       <div className="container mx-auto py-6">
         <Card>
