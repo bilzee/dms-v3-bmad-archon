@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
+import { useAuth } from '@/hooks/useAuth';
 import type { 
   VerificationQueueResponse, 
   VerificationQueueFilters,
@@ -11,7 +12,8 @@ import type {
 
 // API functions
 async function fetchVerificationQueue(
-  filters: VerificationQueueFilters & { page?: number; limit?: number }
+  filters: VerificationQueueFilters & { page?: number; limit?: number },
+  token: string
 ): Promise<VerificationQueueResponse> {
   const params = new URLSearchParams();
   
@@ -23,7 +25,7 @@ async function fetchVerificationQueue(
   
   const response = await fetch(`/api/v1/verification/queue/assessments?${params}`, {
     headers: {
-      'Authorization': `Bearer ${localStorage.getItem('token')}`
+      'Authorization': `Bearer ${token}`
     }
   });
   
@@ -37,13 +39,14 @@ async function fetchVerificationQueue(
 
 async function verifyAssessment(
   assessmentId: string, 
-  data: VerifyAssessmentRequest
+  data: VerifyAssessmentRequest,
+  token: string
 ): Promise<any> {
   const response = await fetch(`/api/v1/assessments/${assessmentId}/verify`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
-      'Authorization': `Bearer ${localStorage.getItem('token')}`
+      'Authorization': `Bearer ${token}`
     },
     body: JSON.stringify(data),
   });
@@ -58,12 +61,14 @@ async function verifyAssessment(
 
 async function rejectAssessment(
   assessmentId: string, 
-  data: RejectAssessmentRequest
+  data: RejectAssessmentRequest,
+  token: string
 ): Promise<any> {
   const response = await fetch(`/api/v1/assessments/${assessmentId}/reject`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
+      'Authorization': `Bearer ${token}`
     },
     body: JSON.stringify(data),
   });
@@ -80,21 +85,30 @@ async function rejectAssessment(
 export function useVerificationQueue(
   filters: VerificationQueueFilters & { page?: number; limit?: number } = {}
 ) {
+  const { token } = useAuth();
+  
   return useQuery({
     queryKey: ['verification-queue', filters],
-    queryFn: () => fetchVerificationQueue(filters),
+    queryFn: () => {
+      if (!token) throw new Error('No authentication token available');
+      return fetchVerificationQueue(filters, token);
+    },
     staleTime: 30000, // 30 seconds - refresh frequently for real-time updates
     refetchInterval: 60000, // Auto-refresh every minute
+    enabled: !!token, // Only run query if token exists
   });
 }
 
 // Hook for verification actions
 export function useVerificationActions() {
   const queryClient = useQueryClient();
+  const { token } = useAuth();
   
   const verifyMutation = useMutation({
-    mutationFn: ({ assessmentId, data }: { assessmentId: string; data: VerifyAssessmentRequest }) =>
-      verifyAssessment(assessmentId, data),
+    mutationFn: ({ assessmentId, data }: { assessmentId: string; data: VerifyAssessmentRequest }) => {
+      if (!token) throw new Error('No authentication token available');
+      return verifyAssessment(assessmentId, data, token);
+    },
     onSuccess: (data) => {
       // Invalidate and refetch verification queue
       queryClient.invalidateQueries({ queryKey: ['verification-queue'] });
@@ -111,8 +125,10 @@ export function useVerificationActions() {
   });
   
   const rejectMutation = useMutation({
-    mutationFn: ({ assessmentId, data }: { assessmentId: string; data: RejectAssessmentRequest }) =>
-      rejectAssessment(assessmentId, data),
+    mutationFn: ({ assessmentId, data }: { assessmentId: string; data: RejectAssessmentRequest }) => {
+      if (!token) throw new Error('No authentication token available');
+      return rejectAssessment(assessmentId, data, token);
+    },
     onSuccess: (data) => {
       // Invalidate and refetch verification queue
       queryClient.invalidateQueries({ queryKey: ['verification-queue'] });
@@ -139,12 +155,16 @@ export function useVerificationActions() {
 
 // Hook for verification metrics (dashboard overview)
 export function useVerificationMetrics() {
+  const { token } = useAuth();
+  
   return useQuery({
     queryKey: ['verification-metrics'],
     queryFn: async (): Promise<VerificationMetrics> => {
+      if (!token) throw new Error('No authentication token available');
+      
       const response = await fetch('/api/v1/verification/metrics', {
         headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
+          'Authorization': `Bearer ${token}`
         }
       });
       
@@ -158,6 +178,7 @@ export function useVerificationMetrics() {
     },
     staleTime: 300000, // 5 minutes
     refetchInterval: 300000, // Auto-refresh every 5 minutes
+    enabled: !!token, // Only run query if token exists
   });
 }
 

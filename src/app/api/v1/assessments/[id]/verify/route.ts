@@ -14,6 +14,15 @@ export const POST = withAuth(async (
 ) => {
   try {
     const { user } = context;
+    
+    // Check if user has coordinator role
+    if (!user.roles.includes('COORDINATOR')) {
+      return NextResponse.json(
+        { success: false, error: 'Insufficient permissions. Coordinator role required.' },
+        { status: 403 }
+      );
+    }
+
     const body = await request.json();
     const validatedData = verifyAssessmentSchema.parse(body);
 
@@ -49,7 +58,7 @@ export const POST = withAuth(async (
         data: {
           verificationStatus: 'VERIFIED',
           verifiedAt: new Date(),
-          verifiedBy: user.id
+          verifiedBy: user.userId
         },
         include: {
           entity: {
@@ -73,11 +82,11 @@ export const POST = withAuth(async (
       // Create audit log entry
       await tx.auditLog.create({
         data: {
-          userId: user.id,
+          userId: user.userId,
           action: 'ASSESSMENT_VERIFIED',
-          entityType: 'RapidAssessment',
-          entityId: assessmentId,
-          details: {
+          resource: 'RapidAssessment',
+          resourceId: assessmentId,
+          newValues: {
             assessmentType: assessment.rapidAssessmentType,
             entityName: assessment.entity.name,
             verificationNotes: validatedData.notes,

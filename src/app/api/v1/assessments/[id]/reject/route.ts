@@ -1,8 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth';
+import { withAuth } from '@/lib/auth/middleware';
 import { z } from 'zod';
-import { db } from '@/lib/db/client';
-import { authConfig } from '@/lib/auth/config';
+import { prisma } from '@/lib/db/client';
 
 const rejectAssessmentSchema = z.object({
   reason: z.enum([
@@ -18,31 +17,15 @@ const rejectAssessmentSchema = z.object({
   metadata: z.record(z.any()).optional()
 });
 
-export async function POST(
+export const POST = withAuth(async (
   request: NextRequest,
-  { params }: { params: { id: string } }
-) {
+  context: { params: { id: string } }
+) => {
   try {
-    const session = await getServerSession(authConfig);
+    const { user } = context;
     
-    if (!session?.user?.id) {
-      return NextResponse.json(
-        { success: false, error: 'Unauthorized' },
-        { status: 401 }
-      );
-    }
-
-    // Check if user is coordinator
-    const user = await db.user.findUnique({
-      where: { id: session.user.id },
-      include: { roles: { include: { role: true } } }
-    });
-
-    const hasCoordinatorRole = user?.roles.some(
-      userRole => userRole.role.name === 'COORDINATOR'
-    );
-
-    if (!hasCoordinatorRole) {
+    // Check if user has coordinator role
+    if (!user.roles.includes('COORDINATOR')) {
       return NextResponse.json(
         { success: false, error: 'Insufficient permissions. Coordinator role required.' },
         { status: 403 }
@@ -52,10 +35,10 @@ export async function POST(
     const body = await request.json();
     const validatedData = rejectAssessmentSchema.parse(body);
 
-    const assessmentId = params.id;
+    const assessmentId = context.params.id;
 
     // Start transaction for rejection
-    const result = await db.$transaction(async (tx) => {
+    const result = await prisma.$transaction(async (tx) => {
       // Get assessment with current status
       const assessment = await tx.rapidAssessment.findUnique({
         where: { id: assessmentId },
@@ -86,7 +69,7 @@ export async function POST(
           rejectionReason: validatedData.reason,
           rejectionFeedback: validatedData.feedback,
           verifiedAt: new Date(),
-          verifiedBy: session.user.id
+          verifiedBy: user.userId
         },
         include: {
           entity: {
@@ -110,11 +93,11 @@ export async function POST(
       // Create audit log entry
       await tx.auditLog.create({
         data: {
-          userId: session.user.id,
+          userId: user.userId,
           action: 'ASSESSMENT_REJECTED',
-          entityType: 'RapidAssessment',
-          entityId: assessmentId,
-          details: {
+          resource: 'RapidAssessment',
+          resourceId: assessmentId,
+          newValues: {
             assessmentType: assessment.rapidAssessmentType,
             entityName: assessment.entity.name,
             rejectionReason: validatedData.reason,
@@ -164,4 +147,4 @@ export async function POST(
       { status: 500 }
     );
   }
-}
+});

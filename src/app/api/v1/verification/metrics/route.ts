@@ -1,9 +1,19 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { withAuth, requireRole } from '@/lib/auth/middleware';
+import { withAuth } from '@/lib/auth/middleware';
 import { prisma } from '@/lib/db/client';
 
 export const GET = withAuth(async (request, context) => {
   try {
+    const { user } = context;
+    
+    // Check if user has coordinator role
+    if (!user.roles.includes('COORDINATOR')) {
+      return NextResponse.json(
+        { success: false, error: 'Insufficient permissions. Coordinator role required.' },
+        { status: 403 }
+      );
+    }
+
     // Get current date range (today)
     const today = new Date();
     const startOfDay = new Date(today);

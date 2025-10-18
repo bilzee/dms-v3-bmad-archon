@@ -17,6 +17,14 @@ const bulkUpdateSchema = z.object({
 export const GET = withAuth(async (request: NextRequest, context) => {
   try {
     const { user } = context;
+    
+    // Check if user has coordinator role
+    if (!user.roles.includes('COORDINATOR')) {
+      return NextResponse.json(
+        { success: false, error: 'Insufficient permissions. Coordinator role required.' },
+        { status: 403 }
+      );
+    }
     const { searchParams } = new URL(request.url);
     const entityType = searchParams.get('entityType');
     const enabledOnly = searchParams.get('enabledOnly') === 'true';
@@ -116,6 +124,14 @@ export const GET = withAuth(async (request: NextRequest, context) => {
 export const PUT = withAuth(async (request: NextRequest, context) => {
   try {
     const { user } = context;
+    
+    // Check if user has coordinator role
+    if (!user.roles.includes('COORDINATOR')) {
+      return NextResponse.json(
+        { success: false, error: 'Insufficient permissions. Coordinator role required.' },
+        { status: 403 }
+      );
+    }
     const body = await request.json();
     const validatedData = bulkUpdateSchema.parse(body);
 
@@ -153,7 +169,7 @@ export const PUT = withAuth(async (request: NextRequest, context) => {
             assessmentTypes: validatedData.conditions?.assessmentTypes || [],
             maxPriority: validatedData.conditions?.maxPriority || 'MEDIUM',
             requiresDocumentation: validatedData.conditions?.requiresDocumentation || false,
-            lastModifiedBy: user.id,
+            lastModifiedBy: user.userId,
             lastModifiedAt: new Date().toISOString(),
           }
         };
@@ -180,18 +196,18 @@ export const PUT = withAuth(async (request: NextRequest, context) => {
         // Create audit log entry for each entity
         await tx.auditLog.create({
           data: {
-            userId: user.id,
+            userId: user.userId,
             action: 'BULK_AUTO_APPROVAL_CONFIG_UPDATED',
-            entityType: 'Entity',
-            entityId: entity.id,
-            details: {
+            resource: 'Entity',
+            resourceId: entity.id,
+            newValues: {
               entityName: entity.name,
               previousEnabled: entity.autoApproveEnabled,
               newEnabled: validatedData.enabled,
               conditions: validatedData.conditions,
               bulkUpdate: true,
               totalEntitiesUpdated: entities.length,
-              configuredBy: user.name || user.id
+              configuredBy: user.name || user.userId
             }
           }
         });
