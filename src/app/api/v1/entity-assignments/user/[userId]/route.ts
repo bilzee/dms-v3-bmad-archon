@@ -11,14 +11,12 @@ interface RouteParams {
 export const GET = withAuth(async (request: NextRequest, context: RouteParams) => {
   try {
     const { userId } = context.params;
-    const currentUser = context.user;
+    const { roles, userId: currentUserId } = context;
 
     // Users can only view their own assignments unless they're a coordinator
-    const hasCoordinatorRole = currentUser.roles.some(
-      userRole => userRole.role.name === 'COORDINATOR'
-    );
+    const hasCoordinatorRole = roles.includes('COORDINATOR');
 
-    if (!hasCoordinatorRole && currentUser.id !== userId) {
+    if (!hasCoordinatorRole && currentUserId !== userId) {
       return NextResponse.json(
         { error: 'Forbidden: Can only view your own assignments' },
         { status: 403 }

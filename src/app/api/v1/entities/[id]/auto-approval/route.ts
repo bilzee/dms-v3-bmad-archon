@@ -1,8 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth';
 import { z } from 'zod';
-import { db } from '@/lib/db/client';
-import { authConfig } from '@/lib/auth/config';
+import { withAuth } from '@/lib/auth/middleware';
+import { prisma } from '@/lib/db/client';
 
 const updateAutoApprovalSchema = z.object({
   enabled: z.boolean(),
@@ -14,31 +13,15 @@ const updateAutoApprovalSchema = z.object({
 });
 
 // GET - Get auto-approval configuration for entity
-export async function GET(
+export const GET = withAuth(async (
   request: NextRequest,
-  { params }: { params: { id: string } }
-) {
+  context: { params: { id: string } }
+) => {
   try {
-    const session = await getServerSession(authConfig);
+    const { roles } = context;
     
-    if (!session?.user?.id) {
-      return NextResponse.json(
-        { success: false, error: 'Unauthorized' },
-        { status: 401 }
-      );
-    }
-
-    // Check if user is coordinator
-    const user = await db.user.findUnique({
-      where: { id: session.user.id },
-      include: { roles: { include: { role: true } } }
-    });
-
-    const hasCoordinatorRole = user?.roles.some(
-      userRole => userRole.role.name === 'COORDINATOR'
-    );
-
-    if (!hasCoordinatorRole) {
+    // Check if user has coordinator role
+    if (!roles.includes('COORDINATOR')) {
       return NextResponse.json(
         { success: false, error: 'Insufficient permissions. Coordinator role required.' },
         { status: 403 }
@@ -48,7 +31,7 @@ export async function GET(
     const entityId = params.id;
 
     // Get entity with auto-approval configuration
-    const entity = await db.entity.findUnique({
+    const entity = await prisma.entity.findUnique({
       where: { id: entityId },
       select: {
         id: true,
@@ -100,34 +83,18 @@ export async function GET(
       { status: 500 }
     );
   }
-}
+});
 
 // PUT - Update auto-approval configuration for entity
-export async function PUT(
+export const PUT = withAuth(async (
   request: NextRequest,
-  { params }: { params: { id: string } }
-) {
+  context: { params: { id: string } }
+) => {
   try {
-    const session = await getServerSession(authConfig);
+    const { roles, userId } = context;
     
-    if (!session?.user?.id) {
-      return NextResponse.json(
-        { success: false, error: 'Unauthorized' },
-        { status: 401 }
-      );
-    }
-
-    // Check if user is coordinator
-    const user = await db.user.findUnique({
-      where: { id: session.user.id },
-      include: { roles: { include: { role: true } } }
-    });
-
-    const hasCoordinatorRole = user?.roles.some(
-      userRole => userRole.role.name === 'COORDINATOR'
-    );
-
-    if (!hasCoordinatorRole) {
+    // Check if user has coordinator role
+    if (!roles.includes('COORDINATOR')) {
       return NextResponse.json(
         { success: false, error: 'Insufficient permissions. Coordinator role required.' },
         { status: 403 }
@@ -139,7 +106,7 @@ export async function PUT(
     const entityId = params.id;
 
     // Start transaction for auto-approval configuration update
-    const result = await db.$transaction(async (tx) => {
+    const result = await prisma.$transaction(async (tx) => {
       // Check if entity exists
       const entity = await tx.entity.findUnique({
         where: { id: entityId }
@@ -159,7 +126,7 @@ export async function PUT(
           assessmentTypes: validatedData.conditions?.assessmentTypes || [],
           maxPriority: validatedData.conditions?.maxPriority || 'MEDIUM',
           requiresDocumentation: validatedData.conditions?.requiresDocumentation || false,
-          lastModifiedBy: session.user.id,
+          lastModifiedBy: userId,
           lastModifiedAt: new Date().toISOString(),
         }
       };
@@ -184,7 +151,7 @@ export async function PUT(
       // Create audit log entry
       await tx.auditLog.create({
         data: {
-          userId: session.user.id,
+          userId: userId,
           action: 'AUTO_APPROVAL_CONFIG_UPDATED',
           entityType: 'Entity',
           entityId: entityId,
@@ -247,4 +214,4 @@ export async function PUT(
       { status: 500 }
     );
   }
-}
+});

@@ -11,19 +11,17 @@ interface RouteParams {
 export const GET = withAuth(async (request: NextRequest, context: RouteParams) => {
   try {
     const { entityId } = context.params;
-    const currentUser = context.user;
+    const { user, userId, roles } = context;
 
     // Only coordinators can view entity assignments, or users can view if they're assigned
-    const hasCoordinatorRole = currentUser.roles.some(
-      userRole => userRole.role.name === 'COORDINATOR'
-    );
+    const hasCoordinatorRole = roles.includes('COORDINATOR');
 
     if (!hasCoordinatorRole) {
       // Check if current user is assigned to this entity
       const userAssignment = await prisma.entityAssignment.findUnique({
         where: {
           userId_entityId: {
-            userId: currentUser.id,
+            userId: userId,
             entityId
           }
         }
