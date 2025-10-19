@@ -26,8 +26,8 @@ export const GET = withAuth(
 
       // Only allow users to see their own assessments unless they're coordinator/admin
       const requestingUserId = context.user.userId
-      const isCoordinatorOrAdmin = context.user.roles.includes('COORDINATOR') || 
-                                  context.user.roles.includes('ADMIN')
+      const isCoordinatorOrAdmin = context.roles.includes('COORDINATOR') || 
+                                  context.roles.includes('ADMIN')
       
       if (userId !== requestingUserId && !isCoordinatorOrAdmin) {
         return NextResponse.json(

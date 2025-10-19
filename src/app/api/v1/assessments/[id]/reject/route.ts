@@ -22,10 +22,10 @@ export const POST = withAuth(async (
   context: { params: { id: string } }
 ) => {
   try {
-    const { user } = context;
+    const { roles } = context;
     
     // Check if user has coordinator role
-    if (!user.roles.includes('COORDINATOR')) {
+    if (!roles.includes('COORDINATOR')) {
       return NextResponse.json(
         { success: false, error: 'Insufficient permissions. Coordinator role required.' },
         { status: 403 }

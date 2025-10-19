@@ -16,10 +16,10 @@ const bulkUpdateSchema = z.object({
 // GET - Get all auto-approval configurations
 export const GET = withAuth(async (request: NextRequest, context) => {
   try {
-    const { user } = context;
+    const { roles } = context;
     
     // Check if user has coordinator role
-    if (!user.roles.includes('COORDINATOR')) {
+    if (!roles.includes('COORDINATOR')) {
       return NextResponse.json(
         { success: false, error: 'Insufficient permissions. Coordinator role required.' },
         { status: 403 }
@@ -123,10 +123,10 @@ export const GET = withAuth(async (request: NextRequest, context) => {
 // PUT - Bulk update auto-approval configurations
 export const PUT = withAuth(async (request: NextRequest, context) => {
   try {
-    const { user } = context;
+    const { roles } = context;
     
     // Check if user has coordinator role
-    if (!user.roles.includes('COORDINATOR')) {
+    if (!roles.includes('COORDINATOR')) {
       return NextResponse.json(
         { success: false, error: 'Insufficient permissions. Coordinator role required.' },
         { status: 403 }
