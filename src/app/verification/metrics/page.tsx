@@ -19,7 +19,7 @@ interface VerificationMetrics {
 }
 
 export default function VerificationMetricsPage() {
-  const { user } = useAuth()
+  const { user, token } = useAuth()
   const [metrics, setMetrics] = useState<VerificationMetrics | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -27,7 +27,6 @@ export default function VerificationMetricsPage() {
   useEffect(() => {
     const fetchMetrics = async () => {
       try {
-        const token = localStorage.getItem('token')
         if (!token) {
           throw new Error('No authentication token found')
         }

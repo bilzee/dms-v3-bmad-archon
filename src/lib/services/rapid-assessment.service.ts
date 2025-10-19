@@ -32,6 +32,19 @@ export class RapidAssessmentService {
     // Verify user is assigned to this entity
     await this.validateEntityAssignment(createdBy, entityId)
 
+    // Check if entity has auto-approval enabled
+    const entity = await prisma.entity.findUnique({
+      where: { id: entityId },
+      select: { autoApproveEnabled: true }
+    })
+
+    if (!entity) {
+      throw new Error('Entity not found')
+    }
+
+    // Determine verification status based on entity's auto-approval setting
+    const verificationStatus = entity.autoApproveEnabled ? 'AUTO_VERIFIED' : 'SUBMITTED'
+
     // Start transaction to create both rapid assessment and type-specific assessment
     const result = await prisma.$transaction(async (tx) => {
       // Create base rapid assessment
@@ -50,7 +63,8 @@ export class RapidAssessmentService {
           versionNumber: 1,
           isOfflineCreated: false,
           syncStatus: 'SYNCED',
-          verificationStatus: 'SUBMITTED'
+          verificationStatus,
+          verifiedAt: entity.autoApproveEnabled ? new Date() : null
         }
       })
 
