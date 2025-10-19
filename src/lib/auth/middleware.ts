@@ -1,8 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { AuthService, AuthTokenPayload } from './service'
+import { AuthService, AuthTokenPayload, UserWithRoles } from './service'
 
 export interface AuthContext {
-  user: AuthTokenPayload
+  user: UserWithRoles
+  userId: string
+  roles: string[]
+  permissions: string[]
   request: NextRequest
   params?: any
 }
@@ -31,11 +34,24 @@ export function withAuth(handler: AuthenticatedHandler) {
       const token = authorization.substring(7) // Remove 'Bearer ' prefix
       
       // Verify token
-      const user = AuthService.verifyToken(token)
+      const payload = AuthService.verifyToken(token)
       
-      // Create auth context with params from Next.js context
+      // Get fresh user data from database (matches architecture document)
+      const user = await AuthService.getUserWithRoles(payload.userId)
+      
+      if (!user || !user.isActive) {
+        return NextResponse.json(
+          { error: 'Unauthorized' },
+          { status: 401 }
+        )
+      }
+      
+      // Build context with extracted roles and permissions (matches architecture document)
       const context: AuthContext = { 
-        user, 
+        user, // Full DB user object
+        userId: user.id,
+        roles: user.roles.map(ur => ur.role.name), // Extract role names
+        permissions: user.roles.flatMap(ur => ur.role.permissions.map(p => p.code)), // Extract permission codes
         request,
         params: nextContext?.params 
       }
@@ -75,7 +91,7 @@ export function requirePermission(permissionCode: string) {
 export function requireRole(roleName: string) {
   return function(handler: AuthenticatedHandler): AuthenticatedHandler {
     return async (request: NextRequest, context: AuthContext) => {
-      if (!context.user.roles.includes(roleName)) {
+      if (!context || !context.roles || !context.roles.includes(roleName)) {
         return NextResponse.json(
           { error: `Missing required role: ${roleName}` },
           { status: 403 }
@@ -93,7 +109,7 @@ export function requireRole(roleName: string) {
 export function requireAnyRole(...roleNames: string[]) {
   return function(handler: AuthenticatedHandler): AuthenticatedHandler {
     return async (request: NextRequest, context: AuthContext) => {
-      const hasRole = roleNames.some(role => context.user.roles.includes(role))
+      const hasRole = context && context.roles && roleNames.some(role => context.roles.includes(role))
       
       if (!hasRole) {
         return NextResponse.json(
@@ -113,8 +129,8 @@ export function requireAnyRole(...roleNames: string[]) {
 export function requireAnyPermission(...permissionCodes: string[]) {
   return function(handler: AuthenticatedHandler): AuthenticatedHandler {
     return async (request: NextRequest, context: AuthContext) => {
-      const hasPermission = permissionCodes.some(permission => 
-        context.user.permissions.includes(permission)
+      const hasPermission = context && context.permissions && permissionCodes.some(permission => 
+        context.permissions.includes(permission)
       )
       
       if (!hasPermission) {

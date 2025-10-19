@@ -1,30 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/db/client';
-import { verifyToken } from '@/lib/auth/verify';
+import { requireAnyRole } from '@/lib/auth/middleware';
 
-export async function GET(request: NextRequest) {
+export const GET = requireAnyRole('COORDINATOR', 'ADMIN')(async (request: NextRequest, context) => {
   try {
-    // Verify authentication
-    const authResult = await verifyToken(request);
-    if (!authResult.success || !authResult.user) {
-      return NextResponse.json(
-        { error: 'Unauthorized' },
-        { status: 401 }
-      );
-    }
-
-    // Check if user has coordinator role (only coordinators can see assignable users)
-    const hasCoordinatorRole = authResult.user.roles.some(
-      userRole => ['COORDINATOR', 'ADMIN'].includes(userRole.role.name)
-    );
-
-    if (!hasCoordinatorRole) {
-      return NextResponse.json(
-        { error: 'Forbidden: Only coordinators can view assignable users' },
-        { status: 403 }
-      );
-    }
-
     const url = new URL(request.url);
     const roleFilter = url.searchParams.get('role'); // Optional role filter (ASSESSOR, RESPONDER)
 
@@ -96,4 +75,4 @@ export async function GET(request: NextRequest) {
       { status: 500 }
     );
   }
-}
+});

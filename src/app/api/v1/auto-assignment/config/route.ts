@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { verifyTokenWithRole } from '@/lib/auth/verify';
+import { requireRole } from '@/lib/auth/middleware';
 import { AutoAssignmentService, AutoAssignmentConfig } from '@/lib/assignment/auto-assignment';
 import { z } from 'zod';
 
@@ -20,16 +20,8 @@ const autoAssignmentConfigSchema = z.object({
   })
 });
 
-export async function GET(request: NextRequest) {
+export const GET = requireRole('COORDINATOR')(async (request: NextRequest, context) => {
   try {
-    // Verify authentication and coordinator role
-    const authResult = await verifyTokenWithRole(request, 'COORDINATOR');
-    if (!authResult.success || !authResult.user) {
-      return NextResponse.json(
-        { error: authResult.error || 'Unauthorized' },
-        { status: 401 }
-      );
-    }
 
     const config = AutoAssignmentService.getConfig();
 
@@ -45,18 +37,10 @@ export async function GET(request: NextRequest) {
       { status: 500 }
     );
   }
-}
+});
 
-export async function PUT(request: NextRequest) {
+export const PUT = requireRole('COORDINATOR')(async (request: NextRequest, context) => {
   try {
-    // Verify authentication and coordinator role
-    const authResult = await verifyTokenWithRole(request, 'COORDINATOR');
-    if (!authResult.success || !authResult.user) {
-      return NextResponse.json(
-        { error: authResult.error || 'Unauthorized' },
-        { status: 401 }
-      );
-    }
 
     const body = await request.json();
     const validatedConfig = autoAssignmentConfigSchema.parse(body);
@@ -84,18 +68,10 @@ export async function PUT(request: NextRequest) {
       { status: 500 }
     );
   }
-}
+});
 
-export async function POST(request: NextRequest) {
+export const POST = requireRole('COORDINATOR')(async (request: NextRequest, context) => {
   try {
-    // Verify authentication and coordinator role
-    const authResult = await verifyTokenWithRole(request, 'COORDINATOR');
-    if (!authResult.success || !authResult.user) {
-      return NextResponse.json(
-        { error: authResult.error || 'Unauthorized' },
-        { status: 401 }
-      );
-    }
 
     // Reset to default configuration
     const defaultConfig = {
@@ -151,4 +127,4 @@ export async function POST(request: NextRequest) {
       { status: 500 }
     );
   }
-}
+});

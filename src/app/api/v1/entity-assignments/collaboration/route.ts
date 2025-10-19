@@ -1,17 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { verifyToken } from '@/lib/auth/verify';
+import { withAuth } from '@/lib/auth/middleware';
 import { MultiUserAssignmentService } from '@/lib/assignment/multi-user-service';
 
-export async function GET(request: NextRequest) {
+export const GET = withAuth(async (request: NextRequest, context) => {
   try {
-    // Verify authentication
-    const authResult = await verifyToken(request);
-    if (!authResult.success || !authResult.user) {
-      return NextResponse.json(
-        { error: 'Unauthorized' },
-        { status: 401 }
-      );
-    }
 
     const url = new URL(request.url);
     const entityId = url.searchParams.get('entityId');
@@ -85,4 +77,4 @@ export async function GET(request: NextRequest) {
       { status: 500 }
     );
   }
-}
+});

@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/db/client';
-import { verifyToken } from '@/lib/auth/verify';
+import { withAuth, requireRole } from '@/lib/auth/middleware';
 
 interface RouteParams {
   params: {
@@ -8,30 +8,9 @@ interface RouteParams {
   }
 }
 
-export async function DELETE(request: NextRequest, { params }: RouteParams) {
+export const DELETE = requireRole('COORDINATOR')(async (request: NextRequest, context: RouteParams) => {
   try {
-    // Verify authentication and coordinator role
-    const authResult = await verifyToken(request);
-    if (!authResult.success || !authResult.user) {
-      return NextResponse.json(
-        { error: 'Unauthorized' },
-        { status: 401 }
-      );
-    }
-
-    // Check if user has coordinator role
-    const hasCoordinatorRole = authResult.user.roles.some(
-      userRole => userRole.role.name === 'COORDINATOR'
-    );
-
-    if (!hasCoordinatorRole) {
-      return NextResponse.json(
-        { error: 'Forbidden: Only coordinators can manage entity assignments' },
-        { status: 403 }
-      );
-    }
-
-    const { id } = params;
+    const { id } = context.params;
 
     // Check if assignment exists
     const assignment = await prisma.entityAssignment.findUnique({
@@ -79,20 +58,11 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
       { status: 500 }
     );
   }
-}
+});
 
-export async function GET(request: NextRequest, { params }: RouteParams) {
+export const GET = withAuth(async (request: NextRequest, context: RouteParams) => {
   try {
-    // Verify authentication
-    const authResult = await verifyToken(request);
-    if (!authResult.success || !authResult.user) {
-      return NextResponse.json(
-        { error: 'Unauthorized' },
-        { status: 401 }
-      );
-    }
-
-    const { id } = params;
+    const { id } = context.params;
 
     // Get specific assignment
     const assignment = await prisma.entityAssignment.findUnique({
@@ -142,4 +112,4 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
       { status: 500 }
     );
   }
-}
+});

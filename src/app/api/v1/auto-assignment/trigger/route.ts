@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { verifyToken } from '@/lib/auth/verify';
+import { requireRole } from '@/lib/auth/middleware';
 import { triggerAutoAssignment } from '@/lib/assignment/middleware';
 import { z } from 'zod';
 
@@ -11,34 +11,14 @@ const triggerAutoAssignmentSchema = z.object({
   assignedBy: z.string().cuid().optional()
 });
 
-export async function POST(request: NextRequest) {
+export const POST = requireRole('COORDINATOR')(async (request: NextRequest, context) => {
   try {
-    // Verify authentication
-    const authResult = await verifyToken(request);
-    if (!authResult.success || !authResult.user) {
-      return NextResponse.json(
-        { error: 'Unauthorized' },
-        { status: 401 }
-      );
-    }
-
-    // Check if user has coordinator role for manual triggers
-    const hasCoordinatorRole = authResult.user.roles.some(
-      userRole => userRole.role.name === 'COORDINATOR'
-    );
-
-    if (!hasCoordinatorRole) {
-      return NextResponse.json(
-        { error: 'Forbidden: Only coordinators can manually trigger auto-assignments' },
-        { status: 403 }
-      );
-    }
 
     const body = await request.json();
     const validatedData = triggerAutoAssignmentSchema.parse(body);
 
     // Set assignedBy to current user if not provided
-    const assignedBy = validatedData.assignedBy || authResult.user.id;
+    const assignedBy = validatedData.assignedBy || context.user.id;
 
     // Trigger auto-assignment
     const success = await triggerAutoAssignment(validatedData.type, {
@@ -80,4 +60,4 @@ export async function POST(request: NextRequest) {
       { status: 500 }
     );
   }
-}
+});

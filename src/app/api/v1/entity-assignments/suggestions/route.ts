@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { verifyToken } from '@/lib/auth/verify';
+import { withAuth, requireRole } from '@/lib/auth/middleware';
 import { MultiUserAssignmentService } from '@/lib/assignment/multi-user-service';
 import { z } from 'zod';
 
@@ -8,16 +8,8 @@ const suggestionQuerySchema = z.object({
   requiredRoles: z.array(z.enum(['ASSESSOR', 'RESPONDER'])).optional()
 });
 
-export async function GET(request: NextRequest) {
+export const GET = withAuth(async (request: NextRequest, context) => {
   try {
-    // Verify authentication
-    const authResult = await verifyToken(request);
-    if (!authResult.success || !authResult.user) {
-      return NextResponse.json(
-        { error: 'Unauthorized' },
-        { status: 401 }
-      );
-    }
 
     const url = new URL(request.url);
     const entityId = url.searchParams.get('entityId');
@@ -77,30 +69,10 @@ export async function GET(request: NextRequest) {
       { status: 500 }
     );
   }
-}
+});
 
-export async function POST(request: NextRequest) {
+export const POST = requireRole('COORDINATOR')(async (request: NextRequest, context) => {
   try {
-    // Verify authentication and coordinator role
-    const authResult = await verifyToken(request);
-    if (!authResult.success || !authResult.user) {
-      return NextResponse.json(
-        { error: 'Unauthorized' },
-        { status: 401 }
-      );
-    }
-
-    // Check if user has coordinator role
-    const hasCoordinatorRole = authResult.user.roles.some(
-      userRole => userRole.role.name === 'COORDINATOR'
-    );
-
-    if (!hasCoordinatorRole) {
-      return NextResponse.json(
-        { error: 'Forbidden: Only coordinators can check assignment conflicts' },
-        { status: 403 }
-      );
-    }
 
     const body = await request.json();
     const { entityId, userIds } = body;
@@ -136,4 +108,4 @@ export async function POST(request: NextRequest) {
       { status: 500 }
     );
   }
-}
+});

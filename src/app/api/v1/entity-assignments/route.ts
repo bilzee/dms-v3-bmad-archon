@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/db/client';
-import { verifyToken } from '@/lib/auth/verify';
+import { withAuth, requireRole } from '@/lib/auth/middleware';
 import { z } from 'zod';
 
 const createAssignmentSchema = z.object({
@@ -9,29 +9,8 @@ const createAssignmentSchema = z.object({
   assignedBy: z.string().min(1)
 });
 
-export async function POST(request: NextRequest) {
+export const POST = requireRole('COORDINATOR')(async (request: NextRequest, context) => {
   try {
-    // Verify authentication and coordinator role
-    const authResult = await verifyToken(request);
-    if (!authResult.success || !authResult.user) {
-      return NextResponse.json(
-        { error: 'Unauthorized' },
-        { status: 401 }
-      );
-    }
-
-    // Check if user has coordinator role
-    const hasCoordinatorRole = authResult.user.roles.some(
-      userRole => userRole.role.name === 'COORDINATOR'
-    );
-
-    if (!hasCoordinatorRole) {
-      return NextResponse.json(
-        { error: 'Forbidden: Only coordinators can manage entity assignments' },
-        { status: 403 }
-      );
-    }
-
     const body = await request.json();
     const validatedData = createAssignmentSchema.parse(body);
 
@@ -144,19 +123,10 @@ export async function POST(request: NextRequest) {
       { status: 500 }
     );
   }
-}
+});
 
-export async function GET(request: NextRequest) {
+export const GET = withAuth(async (request: NextRequest, context) => {
   try {
-    // Verify authentication
-    const authResult = await verifyToken(request);
-    if (!authResult.success || !authResult.user) {
-      return NextResponse.json(
-        { error: 'Unauthorized' },
-        { status: 401 }
-      );
-    }
-
     const url = new URL(request.url);
     const page = parseInt(url.searchParams.get('page') || '1');
     const limit = parseInt(url.searchParams.get('limit') || '10');
@@ -214,4 +184,4 @@ export async function GET(request: NextRequest) {
       { status: 500 }
     );
   }
-}
+});

@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/db/client';
-import { verifyToken } from '@/lib/auth/verify';
+import { withAuth } from '@/lib/auth/middleware';
 
 interface RouteParams {
   params: {
@@ -8,19 +8,10 @@ interface RouteParams {
   }
 }
 
-export async function GET(request: NextRequest, { params }: RouteParams) {
+export const GET = withAuth(async (request: NextRequest, context: RouteParams) => {
   try {
-    // Verify authentication
-    const authResult = await verifyToken(request);
-    if (!authResult.success || !authResult.user) {
-      return NextResponse.json(
-        { error: 'Unauthorized' },
-        { status: 401 }
-      );
-    }
-
-    const { entityId } = params;
-    const currentUser = authResult.user;
+    const { entityId } = context.params;
+    const currentUser = context.user;
 
     // Only coordinators can view entity assignments, or users can view if they're assigned
     const hasCoordinatorRole = currentUser.roles.some(
@@ -116,4 +107,4 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
       { status: 500 }
     );
   }
-}
+});
