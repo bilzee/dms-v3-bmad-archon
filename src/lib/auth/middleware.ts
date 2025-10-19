@@ -47,10 +47,13 @@ export function withAuth(handler: AuthenticatedHandler) {
       }
       
       // Build context with extracted roles and permissions (matches architecture document)
+      const userRoles = user.roles.map(ur => ur.role.name) // Extract role names
+      console.log('DEBUG: User roles:', userRoles) // Debug logging
+      
       const context: AuthContext = { 
         user, // Full DB user object
         userId: user.id,
-        roles: user.roles.map(ur => ur.role.name), // Extract role names
+        roles: userRoles,
         permissions: user.roles.flatMap(ur => ur.role.permissions.map(p => p.code)), // Extract permission codes
         request,
         params: nextContext?.params 
@@ -109,7 +112,20 @@ export function requireRole(roleName: string) {
 export function requireAnyRole(...roleNames: string[]) {
   return function(handler: AuthenticatedHandler): AuthenticatedHandler {
     return async (request: NextRequest, context: AuthContext) => {
+      console.log('DEBUG: requireAnyRole - Checking roles:', {
+        contextRoles: context?.roles,
+        requiredRoles: roleNames,
+        hasContext: !!context,
+        hasRoles: !!(context?.roles)
+      });
+      
       const hasRole = context && context.roles && roleNames.some(role => context.roles.includes(role))
+      
+      console.log('DEBUG: requireAnyRole - Role check result:', {
+        hasRole,
+        userRoles: context?.roles,
+        requiredRoles: roleNames
+      });
       
       if (!hasRole) {
         return NextResponse.json(
