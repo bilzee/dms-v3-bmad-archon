@@ -58,16 +58,25 @@ export default function AssessorRapidAssessmentsPage() {
     }
   }
 
-  const getStatusBadge = (status: string) => {
-    switch (status) {
+  const getStatusBadge = (assessment: any) => {
+    // Use verificationStatus for submitted assessments, otherwise use status
+    const displayStatus = assessment.status === 'SUBMITTED' ? assessment.verificationStatus : assessment.status;
+    
+    switch (displayStatus) {
       case 'COMPLETED':
         return <Badge className="bg-green-100 text-green-800"><CheckCircle className="w-3 h-3 mr-1" />Completed</Badge>
+      case 'VERIFIED':
+        return <Badge className="bg-green-100 text-green-800"><CheckCircle className="w-3 h-3 mr-1" />Verified</Badge>
+      case 'AUTO_VERIFIED':
+        return <Badge className="bg-blue-100 text-blue-800"><CheckCircle className="w-3 h-3 mr-1" />Auto-Verified</Badge>
+      case 'REJECTED':
+        return <Badge className="bg-red-100 text-red-800"><AlertTriangle className="w-3 h-3 mr-1" />Rejected</Badge>
       case 'SUBMITTED':
-        return <Badge className="bg-blue-100 text-blue-800"><FileText className="w-3 h-3 mr-1" />Submitted</Badge>
+        return <Badge className="bg-yellow-100 text-yellow-800"><FileText className="w-3 h-3 mr-1" />Pending Review</Badge>
       case 'DRAFT':
         return <Badge className="bg-gray-100 text-gray-800"><Clock className="w-3 h-3 mr-1" />Draft</Badge>
       default:
-        return <Badge variant="outline">{status}</Badge>
+        return <Badge variant="outline">{displayStatus}</Badge>
     }
   }
 
@@ -238,7 +247,7 @@ export default function AssessorRapidAssessmentsPage() {
                           {assessment.gapCount} Gaps
                         </Badge>
                       )}
-                      {getStatusBadge(assessment.status)}
+                      {getStatusBadge(assessment)}
                       <Link href={`/rapid-assessments/${assessment.id}`}>
                         <Button variant="outline" size="sm">
                           View Details

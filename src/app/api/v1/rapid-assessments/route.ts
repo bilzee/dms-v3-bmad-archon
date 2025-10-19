@@ -88,7 +88,7 @@ export const POST = withAuth(
       const body = await request.json()
       const input = CreateRapidAssessmentSchema.parse(body)
       
-      const assessment = await RapidAssessmentService.create(input, context.user.userId)
+      const assessment = await RapidAssessmentService.create(input, context.userId)
 
       return NextResponse.json(
         {
