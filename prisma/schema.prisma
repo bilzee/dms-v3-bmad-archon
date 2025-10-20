@@ -1,6 +1,3 @@
-// Disaster Management PWA - Database Schema
-// This is your Prisma schema file, learn more about it in the docs: https://pris.ly/d/prisma-schema
-
 generator client {
   provider = "prisma-client-js"
 }
@@ -10,40 +7,35 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-// User Management Models
 model User {
-  id           String   @id @default(uuid())
-  email        String   @unique
-  username     String   @unique
-  passwordHash String
-  name         String
-  phone        String?
-  organization String?
-  isActive     Boolean  @default(true)
-  isLocked     Boolean  @default(false)
-  lastLogin    DateTime?
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
-
-  // Relationships
-  roles            UserRole[]
+  id                String             @id @default(uuid())
+  email             String             @unique
+  username          String             @unique
+  passwordHash      String
+  name              String
+  phone             String?
+  organization      String?
+  isActive          Boolean            @default(true)
+  isLocked          Boolean            @default(false)
+  lastLogin         DateTime?
+  createdAt         DateTime           @default(now())
+  updatedAt         DateTime           @updatedAt
+  auditLogs         AuditLog[]
   entityAssignments EntityAssignment[]
-  auditLogs        AuditLog[]
-  responses        RapidResponse[]
-  assessments      RapidAssessment[]
-  
+  assessments       RapidAssessment[]  @relation("AssessorResponses")
+  responses         RapidResponse[]    @relation("UserResponses")
+  roles             UserRole[]
+
   @@map("users")
 }
 
 model Role {
-  id          String @id @default(uuid())
-  name        RoleName @unique
+  id          String           @id @default(uuid())
+  name        RoleName         @unique
   description String
-  createdAt   DateTime @default(now())
-
-  // Relationships
-  userRoles   UserRole[]
+  createdAt   DateTime         @default(now())
   permissions RolePermission[]
+  userRoles   UserRole[]
 
   @@map("roles")
 }
@@ -54,165 +46,143 @@ model UserRole {
   roleId     String
   assignedAt DateTime @default(now())
   assignedBy String
-
-  // Relationships
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
-  role Role @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  role       Role     @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([userId, roleId])
   @@map("user_roles")
 }
 
 model Permission {
-  id          String @id @default(uuid())
+  id          String           @id @default(uuid())
   name        String
-  code        String @unique
+  code        String           @unique
   category    String
   description String
-  createdAt   DateTime @default(now())
-
-  // Relationships
-  roles RolePermission[]
+  createdAt   DateTime         @default(now())
+  roles       RolePermission[]
 
   @@map("permissions")
 }
 
 model RolePermission {
-  id           String @id @default(uuid())
+  id           String     @id @default(uuid())
   roleId       String
   permissionId String
-
-  // Relationships
-  role       Role       @relation(fields: [roleId], references: [id], onDelete: Cascade)
-  permission Permission @relation(fields: [permissionId], references: [id], onDelete: Cascade)
+  permission   Permission @relation(fields: [permissionId], references: [id], onDelete: Cascade)
+  role         Role       @relation(fields: [roleId], references: [id], onDelete: Cascade)
 
   @@unique([roleId, permissionId])
   @@map("role_permissions")
 }
 
-// Entity Management
 model Entity {
-  id          String     @id @default(uuid())
-  name        String
-  type        EntityType
-  location    String?
-  coordinates Json?
-  metadata    Json?
-  isActive    Boolean    @default(true)
-  autoApproveEnabled Boolean @default(false)
-  createdAt   DateTime   @default(now())
-  updatedAt   DateTime   @updatedAt
-
-  // Relationships
+  id                 String             @id @default(uuid())
+  name               String
+  type               EntityType
+  location           String?
+  coordinates        Json?
+  metadata           Json?
+  isActive           Boolean            @default(true)
+  autoApproveEnabled Boolean            @default(false)
+  createdAt          DateTime           @default(now())
+  updatedAt          DateTime           @updatedAt
   assignments        EntityAssignment[]
   rapidAssessments   RapidAssessment[]
-  responses          RapidResponse[]
+  responses          RapidResponse[]    @relation("EntityResponses")
 
   @@unique([name, type])
   @@map("entities")
 }
 
 model EntityAssignment {
-  id       String @id @default(uuid())
-  userId   String
-  entityId String
+  id         String   @id @default(uuid())
+  userId     String
+  entityId   String
   assignedAt DateTime @default(now())
   assignedBy String
-
-  // Relationships
-  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
-  entity Entity @relation(fields: [entityId], references: [id], onDelete: Cascade)
+  entity     Entity   @relation(fields: [entityId], references: [id], onDelete: Cascade)
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([userId, entityId])
   @@map("entity_assignments")
 }
 
-// Incident Management
 model Incident {
-  id                   String   @id @default(uuid())
-  type                 String
-  subType              String?
-  severity             Priority @default(MEDIUM)
-  status               IncidentStatus @default(ACTIVE)
-  description          String
-  location             String
-  coordinates          Json?
-  createdBy            String
-  createdAt            DateTime @default(now())
-  updatedAt            DateTime @updatedAt
-
-  // Relationships
+  id                     String                  @id @default(uuid())
+  type                   String
+  subType                String?
+  severity               Priority                @default(MEDIUM)
+  status                 IncidentStatus          @default(ACTIVE)
+  description            String
+  location               String
+  coordinates            Json?
+  createdBy              String
+  createdAt              DateTime                @default(now())
+  updatedAt              DateTime                @updatedAt
   preliminaryAssessments PreliminaryAssessment[]
 
   @@map("incidents")
 }
 
 model PreliminaryAssessment {
-  id                              String   @id @default(uuid())
-  reportingDate                   DateTime
-  reportingLatitude               Float
-  reportingLongitude              Float
-  reportingLGA                    String
-  reportingWard                   String
-  numberLivesLost                 Int      @default(0)
-  numberInjured                   Int      @default(0)
-  numberDisplaced                 Int      @default(0)
-  numberHousesAffected            Int      @default(0)
-  numberSchoolsAffected           Int      @default(0)
-  schoolsAffected                 String?  // List of affected schools
-  numberMedicalFacilitiesAffected Int      @default(0)
-  medicalFacilitiesAffected       String?  // List of affected medical facilities
-  estimatedAgriculturalLandsAffected String? // Description/estimate of agricultural impact
-  reportingAgent                  String   // LEMC agent or staff name
-  additionalDetails               Json?
-  incidentId                      String?  // Nullable - preliminary assessments can predate incidents
-  createdAt                       DateTime @default(now())
-  updatedAt                       DateTime @updatedAt
-  
-  // Relationships
-  incident                        Incident? @relation(fields: [incidentId], references: [id])
+  id                                 String    @id @default(uuid())
+  reportingDate                      DateTime
+  reportingLatitude                  Float
+  reportingLongitude                 Float
+  reportingLGA                       String
+  reportingWard                      String
+  numberLivesLost                    Int       @default(0)
+  numberInjured                      Int       @default(0)
+  numberDisplaced                    Int       @default(0)
+  numberHousesAffected               Int       @default(0)
+  numberSchoolsAffected              Int       @default(0)
+  schoolsAffected                    String?
+  numberMedicalFacilitiesAffected    Int       @default(0)
+  medicalFacilitiesAffected          String?
+  estimatedAgriculturalLandsAffected String?
+  reportingAgent                     String
+  additionalDetails                  Json?
+  incidentId                         String?
+  createdAt                          DateTime  @default(now())
+  updatedAt                          DateTime  @updatedAt
+  incident                           Incident? @relation(fields: [incidentId], references: [id])
 
   @@map("preliminary_assessments")
 }
 
-// Assessment and Response Models
 model RapidAssessment {
-  id                    String   @id @default(uuid())
-  rapidAssessmentType   AssessmentType
-  rapidAssessmentDate   DateTime
-  assessorId            String
-  entityId              String
-  assessorName          String
-  location              String?
-  coordinates           Json? // GPS data: { latitude, longitude, accuracy, timestamp, captureMethod }
-  status                AssessmentStatus @default(DRAFT)
-  priority              Priority @default(MEDIUM)
-  versionNumber         Int @default(1)
-  isOfflineCreated      Boolean @default(false)
-  syncStatus            SyncStatus @default(PENDING)
-  verificationStatus    VerificationStatus @default(DRAFT)
-  verifiedAt            DateTime?
-  verifiedBy            String?
-  rejectionReason       String?
-  rejectionFeedback     String?
-  mediaAttachments      Json? // Array of media files with metadata
-  createdAt             DateTime @default(now())
-  updatedAt             DateTime @updatedAt
+  id                   String                @id @default(uuid())
+  rapidAssessmentType  AssessmentType
+  rapidAssessmentDate  DateTime
+  assessorId           String
+  entityId             String
+  assessorName         String
+  location             String?
+  coordinates          Json?
+  status               AssessmentStatus      @default(DRAFT)
+  priority             Priority              @default(MEDIUM)
+  versionNumber        Int                   @default(1)
+  isOfflineCreated     Boolean               @default(false)
+  syncStatus           SyncStatus            @default(PENDING)
+  verificationStatus   VerificationStatus    @default(DRAFT)
+  verifiedAt           DateTime?
+  verifiedBy           String?
+  rejectionReason      String?
+  rejectionFeedback    String?
+  mediaAttachments     Json?
+  createdAt            DateTime              @default(now())
+  updatedAt            DateTime              @updatedAt
+  foodAssessment       FoodAssessment?
+  healthAssessment     HealthAssessment?
+  populationAssessment PopulationAssessment?
+  assessor             User                  @relation("AssessorResponses", fields: [assessorId], references: [id])
+  entity               Entity                @relation(fields: [entityId], references: [id])
+  responses            RapidResponse[]       @relation("AssessmentResponses")
+  securityAssessment   SecurityAssessment?
+  shelterAssessment    ShelterAssessment?
+  washAssessment       WASHAssessment?
 
-  // Relationships
-  assessor                User       @relation(fields: [assessorId], references: [id])
-  entity                  Entity     @relation(fields: [entityId], references: [id])
-  responses              RapidResponse[]
-  
-  // Related assessment details (one-to-one relationships)
-  healthAssessment      HealthAssessment?
-  populationAssessment  PopulationAssessment?
-  foodAssessment        FoodAssessment?
-  washAssessment        WASHAssessment?
-  shelterAssessment     ShelterAssessment?
-  securityAssessment    SecurityAssessment?
-
-  // Enhanced indexes for assessment queries
   @@index([rapidAssessmentType, rapidAssessmentDate, entityId])
   @@index([entityId, rapidAssessmentDate])
   @@index([assessorId, createdAt])
@@ -223,162 +193,203 @@ model RapidAssessment {
   @@map("rapid_assessments")
 }
 
-// Assessment Type Models (Type-Safe Implementation)
-
 model HealthAssessment {
-  rapidAssessmentId         String   @id
-  hasFunctionalClinic       Boolean
-  hasEmergencyServices       Boolean
-  numberHealthFacilities    Int
-  healthFacilityType        String
-  qualifiedHealthWorkers    Int
-  hasTrainedStaff           Boolean
-  hasMedicineSupply         Boolean
-  hasMedicalSupplies        Boolean
-  hasMaternalChildServices  Boolean
-  commonHealthIssues        String   @default("[]") // JSON string array: Diarrhea, Malaria, Respiratory, Malnutrition, Other
-  additionalHealthDetails   Json?
-  rapidAssessment           RapidAssessment @relation(fields: [rapidAssessmentId], references: [id], onDelete: Cascade)
+  rapidAssessmentId        String          @id
+  hasFunctionalClinic      Boolean
+  hasEmergencyServices     Boolean
+  numberHealthFacilities   Int
+  healthFacilityType       String
+  qualifiedHealthWorkers   Int
+  hasTrainedStaff          Boolean
+  hasMedicineSupply        Boolean
+  hasMedicalSupplies       Boolean
+  hasMaternalChildServices Boolean
+  commonHealthIssues       String          @default("[]")
+  additionalHealthDetails  Json?
+  rapidAssessment          RapidAssessment @relation(fields: [rapidAssessmentId], references: [id], onDelete: Cascade)
+
   @@map("health_assessments")
 }
 
 model PopulationAssessment {
-  rapidAssessmentId             String   @id
-  totalHouseholds               Int
-  totalPopulation               Int
-  populationMale                Int
-  populationFemale              Int
-  populationUnder5              Int
-  pregnantWomen                 Int
-  lactatingMothers              Int
-  personWithDisability          Int
-  elderlyPersons                Int
-  separatedChildren             Int
-  numberLivesLost               Int
-  numberInjured                 Int
-  additionalPopulationDetails   String?   @db.Text
-  rapidAssessment               RapidAssessment @relation(fields: [rapidAssessmentId], references: [id], onDelete: Cascade)
+  rapidAssessmentId           String          @id
+  totalHouseholds             Int
+  totalPopulation             Int
+  populationMale              Int
+  populationFemale            Int
+  populationUnder5            Int
+  pregnantWomen               Int
+  lactatingMothers            Int
+  personWithDisability        Int
+  elderlyPersons              Int
+  separatedChildren           Int
+  numberLivesLost             Int
+  numberInjured               Int
+  additionalPopulationDetails String?
+  rapidAssessment             RapidAssessment @relation(fields: [rapidAssessmentId], references: [id], onDelete: Cascade)
+
   @@map("population_assessments")
 }
 
 model FoodAssessment {
-  rapidAssessmentId                   String   @id
-  isFoodSufficient                    Boolean
-  hasRegularMealAccess                Boolean
-  hasInfantNutrition                  Boolean
-  foodSource                          String   @default("[]") // JSON string array: Government kitchen, Humanitarian Partners, Community, Individuals, Other
-  availableFoodDurationDays           Int      // How long will available food last
-  additionalFoodRequiredPersons       Int      // Additional food needed in terms of persons
-  additionalFoodRequiredHouseholds    Int      // Additional food needed in terms of households
-  additionalFoodDetails               Json?
-  rapidAssessment                     RapidAssessment @relation(fields: [rapidAssessmentId], references: [id], onDelete: Cascade)
+  rapidAssessmentId                String          @id
+  isFoodSufficient                 Boolean
+  hasRegularMealAccess             Boolean
+  hasInfantNutrition               Boolean
+  foodSource                       String          @default("[]")
+  availableFoodDurationDays        Int
+  additionalFoodRequiredPersons    Int
+  additionalFoodRequiredHouseholds Int
+  additionalFoodDetails            Json?
+  rapidAssessment                  RapidAssessment @relation(fields: [rapidAssessmentId], references: [id], onDelete: Cascade)
+
   @@map("food_assessments")
 }
 
 model WASHAssessment {
-  rapidAssessmentId           String   @id
-  waterSource                 String @default("[]") // JSON string array: Borehole, River/Stream, Water trucks, Tap water, Sachet water, Other
-  isWaterSufficient           Boolean  // Available water sufficiency
+  rapidAssessmentId           String          @id
+  waterSource                 String          @default("[]")
+  isWaterSufficient           Boolean
   hasCleanWaterAccess         Boolean
-  functionalLatrinesAvailable Int      // Number of functional latrines
+  functionalLatrinesAvailable Int
   areLatrinesSufficient       Boolean
   hasHandwashingFacilities    Boolean
   hasOpenDefecationConcerns   Boolean
   additionalWashDetails       Json?
   rapidAssessment             RapidAssessment @relation(fields: [rapidAssessmentId], references: [id], onDelete: Cascade)
+
   @@map("wash_assessments")
 }
 
 model ShelterAssessment {
-  rapidAssessmentId         String   @id
-  areSheltersSufficient     Boolean
-  hasSafeStructures         Boolean
-  shelterTypes              String @default("[]") // JSON string array: Trampoline, Open space, Local materials, Communal structure, Other
-  requiredShelterType       String @default("[]") // JSON string array: Trampoline, Open space, Local materials, Communal structure, Other
-  numberSheltersRequired    Int      // Estimated number required if insufficient
-  areOvercrowded            Boolean
-  provideWeatherProtection  Boolean
-  additionalShelterDetails  Json?
-  rapidAssessment           RapidAssessment @relation(fields: [rapidAssessmentId], references: [id], onDelete: Cascade)
+  rapidAssessmentId        String          @id
+  areSheltersSufficient    Boolean
+  hasSafeStructures        Boolean
+  shelterTypes             String          @default("[]")
+  requiredShelterType      String          @default("[]")
+  numberSheltersRequired   Int
+  areOvercrowded           Boolean
+  provideWeatherProtection Boolean
+  additionalShelterDetails Json?
+  rapidAssessment          RapidAssessment @relation(fields: [rapidAssessmentId], references: [id], onDelete: Cascade)
+
   @@map("shelter_assessments")
 }
 
 model SecurityAssessment {
-  rapidAssessmentId                 String   @id
-  isSafeFromViolence                Boolean
-  gbvCasesReported                  Boolean
-  hasSecurityPresence               Boolean
-  hasProtectionReportingMechanism   Boolean
-  vulnerableGroupsHaveAccess        Boolean
-  hasLighting                       Boolean
-  additionalSecurityDetails         Json?
-  rapidAssessment                   RapidAssessment @relation(fields: [rapidAssessmentId], references: [id], onDelete: Cascade)
+  rapidAssessmentId               String          @id
+  isSafeFromViolence              Boolean
+  gbvCasesReported                Boolean
+  hasSecurityPresence             Boolean
+  hasProtectionReportingMechanism Boolean
+  vulnerableGroupsHaveAccess      Boolean
+  hasLighting                     Boolean
+  additionalSecurityDetails       Json?
+  rapidAssessment                 RapidAssessment @relation(fields: [rapidAssessmentId], references: [id], onDelete: Cascade)
+
   @@map("security_assessments")
 }
 
 model RapidResponse {
-  id              String          @id @default(uuid())
-  responderId     String
-  entityId        String
-  assessmentId    String?
-  type            ResponseType
-  priority        Priority        @default(MEDIUM)
-  status          ResponseStatus  @default(PLANNED)
-  description     String
-  resources       Json?
-  timeline        Json?
-  versionNumber   Int             @default(1)
-  isOfflineCreated Boolean        @default(false)
+  id                 String             @id @default(uuid())
+  responderId        String
+  entityId           String
+  assessmentId       String
+  type               ResponseType
+  priority           Priority           @default(MEDIUM)
+  status             ResponseStatus     @default(PLANNED)
+  description        String?
+  resources          Json?
+  timeline           Json?
+  versionNumber      Int                @default(1)
+  isOfflineCreated   Boolean            @default(false)
   verificationStatus VerificationStatus @default(DRAFT)
-  verifiedAt      DateTime?
-  verifiedBy      String?
-  createdAt       DateTime        @default(now())
-  updatedAt       DateTime        @updatedAt
-
-  // Relationships
-  responder       User     @relation(fields: [responderId], references: [id])
-  entity          Entity   @relation(fields: [entityId], references: [id])
-  assessment      RapidAssessment? @relation(fields: [assessmentId], references: [id])
+  verifiedAt         DateTime?
+  verifiedBy         String?
+  createdAt          DateTime           @default(now())
+  updatedAt          DateTime           @updatedAt
+  donorId            String?
+  items              Json
+  offlineId          String?            @unique
+  plannedDate        DateTime           @default(now())
+  rejectionFeedback  String?
+  rejectionReason    String?
+  responseDate       DateTime?
+  syncStatus         SyncStatus         @default(LOCAL)
+  mediaAttachments   MediaAttachment[]
+  assessment         RapidAssessment    @relation("AssessmentResponses", fields: [assessmentId], references: [id])
+  donor              Donor?             @relation("DonorResponses", fields: [donorId], references: [id])
+  entity             Entity             @relation("EntityResponses", fields: [entityId], references: [id])
+  responder          User               @relation("UserResponses", fields: [responderId], references: [id])
+  conflicts          SyncConflict[]     @relation("ResponseConflicts")
 
   @@map("rapid_responses")
 }
 
-// Synchronization and Conflict Management
+model Donor {
+  id           String          @id @default(uuid())
+  name         String
+  type         DonorType       @default(ORGANIZATION)
+  contactEmail String?
+  contactPhone String?
+  organization String?
+  isActive     Boolean         @default(true)
+  createdAt    DateTime        @default(now())
+  updatedAt    DateTime        @updatedAt
+  responses    RapidResponse[] @relation("DonorResponses")
+
+  @@map("donors")
+}
+
+model MediaAttachment {
+  id            String        @id @default(uuid())
+  responseId    String
+  filename      String
+  originalName  String
+  mimeType      String
+  fileSize      Int
+  filePath      String
+  thumbnailPath String?
+  uploadedAt    DateTime      @default(now())
+  uploadedBy    String
+  response      RapidResponse @relation(fields: [responseId], references: [id], onDelete: Cascade)
+
+  @@map("media_attachments")
+}
+
 model SyncConflict {
-  id                    String   @id @default(uuid())
+  id                    String         @id @default(uuid())
   entityType            String
   entityId              String
-  conflictDate          DateTime @default(now())
-  resolutionMethod      String   @default("LAST_WRITE_WINS")
+  conflictDate          DateTime       @default(now())
+  resolutionMethod      String         @default("LAST_WRITE_WINS")
   winningVersion        Json
   losingVersion         Json
-  resolvedAt            DateTime @default(now())
-  coordinatorNotified   Boolean  @default(false)
+  resolvedAt            DateTime       @default(now())
+  coordinatorNotified   Boolean        @default(false)
   coordinatorNotifiedAt DateTime?
+  responseId            String?
+  response              RapidResponse? @relation("ResponseConflicts", fields: [responseId], references: [id])
 
   @@map("sync_conflicts")
 }
 
-// Audit and Logging
 model AuditLog {
-  id        String   @id @default(uuid())
-  userId    String?
-  action    String
-  resource  String
+  id         String   @id @default(uuid())
+  userId     String?
+  action     String
+  resource   String
   resourceId String?
-  oldValues Json?
-  newValues Json?
-  timestamp DateTime @default(now())
-  ipAddress String?
-  userAgent String?
-
-  // Relationships
-  user User? @relation(fields: [userId], references: [id])
+  oldValues  Json?
+  newValues  Json?
+  timestamp  DateTime @default(now())
+  ipAddress  String?
+  userAgent  String?
+  user       User?    @relation(fields: [userId], references: [id])
 
   @@map("audit_logs")
 }
 
-// Enums
 enum RoleName {
   ASSESSOR
   COORDINATOR
@@ -415,6 +426,11 @@ enum ResponseType {
   LOGISTICS
 }
 
+enum ResponseStatus {
+  PLANNED
+  DELIVERED
+}
+
 enum Priority {
   CRITICAL
   HIGH
@@ -429,19 +445,12 @@ enum AssessmentStatus {
   PUBLISHED
 }
 
-enum ResponseStatus {
-  PLANNED
-  IN_PROGRESS
-  COMPLETED
-  CANCELLED
-}
-
 enum VerificationStatus {
-  DRAFT         // Initial state
-  SUBMITTED     // Awaiting verification
-  VERIFIED      // Approved by coordinator
-  AUTO_VERIFIED // Automatically approved
-  REJECTED      // Rejected by coordinator
+  DRAFT
+  SUBMITTED
+  VERIFIED
+  AUTO_VERIFIED
+  REJECTED
 }
 
 enum SyncStatus {
@@ -450,6 +459,15 @@ enum SyncStatus {
   SYNCED
   FAILED
   CONFLICT
+  LOCAL
+}
+
+enum DonorType {
+  INDIVIDUAL
+  ORGANIZATION
+  GOVERNMENT
+  NGO
+  CORPORATE
 }
 
 enum IncidentStatus {
