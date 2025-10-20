@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { withAuth } from '@/lib/auth/middleware';
+import { withAuth, AuthContext, requireRole } from '@/lib/auth/middleware';
 import { z } from 'zod';
 import { prisma } from '@/lib/db/client';
 
@@ -17,25 +17,17 @@ const rejectAssessmentSchema = z.object({
   metadata: z.record(z.any()).optional()
 });
 
-export const POST = withAuth(async (
-  request: NextRequest,
-  context: { params: { id: string } }
-) => {
-  try {
-    const { roles } = context;
-    
-    // Check if user has coordinator role
-    if (!roles.includes('COORDINATOR')) {
-      return NextResponse.json(
-        { success: false, error: 'Insufficient permissions. Coordinator role required.' },
-        { status: 403 }
-      );
-    }
+interface RouteParams {
+  params: Promise<{ id: string }>
+}
 
-    const body = await request.json();
-    const validatedData = rejectAssessmentSchema.parse(body);
-
-    const assessmentId = context.params.id;
+export const POST = withAuth(
+  requireRole('COORDINATOR')(
+    async (request: NextRequest, context: AuthContext, { params }: RouteParams) => {
+      try {
+        const { id } = await params;
+        const body = await request.json();
+        const validatedData = rejectAssessmentSchema.parse(body);
 
     // Start transaction for rejection
     const result = await prisma.$transaction(async (tx) => {
@@ -69,7 +61,7 @@ export const POST = withAuth(async (
           rejectionReason: validatedData.reason,
           rejectionFeedback: validatedData.feedback,
           verifiedAt: new Date(),
-          verifiedBy: user.userId
+          verifiedBy: context.userId
         },
         include: {
           entity: {
@@ -93,10 +85,10 @@ export const POST = withAuth(async (
       // Create audit log entry
       await tx.auditLog.create({
         data: {
-          userId: user.userId,
+          userId: context.userId,
           action: 'ASSESSMENT_REJECTED',
           resource: 'RapidAssessment',
-          resourceId: assessmentId,
+          resourceId: id,
           newValues: {
             assessmentType: assessment.rapidAssessmentType,
             entityName: assessment.entity.name,
@@ -147,4 +139,6 @@ export const POST = withAuth(async (
       { status: 500 }
     );
   }
-});
+    }
+  )
+)

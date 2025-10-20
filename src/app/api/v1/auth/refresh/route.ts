@@ -7,7 +7,7 @@ import { RefreshTokenResponse } from '@/types/auth'
 export const POST = withAuth(async (request, context) => {
   try {
     // Generate new token with current user data
-    const token = await AuthService.refreshToken(context.user.userId)
+    const token = await AuthService.refreshToken(context.userId)
 
     const response: RefreshTokenResponse = {
       data: {

@@ -86,6 +86,13 @@ const getNavigationItems = (role: string | null): NavItem[] => {
     ],
     RESPONDER: [
       {
+        name: 'Response Planning',
+        href: '/responder/planning',
+        icon: HandHeart,
+        description: 'Plan and manage response resources',
+        badge: 'NEW'
+      },
+      {
         name: 'Response',
         href: '/response',
         icon: HandHeart,

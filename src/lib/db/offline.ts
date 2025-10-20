@@ -414,6 +414,19 @@ export class OfflineDatabase extends Dexie {
     return { ...response, decryptedData };
   }
 
+  async updateResponse(uuid: string, updates: Partial<Response & { data: any }>): Promise<number> {
+    const { data, ...otherUpdates } = updates;
+    const updateData: Partial<Response & { keyVersion?: number }> = { ...otherUpdates, lastModified: new Date() };
+    
+    if (data) {
+      const { encryptedData, keyVersion } = await this.encryptData(data);
+      updateData.data = encryptedData;
+      (updateData as any).keyVersion = keyVersion;
+    }
+    
+    return await this.responses.where('uuid').equals(uuid).modify(updateData);
+  }
+
   // Entity operations
   async addEntity(entity: Omit<Entity, 'id' | 'data'> & { data: any }): Promise<number> {
     const { encryptedData, keyVersion } = await this.encryptData(entity.data);

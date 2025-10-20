@@ -6,7 +6,7 @@ import { UserMeResponse } from '@/types/auth'
 
 export const GET = withAuth(async (request, context) => {
   try {
-    const user = await AuthService.getUserWithRoles(context.user.userId)
+    const user = await AuthService.getUserWithRoles(context.userId)
     
     if (!user) {
       return NextResponse.json(

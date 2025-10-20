@@ -1,16 +1,16 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/db/client';
-import { withAuth, requireRole } from '@/lib/auth/middleware';
+import { withAuth, AuthContext, requireRole } from '@/lib/auth/middleware';
 
 interface RouteParams {
-  params: {
-    id: string;
-  }
+  params: Promise<{ id: string }>
 }
 
-export const DELETE = requireRole('COORDINATOR')(async (request: NextRequest, context: RouteParams) => {
-  try {
-    const { id } = context.params;
+export const DELETE = withAuth(
+  requireRole('COORDINATOR')(
+    async (request: NextRequest, context: AuthContext, { params }: RouteParams) => {
+      try {
+        const { id } = await params;
 
     // Check if assignment exists
     const assignment = await prisma.entityAssignment.findUnique({
@@ -58,7 +58,9 @@ export const DELETE = requireRole('COORDINATOR')(async (request: NextRequest, co
       { status: 500 }
     );
   }
-});
+    }
+  )
+)
 
 export const GET = withAuth(async (request: NextRequest, context: RouteParams) => {
   try {

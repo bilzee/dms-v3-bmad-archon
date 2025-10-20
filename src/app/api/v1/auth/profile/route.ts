@@ -45,7 +45,7 @@ export const PUT = withAuth(async (request, context) => {
     }
 
     const validatedData = validation.data
-    const userId = context.user.userId
+    const userId = context.userId
 
     // Get current user
     const existingUser = await prisma.user.findUnique({
@@ -179,7 +179,7 @@ export const PUT = withAuth(async (request, context) => {
 // Get own profile
 export const GET = withAuth(async (request, context) => {
   try {
-    const userId = context.user.userId
+    const userId = context.userId
 
     const user = await prisma.user.findUnique({
       where: { id: userId },

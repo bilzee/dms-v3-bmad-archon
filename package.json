@@ -19,6 +19,10 @@
     "test:unit": "jest",
     "test:unit:watch": "jest --watch",
     "test:unit:coverage": "jest --coverage",
+    "test:response-planning": "bash scripts/test-response-planning.sh",
+    "test:response-planning:unit": "jest tests/unit/services/response-planning.test.ts tests/unit/components/ResponsePlanningForm.test.tsx",
+    "test:response-planning:integration": "jest tests/integration/response-planning/",
+    "test:response-planning:e2e": "playwright test tests/e2e/response-planning-workflow.test.ts",
     "claude:dev": "set MCP_CONFIG=.mcp.dev.json && claude-code"
   },
   "dependencies": {
@@ -68,6 +72,8 @@
     "zustand": "4.5.5"
   },
   "devDependencies": {
+    "@babel/core": "^7.28.4",
+    "@babel/preset-env": "^7.28.3",
     "@playwright/test": "^1.55.1",
     "@tanstack/react-query-devtools": "^5.90.2",
     "@testing-library/jest-dom": "^6.9.1",
@@ -78,6 +84,7 @@
     "@types/react": "^18",
     "@types/react-dom": "^18",
     "@types/uuid": "^11.0.0",
+    "babel-loader": "^10.0.0",
     "cross-env": "^7.0.3",
     "eslint": "^8",
     "eslint-config-next": "14.2.5",

@@ -280,7 +280,9 @@ export class ConflictResolver {
         resolvedAt: new Date(),
         resolvedBy: 'system', // or user ID for manual resolutions
         metadata: {
-          ...conflict.metadata,
+          localLastModified: conflict.metadata?.localLastModified || new Date(),
+          serverLastModified: conflict.metadata?.serverLastModified || new Date(),
+          conflictReason: conflict.metadata?.conflictReason || 'Unknown',
           autoResolved: strategy !== 'manual'
         }
       };

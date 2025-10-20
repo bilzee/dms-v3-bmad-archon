@@ -115,7 +115,7 @@ export default function CoordinatorEntitiesPage() {
           body: JSON.stringify({
             userId,
             entityId: selectedEntity,
-            assignedBy: user?.userId
+            assignedBy: user?.id
           })
         })
       );

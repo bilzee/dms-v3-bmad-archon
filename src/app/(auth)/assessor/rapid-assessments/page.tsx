@@ -122,7 +122,7 @@ export default function AssessorRapidAssessmentsPage() {
             </select>
             <Button 
               onClick={handleNewAssessment}
-              disabled={selectedType}
+              disabled={!selectedType}
               data-testid="new-assessment-button"
             >
               <PlusCircle className="h-4 w-4 mr-2" />

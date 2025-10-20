@@ -340,6 +340,92 @@ export class EntityAssignmentServiceImpl implements EntityAssignmentService {
       };
     }
   }
+
+  /**
+   * Get entities assigned to a user (for responders)
+   * Similar to getUserAssignedEntities but for responder role
+   */
+  async getAssignedEntities(userId: string): Promise<Entity[]> {
+    try {
+      const assignments = await prisma.entityAssignment.findMany({
+        where: {
+          userId,
+          user: {
+            isActive: true,
+            roles: {
+              some: {
+                role: {
+                  name: 'RESPONDER'
+                }
+              }
+            }
+          }
+        },
+        include: {
+          entity: true
+        },
+        orderBy: {
+          assignedAt: 'desc'
+        }
+      });
+
+      return assignments.map(assignment => ({
+        id: assignment.entity.id,
+        name: assignment.entity.name,
+        type: assignment.entity.type,
+        location: assignment.entity.location,
+        coordinates: assignment.entity.coordinates,
+        metadata: assignment.entity.metadata,
+        isActive: assignment.entity.isActive,
+        createdAt: assignment.entity.createdAt,
+        updatedAt: assignment.entity.updatedAt
+      }));
+    } catch (error) {
+      console.error('Error getting assigned entities:', error);
+      return [];
+    }
+  }
+
+  /**
+   * Get verified assessments for an entity
+   * Returns assessments that can be used for response planning
+   */
+  async getVerifiedAssessments(entityId: string): Promise<any[]> {
+    try {
+      const assessments = await prisma.rapidAssessment.findMany({
+        where: {
+          affectedEntityId: entityId,
+          verificationStatus: {
+            in: ['VERIFIED', 'AUTO_VERIFIED']
+          },
+          status: 'PUBLISHED'
+        },
+        select: {
+          id: true,
+          rapidAssessmentType: true,
+          rapidAssessmentDate: true,
+          status: true,
+          verificationStatus: true,
+          affectedEntity: {
+            select: {
+              id: true,
+              name: true,
+              type: true
+            }
+          }
+        },
+        orderBy: [
+          { verificationStatus: 'desc' },
+          { rapidAssessmentDate: 'desc' }
+        ]
+      });
+
+      return assessments;
+    } catch (error) {
+      console.error('Error getting verified assessments:', error);
+      return [];
+    }
+  }
 }
 
 // Export singleton instance
