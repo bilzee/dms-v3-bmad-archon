@@ -1,10 +1,18 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { v4 as uuidv4 } from 'uuid'
-import { withAuth, requireAnyPermission } from '@/lib/auth/middleware'
+import { withAuth } from '@/lib/auth/middleware'
 import { prisma } from '@/lib/db/client'
 
 // Get all roles - requires MANAGE_USERS or ASSIGN_ROLES permission
-export const GET = withAuth(requireAnyPermission('MANAGE_USERS', 'ASSIGN_ROLES')(async (request, context) => {
+export const GET = withAuth(async (request: NextRequest, context) => {
+  const { permissions } = context;
+  if (!permissions.includes('MANAGE_USERS') && !permissions.includes('ASSIGN_ROLES')) {
+    return NextResponse.json(
+      { success: false, error: 'Insufficient permissions. Manage users or Assign roles permission required.' },
+      { status: 403 }
+    );
+  }
+
   try {
     const roles = await prisma.role.findMany({
       include: {
@@ -45,4 +53,4 @@ export const GET = withAuth(requireAnyPermission('MANAGE_USERS', 'ASSIGN_ROLES')
       { status: 500 }
     )
   }
-}))
+})

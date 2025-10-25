@@ -43,8 +43,15 @@ function cleanupExpiredCollaborations() {
 }
 
 export const GET = withAuth(
-  requireRole('RESPONDER')(
-    async (request: NextRequest, context: AuthContext, { params }: RouteParams) => {
+  async (request: NextRequest, context: AuthContext, { params }: RouteParams) => {
+    const { user, roles } = context;
+    
+    if (!roles.includes('RESPONDER')) {
+      return NextResponse.json(
+        { success: false, error: 'Insufficient permissions. Responder role required.' },
+        { status: 403 }
+      );
+    }
       try {
         cleanupExpiredCollaborations()
         
@@ -98,12 +105,18 @@ export const GET = withAuth(
         )
       }
     }
-  )
 )
 
 export const POST = withAuth(
-  requireRole('RESPONDER')(
-    async (request: NextRequest, context: AuthContext, { params }: RouteParams) => {
+  async (request: NextRequest, context: AuthContext, { params }: RouteParams) => {
+    const { user, roles } = context;
+    
+    if (!roles.includes('RESPONDER')) {
+      return NextResponse.json(
+        { success: false, error: 'Insufficient permissions. Responder role required.' },
+        { status: 403 }
+      );
+    }
       try {
         cleanupExpiredCollaborations()
         
@@ -223,5 +236,4 @@ export const POST = withAuth(
         )
       }
     }
-  )
 )

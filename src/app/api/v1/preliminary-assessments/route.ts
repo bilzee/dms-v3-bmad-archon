@@ -1,21 +1,21 @@
-import { NextRequest, NextResponse } from 'next/server'
-import { v4 as uuidv4 } from 'uuid'
-import { withAuth, requireRole } from '@/lib/auth/middleware'
-import { PreliminaryAssessmentService } from '@/lib/services/preliminary-assessment.service'
+import { NextRequest, NextResponse } from 'next/server';
+import { v4 as uuidv4 } from 'uuid';
+import { withAuth } from '@/lib/auth/middleware';
+import { PreliminaryAssessmentService } from '@/lib/services/preliminary-assessment.service';
 import { 
   CreatePreliminaryAssessmentSchema,
   QueryPreliminaryAssessmentSchema 
-} from '@/lib/validation/preliminary-assessment'
-import { PreliminaryAssessmentListResponse } from '@/types/preliminary-assessment'
+} from '@/lib/validation/preliminary-assessment';
+import { PreliminaryAssessmentListResponse } from '@/types/preliminary-assessment';
 
 export const GET = withAuth(async (request, context) => {
   try {
-    const url = new URL(request.url)
-    const searchParams = Object.fromEntries(url.searchParams)
+    const url = new URL(request.url);
+    const searchParams = Object.fromEntries(url.searchParams);
     
-    const query = QueryPreliminaryAssessmentSchema.parse(searchParams)
+    const query = QueryPreliminaryAssessmentSchema.parse(searchParams);
     
-    const { assessments, total, totalPages } = await PreliminaryAssessmentService.findAll(query)
+    const { assessments, total, totalPages } = await PreliminaryAssessmentService.findAll(query);
 
     const response: PreliminaryAssessmentListResponse = {
       data: assessments,
@@ -30,11 +30,11 @@ export const GET = withAuth(async (request, context) => {
         version: '1.0.0',
         requestId: uuidv4()
       }
-    }
+    };
 
-    return NextResponse.json(response, { status: 200 })
+    return NextResponse.json(response, { status: 200 });
   } catch (error) {
-    console.error('Get preliminary assessments error:', error)
+    console.error('Get preliminary assessments error:', error);
     
     return NextResponse.json(
       {
@@ -46,57 +46,6 @@ export const GET = withAuth(async (request, context) => {
         }
       },
       { status: 500 }
-    )
+    );
   }
-})
-
-export const POST = withAuth(
-  requireRole('ASSESSOR')(async (request, context) => {
-    try {
-      const body = await request.json()
-      const input = CreatePreliminaryAssessmentSchema.parse(body)
-      
-      const assessment = await PreliminaryAssessmentService.create(input, context.user.userId)
-
-      return NextResponse.json(
-        {
-          data: assessment,
-          meta: {
-            timestamp: new Date().toISOString(),
-            version: '1.0.0',
-            requestId: uuidv4()
-          }
-        },
-        { status: 201 }
-      )
-    } catch (error) {
-      console.error('Create preliminary assessment error:', error)
-      
-      if (error instanceof Error && error.message.includes('validation')) {
-        return NextResponse.json(
-          {
-            error: error.message,
-            meta: {
-              timestamp: new Date().toISOString(),
-              version: '1.0.0',
-              requestId: uuidv4()
-            }
-          },
-          { status: 400 }
-        )
-      }
-      
-      return NextResponse.json(
-        {
-          error: 'Internal server error',
-          meta: {
-            timestamp: new Date().toISOString(),
-            version: '1.0.0',
-            requestId: uuidv4()
-          }
-        },
-        { status: 500 }
-      )
-    }
-  })
-)
+});

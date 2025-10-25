@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { withAuth, AuthContext, requireRole } from '@/lib/auth/middleware';
+import { withAuth } from '@/lib/auth/middleware';
 import { z } from 'zod';
 import { prisma } from '@/lib/db/client';
 
@@ -12,13 +12,27 @@ interface RouteParams {
   params: Promise<{ id: string }>
 }
 
-export const POST = withAuth(
-  requireRole('COORDINATOR')(
-    async (request: NextRequest, context: AuthContext, { params }: RouteParams) => {
-      try {
-        const { id } = await params;
-        const body = await request.json();
-        const validatedData = verifyAssessmentSchema.parse(body);
+export const POST = withAuth(async (
+  request: NextRequest,
+  context: any
+) => {
+  try {
+    const { user, roles } = context;
+    
+    // Check if user has coordinator role
+    if (!roles.includes('COORDINATOR')) {
+      return NextResponse.json(
+        { success: false, error: 'Insufficient permissions. Coordinator role required.' },
+        { status: 403 }
+      );
+    }
+
+    const body = await request.json();
+    const validatedData = verifyAssessmentSchema.parse(body);
+    // Extract ID from URL since we're not using async params
+  const url = new URL(request.url);
+  const pathname = url.pathname;
+  const assessmentId = pathname.split('/').slice(-2, -1)[0]; // Get ID before /verify
 
     // Start transaction for verification
     const result = await prisma.$transaction(async (tx) => {
@@ -127,6 +141,4 @@ export const POST = withAuth(
       { status: 500 }
     );
   }
-    }
-  )
-)
+});

@@ -290,7 +290,7 @@ async function main() {
   })
 
   // Assign multiple roles to the multi-role user
-  const rolesToAssign = [assessorRole.id, coordinatorRole.id, donorRole.id]
+  const rolesToAssign = [assessorRole.id, coordinatorRole.id, donorRole.id, responderRole.id]
   for (const roleId of rolesToAssign) {
     await prisma.userRole.upsert({
       where: { userId_roleId: { userId: multiRoleUser.id, roleId } },
@@ -310,6 +310,46 @@ async function main() {
       update: {},
       create: {
         userId: multiRoleUser.id,
+        entityId: maiduguri.id,
+        assignedBy: adminUser.id,
+      },
+    })
+  }
+
+  // Create sample responder user for testing
+  console.log('👤 Creating sample responder user...')
+  const responderPasswordHash = await bcrypt.hash('responder123!', 10)
+  
+  const responderUser = await prisma.user.upsert({
+    where: { email: 'responder@dms.gov.ng' },
+    update: {},
+    create: {
+      email: 'responder@dms.gov.ng',
+      username: 'responder',
+      passwordHash: responderPasswordHash,
+      name: 'Response Responder',
+      organization: 'Borno State Emergency Management Agency',
+    },
+  })
+
+  // Assign responder role
+  await prisma.userRole.upsert({
+    where: { userId_roleId: { userId: responderUser.id, roleId: responderRole.id } },
+    update: {},
+    create: {
+      userId: responderUser.id,
+      roleId: responderRole.id,
+      assignedBy: adminUser.id,
+    },
+  })
+
+  // Assign responder to entities
+  if (maiduguri) {
+    await prisma.entityAssignment.upsert({
+      where: { userId_entityId: { userId: responderUser.id, entityId: maiduguri.id } },
+      update: {},
+      create: {
+        userId: responderUser.id,
         entityId: maiduguri.id,
         assignedBy: adminUser.id,
       },
@@ -431,8 +471,9 @@ async function main() {
   console.log('✅ Database seed completed successfully!')
   console.log('📧 Admin credentials: admin@dms.gov.ng / admin123!')
   console.log('📧 Coordinator credentials: coordinator@dms.gov.ng / coordinator123!')
+  console.log('📧 Responder credentials: responder@dms.gov.ng / responder123!')
   console.log('📧 Assessor credentials: assessor@test.com / test-password')
-  console.log('📧 Multi-role credentials: multirole@dms.gov.ng / multirole123! (ASSESSOR, COORDINATOR, DONOR)')
+  console.log('📧 Multi-role credentials: multirole@dms.gov.ng / multirole123! (ASSESSOR, COORDINATOR, DONOR, RESPONDER)')
   console.log('📋 Created 5 sample assessments for verification workflow testing')
 }
 

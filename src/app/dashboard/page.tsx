@@ -16,7 +16,9 @@ import {
   ClipboardList,
   CheckCircle,
   Settings,
-  BarChart3
+  BarChart3,
+  Package,
+  PlusCircle
 } from 'lucide-react'
 
 export default function DashboardPage() {
@@ -188,6 +190,47 @@ export default function DashboardPage() {
                   View Metrics Dashboard
                 </Button>
               </Link>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Response Planning - Story 4.1 */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Package className="h-5 w-5" />
+              Response Planning
+            </CardTitle>
+            <CardDescription>
+              Plan and coordinate disaster response resources before deployment
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-3">
+              <div className="flex items-center gap-2">
+                <Badge variant="outline" className="text-xs">Story 4.1</Badge>
+                <Badge variant="secondary" className="text-xs">Responder</Badge>
+                <Badge variant="outline" className="text-xs bg-green-50 text-green-700 border-green-200">New</Badge>
+              </div>
+              <div className="grid grid-cols-1 gap-2">
+                <Link href="/responder/planning">
+                  <Button className="w-full justify-start">
+                    <Package className="h-4 w-4 mr-2" />
+                    Response Planning Dashboard
+                  </Button>
+                </Link>
+                {hasPermission('CREATE_RESPONSE') && (
+                  <Link href="/responder/planning/new">
+                    <Button variant="outline" className="w-full justify-start">
+                      <PlusCircle className="h-4 w-4 mr-2" />
+                      Create Response Plan
+                    </Button>
+                  </Link>
+                )}
+              </div>
+              <div className="text-xs text-muted-foreground">
+                Features offline planning, real-time collaboration, and resource management
+              </div>
             </div>
           </CardContent>
         </Card>

@@ -24,9 +24,15 @@ export default function ResponsePlanningPage() {
   const { user } = useAuthStore()
   const [showCreateForm, setShowCreateForm] = useState(false)
   const [editingResponse, setEditingResponse] = useState<string | null>(null)
+  const [isClient, setIsClient] = useState(false)
+
+  // Prevent hydration mismatch
+  useEffect(() => {
+    setIsClient(true)
+  }, [])
 
   // Get assigned planned responses for this responder
-  const { data: responsesData = [], isLoading, error, refetch } = useQuery({
+  const { data: responsesData, isLoading, error, refetch } = useQuery({
     queryKey: ['responses', 'planned', user?.id],
     queryFn: async () => {
       if (!user) throw new Error('User not authenticated')
@@ -35,7 +41,8 @@ export default function ResponsePlanningPage() {
         limit: 50
       })
     },
-    enabled: !!user
+    enabled: !!user && isClient, // Only run query on client side after hydration
+    initialData: { responses: [], total: 0 }
   })
 
   const responses = responsesData?.responses || []

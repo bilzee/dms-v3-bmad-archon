@@ -71,7 +71,9 @@ export class EntityAssignmentServiceImpl implements EntityAssignmentService {
             roles: {
               some: {
                 role: {
-                  name: 'ASSESSOR'
+                  name: {
+                    in: ['ASSESSOR', 'RESPONDER']
+                  }
                 }
               }
             }
@@ -87,7 +89,7 @@ export class EntityAssignmentServiceImpl implements EntityAssignmentService {
   }
 
   /**
-   * Get all entities assigned to a user with assessor role
+   * Get all entities assigned to a user with assessor or responder role
    */
   async getUserAssignedEntities(userId: string): Promise<EntityAssignmentSummary[]> {
     try {
@@ -98,7 +100,9 @@ export class EntityAssignmentServiceImpl implements EntityAssignmentService {
             roles: {
               some: {
                 role: {
-                  name: 'ASSESSOR'
+                  name: {
+                    in: ['ASSESSOR', 'RESPONDER']
+                  }
                 }
               }
             }
@@ -173,11 +177,11 @@ export class EntityAssignmentServiceImpl implements EntityAssignmentService {
 
   /**
    * Validate if user can create assessment for entity
-   * User must be assigned to entity and have assessor role
+   * User must be assigned to entity and have assessor role (NOT responder)
    */
   async canCreateAssessment(userId: string, entityId: string): Promise<boolean> {
     try {
-      // Check if user has assessor role
+      // Check if user has assessor role only
       const userWithRole = await prisma.user.findFirst({
         where: {
           id: userId,
@@ -207,6 +211,46 @@ export class EntityAssignmentServiceImpl implements EntityAssignmentService {
       return !!assignment;
     } catch (error) {
       console.error('Error checking assessment permission:', error);
+      return false;
+    }
+  }
+
+  /**
+   * Validate if user can create response for entity
+   * User must be assigned to entity and have responder role
+   */
+  async canCreateResponse(userId: string, entityId: string): Promise<boolean> {
+    try {
+      // Check if user has responder role only
+      const userWithRole = await prisma.user.findFirst({
+        where: {
+          id: userId,
+          isActive: true,
+          roles: {
+            some: {
+              role: {
+                name: 'RESPONDER'
+              }
+            }
+          }
+        }
+      });
+
+      if (!userWithRole) {
+        return false;
+      }
+
+      // Check if user is assigned to the entity
+      const assignment = await prisma.entityAssignment.findFirst({
+        where: {
+          userId,
+          entityId
+        }
+      });
+
+      return !!assignment;
+    } catch (error) {
+      console.error('Error checking response permission:', error);
       return false;
     }
   }
@@ -342,8 +386,8 @@ export class EntityAssignmentServiceImpl implements EntityAssignmentService {
   }
 
   /**
-   * Get entities assigned to a user (for responders)
-   * Similar to getUserAssignedEntities but for responder role
+   * Get entities assigned to a user (for responders and assessors)
+   * Similar to getUserAssignedEntities but for responder or assessor role
    */
   async getAssignedEntities(userId: string): Promise<Entity[]> {
     try {
@@ -355,7 +399,9 @@ export class EntityAssignmentServiceImpl implements EntityAssignmentService {
             roles: {
               some: {
                 role: {
-                  name: 'RESPONDER'
+                  name: {
+                    in: ['RESPONDER', 'ASSESSOR']
+                  }
                 }
               }
             }

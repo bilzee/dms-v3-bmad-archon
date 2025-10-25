@@ -38,19 +38,29 @@ export function EntitySelector({
   showAssignmentInfo = true,
   className 
 }: EntitySelectorProps) {
-  const { user } = useAuthStore()
+  const { user, token } = useAuthStore()
   const [selectedEntity, setSelectedEntity] = useState<EntityWithAssignment | null>(null)
+  const [isClient, setIsClient] = useState(false)
+  
+  // Prevent hydration mismatch
+  useEffect(() => {
+    setIsClient(true)
+  }, [])
   
   // TanStack Query hook for entities with assignment info
   const { data: entities = [], isLoading, error, refetch } = useQuery({
     queryKey: ['entities', 'with-assignment-info', user?.id],
     queryFn: async () => {
-      if (!user) {
+      if (!user || !token) {
         throw new Error('User not authenticated')
       }
 
       // Get entities available for assessment by this user via API
-      const response = await fetch(`/api/entities/available-for-assessment?userId=${user.id}`)
+      const response = await fetch(`/api/entities/available-for-assessment?userId=${user.id}`, {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      })
       
       if (!response.ok) {
         const errorData = await response.json()
@@ -60,7 +70,7 @@ export function EntitySelector({
       const data = await response.json()
       return data.entities || []
     },
-    enabled: !!user,
+    enabled: !!user && !!token && isClient, // Only run query on client side after hydration
     staleTime: 5 * 60 * 1000, // 5 minutes
     retry: 2
   })
@@ -132,7 +142,9 @@ export function EntitySelector({
     return (
       <Alert>
         <AlertCircle className="h-4 w-4" />
-        <AlertDescription>{error}</AlertDescription>
+        <AlertDescription>
+          {error instanceof Error ? error.message : 'Failed to load entities'}
+        </AlertDescription>
         <Button variant="outline" size="sm" onClick={() => refetch()} className="ml-2">
           <RefreshCw className="h-4 w-4 mr-1" />
           Retry
@@ -236,7 +248,7 @@ export function EntitySelector({
         <Alert>
           <AlertCircle className="h-4 w-4" />
           <AlertDescription>
-            You don't have permission to create assessments for this entity. 
+            You don&apos;t have permission to create assessments for this entity. 
             Please contact your coordinator for proper assignment.
           </AlertDescription>
         </Alert>

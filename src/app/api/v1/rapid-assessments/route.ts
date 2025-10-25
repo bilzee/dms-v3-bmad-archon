@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { v4 as uuidv4 } from 'uuid'
-import { withAuth, requireRole } from '@/lib/auth/middleware'
+import { withAuth } from '@/lib/auth/middleware'
 import { RapidAssessmentService } from '@/lib/services/rapid-assessment.service'
 import { 
   CreateRapidAssessmentSchema,
@@ -82,58 +82,39 @@ export const GET = withAuth(async (request, context) => {
   }
 })
 
-export const POST = withAuth(
-  requireRole('ASSESSOR')(async (request, context) => {
-    try {
-      const body = await request.json()
-      const input = CreateRapidAssessmentSchema.parse(body)
-      
-      const assessment = await RapidAssessmentService.create(input, context.userId)
+export const POST = withAuth(async (request, context) => {
+  const { user, roles } = context;
+  
+  if (!roles.includes('ASSESSOR')) {
+    return NextResponse.json(
+      { success: false, error: 'Insufficient permissions. Assessor role required.' },
+      { status: 403 }
+    );
+  }
+  
+  try {
+    const body = await request.json()
+    const input = CreateRapidAssessmentSchema.parse(body)
+    
+    const assessment = await RapidAssessmentService.create(input, context.userId)
 
-      return NextResponse.json(
-        {
-          data: assessment,
-          meta: {
-            timestamp: new Date().toISOString(),
-            version: '1.0.0',
-            requestId: uuidv4()
-          }
-        },
-        { status: 201 }
-      )
-    } catch (error) {
-      console.error('Create rapid assessment error:', error)
-      
-      const errorMessage = error instanceof Error ? error.message : 'Unknown error'
-      
-      if (errorMessage.includes('validation') || errorMessage.includes('Zod')) {
-        return NextResponse.json(
-          {
-            error: errorMessage,
-            meta: {
-              timestamp: new Date().toISOString(),
-              version: '1.0.0',
-              requestId: uuidv4()
-            }
-          },
-          { status: 400 }
-        )
-      }
-      
-      if (errorMessage.includes('assigned') || errorMessage.includes('EntityAssignment')) {
-        return NextResponse.json(
-          {
-            error: errorMessage,
-            meta: {
-              timestamp: new Date().toISOString(),
-              version: '1.0.0',
-              requestId: uuidv4()
-            }
-          },
-          { status: 403 }
-        )
-      }
-      
+    return NextResponse.json(
+      {
+        data: assessment,
+        meta: {
+          timestamp: new Date().toISOString(),
+          version: '1.0.0',
+          requestId: uuidv4()
+        }
+      },
+      { status: 201 }
+    )
+  } catch (error) {
+    console.error('Create rapid assessment error:', error)
+    
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error'
+    
+    if (errorMessage.includes('validation') || errorMessage.includes('Zod')) {
       return NextResponse.json(
         {
           error: errorMessage,
@@ -143,8 +124,34 @@ export const POST = withAuth(
             requestId: uuidv4()
           }
         },
-        { status: 500 }
+        { status: 400 }
       )
     }
-  })
-)
+    
+    if (errorMessage.includes('assigned') || errorMessage.includes('EntityAssignment')) {
+      return NextResponse.json(
+        {
+          error: errorMessage,
+          meta: {
+            timestamp: new Date().toISOString(),
+            version: '1.0.0',
+            requestId: uuidv4()
+          }
+        },
+        { status: 403 }
+      )
+    }
+    
+    return NextResponse.json(
+      {
+        error: errorMessage,
+        meta: {
+          timestamp: new Date().toISOString(),
+          version: '1.0.0',
+          requestId: uuidv4()
+        }
+      },
+      { status: 500 }
+    )
+  }
+})

@@ -1,3 +1,4 @@
+import React from 'react';
 import { cn } from '@/lib/utils';
 import { CheckCircle, Clock, XCircle, Shield, FileText } from 'lucide-react';
 import type { StatusIndicatorProps, VerificationStatus } from '@/types/verification';

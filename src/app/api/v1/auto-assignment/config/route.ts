@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { requireRole } from '@/lib/auth/middleware';
+import { withAuth } from '@/lib/auth/middleware';
 import { AutoAssignmentService, AutoAssignmentConfig } from '@/lib/assignment/auto-assignment';
 import { z } from 'zod';
 
@@ -20,7 +20,15 @@ const autoAssignmentConfigSchema = z.object({
   })
 });
 
-export const GET = requireRole('COORDINATOR')(async (request: NextRequest, context) => {
+export const GET = withAuth(async (request: NextRequest, context) => {
+  const { user, roles } = context;
+  
+  if (!roles.includes('COORDINATOR')) {
+    return NextResponse.json(
+      { success: false, error: 'Insufficient permissions. Coordinator role required.' },
+      { status: 403 }
+    );
+  }
   try {
 
     const config = AutoAssignmentService.getConfig();
@@ -39,7 +47,15 @@ export const GET = requireRole('COORDINATOR')(async (request: NextRequest, conte
   }
 });
 
-export const PUT = requireRole('COORDINATOR')(async (request: NextRequest, context) => {
+export const PUT = withAuth(async (request: NextRequest, context) => {
+  const { user, roles } = context;
+  
+  if (!roles.includes('COORDINATOR')) {
+    return NextResponse.json(
+      { success: false, error: 'Insufficient permissions. Coordinator role required.' },
+      { status: 403 }
+    );
+  }
   try {
 
     const body = await request.json();

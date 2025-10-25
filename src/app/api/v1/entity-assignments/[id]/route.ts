@@ -1,16 +1,26 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/db/client';
-import { withAuth, AuthContext, requireRole } from '@/lib/auth/middleware';
+import { withAuth, AuthContext } from '@/lib/auth/middleware';
 
 interface RouteParams {
   params: Promise<{ id: string }>
 }
 
 export const DELETE = withAuth(
-  requireRole('COORDINATOR')(
-    async (request: NextRequest, context: AuthContext, { params }: RouteParams) => {
+  async (request: NextRequest, context: any) => {
+    const { user, roles } = context;
+    
+    if (!roles.includes('COORDINATOR')) {
+      return NextResponse.json(
+        { success: false, error: 'Insufficient permissions. Coordinator role required.' },
+        { status: 403 }
+      );
+    }
       try {
-        const { id } = await params;
+        // Extract ID from URL since we're not using async params
+        const url = new URL(request.url);
+        const pathname = url.pathname;
+        const id = pathname.split('/').pop();
 
     // Check if assignment exists
     const assignment = await prisma.entityAssignment.findUnique({
@@ -59,12 +69,14 @@ export const DELETE = withAuth(
     );
   }
     }
-  )
 )
 
-export const GET = withAuth(async (request: NextRequest, context: RouteParams) => {
+export const GET = withAuth(async (request: NextRequest, context: any) => {
   try {
-    const { id } = context.params;
+    // Extract ID from URL since we're not using async params
+    const url = new URL(request.url);
+    const pathname = url.pathname;
+    const id = pathname.split('/').pop();
 
     // Get specific assignment
     const assignment = await prisma.entityAssignment.findUnique({

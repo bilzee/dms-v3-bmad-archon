@@ -13,7 +13,7 @@ import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Separator } from '@/components/ui/separator'
 import { useAuth } from '@/hooks/useAuth'
-import { User, Shield, Users, Heart } from 'lucide-react'
+import { User, Shield, Users, Heart, Package } from 'lucide-react'
 
 const loginSchema = z.object({
   email: z.string().min(1, 'Email is required').email('Invalid email format'),
@@ -52,13 +52,22 @@ const DEV_TEST_USERS = [
     description: 'Conducts rapid assessments in the field'
   },
   {
+    id: 'responder',
+    name: 'Response Responder',
+    email: 'responder@dms.gov.ng',
+    password: 'responder123!',
+    roles: ['Responder'],
+    icon: Package,
+    description: 'Plans and delivers disaster response resources'
+  },
+  {
     id: 'multirole',
     name: 'Multi Role Test User',
     email: 'multirole@dms.gov.ng',
     password: 'multirole123!',
-    roles: ['Assessor', 'Coordinator', 'Donor'],
+    roles: ['Assessor', 'Coordinator', 'Donor', 'Responder'],
     icon: User,
-    description: 'Test user with multiple roles'
+    description: 'Test user with multiple roles including response planning'
   }
 ]
 

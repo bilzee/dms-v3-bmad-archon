@@ -1,14 +1,21 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { v4 as uuidv4 } from 'uuid'
-import { withAuth, requireAnyRole } from '@/lib/auth/middleware'
+import { withAuth } from '@/lib/auth/middleware'
 import { PreliminaryAssessmentService } from '@/lib/services/preliminary-assessment.service'
 import { QueryPreliminaryAssessmentSchema } from '@/lib/validation/preliminary-assessment'
 import { PreliminaryAssessmentListResponse } from '@/types/preliminary-assessment'
 
-export const GET = withAuth(
-  requireAnyRole('ASSESSOR', 'COORDINATOR', 'ADMIN')(async (request, context) => {
-    try {
-      const { userId } = context.params
+export const GET = withAuth(async (request: NextRequest, context, { params }: any) => {
+  const { roles } = context;
+  if (!roles.includes('ASSESSOR') && !roles.includes('COORDINATOR') && !roles.includes('ADMIN')) {
+    return NextResponse.json(
+      { success: false, error: 'Insufficient permissions. Assessor, Coordinator, or Admin role required.' },
+      { status: 403 }
+    );
+  }
+
+  try {
+    const { userId } = await params;
       
       if (!userId) {
         return NextResponse.json(
@@ -81,5 +88,5 @@ export const GET = withAuth(
         { status: 500 }
       )
     }
-  })
+  }
 )

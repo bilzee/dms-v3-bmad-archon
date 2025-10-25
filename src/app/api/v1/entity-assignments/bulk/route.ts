@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/db/client';
-import { requireRole } from '@/lib/auth/middleware';
+import { withAuth } from '@/lib/auth/middleware';
 import { z } from 'zod';
 
 const bulkAssignmentSchema = z.object({
@@ -9,7 +9,15 @@ const bulkAssignmentSchema = z.object({
   assignedBy: z.string().cuid()
 });
 
-export const POST = requireRole('COORDINATOR')(async (request: NextRequest, context) => {
+export const POST = withAuth(async (request: NextRequest, context) => {
+  const { user, roles } = context;
+  
+  if (!roles.includes('COORDINATOR')) {
+    return NextResponse.json(
+      { success: false, error: 'Insufficient permissions. Coordinator role required.' },
+      { status: 403 }
+    );
+  }
   try {
 
     const body = await request.json();

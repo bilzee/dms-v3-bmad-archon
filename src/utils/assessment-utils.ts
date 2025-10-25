@@ -10,7 +10,7 @@ export const getCurrentUserName = (): string => {
     try {
       // Dynamic import to avoid SSR issues
       const { useAuthStore } = require('@/stores/auth.store')
-      const authStore = useAuthStore()
+      const authStore = useAuthStore.getState()
       
       if (authStore.user?.name) {
         return authStore.user.name

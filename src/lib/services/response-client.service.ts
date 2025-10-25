@@ -1,4 +1,5 @@
 import { CreatePlannedResponseInput, ResponseItem } from '@/lib/validation/response'
+import { useAuthStore } from '@/stores/auth.store'
 
 export class ResponseService {
   private static readonly BASE_URL = '/api/v1/responses'
@@ -86,7 +87,11 @@ export class ResponseService {
     }
 
     const result = await response.json()
-    return result
+    // Transform API response format to match client expectations
+    return {
+      responses: result.data,
+      total: result.meta?.total || 0
+    }
   }
 
   static async checkAssessmentConflicts(assessmentId: string) {
@@ -147,10 +152,12 @@ export class ResponseService {
       throw new Error('getAuthToken can only be called on client side')
     }
 
-    // Get token from localStorage (or your preferred storage)
-    const token = localStorage.getItem('auth_token')
+    // Get token from auth store
+    const authStore = useAuthStore.getState()
+    const token = authStore.token
+    
     if (!token) {
-      throw new Error('No authentication token found')
+      throw new Error('User not authenticated - no token found')
     }
 
     return token

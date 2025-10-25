@@ -153,6 +153,80 @@ export default function AssessmentPage() {
 
 ### 6. API Routes
 
+#### **✅ Recommended Pattern: Manual Role Check**
+This pattern works with Next.js 14.2.5 and is compatible with async route params.
+
+```typescript
+// app/api/v1/assessments/[id]/verify/route.ts
+
+export const POST = withAuth(async (request: NextRequest, context: AuthContext) => {
+  const { user, roles } = context;
+  
+  if (!roles.includes('COORDINATOR')) {
+    return NextResponse.json(
+      { 
+        success: false, 
+        error: 'Insufficient permissions. Coordinator role required.' 
+      }, 
+      { status: 403 }
+    );
+  }
+  
+  const { id } = context.params.id; // Direct param access - works with Next.js 14.2.5
+  const body = await request.json();
+  const validatedData = verifyAssessmentSchema.parse(body);
+  
+  // ... implementation
+});
+```
+
+#### **⚠️ Deprecated: Decorator Pattern**
+The decorator pattern shown below is **incompatible with Next.js 14.2.5 async params** and should not be used.
+
+```typescript
+// ❌ DEPRECATED - Broken with Next.js 14.2.5
+export const POST = withAuth(requireRole('COORDINATOR')(async (request, context, { params }) => {
+  // This pattern fails due to async params incompatibility
+}));
+```
+
+#### **Role-Based Authorization Examples**
+This pattern provides clear, working examples that are compatible with Next.js 14.2.5.
+
+```typescript
+// Multiple role check
+export const POST = withAuth(async (request: NextRequest, context: AuthContext) => {
+  const { roles } = context;
+  
+  const allowedRoles = ['COORDINATOR', 'ADMIN'];
+  if (!allowedRoles.some(role => roles.includes(role))) {
+    return NextResponse.json(
+      { error: 'Insufficient permissions. Coordinator or Admin role required.' },
+      { status: 403 }
+    );
+  }
+  
+  // ... implementation
+});
+
+// Permission-based check
+export const POST = withAuth(async (request: NextRequest, context: AuthContext) => {
+  const { permissions } = context;
+  
+  if (!permissions.includes('VERIFY_ASSESSMENT')) {
+    return NextResponse.json(
+      { error: 'Insufficient permissions. Verify Assessment permission required.' },
+      { status: 403 }
+    );
+  }
+  
+  // ... implementation
+});
+```
+
+#### **Basic API Route (Legacy Pattern)**
+For simple APIs without role-based access control:
+
 ```typescript
 // app/api/v1/assessments/route.ts
 import { NextRequest, NextResponse } from 'next/server';

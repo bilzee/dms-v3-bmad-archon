@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { v4 as uuidv4 } from 'uuid'
-import { withAuth, AuthContext, requireRole } from '@/lib/auth/middleware'
+import { withAuth, AuthContext } from '@/lib/auth/middleware'
 import { ResponseService } from '@/lib/services/response.service'
 import { GetResponseResponse, UpdateResponseResponse } from '@/types/response'
 import { UpdatePlannedResponseSchema } from '@/lib/validation/response'
@@ -10,9 +10,17 @@ interface RouteParams {
 }
 
 export const GET = withAuth(
-  requireRole('RESPONDER')(
-    async (request: NextRequest, context: AuthContext, { params }: RouteParams) => {
-      try {
+  async (request: NextRequest, context: AuthContext, { params }: RouteParams) => {
+    const { user, roles } = context;
+    
+    if (!roles.includes('RESPONDER')) {
+      return NextResponse.json(
+        { success: false, error: 'Insufficient permissions. Responder role required.' },
+        { status: 403 }
+      );
+    }
+    
+    try {
         const { id } = await params
         
         // Get response details
@@ -21,7 +29,21 @@ export const GET = withAuth(
           context.userId
         )
 
-        const apiResponse: GetResponseResponse = {
+        if (!response) {
+          return NextResponse.json(
+            {
+              error: 'Response not found',
+              meta: {
+                timestamp: new Date().toISOString(),
+                version: '1.0.0',
+                requestId: uuidv4()
+              }
+            },
+            { status: 404 }
+          )
+        }
+
+        const responseData: GetResponseResponse = {
           data: response,
           meta: {
             timestamp: new Date().toISOString(),
@@ -30,39 +52,9 @@ export const GET = withAuth(
           }
         }
 
-        return NextResponse.json(apiResponse, { status: 200 })
+        return NextResponse.json(responseData, { status: 200 })
       } catch (error) {
         console.error('Get response error:', error)
-        
-        if (error instanceof Error) {
-          if (error.message.includes('not found')) {
-            return NextResponse.json(
-              {
-                error: error.message,
-                meta: {
-                  timestamp: new Date().toISOString(),
-                  version: '1.0.0',
-                  requestId: uuidv4()
-                }
-              },
-              { status: 404 }
-            )
-          }
-          
-          if (error.message.includes('not assigned')) {
-            return NextResponse.json(
-              {
-                error: error.message,
-                meta: {
-                  timestamp: new Date().toISOString(),
-                  version: '1.0.0',
-                  requestId: uuidv4()
-                }
-              },
-              { status: 403 }
-            )
-          }
-        }
         
         return NextResponse.json(
           {
@@ -76,14 +68,21 @@ export const GET = withAuth(
           { status: 500 }
         )
       }
-    }
-  )
+  }
 )
 
 export const PUT = withAuth(
-  requireRole('RESPONDER')(
-    async (request: NextRequest, context: AuthContext, { params }: RouteParams) => {
-      try {
+  async (request: NextRequest, context: AuthContext, { params }: RouteParams) => {
+    const { user, roles } = context;
+    
+    if (!roles.includes('RESPONDER')) {
+      return NextResponse.json(
+        { success: false, error: 'Insufficient permissions. Responder role required.' },
+        { status: 403 }
+      );
+    }
+    
+    try {
         const { id } = await params
         const body = await request.json()
         
@@ -103,15 +102,28 @@ export const PUT = withAuth(
             { status: 400 }
           )
         }
-
-        // Update planned response
-        const response = await ResponseService.updatePlannedResponse(
+        
+        const response = await ResponseService.updateResponse(
           id,
-          validationResult.data,
-          context.userId
+          context.userId,
+          validationResult.data
         )
 
-        const apiResponse: UpdateResponseResponse = {
+        if (!response) {
+          return NextResponse.json(
+            {
+              error: 'Response not found',
+              meta: {
+                timestamp: new Date().toISOString(),
+                version: '1.0.0',
+                requestId: uuidv4()
+              }
+            },
+            { status: 404 }
+          )
+        }
+
+        const responseData: UpdateResponseResponse = {
           data: response,
           meta: {
             timestamp: new Date().toISOString(),
@@ -120,7 +132,7 @@ export const PUT = withAuth(
           }
         }
 
-        return NextResponse.json(apiResponse, { status: 200 })
+        return NextResponse.json(responseData, { status: 200 })
       } catch (error) {
         console.error('Update response error:', error)
         
@@ -180,6 +192,5 @@ export const PUT = withAuth(
           { status: 500 }
         )
       }
-    }
-  )
+  }
 )

@@ -1,9 +1,16 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/db/client';
-import { withAuth, requireAnyRole } from '@/lib/auth/middleware';
+import { withAuth } from '@/lib/auth/middleware';
 
-export const GET = withAuth(
-  requireAnyRole('COORDINATOR', 'ADMIN')(async (request: NextRequest, context) => {
+export const GET = withAuth(async (request: NextRequest, context) => {
+  const { user, roles } = context;
+  
+  if (!roles.includes('COORDINATOR') && !roles.includes('ADMIN')) {
+    return NextResponse.json(
+      { success: false, error: 'Insufficient permissions. Coordinator or Admin role required.' },
+      { status: 403 }
+    );
+  }
     try {
       console.log('DEBUG: Entities API - User roles:', context.roles) // Debug logging
       const url = new URL(request.url);
@@ -48,5 +55,5 @@ export const GET = withAuth(
         { status: 500 }
       );
     }
-  })
+  }
 );

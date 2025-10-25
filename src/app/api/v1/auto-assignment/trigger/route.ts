@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { requireRole } from '@/lib/auth/middleware';
+import { withAuth } from '@/lib/auth/middleware';
 import { triggerAutoAssignment } from '@/lib/assignment/middleware';
 import { z } from 'zod';
 
@@ -11,7 +11,15 @@ const triggerAutoAssignmentSchema = z.object({
   assignedBy: z.string().cuid().optional()
 });
 
-export const POST = requireRole('COORDINATOR')(async (request: NextRequest, context) => {
+export const POST = withAuth(async (request: NextRequest, context) => {
+  const { user, roles } = context;
+  
+  if (!roles.includes('COORDINATOR')) {
+    return NextResponse.json(
+      { success: false, error: 'Insufficient permissions. Coordinator role required.' },
+      { status: 403 }
+    );
+  }
   try {
 
     const body = await request.json();

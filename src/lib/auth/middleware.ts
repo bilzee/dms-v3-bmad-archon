@@ -7,12 +7,12 @@ export interface AuthContext {
   roles: string[]
   permissions: string[]
   request: NextRequest
-  params?: any
 }
 
 export type AuthenticatedHandler = (
   request: NextRequest,
-  context: AuthContext
+  context: AuthContext,
+  params?: any
 ) => Promise<NextResponse> | NextResponse
 
 /**
@@ -48,15 +48,14 @@ export function withAuth(handler: AuthenticatedHandler) {
       
       // Build context with extracted roles and permissions (matches architecture document)
       const userRoles = user.roles.map(ur => ur.role.name) // Extract role names
-      console.log('DEBUG: User roles:', userRoles) // Debug logging
       
       const context: AuthContext = { 
         user, // Full DB user object
         userId: user.id,
         roles: userRoles,
         permissions: user.roles.flatMap(ur => ur.role.permissions.map(p => p.code)), // Extract permission codes
-        request,
-        params: nextContext?.params 
+        request
+        // Note: params not handled here - routes extract from URL manually
       }
       
       // Call the handler with auth context
@@ -70,96 +69,9 @@ export function withAuth(handler: AuthenticatedHandler) {
   }
 }
 
-/**
- * Middleware decorator to require specific permission
- */
-export function requirePermission(permissionCode: string) {
-  return function(handler: AuthenticatedHandler): AuthenticatedHandler {
-    return async (request: NextRequest, context: AuthContext) => {
-      if (!context.user.permissions.includes(permissionCode)) {
-        return NextResponse.json(
-          { error: `Missing required permission: ${permissionCode}` },
-          { status: 403 }
-        )
-      }
-      
-      return handler(request, context)
-    }
-  }
-}
-
-/**
- * Middleware decorator to require specific role
- */
-export function requireRole(roleName: string) {
-  return function(handler: AuthenticatedHandler): AuthenticatedHandler {
-    return async (request: NextRequest, context: AuthContext) => {
-      if (!context || !context.roles || !context.roles.includes(roleName)) {
-        return NextResponse.json(
-          { error: `Missing required role: ${roleName}` },
-          { status: 403 }
-        )
-      }
-      
-      return handler(request, context)
-    }
-  }
-}
-
-/**
- * Middleware decorator to require any of multiple roles
- */
-export function requireAnyRole(...roleNames: string[]) {
-  return function(handler: AuthenticatedHandler): AuthenticatedHandler {
-    return async (request: NextRequest, context: AuthContext) => {
-      console.log('DEBUG: requireAnyRole - Checking roles:', {
-        contextRoles: context?.roles,
-        requiredRoles: roleNames,
-        hasContext: !!context,
-        hasRoles: !!(context?.roles)
-      });
-      
-      const hasRole = context && context.roles && roleNames.some(role => context.roles.includes(role))
-      
-      console.log('DEBUG: requireAnyRole - Role check result:', {
-        hasRole,
-        userRoles: context?.roles,
-        requiredRoles: roleNames
-      });
-      
-      if (!hasRole) {
-        return NextResponse.json(
-          { error: `Missing required role(s): ${roleNames.join(', ')}` },
-          { status: 403 }
-        )
-      }
-      
-      return handler(request, context)
-    }
-  }
-}
-
-/**
- * Middleware decorator to require any of multiple permissions
- */
-export function requireAnyPermission(...permissionCodes: string[]) {
-  return function(handler: AuthenticatedHandler): AuthenticatedHandler {
-    return async (request: NextRequest, context: AuthContext) => {
-      const hasPermission = context && context.permissions && permissionCodes.some(permission => 
-        context.permissions.includes(permission)
-      )
-      
-      if (!hasPermission) {
-        return NextResponse.json(
-          { error: `Missing required permission(s): ${permissionCodes.join(', ')}` },
-          { status: 403 }
-        )
-      }
-      
-      return handler(request, context)
-    }
-  }
-}
+// NOTE: Deprecated decorator functions removed as they are incompatible with Next.js 14.2.5 async params
+// Use manual role checks inside the handler instead
+// Example: if (!context.roles.includes('COORDINATOR')) { return NextResponse.json({ error: 'Insufficient permissions' }, { status: 403 }); }
 
 /**
  * Extract auth token from request headers

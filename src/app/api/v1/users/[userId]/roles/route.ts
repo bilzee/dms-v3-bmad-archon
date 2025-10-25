@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
 import { v4 as uuidv4 } from 'uuid'
-import { withAuth, requirePermission } from '@/lib/auth/middleware'
+import { withAuth } from '@/lib/auth/middleware'
 import { AuthService } from '@/lib/auth/service'
 import { prisma } from '@/lib/db/client'
 import { AssignRolesRequest } from '@/types/auth'
@@ -17,10 +17,15 @@ interface RouteParams {
 }
 
 // Assign roles to user - requires ASSIGN_ROLES permission  
-export const PUT = withAuth(requirePermission('ASSIGN_ROLES')(async (
-  request: NextRequest,
-  context
-) => {
+export const PUT = withAuth(async (request: NextRequest, context) => {
+  const { permissions } = context;
+  if (!permissions.includes('ASSIGN_ROLES')) {
+    return NextResponse.json(
+      { success: false, error: 'Insufficient permissions. Assign roles permission required.' },
+      { status: 403 }
+    );
+  }
+
   const url = new URL(request.url)
   const params = { userId: url.pathname.split('/')[4] }
   try {
@@ -115,13 +120,18 @@ export const PUT = withAuth(requirePermission('ASSIGN_ROLES')(async (
       { status: 500 }
     )
   }
-}))
+})
 
 // Get user roles - requires MANAGE_USERS permission
-export const GET = withAuth(requirePermission('MANAGE_USERS')(async (
-  request: NextRequest,
-  context
-) => {
+export const GET = withAuth(async (request: NextRequest, context) => {
+  const { permissions } = context;
+  if (!permissions.includes('MANAGE_USERS')) {
+    return NextResponse.json(
+      { success: false, error: 'Insufficient permissions. Manage users permission required.' },
+      { status: 403 }
+    );
+  }
+
   const url = new URL(request.url)
   const params = { userId: url.pathname.split('/')[4] }
   try {
@@ -173,4 +183,4 @@ export const GET = withAuth(requirePermission('MANAGE_USERS')(async (
       { status: 500 }
     )
   }
-}))
+})

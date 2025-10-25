@@ -233,7 +233,7 @@ export function FoodAssessmentForm({
                           {field.value && <Badge variant="default" className="bg-green-100 text-green-800 border-green-200">No Gap</Badge>}
                         </FormLabel>
                         <FormDescription>
-                          Food supplies are sufficient to meet the population's needs
+                          Food supplies are sufficient to meet the population&apos;s needs
                         </FormDescription>
                       </div>
                     </FormItem>

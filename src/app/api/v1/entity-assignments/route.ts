@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/db/client';
-import { withAuth, requireRole } from '@/lib/auth/middleware';
+import { withAuth, AuthContext } from '@/lib/auth/middleware';
 import { z } from 'zod';
 
 const createAssignmentSchema = z.object({
@@ -9,7 +9,15 @@ const createAssignmentSchema = z.object({
   assignedBy: z.string().min(1)
 });
 
-export const POST = requireRole('COORDINATOR')(async (request: NextRequest, context) => {
+export const POST = withAuth(async (request: NextRequest, context: AuthContext) => {
+  const { user, roles } = context;
+  
+  if (!roles.includes('COORDINATOR')) {
+    return NextResponse.json(
+      { success: false, error: 'Insufficient permissions. Coordinator role required.' },
+      { status: 403 }
+    );
+  }
   try {
     const body = await request.json();
     const validatedData = createAssignmentSchema.parse(body);
@@ -123,7 +131,8 @@ export const POST = requireRole('COORDINATOR')(async (request: NextRequest, cont
       { status: 500 }
     );
   }
-});
+  }
+);
 
 export const GET = withAuth(async (request: NextRequest, context) => {
   try {

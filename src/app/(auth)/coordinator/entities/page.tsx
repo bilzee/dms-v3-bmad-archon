@@ -533,7 +533,7 @@ export default function CoordinatorEntitiesPage() {
                     </div>
                   ) : assignments.length === 0 ? (
                     <div className="text-center p-8 text-muted-foreground">
-                      No assignments found. Use the "Assign Users" tab to create assignments.
+                      No assignments found. Use the &quot;Assign Users&quot; tab to create assignments.
                     </div>
                   ) : (
                     <Table>

@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
 import { v4 as uuidv4 } from 'uuid'
-import { withAuth, requirePermission } from '@/lib/auth/middleware'
+import { withAuth } from '@/lib/auth/middleware'
 import { AuthService } from '@/lib/auth/service'
 import { prisma } from '@/lib/db/client'
 import { CreateUserRequest, CreateUserResponse } from '@/types/auth'
@@ -17,7 +17,15 @@ const createUserSchema = z.object({
 })
 
 // Create user - requires MANAGE_USERS permission
-export const POST = withAuth(requirePermission('MANAGE_USERS')(async (request, context) => {
+export const POST = withAuth(async (request: NextRequest, context) => {
+  const { permissions } = context;
+  if (!permissions.includes('MANAGE_USERS')) {
+    return NextResponse.json(
+      { success: false, error: 'Insufficient permissions. Manage users permission required.' },
+      { status: 403 }
+    );
+  }
+
   try {
     const body = await request.json() as CreateUserRequest
     
@@ -139,10 +147,18 @@ export const POST = withAuth(requirePermission('MANAGE_USERS')(async (request, c
       { status: 500 }
     )
   }
-}))
+})
 
 // List users - requires MANAGE_USERS permission
-export const GET = withAuth(requirePermission('MANAGE_USERS')(async (request, context) => {
+export const GET = withAuth(async (request: NextRequest, context) => {
+  const { permissions } = context;
+  if (!permissions.includes('MANAGE_USERS')) {
+    return NextResponse.json(
+      { success: false, error: 'Insufficient permissions. Manage users permission required.' },
+      { status: 403 }
+    );
+  }
+
   try {
     const { searchParams } = new URL(request.url)
     const page = parseInt(searchParams.get('page') || '1')
@@ -217,4 +233,4 @@ export const GET = withAuth(requirePermission('MANAGE_USERS')(async (request, co
       { status: 500 }
     )
   }
-}))
+})
