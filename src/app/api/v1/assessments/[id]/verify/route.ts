@@ -58,11 +58,12 @@ export const POST = withAuth(async (
         );
       }
 
-      // Update assessment to verified status
+      // Update assessment to verified status and publish it
       const updatedAssessment = await tx.rapidAssessment.update({
         where: { id: assessmentId },
         data: {
           verificationStatus: 'VERIFIED',
+          status: 'PUBLISHED',
           verifiedAt: new Date(),
           verifiedBy: user.userId
         },

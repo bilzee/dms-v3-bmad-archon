@@ -123,7 +123,7 @@ export const GET = withAuth(async (request: NextRequest, context) => {
 // PUT - Bulk update auto-approval configurations
 export const PUT = withAuth(async (request: NextRequest, context) => {
   try {
-    const { roles } = context;
+    const { roles, user } = context;
     
     // Check if user has coordinator role
     if (!roles.includes('COORDINATOR')) {
@@ -169,7 +169,7 @@ export const PUT = withAuth(async (request: NextRequest, context) => {
             assessmentTypes: validatedData.conditions?.assessmentTypes || [],
             maxPriority: validatedData.conditions?.maxPriority || 'MEDIUM',
             requiresDocumentation: validatedData.conditions?.requiresDocumentation || false,
-            lastModifiedBy: user.userId,
+            lastModifiedBy: user.id,
             lastModifiedAt: new Date().toISOString(),
           }
         };
@@ -196,7 +196,7 @@ export const PUT = withAuth(async (request: NextRequest, context) => {
         // Create audit log entry for each entity
         await tx.auditLog.create({
           data: {
-            userId: user.userId,
+            userId: user.id,
             action: 'BULK_AUTO_APPROVAL_CONFIG_UPDATED',
             resource: 'Entity',
             resourceId: entity.id,
@@ -207,7 +207,7 @@ export const PUT = withAuth(async (request: NextRequest, context) => {
               conditions: validatedData.conditions,
               bulkUpdate: true,
               totalEntitiesUpdated: entities.length,
-              configuredBy: user.name || user.userId
+              configuredBy: user.name || user.id
             }
           }
         });
