@@ -19,7 +19,7 @@ import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Separator } from '@/components/ui/separator'
 
 // Icons
-import { Plus, Trash2, Package, AlertTriangle, Save, X, Wifi, WifiOff, Cloud, CloudOff } from 'lucide-react'
+import { Plus, Trash2, Package, AlertTriangle, Save, X, Wifi, WifiOff, Cloud, CloudOff, FileText } from 'lucide-react'
 
 // Shared components
 import { EntitySelector } from '@/components/shared/EntitySelector'
@@ -40,7 +40,6 @@ const ResponseItemSchema = z.object({
   name: z.string().min(1, 'Item name is required'),
   unit: z.string().min(1, 'Unit is required'),
   quantity: z.number().positive('Quantity must be positive'),
-  category: z.string().optional(),
   notes: z.string().optional()
 })
 
@@ -57,7 +56,7 @@ const ResponsePlanningFormSchema = z.object({
 type FormData = z.infer<typeof ResponsePlanningFormSchema>
 
 interface ResponsePlanningFormProps {
-  initialData?: FormData
+  initialData?: FormData & { id?: string }
   mode?: 'create' | 'edit'
   onSuccess?: (response: any) => void
   onCancel?: () => void
@@ -72,10 +71,12 @@ export function ResponsePlanningForm({
   const { user, token } = useAuthStore()
   const queryClient = useQueryClient()
   const [isDirty, setIsDirty] = useState(false)
-  const [editingResponseId, setEditingResponseId] = useState<string | null>(null)
+  const [editingResponseId, setEditingResponseId] = useState<string | null>(
+    mode === 'edit' && initialData?.id ? initialData.id : null
+  )
 
-  // Collaboration hook
-  const collaboration = useCollaboration(editingResponseId)
+  // Collaboration hook - Only for create mode
+  const collaboration = useCollaboration(mode === 'create' ? editingResponseId : null)
 
   // Offline hook
   const {
@@ -156,6 +157,28 @@ export function ResponsePlanningForm({
     enabled: !!selectedEntityId && !!token
   })
 
+  // Get assessment data for edit mode
+  const { data: editAssessment = null } = useQuery({
+    queryKey: ['assessment', initialData?.assessmentId],
+    queryFn: async () => {
+      if (!initialData?.assessmentId || !token) return null
+      
+      const response = await fetch(`/api/v1/assessments/${initialData.assessmentId}`, {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      })
+      
+      if (!response.ok) {
+        throw new Error('Failed to fetch assessment')
+      }
+      
+      const result = await response.json()
+      return result.data
+    },
+    enabled: !!initialData?.assessmentId && !!token && mode === 'edit'
+  })
+
   // Create planned response mutation
   const createMutation = useMutation({
     mutationFn: async (data: CreatePlannedResponseInput) => {
@@ -204,8 +227,8 @@ export function ResponsePlanningForm({
     onSuccess: (response) => {
       queryClient.invalidateQueries({ queryKey: ['responses', 'planned', user?.id] })
       setIsDirty(false)
-      // Stop editing after successful update
-      if (collaboration.isCurrentUserCollaborating) {
+      // Stop editing after successful update (only in create mode)
+      if (mode === 'create' && collaboration.isCurrentUserCollaborating) {
         collaboration.actions.stopEditing()
       }
       
@@ -234,27 +257,32 @@ export function ResponsePlanningForm({
 
   const handleSubmit = form.handleSubmit(async (data) => {
     try {
-      // Check if someone else is editing (for edit mode)
-      if (mode === 'edit' && collaboration.isActive && !collaboration.canEdit) {
+      // Collaboration checks only apply to create mode
+      if (mode === 'create' && collaboration.isActive && !collaboration.canEdit) {
         throw new Error('Another responder is currently editing this response. Please wait for them to finish.')
       }
 
-      // Start editing if collaborating
+      // Start editing if collaborating (only in create mode)
       if (mode === 'create' && collaboration.isCurrentUserCollaborating) {
         collaboration.actions.startEditing()
       }
       
-      if (mode === 'edit' && collaboration.isCurrentUserCollaborating) {
-        collaboration.actions.startEditing()
+      // Auto-assign category based on response type
+      const dataWithCategory = {
+        ...data,
+        items: data.items.map(item => ({
+          ...item,
+          category: data.type // Auto-assign category from response type
+        }))
       }
-      
+
       if (mode === 'create') {
-        createMutation.mutate(data)
+        createMutation.mutate(dataWithCategory)
       } else if (mode === 'edit') {
         if (!editingResponseId) {
           throw new Error('Response ID is required for editing')
         }
-        updateMutation.mutate({ id: editingResponseId, data })
+        updateMutation.mutate({ id: editingResponseId, data: dataWithCategory })
       }
     } catch (error) {
       console.error('Form submission error:', error)
@@ -286,14 +314,14 @@ export function ResponsePlanningForm({
     setIsDirty(form.formState.isDirty)
   }, [form.formState.isDirty])
 
-  // Cleanup collaboration on unmount
+  // Cleanup collaboration on unmount (only in create mode)
   useEffect(() => {
     return () => {
-      if (collaboration.isCurrentUserCollaborating) {
+      if (mode === 'create' && collaboration.isCurrentUserCollaborating) {
         collaboration.actions.leaveCollaboration()
       }
     }
-  }, [collaboration.isCurrentUserCollaborating, collaboration.actions])
+  }, [mode, collaboration.isCurrentUserCollaborating, collaboration.actions])
 
   const isLoading = createMutation.isPending || updateMutation.isPending || entitiesLoading || assessmentsLoading
 
@@ -359,8 +387,8 @@ export function ResponsePlanningForm({
         </CardDescription>
       </CardHeader>
       <CardContent>
-        {/* Collaboration Status - Show for edit mode or when collaborating */}
-        {(mode === 'edit' || collaboration.isActive) && (
+        {/* Collaboration Status - Only show for create mode or when actively collaborating */}
+        {mode === 'create' && collaboration.isActive && (
           <div className="mb-6">
             <CollaborationStatus
               collaboration={collaboration}
@@ -399,23 +427,63 @@ export function ResponsePlanningForm({
               />
             )}
 
+            {/* Entity Display - Read-only in edit mode */}
+            {mode === 'edit' && initialData?.entityId && (
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Entity</label>
+                <div className="flex items-center gap-2 p-3 bg-gray-50 border rounded-md">
+                  <span className="text-sm">
+                    {entities.find(e => e.id === initialData.entityId)?.name || 'Loading...'}
+                  </span>
+                  <Badge variant="outline" className="text-xs">
+                    {entities.find(e => e.id === initialData.entityId)?.type || 'Unknown'}
+                  </Badge>
+                </div>
+              </div>
+            )}
+
             {/* Assessment Selection */}
-            <AssessmentSelector
-              entityId={form.watch('entityId')}
-              value={form.watch('assessmentId')}
-              onValueChange={(assessmentId, assessment) => {
-                form.setValue('assessmentId', assessmentId)
-                // Auto-match response type to assessment type
-                if (assessment && assessment.rapidAssessmentType) {
-                  form.setValue('type', assessment.rapidAssessmentType)
-                }
-                // Note: Don't override entityId as it's already selected by the user
-                // The assessment should be for the same entity that was selected
-              }}
-              disabled={mode === 'edit'}
-              showConflictWarning={true}
-              selectedAssessment={assessments.find(a => a.id === form.watch('assessmentId'))}
-            />
+            {mode === 'create' ? (
+              <AssessmentSelector
+                entityId={form.watch('entityId')}
+                value={form.watch('assessmentId')}
+                onValueChange={(assessmentId, assessment) => {
+                  form.setValue('assessmentId', assessmentId)
+                  // Auto-match response type to assessment type
+                  if (assessment && assessment.rapidAssessmentType) {
+                    form.setValue('type', assessment.rapidAssessmentType)
+                  }
+                  // Note: Don't override entityId as it's already selected by the user
+                  // The assessment should be for the same entity that was selected
+                }}
+                disabled={mode === 'edit'}
+                showConflictWarning={true}
+                selectedAssessment={assessments.find(a => a.id === form.watch('assessmentId'))}
+              />
+            ) : (
+              // Assessment Display - Read-only in edit mode
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Assessment</label>
+                <div className="p-3 bg-gray-50 border rounded-md">
+                  {editAssessment ? (
+                    <div className="space-y-2">
+                      <div className="flex items-center gap-2">
+                        <FileText className="h-4 w-4 text-blue-600" />
+                        <span className="text-sm font-medium">{editAssessment.rapidAssessmentType}</span>
+                        <Badge variant="outline" className="text-xs">
+                          {editAssessment.verificationStatus}
+                        </Badge>
+                      </div>
+                      <div className="text-xs text-muted-foreground">
+                        Date: {new Date(editAssessment.rapidAssessmentDate).toLocaleDateString()}
+                      </div>
+                    </div>
+                  ) : (
+                    <span className="text-sm text-muted-foreground">Loading assessment details...</span>
+                  )}
+                </div>
+              </div>
+            )}
 
             {/* Response Type and Priority */}
             <div className="grid grid-cols-2 gap-4">
@@ -604,23 +672,6 @@ export function ResponsePlanningForm({
                         )}
                       />
                     </div>
-
-                    <FormField
-                      control={form.control}
-                      name={`items.${index}.category`}
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Category</FormLabel>
-                            <FormControl>
-                              <Input
-                                placeholder="e.g., Medical, Shelter, Food"
-                                {...field}
-                              />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
 
                     <FormField
                       control={form.control}

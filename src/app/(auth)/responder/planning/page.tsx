@@ -15,13 +15,12 @@ import { Plus, Edit, Package, AlertTriangle, Search, Filter } from 'lucide-react
 // Forms and components
 import { ResponsePlanningForm } from '@/components/forms/response'
 import { ResponsePlanningDashboard } from '@/components/response/ResponsePlanningDashboard'
-import { ResponseService } from '@/lib/services/response-client.service'
 
 // Hooks and utilities
 import { useAuthStore } from '@/stores/auth.store'
 
 export default function ResponsePlanningPage() {
-  const { user } = useAuthStore()
+  const { user, token } = useAuthStore()
   const [showCreateForm, setShowCreateForm] = useState(false)
   const [editingResponse, setEditingResponse] = useState<string | null>(null)
   const [isClient, setIsClient] = useState(false)
@@ -31,17 +30,59 @@ export default function ResponsePlanningPage() {
     setIsClient(true)
   }, [])
 
+  // Fetch response data for editing
+  const { data: editingResponseData, isLoading: isEditingLoading } = useQuery({
+    queryKey: ['response', editingResponse],
+    queryFn: async () => {
+      if (!editingResponse || !token) return null
+      
+      const response = await fetch(`/api/v1/responses/${editingResponse}`, {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      })
+      
+      if (!response.ok) {
+        if (response.status === 401) {
+          throw new Error('Authentication failed - please log in again')
+        } else if (response.status === 403) {
+          throw new Error('You do not have permission to access this response')
+        } else if (response.status === 404) {
+          throw new Error('Response not found')
+        } else {
+          throw new Error('Failed to fetch response')
+        }
+      }
+      
+      const result = await response.json()
+      return result.data
+    },
+    enabled: !!editingResponse && !!user && !!token && isClient
+  })
+
   // Get assigned planned responses for this responder
   const { data: responsesData, isLoading, error, refetch } = useQuery({
     queryKey: ['responses', 'planned', user?.id],
     queryFn: async () => {
-      if (!user) throw new Error('User not authenticated')
-      return await ResponseService.getPlannedResponsesForResponder({
-        page: 1,
-        limit: 50
+      if (!user || !token) throw new Error('User not authenticated')
+      
+      const response = await fetch(`/api/v1/responses/planned/assigned?page=1&limit=50`, {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
       })
+      
+      if (!response.ok) {
+        throw new Error('Failed to fetch planned responses')
+      }
+      
+      const result = await response.json()
+      return {
+        responses: result.data || [],
+        total: result.meta?.total || 0
+      }
     },
-    enabled: !!user && isClient, // Only run query on client side after hydration
+    enabled: !!user && !!token && isClient, // Only run query on client side after hydration
     initialData: { responses: [], total: 0 }
   })
 
@@ -61,7 +102,23 @@ export default function ResponsePlanningPage() {
     setEditingResponse(null)
   }
 
-  // Loading state
+  // Loading state for editing response
+  if (isEditingLoading) {
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle>Loading Response Plan...</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="flex items-center justify-center py-8">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+          </div>
+        </CardContent>
+      </Card>
+    )
+  }
+
+  // Loading state for response list
   if (isLoading) {
     return (
       <Card>
@@ -116,6 +173,22 @@ export default function ResponsePlanningPage() {
         
         <ResponsePlanningForm
           mode={editingResponse ? 'edit' : 'create'}
+          initialData={editingResponse ? {
+            id: editingResponse,
+            assessmentId: editingResponseData?.assessmentId || '',
+            entityId: editingResponseData?.entityId || '',
+            type: editingResponseData?.type || 'HEALTH',
+            priority: editingResponseData?.priority || 'MEDIUM',
+            description: editingResponseData?.description || '',
+            items: editingResponseData?.items?.map(item => ({
+              ...item,
+              // Remove category from display since it's auto-assigned
+              name: item.name,
+              unit: item.unit,
+              quantity: item.quantity,
+              notes: item.notes
+            })) || [{ name: '', unit: '', quantity: 1 }]
+          } : undefined}
           onCancel={handleBackToList}
           onSuccess={() => {
             handleBackToList()
