@@ -15,9 +15,9 @@ import { Separator } from '@/components/ui/separator'
 import { FileText, Calendar, MapPin, User, AlertTriangle, CheckCircle, Clock } from 'lucide-react'
 
 // Services and types
-import { entityAssignmentService } from '@/lib/services/entity-assignment.service'
 import { responseOfflineService } from '@/lib/services/response-offline.service'
 import { responseService } from '@/lib/services/response.service'
+import { useAuthStore } from '@/stores/auth.store'
 
 interface AssessmentSelectorProps {
   entityId: string
@@ -34,7 +34,7 @@ interface AssessmentWithDetails {
   rapidAssessmentDate: string
   status: string
   verificationStatus: string
-  affectedEntity: {
+  entity: {
     id: string
     name: string
     type: string
@@ -55,13 +55,28 @@ export function AssessmentSelector({
   selectedAssessment
 }: AssessmentSelectorProps) {
   const [isCheckingConflicts, setIsCheckingConflicts] = useState(false)
+  const { token } = useAuthStore()
 
   // Get verified assessments for the entity
   const { data: assessments = [], isLoading, error } = useQuery({
     queryKey: ['assessments', 'verified', entityId, 'response-planning'],
     queryFn: async () => {
-      if (!entityId) return []
-      const assessments = await entityAssignmentService.getVerifiedAssessments(entityId)
+      if (!entityId || !token) {
+        return []
+      }
+      
+      const response = await fetch(`/api/v1/assessments/verified?entityId=${entityId}`, {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      })
+      
+      if (!response.ok) {
+        throw new Error('Failed to fetch verified assessments')
+      }
+      
+      const result = await response.json()
+      const assessments = result.data || []
       
       // Check each assessment for existing responses
       const assessmentsWithConflicts = await Promise.all(
@@ -87,7 +102,7 @@ export function AssessmentSelector({
       
       return assessmentsWithConflicts
     },
-    enabled: !!entityId && !disabled
+    enabled: !!entityId && !disabled && !!token
   })
 
   const handleAssessmentSelect = async (assessmentId: string) => {
@@ -223,9 +238,9 @@ export function AssessmentSelector({
                 <div className="flex items-center gap-2">
                   <MapPin className="h-4 w-4 text-blue-600" />
                   <span className="text-sm">
-                    <strong>Entity:</strong> {selectedAssessment.affectedEntity?.name}
+                    <strong>Entity:</strong> {selectedAssessment.entity?.name}
                     <Badge variant="outline" className="ml-2 text-xs">
-                      {selectedAssessment.affectedEntity?.type}
+                      {selectedAssessment.entity?.type}
                     </Badge>
                   </span>
                 </div>

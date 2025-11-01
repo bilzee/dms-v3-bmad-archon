@@ -440,11 +440,10 @@ export class EntityAssignmentServiceImpl implements EntityAssignmentService {
     try {
       const assessments = await prisma.rapidAssessment.findMany({
         where: {
-          affectedEntityId: entityId,
+          entityId: entityId,
           verificationStatus: {
             in: ['VERIFIED', 'AUTO_VERIFIED']
-          },
-          status: 'PUBLISHED'
+          }
         },
         select: {
           id: true,
@@ -452,11 +451,19 @@ export class EntityAssignmentServiceImpl implements EntityAssignmentService {
           rapidAssessmentDate: true,
           status: true,
           verificationStatus: true,
-          affectedEntity: {
+          verifiedAt: true,
+          verifiedBy: true,
+          entity: {
             select: {
               id: true,
               name: true,
               type: true
+            }
+          },
+          assessor: {
+            select: {
+              name: true,
+              email: true
             }
           }
         },

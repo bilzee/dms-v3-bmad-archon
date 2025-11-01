@@ -13,7 +13,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Alert, AlertDescription } from '@/components/ui/alert'
 
 // Internal services and hooks
-import { entityAssignmentService, Entity } from '@/lib/services/entity-assignment.service'
+import type { Entity } from '@/lib/services/entity-assignment.service'
 import { useAuthStore } from '@/stores/auth.store'
 import { useFilteredEntities } from '@/hooks/useEntities'
 import { EntitySelectorSkeleton } from './EntitySelectorSkeleton'

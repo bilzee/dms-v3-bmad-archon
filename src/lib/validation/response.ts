@@ -9,8 +9,8 @@ export const ResponseItemSchema = z.object({
 })
 
 export const CreatePlannedResponseSchema = z.object({
-  assessmentId: z.string().uuid('Invalid assessment ID'),
-  entityId: z.string().uuid('Invalid entity ID'),
+  assessmentId: z.string().min(1, 'Assessment ID is required'),
+  entityId: z.string().min(1, 'Entity ID is required'),
   type: z.enum(['HEALTH', 'WASH', 'SHELTER', 'FOOD', 'SECURITY', 'POPULATION', 'LOGISTICS']),
   priority: z.enum(['CRITICAL', 'HIGH', 'MEDIUM', 'LOW']).default('MEDIUM'),
   description: z.string().optional(),
@@ -27,8 +27,8 @@ export const UpdatePlannedResponseSchema = z.object({
 })
 
 export const ResponseQuerySchema = z.object({
-  assessmentId: z.string().uuid().optional(),
-  entityId: z.string().uuid().optional(),
+  assessmentId: z.string().min(1).optional(),
+  entityId: z.string().min(1).optional(),
   status: z.enum(['PLANNED', 'DELIVERED']).optional(),
   type: z.enum(['HEALTH', 'WASH', 'SHELTER', 'FOOD', 'SECURITY', 'POPULATION', 'LOGISTICS']).optional(),
   page: z.number().positive().default(1),

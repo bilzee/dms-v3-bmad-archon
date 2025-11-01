@@ -6,7 +6,7 @@ export class ResponseOfflineService {
   private static readonly BASE_URL = '/api/v1/responses'
 
   // Create planned response with offline support
-  static async createPlannedResponse(data: CreatePlannedResponseInput): Promise<any> {
+  async createPlannedResponse(data: CreatePlannedResponseInput): Promise<any> {
     try {
       // Try online first
       const response = await ResponseService.createPlannedResponse(data)
@@ -60,7 +60,7 @@ export class ResponseOfflineService {
   }
 
   // Update planned response with offline support
-  static async updatePlannedResponse(id: string, data: UpdatePlannedResponseInput): Promise<any> {
+  async updatePlannedResponse(id: string, data: UpdatePlannedResponseInput): Promise<any> {
     try {
       // Try online first
       const response = await ResponseService.updatePlannedResponse(id, data)

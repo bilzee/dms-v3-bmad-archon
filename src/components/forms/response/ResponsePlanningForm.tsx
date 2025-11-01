@@ -29,9 +29,9 @@ import { CollaborationStatus } from '@/components/response/CollaborationStatus'
 // Hooks
 import { useCollaboration } from '@/hooks/useCollaboration'
 import { useOffline } from '@/hooks/useOffline'
+import { useSync } from '@/hooks/useSync'
 
 // Services and types
-import { entityAssignmentService } from '@/lib/services/entity-assignment.service'
 import { responseOfflineService } from '@/lib/services/response-offline.service'
 import { CreatePlannedResponseInput, ResponseItem } from '@/lib/validation/response'
 import { useAuthStore } from '@/stores/auth.store'
@@ -45,8 +45,8 @@ const ResponseItemSchema = z.object({
 })
 
 const ResponsePlanningFormSchema = z.object({
-  assessmentId: z.string().uuid('Invalid assessment ID'),
-  entityId: z.string().uuid('Invalid entity ID'),
+  assessmentId: z.string().min(1, 'Assessment ID is required'),
+  entityId: z.string().min(1, 'Entity ID is required'),
   type: z.enum(['HEALTH', 'WASH', 'SHELTER', 'FOOD', 'SECURITY', 'POPULATION', 'LOGISTICS']),
   priority: z.enum(['CRITICAL', 'HIGH', 'MEDIUM', 'LOW']).default('MEDIUM'),
   description: z.string().optional(),
@@ -69,7 +69,7 @@ export function ResponsePlanningForm({
   onSuccess,
   onCancel 
 }: ResponsePlanningFormProps) {
-  const { user } = useAuthStore()
+  const { user, token } = useAuthStore()
   const queryClient = useQueryClient()
   const [isDirty, setIsDirty] = useState(false)
   const [editingResponseId, setEditingResponseId] = useState<string | null>(null)
@@ -86,6 +86,14 @@ export function ResponsePlanningForm({
     queueOperation,
     getOfflineResponse
   } = useOffline()
+
+  // Sync hook
+  const { triggerSync, isSyncing: syncInProgress } = useSync({
+    autoInitialize: true,
+    enableAutoSync: true,
+    syncInterval: 1, // 1 minute for more responsive sync
+    enableNotifications: true
+  })
 
   const form = useForm<FormData>({
     resolver: zodResolver(ResponsePlanningFormSchema),
@@ -107,10 +115,22 @@ export function ResponsePlanningForm({
   const { data: entities = [], isLoading: entitiesLoading } = useQuery({
     queryKey: ['entities', 'assigned', user?.id],
     queryFn: async () => {
-      if (!user) throw new Error('User not authenticated')
-      return await entityAssignmentService.getAssignedEntities(user.id)
+      if (!user || !token) throw new Error('User not authenticated')
+      
+      const response = await fetch(`/api/v1/entities/assigned?userId=${user.id}`, {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      })
+      
+      if (!response.ok) {
+        throw new Error('Failed to fetch assigned entities')
+      }
+      
+      const result = await response.json()
+      return result.data || []
     },
-    enabled: !!user && mode === 'create'
+    enabled: !!user && !!token && mode === 'create'
   })
 
   // Get available assessments for selected entity
@@ -118,10 +138,22 @@ export function ResponsePlanningForm({
   const { data: assessments = [], isLoading: assessmentsLoading } = useQuery({
     queryKey: ['assessments', 'verified', selectedEntityId],
     queryFn: async () => {
-      if (!selectedEntityId) return []
-      return await entityAssignmentService.getVerifiedAssessments(selectedEntityId)
+      if (!selectedEntityId || !token) return []
+      
+      const response = await fetch(`/api/v1/assessments/verified?entityId=${selectedEntityId}`, {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      })
+      
+      if (!response.ok) {
+        throw new Error('Failed to fetch verified assessments')
+      }
+      
+      const result = await response.json()
+      return result.data || []
     },
-    enabled: !!selectedEntityId
+    enabled: !!selectedEntityId && !!token
   })
 
   // Create planned response mutation
@@ -142,6 +174,13 @@ export function ResponsePlanningForm({
       // Show different success message based on sync status
       if (response.syncStatus === 'pending') {
         console.log('✅ Response plan saved locally. Will sync when you reconnect.')
+        
+        // If online, trigger immediate sync to submit pending responses
+        if (isOnline && !syncInProgress) {
+          triggerSync().catch(error => {
+            console.error('Failed to trigger immediate sync:', error)
+          })
+        }
       } else if (response.meta?.fromCache) {
         console.log('✅ Response plan loaded from offline cache.')
       } else {
@@ -173,6 +212,13 @@ export function ResponsePlanningForm({
       // Show different success message based on sync status
       if (response.syncStatus === 'pending') {
         console.log('✅ Response plan updated locally. Will sync when you reconnect.')
+        
+        // If online, trigger immediate sync to submit pending responses
+        if (isOnline && !syncInProgress) {
+          triggerSync().catch(error => {
+            console.error('Failed to trigger immediate sync:', error)
+          })
+        }
       } else if (response.meta?.fromCache) {
         console.log('✅ Response plan loaded from offline cache.')
       } else {
@@ -359,10 +405,12 @@ export function ResponsePlanningForm({
               value={form.watch('assessmentId')}
               onValueChange={(assessmentId, assessment) => {
                 form.setValue('assessmentId', assessmentId)
-                // Set other form fields based on selected assessment
-                if (assessment) {
-                  form.setValue('entityId', assessment.affectedEntityId)
+                // Auto-match response type to assessment type
+                if (assessment && assessment.rapidAssessmentType) {
+                  form.setValue('type', assessment.rapidAssessmentType)
                 }
+                // Note: Don't override entityId as it's already selected by the user
+                // The assessment should be for the same entity that was selected
               }}
               disabled={mode === 'edit'}
               showConflictWarning={true}
@@ -378,9 +426,9 @@ export function ResponsePlanningForm({
                   <FormItem>
                     <FormLabel>Response Type *</FormLabel>
                     <FormControl>
-                      <Select value={field.value} onValueChange={field.onChange}>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select response type..." />
+                      <Select value={field.value} onValueChange={field.onChange} disabled={true}>
+                        <SelectTrigger className="bg-gray-50">
+                          <SelectValue placeholder="Auto-populated from assessment..." />
                         </SelectTrigger>
                         <SelectContent>
                           <SelectItem value="HEALTH">Health</SelectItem>
@@ -393,6 +441,9 @@ export function ResponsePlanningForm({
                         </SelectContent>
                       </Select>
                     </FormControl>
+                    <FormDescription>
+                      Auto-populated from selected assessment type
+                    </FormDescription>
                     <FormMessage />
                   </FormItem>
                 )}

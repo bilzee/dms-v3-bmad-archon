@@ -15,7 +15,7 @@ import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Package, Edit, Search, Filter, Plus, AlertTriangle, Clock, CheckCircle } from 'lucide-react'
 
 // Components and services
-import { responseService } from '@/lib/services/response-client.service'
+import { ResponseService } from '@/lib/services/response-client.service'
 import { useAuthStore } from '@/stores/auth.store'
 
 interface ResponsePlanningDashboardProps {
@@ -38,7 +38,7 @@ export function ResponsePlanningDashboard({
     queryKey: ['responses', 'planned', 'dashboard', user?.id],
     queryFn: async () => {
       if (!user) throw new Error('User not authenticated')
-      return await responseService.getPlannedResponsesForResponder({
+      return await ResponseService.getPlannedResponsesForResponder({
         page: 1,
         limit: 100
       })
@@ -290,27 +290,31 @@ export function ResponsePlanningDashboard({
                         <h4 className="font-medium text-sm mb-2">Items</h4>
                         <div className="space-y-1">
                           {(() => {
-                            const items = JSON.parse(response.items || '[]')
-                            return items.slice(0, 2).map((item: any, index: number) => (
-                              <div key={index} className="text-sm flex items-center justify-between">
-                                <span className="flex items-center gap-2">
-                                  <span className="font-medium">{item.quantity} {item.unit}</span>
-                                  <span className="text-muted-foreground">•</span>
-                                  <span>{item.name}</span>
-                                </span>
-                                {item.category && (
-                                  <Badge variant="outline" className="text-xs shrink-0">
-                                    {item.category}
-                                  </Badge>
+                            const items = Array.isArray(response.items) ? response.items : []
+                            return (
+                              <>
+                                {items.slice(0, 2).map((item: any, index: number) => (
+                                  <div key={index} className="text-sm flex items-center justify-between">
+                                    <span className="flex items-center gap-2">
+                                      <span className="font-medium">{item.quantity} {item.unit}</span>
+                                      <span className="text-muted-foreground">•</span>
+                                      <span>{item.name}</span>
+                                    </span>
+                                    {item.category && (
+                                      <Badge variant="outline" className="text-xs shrink-0">
+                                        {item.category}
+                                      </Badge>
+                                    )}
+                                  </div>
+                                ))}
+                                {items.length > 2 && (
+                                  <div className="text-sm text-muted-foreground">
+                                    +{items.length - 2} more items...
+                                  </div>
                                 )}
-                              </div>
-                            ))
+                              </>
+                            )
                           })()}
-                          {JSON.parse(response.items || '[]').length > 2 && (
-                            <div className="text-sm text-muted-foreground">
-                              +{JSON.parse(response.items || '[]').length - 2} more items...
-                            </div>
-                          )}
                         </div>
                       </div>
                       
