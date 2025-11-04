@@ -52,9 +52,41 @@ export default function AssessorRapidAssessmentsPage() {
     fetchAssessments()
   }, [token])
 
+  // Listen for new assessment creation events
+  useEffect(() => {
+    const handleStorageChange = (event: StorageEvent) => {
+      if (event.key === 'assessment-created' && event.newValue) {
+        // Refresh assessments when a new one is created
+        const fetchAssessments = async () => {
+          try {
+            if (token) {
+              const response = await fetch(`/api/v1/rapid-assessments?userId=me`, {
+                headers: {
+                  'Authorization': `Bearer ${token}`
+                }
+              })
+              
+              if (response.ok) {
+                const result = await response.json()
+                setAssessments(result.data || [])
+              }
+            }
+          } catch (error) {
+            console.error('Error refreshing assessments:', error)
+          }
+        }
+
+        fetchAssessments()
+      }
+    }
+
+    window.addEventListener('storage', handleStorageChange)
+    return () => window.removeEventListener('storage', handleStorageChange)
+  }, [token])
+
   const handleNewAssessment = () => {
     if (selectedType) {
-      router.push(`/rapid-assessments/new?type=${selectedType}`)
+      router.push(`/assessor/rapid-assessments/new?type=${selectedType}`)
     }
   }
 
@@ -63,8 +95,6 @@ export default function AssessorRapidAssessmentsPage() {
     const displayStatus = assessment.status === 'SUBMITTED' ? assessment.verificationStatus : assessment.status;
     
     switch (displayStatus) {
-      case 'COMPLETED':
-        return <Badge className="bg-green-100 text-green-800"><CheckCircle className="w-3 h-3 mr-1" />Completed</Badge>
       case 'VERIFIED':
         return <Badge className="bg-green-100 text-green-800"><CheckCircle className="w-3 h-3 mr-1" />Verified</Badge>
       case 'AUTO_VERIFIED':
