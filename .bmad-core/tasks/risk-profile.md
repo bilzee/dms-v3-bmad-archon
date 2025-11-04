@@ -30,6 +30,7 @@ Identify, assess, and prioritize risks in the story implementation. Provide risk
 - `DATA`: Data Risks
 - `BUS`: Business Risks
 - `OPS`: Operational Risks
+- `REG`: Regression Risks (New)
 
 1. **Technical Risks (TECH)**
    - Architecture complexity
@@ -73,7 +74,51 @@ Identify, assess, and prioritize risks in the story implementation. Provide risk
    - Documentation inadequacy
    - Knowledge transfer issues
 
+7. **Regression Risks (REG)**
+   - Breaking existing functionality
+   - Component dependency conflicts
+   - Role-based workflow disruption
+   - SSR/Client hydration mismatches
+   - Entity assignment cascade failures
+   - Authentication flow interruptions
+
 ## Risk Analysis Process
+
+### 0. Baseline Assessment (New - Regression Prevention)
+
+**Before identifying risks, establish system baseline:**
+
+1. **System Health Check**
+   - Run baseline verification: `npm run verify:baseline`
+   - Document current functionality status
+   - Identify existing technical debt hotspots
+
+2. **Dependency Analysis**
+   - Map component dependencies affected by story
+   - Identify role-based workflow touchpoints
+   - Assess database schema impact areas
+
+3. **Impact Prediction**
+   - Files likely to be modified
+   - Integration points at risk
+   - Authentication/authorization chains affected
+
+```yaml
+baseline_assessment:
+  system_health: 'HEALTHY|DEGRADED|CRITICAL'
+  baseline_command: 'npm run verify:baseline'
+  dependency_map:
+    - component: 'UserAuth'
+      risk_level: 'HIGH'
+      reason: 'Story touches authentication flows'
+  predicted_impact:
+    high_risk_files:
+      - 'src/lib/auth/session.ts'
+      - 'src/components/auth/LoginForm.tsx'
+    integration_points:
+      - 'API authentication middleware'
+      - 'Role-based route protection'
+```
 
 ### 1. Risk Identification
 
@@ -81,7 +126,7 @@ For each category, identify specific risks:
 
 ```yaml
 risk:
-  id: 'SEC-001' # Use prefixes: SEC, PERF, DATA, BUS, OPS, TECH
+  id: 'SEC-001' # Use prefixes: SEC, PERF, DATA, BUS, OPS, TECH, REG
   category: security
   title: 'Insufficient input validation on user forms'
   description: 'Form inputs not properly sanitized could lead to XSS attacks'
@@ -89,6 +134,18 @@ risk:
     - 'UserRegistrationForm'
     - 'ProfileUpdateForm'
   detection_method: 'Code review revealed missing validation'
+
+# Example regression risk:
+regression_risk:
+  id: 'REG-001'
+  category: regression
+  title: 'Entity assignment cascades may break after auth changes'
+  description: 'Modifying authentication flows could disrupt existing entity assignment logic'
+  affected_components:
+    - 'EntityAssignmentService'
+    - 'RoleBasedAccess'
+  detection_method: 'Baseline assessment identified dependency'
+  baseline_verification: 'npm run verify:baseline && npm test -- --grep="entity assignment"'
 ```
 
 ### 2. Risk Assessment
@@ -337,7 +394,63 @@ Based on risk profile, recommend:
 - Else → Gate = PASS
 - Unmitigated risks → Document in gate
 
-### Output 3: Story Hook Line
+### Output 3: QA-to-User Simplified Handoff Instructions
+
+**Print this complete handoff message for User:**
+
+```markdown
+## 🔄 QA-User Handoff: Story {epic}.{story}
+
+### 📊 Risk Assessment Complete
+- **Risk Level:** [HIGH/MEDIUM/LOW based on highest risk score]
+- **Regression Risks:** [Yes/No - if Yes, living test capture recommended]
+- **Baseline Health:** [HEALTHY/DEGRADED/CRITICAL based on current state]
+
+### 🛠️ Pre-Implementation Commands (Execute Before Dev Implementation):
+
+**Step 1: Baseline Verification (MANDATORY)**
+```bash
+npm run verify:baseline
+```
+✅ **Must Pass:** Build succeeds, no critical system health issues
+❌ **If Fails:** Fix all issues before proceeding with implementation
+
+**Step 2: Living Test Setup (If Regression Risks = Yes)**
+```bash
+npm run living-tests start --context "{epic}.{story}-regression-monitoring"
+```
+✅ **Success:** Living test session started successfully
+⚠️ **If Fails:** Note failure, proceed without capture, inform QA
+
+### 🎯 Implementation Ready
+Once pre-implementation commands succeed, proceed with normal dev implementation:
+```bash
+/dev implement story {epic}.{story}
+```
+
+### 🧹 Post-Implementation Cleanup (Execute After Dev Completion):
+```bash
+npm run living-tests stop
+```
+✅ **Success:** Living test session stopped, capture data saved
+
+### 📋 Simplified Workflow Checklist:
+- [ ] Baseline verification passes
+- [ ] Living test capture started (if regression risks identified)
+- [ ] Dev agent implements story normally (no interruptions)
+- [ ] Living test capture stopped after implementation
+- [ ] Ready for QA review
+
+### 🎯 Key Benefits of Simplified Process:
+- **No real-time validation required** - dev agent implements without interruption
+- **Focused dev implementation** - no context bloat or complex handoffs
+- **80% regression prevention** with minimal token overhead
+- **Practical workflow** that matches actual usage patterns
+
+Ready for implementation! Dev agent can proceed normally after baseline verification.
+```
+
+### Output 4: Story Hook Line
 
 **Print this line for review task to quote:**
 
@@ -353,3 +466,6 @@ Risk profile: qa.qaLocation/assessments/{epic}.{story}-risk-{YYYYMMDD}.md
 - Link risks to specific test requirements
 - Track residual risk after mitigation
 - Update risk profile as story evolves
+- **Establish baseline before assessing new risks (regression prevention)**
+- **Provide Dev agent with specific validation commands**
+- **Consider regression risks as critical as security risks**

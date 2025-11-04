@@ -31,16 +31,34 @@ required:
 - Diff > 500 lines
 - Previous gate was FAIL/CONCERNS
 - Story has > 5 acceptance criteria
+- **Living test capture session was active (indicates manual fixes occurred)**
+- **Baseline verification shows degraded health since story start**
 
 ### 2. Comprehensive Analysis
 
-**A. Requirements Traceability**
+**A. Living Test Analysis (New - First Priority)**
+
+- **Fix Capture Review**: Analyze any captured debugging sessions during implementation
+  - Review living test session logs if available
+  - Validate quality of auto-generated tests from manual fixes
+  - Map captured fixes back to acceptance criteria gaps
+- **Test Evolution Assessment**: Compare initial test design vs actual implementation needs
+  - Identify patterns in manual fixes that suggest missing test coverage
+  - Assess whether captured fixes address real architectural issues
+  - Recommend test architecture improvements based on fix patterns
+- **Regression Validation**: Cross-reference with pre-implementation risk assessment
+  - Verify baseline functionality still works after implementation
+  - Validate that identified regression risks were properly mitigated
+  - Check that living test system captured appropriate fixes
+
+**B. Requirements Traceability**
 
 - Map each acceptance criteria to its validating tests (document mapping with Given-When-Then, not test code)
 - Identify coverage gaps
 - Verify all requirements have corresponding test cases
+- **Cross-reference with captured fixes to identify missed requirements**
 
-**B. Code Quality Review**
+**C. Code Quality Review**
 
 - Architecture and design patterns
 - Refactoring opportunities (and perform them)
@@ -48,8 +66,9 @@ required:
 - Performance optimizations
 - Security vulnerabilities
 - Best practices adherence
+- **Review fixes captured by living test system for code quality patterns**
 
-**C. Test Architecture Assessment**
+**D. Test Architecture Assessment**
 
 - Test coverage adequacy at appropriate levels
 - Test level appropriateness (what should be unit vs integration vs e2e)
@@ -58,8 +77,10 @@ required:
 - Mock/stub usage appropriateness
 - Edge case and error scenario coverage
 - Test execution time and reliability
+- **Quality assessment of auto-generated tests from living test system**
+- **Integration of captured fixes into permanent test suite**
 
-**D. Non-Functional Requirements (NFRs)**
+**E. Non-Functional Requirements (NFRs)**
 
 - Security: Authentication, authorization, data protection
 - Performance: Response times, resource usage
@@ -125,6 +146,19 @@ After review and any refactoring, append your results to the story file in the Q
 
 ### Reviewed By: Quinn (Test Architect)
 
+### Living Test Analysis
+
+**Fixes Captured**: [X debugging sessions | None detected]
+**Auto-Generated Tests**: [Y tests created, Z validated | No living test session found]
+**Coverage Gaps Closed**: [List of AC gaps addressed by captured fixes | N/A]
+**Recurring Fix Patterns**: [Suggest architectural improvements based on fix patterns | N/A]
+
+### Regression Prevention Validation
+
+**Baseline Verification**: [PASS/FAIL - current system health vs pre-implementation]
+**Risk Mitigation Status**: [X of Y identified risks properly addressed]
+**Dependency Impact**: [No unintended breakage detected | Issues found and addressed]
+
 ### Code Quality Assessment
 
 [Overall assessment of implementation quality]
@@ -172,6 +206,7 @@ After review and any refactoring, append your results to the story file in the Q
 Gate: {STATUS} → qa.qaLocation/gates/{epic}.{story}-{slug}.yml
 Risk profile: qa.qaLocation/assessments/{epic}.{story}-risk-{YYYYMMDD}.md
 NFR assessment: qa.qaLocation/assessments/{epic}.{story}-nfr-{YYYYMMDD}.md
+Living test analysis: [qa.qaLocation/assessments/{epic}.{story}-living-{YYYYMMDD}.md | No session detected]
 
 # Note: Paths should reference core-config.yaml for custom configurations
 

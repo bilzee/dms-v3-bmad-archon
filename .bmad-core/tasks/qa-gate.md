@@ -81,29 +81,49 @@ waiver:
 
 ## Gate Decision Criteria
 
+**Enhanced Decision Logic (Applied in Order):**
+
+1. **Living Test & Regression Factors (New - First Priority)**
+   - If critical fixes captured but auto-generated tests have low quality score → CONCERNS
+   - If baseline verification fails compared to pre-implementation → FAIL  
+   - If recurring fix patterns indicate architectural issues not addressed → CONCERNS
+   - If regression risks identified in risk-profile were not properly mitigated → FAIL
+
+2. **Traditional Quality Factors**
+   - All acceptance criteria met
+   - No high-severity issues  
+   - Test coverage meets project standards
+
 ### PASS
 
 - All acceptance criteria met
 - No high-severity issues
 - Test coverage meets project standards
+- **Baseline verification shows healthy system state**
+- **Any captured fixes have been validated and integrated**
 
 ### CONCERNS
 
 - Non-blocking issues present
 - Should be tracked and scheduled
 - Can proceed with awareness
+- **Auto-generated tests from captured fixes need review**
+- **Recurring fix patterns suggest architectural debt**
 
 ### FAIL
 
 - Acceptance criteria not met
 - High-severity issues present
 - Recommend return to InProgress
+- **Baseline verification shows system degradation**
+- **Critical regression risks not properly mitigated**
 
 ### WAIVED
 
 - Issues explicitly accepted
 - Requires approval and reason
 - Proceed despite known issues
+- **Living test quality issues accepted for MVP**
 
 ## Severity Scale
 
@@ -123,6 +143,8 @@ waiver:
 - `ARCH-`: Architecture issues
 - `DOC-`: Documentation gaps
 - `REQ-`: Requirements issues
+- `REG-`: Regression issues (New)
+- `LIVE-`: Living test quality issues (New)
 
 ## Output Requirements
 
@@ -152,6 +174,7 @@ After creating gate file, append to story's QA Results section:
 ### Gate Status
 
 Gate: CONCERNS → qa.qaLocation/gates/{epic}.{story}-{slug}.yml
+Living test analysis: [qa.qaLocation/assessments/{epic}.{story}-living-{YYYYMMDD}.md | No session detected]
 ```
 
 ## Key Principles
@@ -161,3 +184,6 @@ Gate: CONCERNS → qa.qaLocation/gates/{epic}.{story}-{slug}.yml
 - Always write to standard path
 - Always update story with gate reference
 - Clear, actionable findings
+- **Prioritize regression and living test factors in gate decisions**
+- **Include living test analysis reference when available**
+- **Consider baseline health as critical gate factor**

@@ -6,7 +6,7 @@
     "dev": "next dev",
     "dev:pwa": "PWA_TESTING=true next dev",
     "build": "next build",
-    "build:test": "NODE_ENV=test next build",
+    "build:test": "cross-env NODE_ENV=test next build",
     "start": "next start",
     "lint": "next lint",
     "type-check": "tsc --noEmit",
@@ -23,6 +23,11 @@
     "test:response-planning:unit": "jest tests/unit/services/response-planning.test.ts tests/unit/components/ResponsePlanningForm.test.tsx",
     "test:response-planning:integration": "jest tests/integration/response-planning/",
     "test:response-planning:e2e": "playwright test tests/e2e/response-planning-workflow.test.ts",
+    "verify:baseline": "bash scripts/testing/regression-prevention/verify-baseline.sh",
+    "regression:create": "bash scripts/testing/regression-prevention/create-regression-tests.sh",
+    "regression:analyze": "node scripts/testing/regression-prevention/feature-impact-analyzer.js",
+    "dev:validate": "node scripts/testing/validation/development-validator.js",
+    "living-tests": "npx ts-node scripts/testing/living-tests/living-tests.cli.ts",
     "claude:dev": "set MCP_CONFIG=.mcp.dev.json && claude-code"
   },
   "dependencies": {
@@ -51,6 +56,7 @@
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "cmdk": "^1.1.1",
+    "command": "^1.1.1",
     "date-fns": "^4.1.0",
     "dexie": "4.0.8",
     "jsonwebtoken": "^9.0.2",

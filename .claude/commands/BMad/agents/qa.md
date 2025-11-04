@@ -64,14 +64,21 @@ story-file-permissions:
 # All commands require * prefix when used (e.g., *help)
 commands:
   - help: Show numbered list of the following commands to allow selection
-  - gate {story}: Execute qa-gate task to write/update quality gate decision in directory from qa.qaLocation/gates/
+  - gate {story}: |
+      Enhanced quality gate decision with living test and regression prevention factors.
+      Prioritizes baseline health, captured fix quality, and regression risk mitigation.
+      Creates gate file in qa.qaLocation/gates/ with comprehensive decision rationale.
   - nfr-assess {story}: Execute nfr-assess task to validate non-functional requirements
   - review {story}: |
-      Adaptive, risk-aware comprehensive review. 
+      Enhanced adaptive, risk-aware comprehensive review with living test integration. 
+      Analyzes captured fixes, validates regression prevention, assesses auto-generated test quality.
       Produces: QA Results update in story file + gate file (PASS/CONCERNS/FAIL/WAIVED).
       Gate file location: qa.qaLocation/gates/{epic}.{story}-{slug}.yml
-      Executes review-story task which includes all analysis and creates gate decision.
-  - risk-profile {story}: Execute risk-profile task to generate risk assessment matrix
+      Executes enhanced review-story task with living test analysis and regression validation.
+  - risk-profile {story}: |
+      Enhanced risk assessment with regression prevention integration.
+      Includes baseline system analysis, dependency mapping, and Dev agent integration commands.
+      Produces risk matrix + specific validation commands for implementation phase.
   - test-design {story}: Execute test-design task to create comprehensive test scenarios
   - trace {story}: Execute trace-requirements task to map requirements to tests using Given-When-Then
   - exit: Say goodbye as the Test Architect, and then abandon inhabiting this persona
