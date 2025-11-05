@@ -15,7 +15,7 @@ import { Badge } from '@/components/ui/badge'
 import { GPSCapture } from '@/components/shared/GPSCapture'
 import { MediaField } from '@/components/shared/MediaField'
 import { EntitySelector } from '@/components/shared/EntitySelector'
-import { FoodAssessmentFormProps, FoodAssessmentInput } from '@/types/rapid-assessment'
+import { FoodAssessmentFormProps, FoodAssessment } from '@/types/rapid-assessment'
 import { getCurrentUserName, getAssessmentLocationData } from '@/utils/assessment-utils'
 import { cn } from '@/lib/utils'
 import { Utensils, AlertTriangle, Package, Clock } from 'lucide-react'
@@ -76,7 +76,7 @@ export function FoodAssessmentForm({
   disabled = false 
 }: FoodAssessmentFormProps) {
   const [gpsCoordinates, setGpsCoordinates] = useState<{ lat: number; lng: number } | null>(null)
-  const [mediaFiles, setMediaFiles] = useState<string[]>(initialData?.mediaAttachments || [])
+  const [mediaFiles, setMediaFiles] = useState<string[]>((initialData as any)?.mediaAttachments || [])
   const [selectedEntity, setSelectedEntity] = useState<string>(entityId)
   const [selectedEntityData, setSelectedEntityData] = useState<any>(null)
 

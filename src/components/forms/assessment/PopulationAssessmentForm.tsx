@@ -14,7 +14,7 @@ import { Badge } from '@/components/ui/badge'
 import { GPSCapture } from '@/components/shared/GPSCapture'
 import { MediaField } from '@/components/shared/MediaField'
 import { EntitySelector } from '@/components/shared/EntitySelector'
-import { PopulationAssessmentFormProps, PopulationAssessmentInput } from '@/types/rapid-assessment'
+import { PopulationAssessmentFormProps, PopulationAssessment } from '@/types/rapid-assessment'
 import { cn } from '@/lib/utils'
 import { getCurrentUserName, getAssessmentLocationData } from '@/utils/assessment-utils'
 import { Users, Baby, User, UserPlus, AlertTriangle, Heart } from 'lucide-react'
@@ -46,7 +46,7 @@ export function PopulationAssessmentForm({
   disabled = false 
 }: PopulationAssessmentFormProps) {
   const [gpsCoordinates, setGpsCoordinates] = useState<{ lat: number; lng: number } | null>(null)
-  const [mediaFiles, setMediaFiles] = useState<string[]>(initialData?.mediaAttachments || [])
+  const [mediaFiles, setMediaFiles] = useState<string[]>((initialData as any)?.mediaAttachments || [])
   const [selectedEntity, setSelectedEntity] = useState<string>(entityId)
   const [selectedEntityData, setSelectedEntityData] = useState<any>(null)
 

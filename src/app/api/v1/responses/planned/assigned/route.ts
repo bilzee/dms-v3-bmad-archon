@@ -52,7 +52,7 @@ export const GET = withAuth(async (request: NextRequest, context: AuthContext) =
     )
 
     const apiResponse: GetResponsesResponse = {
-      data: responses,
+      data: responses as any,
       meta: {
         total,
         page: validationResult.data.page,

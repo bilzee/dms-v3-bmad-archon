@@ -203,11 +203,13 @@ export function useVerificationUpdates() {
 // Hook for bulk verification actions
 export function useBulkVerificationActions() {
   const queryClient = useQueryClient();
+  const { token } = useAuth();
   
   const bulkVerifyMutation = useMutation({
     mutationFn: async (assessmentIds: string[]) => {
+      if (!token) throw new Error('No authentication token available');
       const promises = assessmentIds.map(id => 
-        verifyAssessment(id, { notes: 'Bulk verification' })
+        verifyAssessment(id, { notes: 'Bulk verification' }, token)
       );
       return Promise.all(promises);
     },

@@ -42,7 +42,7 @@ export const POST = withAuth(async (request: NextRequest, context: AuthContext) 
     }
 
     const hasAssignableRole = targetUser.roles.some(
-      userRole => ['ASSESSOR', 'RESPONDER'].includes(userRole.role.name)
+      (userRole: any) => ['ASSESSOR', 'RESPONDER'].includes(userRole.role.name)
     );
 
     if (!hasAssignableRole) {

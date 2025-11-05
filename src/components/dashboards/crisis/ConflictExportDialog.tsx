@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { ConflictExportOptions } from '@/types/conflict';
 import { conflictExportService, ExportProgress } from '@/lib/services/conflict-export.service';
 
@@ -28,20 +28,20 @@ export const ConflictExportDialog = ({
   const [exportProgress, setExportProgress] = useState<ExportProgress | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    if (isOpen) {
-      loadPreview();
-    }
-  }, [isOpen, options]);
-
-  const loadPreview = async () => {
+  const loadPreview = useCallback(async () => {
     try {
       const previewData = await conflictExportService.getExportPreview(options);
       setPreview(previewData);
     } catch (err) {
       console.error('Failed to load export preview:', err);
     }
-  };
+  }, [options]);
+
+  useEffect(() => {
+    if (isOpen) {
+      loadPreview();
+    }
+  }, [isOpen, options, loadPreview]);
 
   const handleExport = async () => {
     setIsExporting(true);

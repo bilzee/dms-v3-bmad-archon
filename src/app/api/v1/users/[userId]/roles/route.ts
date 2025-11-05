@@ -90,7 +90,7 @@ export const PUT = withAuth(async (request: NextRequest, context) => {
     }
 
     // Assign roles
-    await AuthService.assignRoles(userId, roleIds, context.user.userId)
+    await AuthService.assignRoles(userId, roleIds, context.userId)
 
     return NextResponse.json(
       {

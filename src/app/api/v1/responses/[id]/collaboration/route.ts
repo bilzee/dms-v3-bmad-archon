@@ -1,10 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { v4 as uuidv4 } from 'uuid'
-import { withAuth, AuthContext, requireRole } from '@/lib/auth/middleware'
+import { withAuth, AuthContext } from '@/lib/auth/middleware'
 import { ResponseService } from '@/lib/services/response.service'
 
 interface RouteParams {
-  params: Promise<{ id: string }>
+  params: { id: string }
 }
 
 // Simple in-memory collaboration tracking (in production, use Redis or WebSocket)
@@ -55,15 +55,15 @@ export const GET = withAuth(
       try {
         cleanupExpiredCollaborations()
         
-        const { id: responseId } = await params
+        const { id: responseId } = params
         
         // Verify user has access to this response
-        const response = await ResponseService.getResponseById(responseId, context.user.userId)
+        const response = await ResponseService.getResponseById(responseId, context.userId)
         
         // Get collaboration status
         const collaboration = activeCollaborations.get(responseId)
         const isCurrentUserCollaborating = collaboration?.collaborators.some(
-          c => c.userId === context.user.userId
+          c => c.userId === context.userId
         ) || false
         
         const collaborationData = {
@@ -120,12 +120,12 @@ export const POST = withAuth(
       try {
         cleanupExpiredCollaborations()
         
-        const { id: responseId } = await params
+        const { id: responseId } = params
         const body = await request.json()
         const { action } = body // 'join', 'leave', 'start_editing', 'stop_editing'
         
         // Verify user has access to this response
-        const response = await ResponseService.getResponseById(responseId, context.user.userId)
+        const response = await ResponseService.getResponseById(responseId, context.userId)
         
         if (response.status !== 'PLANNED') {
           throw new Error('Only planned responses can be collaborated on')
@@ -144,9 +144,9 @@ export const POST = withAuth(
 
         const now = Date.now()
         const userCollaborator = {
-          userId: context.user.userId,
-          userName: context.user.name,
-          email: context.user.email,
+          userId: context.userId,
+          userName: (context.user as any).name,
+          email: (context.user as any).email,
           joinedAt: new Date(),
           lastSeen: new Date(),
           isEditing: false
@@ -154,7 +154,7 @@ export const POST = withAuth(
 
         // Find existing collaborator
         const existingCollaboratorIndex = collaboration.collaborators.findIndex(
-          c => c.userId === context.user.userId
+          c => c.userId === context.userId
         )
 
         switch (action) {
@@ -208,7 +208,7 @@ export const POST = withAuth(
           })),
           totalCollaborators: collaboration.collaborators.length,
           isCurrentUserCollaborating: collaboration.collaborators.some(
-            c => c.userId === context.user.userId
+            c => c.userId === context.userId
           )
         }
 

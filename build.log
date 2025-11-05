@@ -1,0 +1,184 @@
+
+> disaster-management-pwa@0.1.0 build:test
+> cross-env NODE_ENV=test next build
+
+  ▲ Next.js 14.2.5
+  - Environments: .env
+
+   Creating an optimized production build ...
+> [PWA] Compile server
+> [PWA] Compile server
+> [PWA] Compile client (static)
+> [PWA] Auto register service worker with: B:\Dev\Claude Code\dms-v3-bmad-archon\node_modules\next-pwa\register.js
+> [PWA] Service worker: B:\Dev\Claude Code\dms-v3-bmad-archon\public\sw.js
+> [PWA]   url: /sw.js
+> [PWA]   scope: /
+> [PWA] Fallback to precache routes when fetch failed from cache or network:
+> [PWA]   document (page): /offline.html
+ ✓ Compiled successfully
+   Linting and checking validity of types ...
+   Collecting page data ...
+Conflict tracking table not found - would need database migration
+Conflict tracking table not found - would need database migration
+Conflict tracking table not found - would need database migration
+   Generating static pages (0/63) ...
+   Generating static pages (15/63) 
+Pull sync endpoint called
+Pull sync endpoint error: q [Error]: Dynamic server usage: Route /api/v1/sync/pull couldn't be rendered statically because it used `request.url`. See more info here: https://nextjs.org/docs/messages/dynamic-server-error
+    at W (B:\Dev\Claude Code\dms-v3-bmad-archon\node_modules\next\dist\compiled\next-server\app-route.runtime.prod.js:6:21106)
+    at Object.get (B:\Dev\Claude Code\dms-v3-bmad-archon\node_modules\next\dist\compiled\next-server\app-route.runtime.prod.js:6:28459)
+    at c (B:\Dev\Claude Code\dms-v3-bmad-archon\.next\server\app\api\v1\sync\pull\route.js:1:1082)
+    at B:\Dev\Claude Code\dms-v3-bmad-archon\node_modules\next\dist\compiled\next-server\app-route.runtime.prod.js:6:36264
+    at B:\Dev\Claude Code\dms-v3-bmad-archon\node_modules\next\dist\server\lib\trace\tracer.js:140:36
+    at NoopContextManager.with (B:\Dev\Claude Code\dms-v3-bmad-archon\node_modules\next\dist\compiled\@opentelemetry\api\index.js:1:7062)
+    at ContextAPI.with (B:\Dev\Claude Code\dms-v3-bmad-archon\node_modules\next\dist\compiled\@opentelemetry\api\index.js:1:518)
+    at NoopTracer.startActiveSpan (B:\Dev\Claude Code\dms-v3-bmad-archon\node_modules\next\dist\compiled\@opentelemetry\api\index.js:1:18093)
+    at ProxyTracer.startActiveSpan (B:\Dev\Claude Code\dms-v3-bmad-archon\node_modules\next\dist\compiled\@opentelemetry\api\index.js:1:18854)
+    at B:\Dev\Claude Code\dms-v3-bmad-archon\node_modules\next\dist\server\lib\trace\tracer.js:122:103 {
+  description: "Route /api/v1/sync/pull couldn't be rendered statically because it used `request.url`. See more info here: https://nextjs.org/docs/messages/dynamic-server-error",
+  digest: 'DYNAMIC_SERVER_USAGE'
+}
+Sync status endpoint called
+Authorization validation failed: q [Error]: Dynamic server usage: Route /api/v1/sync/status couldn't be rendered statically because it used `request.headers`. See more info here: https://nextjs.org/docs/messages/dynamic-server-error
+    at W (B:\Dev\Claude Code\dms-v3-bmad-archon\node_modules\next\dist\compiled\next-server\app-route.runtime.prod.js:6:21106)
+    at Object.get (B:\Dev\Claude Code\dms-v3-bmad-archon\node_modules\next\dist\compiled\next-server\app-route.runtime.prod.js:6:28459)
+    at l (B:\Dev\Claude Code\dms-v3-bmad-archon\.next\server\app\api\v1\sync\status\route.js:1:2043)
+    at u (B:\Dev\Claude Code\dms-v3-bmad-archon\.next\server\app\api\v1\sync\status\route.js:1:571)
+    at B:\Dev\Claude Code\dms-v3-bmad-archon\node_modules\next\dist\compiled\next-server\app-route.runtime.prod.js:6:36264
+    at B:\Dev\Claude Code\dms-v3-bmad-archon\node_modules\next\dist\server\lib\trace\tracer.js:140:36
+    at NoopContextManager.with (B:\Dev\Claude Code\dms-v3-bmad-archon\node_modules\next\dist\compiled\@opentelemetry\api\index.js:1:7062)
+    at ContextAPI.with (B:\Dev\Claude Code\dms-v3-bmad-archon\node_modules\next\dist\compiled\@opentelemetry\api\index.js:1:518)
+    at NoopTracer.startActiveSpan (B:\Dev\Claude Code\dms-v3-bmad-archon\node_modules\next\dist\compiled\@opentelemetry\api\index.js:1:18093)
+    at ProxyTracer.startActiveSpan (B:\Dev\Claude Code\dms-v3-bmad-archon\node_modules\next\dist\compiled\@opentelemetry\api\index.js:1:18854) {
+  description: "Route /api/v1/sync/status couldn't be rendered statically because it used `request.headers`. See more info here: https://nextjs.org/docs/messages/dynamic-server-error",
+  digest: 'DYNAMIC_SERVER_USAGE'
+}
+Error retrieving conflicts: q [Error]: Dynamic server usage: Route /api/v1/sync/conflicts couldn't be rendered statically because it used `nextUrl.searchParams`. See more info here: https://nextjs.org/docs/messages/dynamic-server-error
+    at W (B:\Dev\Claude Code\dms-v3-bmad-archon\node_modules\next\dist\compiled\next-server\app-route.runtime.prod.js:6:21106)
+    at Object.get (B:\Dev\Claude Code\dms-v3-bmad-archon\node_modules\next\dist\compiled\next-server\app-route.runtime.prod.js:6:28131)
+    at c (B:\Dev\Claude Code\dms-v3-bmad-archon\.next\server\app\api\v1\sync\conflicts\route.js:1:543)
+    at B:\Dev\Claude Code\dms-v3-bmad-archon\node_modules\next\dist\compiled\next-server\app-route.runtime.prod.js:6:36264
+    at B:\Dev\Claude Code\dms-v3-bmad-archon\node_modules\next\dist\server\lib\trace\tracer.js:140:36
+    at NoopContextManager.with (B:\Dev\Claude Code\dms-v3-bmad-archon\node_modules\next\dist\compiled\@opentelemetry\api\index.js:1:7062)
+    at ContextAPI.with (B:\Dev\Claude Code\dms-v3-bmad-archon\node_modules\next\dist\compiled\@opentelemetry\api\index.js:1:518)
+    at NoopTracer.startActiveSpan (B:\Dev\Claude Code\dms-v3-bmad-archon\node_modules\next\dist\compiled\@opentelemetry\api\index.js:1:18093)
+    at ProxyTracer.startActiveSpan (B:\Dev\Claude Code\dms-v3-bmad-archon\node_modules\next\dist\compiled\@opentelemetry\api\index.js:1:18854)
+    at B:\Dev\Claude Code\dms-v3-bmad-archon\node_modules\next\dist\server\lib\trace\tracer.js:122:103 {
+  description: "Route /api/v1/sync/conflicts couldn't be rendered statically because it used `nextUrl.searchParams`. See more info here: https://nextjs.org/docs/messages/dynamic-server-error",
+  digest: 'DYNAMIC_SERVER_USAGE'
+}
+   Generating static pages (31/63) 
+Conflict tracking table not found - would need database migration
+Error exporting conflicts: q [Error]: Dynamic server usage: Route /api/v1/sync/conflicts/export couldn't be rendered statically because it used `nextUrl.searchParams`. See more info here: https://nextjs.org/docs/messages/dynamic-server-error
+    at W (B:\Dev\Claude Code\dms-v3-bmad-archon\node_modules\next\dist\compiled\next-server\app-route.runtime.prod.js:6:21106)
+    at Object.get (B:\Dev\Claude Code\dms-v3-bmad-archon\node_modules\next\dist\compiled\next-server\app-route.runtime.prod.js:6:28131)
+    at l (B:\Dev\Claude Code\dms-v3-bmad-archon\.next\server\app\api\v1\sync\conflicts\export\route.js:1:541)
+    at B:\Dev\Claude Code\dms-v3-bmad-archon\node_modules\next\dist\compiled\next-server\app-route.runtime.prod.js:6:36264
+    at B:\Dev\Claude Code\dms-v3-bmad-archon\node_modules\next\dist\server\lib\trace\tracer.js:140:36
+    at NoopContextManager.with (B:\Dev\Claude Code\dms-v3-bmad-archon\node_modules\next\dist\compiled\@opentelemetry\api\index.js:1:7062)
+    at ContextAPI.with (B:\Dev\Claude Code\dms-v3-bmad-archon\node_modules\next\dist\compiled\@opentelemetry\api\index.js:1:518)
+    at NoopTracer.startActiveSpan (B:\Dev\Claude Code\dms-v3-bmad-archon\node_modules\next\dist\compiled\@opentelemetry\api\index.js:1:18093)
+    at ProxyTracer.startActiveSpan (B:\Dev\Claude Code\dms-v3-bmad-archon\node_modules\next\dist\compiled\@opentelemetry\api\index.js:1:18854)
+    at B:\Dev\Claude Code\dms-v3-bmad-archon\node_modules\next\dist\server\lib\trace\tracer.js:122:103 {
+  description: "Route /api/v1/sync/conflicts/export couldn't be rendered statically because it used `nextUrl.searchParams`. See more info here: https://nextjs.org/docs/messages/dynamic-server-error",
+  digest: 'DYNAMIC_SERVER_USAGE'
+}
+Conflict tracking table not found - would need database migration
+   Generating static pages (47/63) 
+ ✓ Generating static pages (63/63)
+   Finalizing page optimization ...
+   Collecting build traces ...
+
+Route (app)                                            Size     First Load JS
+┌ ○ /                                                  2.06 kB        91.9 kB
+├ ○ /_not-found                                        875 B            88 kB
+├ ○ /admin/users                                       4.56 kB         147 kB
+├ ƒ /api/entities/available-for-assessment             0 B                0 B
+├ ƒ /api/living-tests                                  0 B                0 B
+├ ƒ /api/v1/assessments/[id]/reject                    0 B                0 B
+├ ƒ /api/v1/assessments/[id]/verify                    0 B                0 B
+├ ƒ /api/v1/assessments/verified                       0 B                0 B
+├ ƒ /api/v1/auth/login                                 0 B                0 B
+├ ƒ /api/v1/auth/logout                                0 B                0 B
+├ ƒ /api/v1/auth/me                                    0 B                0 B
+├ ƒ /api/v1/auth/profile                               0 B                0 B
+├ ƒ /api/v1/auth/refresh                               0 B                0 B
+├ ƒ /api/v1/auto-assignment/config                     0 B                0 B
+├ ƒ /api/v1/auto-assignment/trigger                    0 B                0 B
+├ ƒ /api/v1/delivery-media                             0 B                0 B
+├ ƒ /api/v1/delivery-media/[id]                        0 B                0 B
+├ ƒ /api/v1/delivery-media/sync                        0 B                0 B
+├ ƒ /api/v1/entities                                   0 B                0 B
+├ ƒ /api/v1/entities/[id]/auto-approval                0 B                0 B
+├ ƒ /api/v1/entities/assigned                          0 B                0 B
+├ ○ /api/v1/entities/public                            0 B                0 B
+├ ƒ /api/v1/entity-assignments                         0 B                0 B
+├ ƒ /api/v1/entity-assignments/[id]                    0 B                0 B
+├ ƒ /api/v1/entity-assignments/bulk                    0 B                0 B
+├ ƒ /api/v1/entity-assignments/collaboration           0 B                0 B
+├ ƒ /api/v1/entity-assignments/entity/[entityId]       0 B                0 B
+├ ƒ /api/v1/entity-assignments/suggestions             0 B                0 B
+├ ƒ /api/v1/entity-assignments/user/[userId]           0 B                0 B
+├ ƒ /api/v1/incidents                                  0 B                0 B
+├ ƒ /api/v1/incidents/from-assessment                  0 B                0 B
+├ ƒ /api/v1/preliminary-assessments                    0 B                0 B
+├ ƒ /api/v1/preliminary-assessments/[id]               0 B                0 B
+├ ƒ /api/v1/preliminary-assessments/user/[userId]      0 B                0 B
+├ ƒ /api/v1/rapid-assessments                          0 B                0 B
+├ ƒ /api/v1/rapid-assessments/[id]                     0 B                0 B
+├ ƒ /api/v1/rapid-assessments/[id]/submit              0 B                0 B
+├ ƒ /api/v1/rapid-assessments/user/[userId]            0 B                0 B
+├ ƒ /api/v1/responses/[id]                             0 B                0 B
+├ ƒ /api/v1/responses/[id]/collaboration               0 B                0 B
+├ ƒ /api/v1/responses/[id]/deliver                     0 B                0 B
+├ ƒ /api/v1/responses/conflicts/[assessmentId]         0 B                0 B
+├ ƒ /api/v1/responses/planned                          0 B                0 B
+├ ƒ /api/v1/responses/planned/assigned                 0 B                0 B
+├ ƒ /api/v1/roles                                      0 B                0 B
+├ ƒ /api/v1/sync/batch                                 0 B                0 B
+├ ƒ /api/v1/sync/conflicts                             0 B                0 B
+├ ƒ /api/v1/sync/conflicts/export                      0 B                0 B
+├ ○ /api/v1/sync/conflicts/summary                     0 B                0 B
+├ ƒ /api/v1/sync/pull                                  0 B                0 B
+├ ƒ /api/v1/sync/resolve                               0 B                0 B
+├ ƒ /api/v1/sync/status                                0 B                0 B
+├ ƒ /api/v1/users                                      0 B                0 B
+├ ƒ /api/v1/users/[userId]                             0 B                0 B
+├ ƒ /api/v1/users/[userId]/roles                       0 B                0 B
+├ ƒ /api/v1/users/assignable                           0 B                0 B
+├ ƒ /api/v1/verification/auto-approval                 0 B                0 B
+├ ƒ /api/v1/verification/metrics                       0 B                0 B
+├ ƒ /api/v1/verification/queue/assessments             0 B                0 B
+├ ƒ /api/v1/verification/queue/deliveries              0 B                0 B
+├ ƒ /api/v1/verification/queue/deliveries/[id]/verify  0 B                0 B
+├ ○ /assessor/dashboard                                5.03 kB         111 kB
+├ ○ /assessor/preliminary-assessment                   14.5 kB         199 kB
+├ ○ /assessor/rapid-assessments                        5.78 kB         111 kB
+├ ○ /assessor/rapid-assessments/new                    2.54 kB         187 kB
+├ ○ /coordinator/dashboard                             4.98 kB         111 kB
+├ ○ /coordinator/entities                              11.6 kB         139 kB
+├ ○ /coordinator/verification                          15.3 kB         160 kB
+├ ○ /coordinator/verification/auto-approval            10.6 kB         155 kB
+├ ○ /coordinator/verification/deliveries               8.89 kB         145 kB
+├ ○ /dashboard                                         5.72 kB         111 kB
+├ ○ /dashboard/crisis                                  7.73 kB         130 kB
+├ ○ /login                                             5.27 kB         157 kB
+├ ○ /profile                                           1.71 kB         133 kB
+├ ○ /rapid-assessments                                 1.78 kB        91.6 kB
+├ ○ /rapid-assessments/new                             2.25 kB         194 kB
+├ ○ /responder/dashboard                               12.4 kB         234 kB
+├ ○ /responder/planning                                3.81 kB         222 kB
+├ ○ /responder/planning/new                            831 B           219 kB
+├ ƒ /responder/responses/[id]/deliver                  5.16 kB         220 kB
+└ ○ /verification/metrics                              3.96 kB         103 kB
++ First Load JS shared by all                          87.1 kB
+  ├ chunks/7023-adb01075ee65bcfe.js                    31.5 kB
+  ├ chunks/fd9d1056-77880d58dbaa8fd6.js                53.6 kB
+  └ other shared chunks (total)                        1.96 kB
+
+
+ƒ Middleware                                           26.6 kB
+
+○  (Static)   prerendered as static content
+ƒ  (Dynamic)  server-rendered on demand
+

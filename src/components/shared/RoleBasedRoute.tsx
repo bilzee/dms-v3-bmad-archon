@@ -20,14 +20,13 @@ export const RoleBasedRoute = ({
   fallbackPath,
   loadingComponent 
 }: RoleBasedRouteProps) => {
-  const { isAuthenticated, currentRole, availableRoles, isLoading } = useAuth();
+  const { isAuthenticated, currentRole, availableRoles } = useAuth();
   const router = useRouter();
   const pathname = usePathname();
   const [isChecking, setIsChecking] = useState(true);
 
   useEffect(() => {
     const checkAccess = async () => {
-      if (isLoading) return;
 
       // Redirect to login if not authenticated
       if (!isAuthenticated) {
@@ -71,9 +70,9 @@ export const RoleBasedRoute = ({
     };
 
     checkAccess();
-  }, [isAuthenticated, currentRole, availableRoles, isLoading, router, requiredRole, requiredRoles, fallbackPath, pathname]);
+  }, [isAuthenticated, currentRole, availableRoles, router, requiredRole, requiredRoles, fallbackPath, pathname]);
 
-  if (isLoading || isChecking) {
+  if (isChecking) {
     return loadingComponent || <div className="flex items-center justify-center min-h-screen">Loading...</div>;
   }
 

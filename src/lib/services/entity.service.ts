@@ -41,7 +41,7 @@ export class EntityService {
 
       return {
         success: true,
-        data: entities
+        data: entities as any
       };
     } catch (error) {
       console.error('Error fetching entities:', error);
@@ -60,7 +60,7 @@ export class EntityService {
     try {
       const entities = await this.prisma.entity.findMany({
         where: {
-          type: type.toUpperCase(),
+          type: type.toUpperCase() as any,
           isActive: true
         },
         orderBy: {
@@ -70,7 +70,7 @@ export class EntityService {
 
       return {
         success: true,
-        data: entities
+        data: entities as any
       };
     } catch (error) {
       console.error('Error fetching entities by type:', error);
@@ -98,12 +98,6 @@ export class EntityService {
               }
             },
             {
-              type: {
-                contains: searchTerm,
-                mode: 'insensitive'
-              }
-            },
-            {
               location: {
                 contains: searchTerm,
                 mode: 'insensitive'
@@ -118,7 +112,7 @@ export class EntityService {
 
       return {
         success: true,
-        data: entities
+        data: entities as any
       };
     } catch (error) {
       console.error('Error searching entities:', error);
@@ -149,7 +143,7 @@ export class EntityService {
 
       return {
         success: true,
-        data: entity
+        data: entity as any
       };
     } catch (error) {
       console.error('Error fetching entity:', error);

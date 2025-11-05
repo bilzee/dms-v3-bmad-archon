@@ -31,7 +31,7 @@ export const ConflictLog = ({ className = '', compact = false }: ConflictLogProp
   useEffect(() => {
     fetchConflicts(filters);
     fetchSummary();
-  }, []);
+  }, [fetchConflicts, fetchSummary, filters]);
 
   const handleFilterChange = (newFilters: Partial<ConflictFilters>) => {
     const updatedFilters = { ...filters, ...newFilters, page: 1 };

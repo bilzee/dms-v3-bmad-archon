@@ -28,7 +28,7 @@ export default function HomePage() {
           Welcome to DMS Borno
         </h1>
         <p className="text-lg text-gray-600">
-          {user?.name ? `Hello, ${user.name}` : 'Disaster Management System Dashboard'}
+          {(user as any)?.name ? `Hello, ${(user as any).name}` : 'Disaster Management System Dashboard'}
         </p>
       </div>
 

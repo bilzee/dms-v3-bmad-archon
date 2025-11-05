@@ -30,7 +30,7 @@ export const Header = () => {
               <div className="flex items-center gap-3">
                 <RoleSwitcher />
                 <span className="text-sm text-gray-600 hidden sm:inline">
-                  {user.name || user.email}
+                  {(user as any).name || (user as any).email}
                 </span>
                 <button
                   onClick={handleLogout}

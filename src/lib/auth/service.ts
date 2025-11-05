@@ -1,7 +1,7 @@
 import bcrypt from 'bcryptjs'
 import jwt from 'jsonwebtoken'
 import { prisma } from '@/lib/db/client'
-import { User, Role, Permission } from '@prisma/client'
+import type { User, Role, Permission } from '@prisma/client'
 
 export interface AuthTokenPayload {
   userId: string

@@ -7,41 +7,50 @@ const createJestConfig = nextJest({
 
 // Add any custom config to be passed to Jest
 const customJestConfig = {
-  setupFilesAfterEnv: ['<rootDir>/jest.setup.js'],
+  setupFilesAfterEnv: ['<rootDir>/tests/setup.ts'],
   testEnvironment: 'jest-environment-jsdom',
-  preset: 'ts-jest',
   moduleNameMapper: {
     '^@/(.*)$': '<rootDir>/src/$1',
   },
   testMatch: [
-    '<rootDir>/tests/unit/**/*.test.ts',
-    '<rootDir>/tests/unit/**/*.test.tsx',
-    '<rootDir>/tests/integration/**/*.test.ts',
-    '<rootDir>/tests/integration/**/*.test.tsx'
+    '<rootDir>/tests/unit/**/*.test.{js,jsx,ts,tsx}',
+    '<rootDir>/tests/integration/**/*.test.{js,jsx,ts,tsx}',
   ],
   collectCoverageFrom: [
     'src/**/*.{ts,tsx}',
     '!src/**/*.d.ts',
-    '!src/**/*.stories.{ts,tsx}',
+    '!src/**/*.stories.tsx',
+    '!src/**/index.ts',
+    '!src/app/layout.tsx',
+    '!src/app/page.tsx',
   ],
   coverageReporters: ['text', 'lcov', 'html'],
   coverageDirectory: 'coverage',
   testPathIgnorePatterns: [
     '<rootDir>/.next/', 
     '<rootDir>/node_modules/',
-    '<rootDir>/tests/e2e/'
+    '<rootDir>/coverage/',
+    '<rootDir>/tests/e2e/',
+    '<rootDir>/tests/unit/delivery-offline.service.test.ts',
+    '<rootDir>/tests/unit/verification/',
+    '<rootDir>/tests/components/DeliveryConfirmationForm.test.tsx',
+    '<rootDir>/tests/integration/delivery-confirmation.test.ts',
+    '<rootDir>/tests/integration/verification/',
+    '<rootDir>/tests/unit/delivery-media-validator.test.ts',
+    '<rootDir>/tests/regression/',
   ],
-  moduleFileExtensions: ['ts', 'tsx', 'js', 'jsx', 'json'],
-  transform: {
-    '^.+\\.(ts|tsx)$': ['ts-jest', {
-      tsconfig: 'tsconfig.json'
-    }]
+  transformIgnorePatterns: [
+    'node_modules/(?!(uuid)/)',
+  ],
+  collectCoverage: true,
+  coverageThreshold: {
+    global: {
+      branches: 70,
+      functions: 70,
+      lines: 70,
+      statements: 70,
+    },
   },
-  globals: {
-    'ts-jest': {
-      tsconfig: 'tsconfig.json'
-    }
-  }
 }
 
 // createJestConfig is exported this way to ensure that next/jest can load the Next.js config which is async

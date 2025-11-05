@@ -62,7 +62,7 @@ export default function ResponsePlanningPage() {
 
   // Get assigned planned responses for this responder
   const { data: responsesData, isLoading, error, refetch } = useQuery({
-    queryKey: ['responses', 'planned', user?.id],
+    queryKey: ['responses', 'planned', (user as any)?.id],
     queryFn: async () => {
       if (!user || !token) throw new Error('User not authenticated')
       
@@ -180,7 +180,7 @@ export default function ResponsePlanningPage() {
             type: editingResponseData?.type || 'HEALTH',
             priority: editingResponseData?.priority || 'MEDIUM',
             description: editingResponseData?.description || '',
-            items: editingResponseData?.items?.map(item => ({
+            items: editingResponseData?.items?.map((item: any) => ({
               ...item,
               // Remove category from display since it's auto-assigned
               name: item.name,

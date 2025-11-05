@@ -35,7 +35,7 @@ export function ResponsePlanningDashboard({
 
   // Get planned responses
   const { data: responsesData = [], isLoading, error, refetch } = useQuery({
-    queryKey: ['responses', 'planned', 'dashboard', user?.id],
+    queryKey: ['responses', 'planned', 'dashboard', (user as any)?.id],
     queryFn: async () => {
       if (!user) throw new Error('User not authenticated')
       return await ResponseService.getPlannedResponsesForResponder({
@@ -46,12 +46,12 @@ export function ResponsePlanningDashboard({
     enabled: !!user
   })
 
-  const responses = responsesData?.responses || []
-  const total = responsesData?.total || 0
+  const responses = (responsesData as any)?.responses || []
+  const total = (responsesData as any)?.total || 0
 
   // Filter and sort responses
   const filteredResponses = responses
-    .filter(response => {
+    .filter((response: any) => {
       const matchesSearch = searchTerm === '' || 
         response.type.toLowerCase().includes(searchTerm.toLowerCase()) ||
         response.description?.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -62,7 +62,7 @@ export function ResponsePlanningDashboard({
       
       return matchesSearch && matchesType && matchesPriority
     })
-    .sort((a, b) => {
+    .sort((a: any, b: any) => {
       switch (sortBy) {
         case 'plannedDate':
           return new Date(b.plannedDate).getTime() - new Date(a.plannedDate).getTime()
@@ -77,9 +77,9 @@ export function ResponsePlanningDashboard({
     })
 
   // Calculate statistics
-  const criticalCount = responses.filter(r => r.priority === 'CRITICAL').length
-  const highCount = responses.filter(r => r.priority === 'HIGH').length
-  const todayCount = responses.filter(r => {
+  const criticalCount = responses.filter((r: any) => r.priority === 'CRITICAL').length
+  const highCount = responses.filter((r: any) => r.priority === 'HIGH').length
+  const todayCount = responses.filter((r: any) => {
     return new Date(r.createdAt).toDateString() === new Date().toDateString()
   }).length
 
@@ -246,7 +246,7 @@ export function ResponsePlanningDashboard({
             </div>
           ) : (
             <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-4">
-              {filteredResponses.map((response) => (
+              {filteredResponses.map((response: any) => (
                 <Card key={response.id} className="hover:shadow-lg transition-all duration-200 hover:scale-[1.02] cursor-pointer group">
                   <CardHeader className="pb-3">
                     <div className="flex items-start justify-between">

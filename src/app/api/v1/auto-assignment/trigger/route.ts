@@ -26,7 +26,7 @@ export const POST = withAuth(async (request: NextRequest, context) => {
     const validatedData = triggerAutoAssignmentSchema.parse(body);
 
     // Set assignedBy to current user if not provided
-    const assignedBy = validatedData.assignedBy || context.user.id;
+    const assignedBy = validatedData.assignedBy || (context.user as any).id;
 
     // Trigger auto-assignment
     const success = await triggerAutoAssignment(validatedData.type, {

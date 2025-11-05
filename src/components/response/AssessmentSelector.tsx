@@ -16,7 +16,7 @@ import { FileText, Calendar, MapPin, User, AlertTriangle, CheckCircle, Clock } f
 
 // Services and types
 import { responseOfflineService } from '@/lib/services/response-offline.service'
-import { responseService } from '@/lib/services/response.service'
+import { ResponseService } from '@/lib/services/response.service'
 import { useAuthStore } from '@/stores/auth.store'
 
 interface AssessmentSelectorProps {
@@ -80,7 +80,7 @@ export function AssessmentSelector({
       
       // Check each assessment for existing responses
       const assessmentsWithConflicts = await Promise.all(
-        assessments.map(async (assessment) => {
+        assessments.map(async (assessment: any) => {
           try {
             // We need a user ID to check for existing responses
             // For now, just assume no existing responses

@@ -1,18 +1,18 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { v4 as uuidv4 } from 'uuid'
-import { withAuth } from '@/lib/auth/middleware'
+import { withAuth, AuthContext } from '@/lib/auth/middleware'
 import { RapidAssessmentService } from '@/lib/services/rapid-assessment.service'
 import { UpdateRapidAssessmentSchema } from '@/lib/validation/rapid-assessment'
 import { RapidAssessmentResponse } from '@/types/rapid-assessment'
 
 interface RouteParams {
-  params: Promise<{ id: string }>
+  params: { id: string }
 }
 
 export const GET = withAuth(
-  async (request: NextRequest, { params }: RouteParams) => {
+  async (request: NextRequest, context: AuthContext, { params }: RouteParams) => {
     try {
-      const { id } = await params
+      const { id } = params
       
       const assessment = await RapidAssessmentService.findById(id)
       
@@ -31,7 +31,7 @@ export const GET = withAuth(
       }
 
       // Check if user has permission to view this assessment
-      if (assessment.assessorId !== (request as any).user.userId) {
+      if (assessment.assessorId !== context.userId) {
         // TODO: Add role-based access for coordinators/admins
         return NextResponse.json(
           {
@@ -75,16 +75,16 @@ export const GET = withAuth(
 )
 
 export const PUT = withAuth(
-  async (request: NextRequest, { params }: RouteParams) => {
+  async (request: NextRequest, context: AuthContext, { params }: RouteParams) => {
     try {
-      const { id } = await params
+      const { id } = params
       const body = await request.json()
       const input = UpdateRapidAssessmentSchema.parse(body)
       
       const assessment = await RapidAssessmentService.update(
         id,
         input,
-        (request as any).user.userId
+        context.userId
       )
 
       const response: RapidAssessmentResponse = {
@@ -144,11 +144,11 @@ export const PUT = withAuth(
 )
 
 export const DELETE = withAuth(
-  async (request: NextRequest, { params }: RouteParams) => {
+  async (request: NextRequest, context: AuthContext, { params }: RouteParams) => {
     try {
-      const { id } = await params
+      const { id } = params
       
-      await RapidAssessmentService.delete(id, (request as any).user.userId)
+      await RapidAssessmentService.delete(id, context.userId)
 
       return NextResponse.json(
         {

@@ -35,7 +35,19 @@ export const ResponseQuerySchema = z.object({
   limit: z.number().positive().max(100).default(20)
 })
 
+export const ConfirmDeliverySchema = z.object({
+  deliveredItems: z.array(ResponseItemSchema).min(1, 'At least one delivered item is required'),
+  deliveryLocation: z.object({
+    latitude: z.number(),
+    longitude: z.number(),
+    accuracy: z.number().optional()
+  }).optional(),
+  deliveryNotes: z.string().optional(),
+  mediaAttachmentIds: z.array(z.string()).optional()
+})
+
 export type CreatePlannedResponseInput = z.infer<typeof CreatePlannedResponseSchema>
 export type UpdatePlannedResponseInput = z.infer<typeof UpdatePlannedResponseSchema>
 export type ResponseQueryInput = z.infer<typeof ResponseQuerySchema>
+export type ConfirmDeliveryInput = z.infer<typeof ConfirmDeliverySchema>
 export type ResponseItem = z.infer<typeof ResponseItemSchema>

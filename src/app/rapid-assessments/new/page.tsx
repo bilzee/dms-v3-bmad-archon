@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, Suspense } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { RoleBasedRoute } from '@/components/shared/RoleBasedRoute'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
@@ -28,7 +28,7 @@ const assessmentTypes = [
   { value: 'SECURITY', label: 'Security Assessment', description: 'Assess security and protection' }
 ]
 
-export default function NewRapidAssessmentPage() {
+function NewRapidAssessmentContent() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const { token, user } = useAuth()
@@ -65,8 +65,8 @@ export default function NewRapidAssessmentPage() {
       const assessmentData = {
         ...data,
         entityId: finalEntityId,
-        assessorId: user.id,
-        assessorName: user.name,
+        assessorId: (user as any).id,
+        assessorName: (user as any).name,
         rapidAssessmentDate: new Date().toISOString()
       }
 
@@ -122,7 +122,7 @@ export default function NewRapidAssessmentPage() {
 
     const formProps = {
       entityId: selectedEntityId || '', // Use selected entity ID
-      initialData: null,
+      initialData: undefined,
       onSubmit: handleSubmit,
       onCancel: handleCancel,
       isSubmitting,
@@ -239,5 +239,13 @@ export default function NewRapidAssessmentPage() {
         )}
       </div>
     </RoleBasedRoute>
+  )
+}
+
+export default function NewRapidAssessmentPage() {
+  return (
+    <Suspense fallback={<div>Loading...</div>}>
+      <NewRapidAssessmentContent />
+    </Suspense>
   )
 }

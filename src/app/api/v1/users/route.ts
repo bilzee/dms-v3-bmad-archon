@@ -114,11 +114,11 @@ export const POST = withAuth(async (request: NextRequest, context) => {
       phone: validatedData.phone,
       organization: validatedData.organization,
       roleIds: validatedData.roleIds,
-      assignedBy: context.user.userId
+      assignedBy: context.userId
     })
 
     // Remove password hash from response
-    const { passwordHash, ...userWithoutPassword } = user
+    const { passwordHash, ...userWithoutPassword } = user as any
 
     const response: CreateUserResponse = {
       data: {
@@ -197,7 +197,7 @@ export const GET = withAuth(async (request: NextRequest, context) => {
     ])
 
     // Remove password hashes
-    const usersWithoutPasswords = users.map(({ passwordHash, ...user }) => user)
+    const usersWithoutPasswords = users.map(({ passwordHash, ...user }: any) => user)
 
     return NextResponse.json(
       {

@@ -94,15 +94,12 @@ export const useOffline = () => {
           break;
       }
 
-      // Auto-sync if online
-      if (isOnline && !isSyncing) {
-        syncData();
-      }
+      // Auto-sync will be triggered by useEffect
     } catch (error) {
       console.error('Failed to queue operation:', error);
       throw error;
     }
-  }, [addToSyncQueue, isOnline, isSyncing]);
+  }, [addToSyncQueue]);
 
   // Sync data with server
   const syncData = useCallback(async () => {
@@ -215,6 +212,13 @@ export const useOffline = () => {
       throw error;
     }
   }, [clearOfflineData]);
+
+  // Auto-sync effect when connection comes back
+  useEffect(() => {
+    if (isOnline && !isSyncing && pendingOperations > 0) {
+      syncData();
+    }
+  }, [isOnline, isSyncing, pendingOperations, syncData]);
 
   return {
     // State

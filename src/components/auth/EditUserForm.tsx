@@ -290,7 +290,6 @@ export function EditUserForm({ user, isAdmin, onSuccess, onCancel }: EditUserFor
             <Label htmlFor="email">Email</Label>
             <Input
               id="email"
-              name="email"
               type="email"
               placeholder="your@email.com"
               {...register('email')}
@@ -308,15 +307,14 @@ export function EditUserForm({ user, isAdmin, onSuccess, onCancel }: EditUserFor
               <Label htmlFor="username">Username</Label>
               <Input
                 id="username"
-                name="username"
                 type="text"
                 placeholder="username"
                 {...register('username' as any)}
-                aria-invalid={errors.username ? 'true' : 'false'}
+                aria-invalid={(errors as any).username ? 'true' : 'false'}
               />
-              {errors.username && (
+              {(errors as any).username && (
                 <p className="text-sm text-red-600" role="alert">
-                  {errors.username.message}
+                  {(errors as any).username.message}
                 </p>
               )}
             </div>
@@ -326,7 +324,6 @@ export function EditUserForm({ user, isAdmin, onSuccess, onCancel }: EditUserFor
             <Label htmlFor="name">Full Name</Label>
             <Input
               id="name"
-              name="name"
               type="text"
               placeholder="John Doe"
               {...register('name')}
@@ -399,9 +396,9 @@ export function EditUserForm({ user, isAdmin, onSuccess, onCancel }: EditUserFor
                     ))}
                   </div>
                 )}
-                {errors.roles && (
+                {(errors as any).roles && (
                   <p className="text-sm text-red-600" role="alert">
-                    {(errors.roles as any).message}
+                    {(errors as any).roles.message}
                   </p>
                 )}
               </div>
@@ -423,14 +420,13 @@ export function EditUserForm({ user, isAdmin, onSuccess, onCancel }: EditUserFor
                 <Label htmlFor="currentPassword">Current Password (for password change)</Label>
                 <Input
                   id="currentPassword"
-                  name="currentPassword"
                   type="password"
                   placeholder="Enter current password"
                   {...register('currentPassword' as any)}
                 />
-                {errors.currentPassword && (
+                {(errors as any).currentPassword && (
                   <p className="text-sm text-red-600" role="alert">
-                    {(errors.currentPassword as any).message}
+                    {(errors as any).currentPassword.message}
                   </p>
                 )}
               </div>
@@ -439,14 +435,13 @@ export function EditUserForm({ user, isAdmin, onSuccess, onCancel }: EditUserFor
                 <Label htmlFor="newPassword">New Password (leave blank to keep current)</Label>
                 <Input
                   id="newPassword"
-                  name="newPassword"
                   type="password"
                   placeholder="Enter new password (min 8 characters)"
                   {...register('newPassword' as any)}
                 />
-                {errors.newPassword && (
+                {(errors as any).newPassword && (
                   <p className="text-sm text-red-600" role="alert">
-                    {(errors.newPassword as any).message}
+                    {(errors as any).newPassword.message}
                   </p>
                 )}
               </div>
@@ -455,14 +450,13 @@ export function EditUserForm({ user, isAdmin, onSuccess, onCancel }: EditUserFor
                 <Label htmlFor="confirmPassword">Confirm New Password</Label>
                 <Input
                   id="confirmPassword"
-                  name="confirmPassword"
                   type="password"
                   placeholder="Confirm new password"
                   {...register('confirmPassword' as any)}
                 />
-                {errors.confirmPassword && (
+                {(errors as any).confirmPassword && (
                   <p className="text-sm text-red-600" role="alert">
-                    {(errors.confirmPassword as any).message}
+                    {(errors as any).confirmPassword.message}
                   </p>
                 )}
               </div>

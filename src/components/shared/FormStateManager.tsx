@@ -8,7 +8,13 @@ interface FormStateManagerProps {
   formData: any;
   onFormDataChange?: (data: any) => void;
   onUnsavedChangesChange?: (hasUnsaved: boolean) => void;
-  children?: React.ReactNode;
+  children?: React.ReactNode | ((props: {
+    formData: any;
+    hasUnsavedChanges: boolean;
+    onFormDataChange: (data: any) => void;
+    clearForm: () => void;
+    resetToInitial: () => void;
+  }) => React.ReactNode);
 }
 
 export const FormStateManager = ({ 

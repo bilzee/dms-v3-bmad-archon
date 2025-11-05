@@ -52,7 +52,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     const { user, token } = authResult
 
     // Remove password hash from response
-    const { passwordHash, ...userWithoutPassword } = user
+    const { passwordHash, ...userWithoutPassword } = user as any
     
     // Extract roles for response
     const roles = user.roles.map(ur => ur.role)

@@ -45,7 +45,7 @@ export class PreliminaryAssessmentService {
       }
     })
 
-    return assessment
+    return assessment as any
   }
 
   static async findById(id: string): Promise<(PreliminaryAssessment & { incident?: Incident }) | null> {
@@ -54,7 +54,7 @@ export class PreliminaryAssessmentService {
       include: {
         incident: true
       }
-    })
+    }) as any
   }
 
   static async findByUserId(
@@ -100,7 +100,7 @@ export class PreliminaryAssessmentService {
     })
 
     return {
-      assessments,
+      assessments: assessments as any,
       total,
       totalPages
     }
@@ -153,7 +153,7 @@ export class PreliminaryAssessmentService {
     })
 
     return {
-      assessments,
+      assessments: assessments as any,
       total,
       totalPages
     }
@@ -171,7 +171,7 @@ export class PreliminaryAssessmentService {
       }
     })
 
-    return assessment
+    return assessment as any
   }
 
   static async delete(id: string): Promise<void> {

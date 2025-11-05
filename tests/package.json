@@ -1,0 +1,77 @@
+{
+  "name": "Disaster Management System - Delivery Documentation Tests",
+  "version": "1.0.0",
+  "description": "Comprehensive test suite for delivery documentation functionality",
+  "scripts": {
+    "test": "vitest",
+    "test:ui": "vitest --ui",
+    "test:run": "vitest run",
+    "test:coverage": "vitest run --coverage",
+    "test:watch": "vitest --watch",
+    "test:unit": "vitest run tests/unit",
+    "test:integration": "vitest run tests/integration", 
+    "test:components": "vitest run tests/components",
+    "test:e2e": "playwright test",
+    "test:e2e:ui": "playwright test --ui",
+    "test:e2e:headed": "playwright test --headed",
+    "test:e2e:debug": "playwright test --debug",
+    "test:e2e:mobile": "playwright test --project='Mobile Chrome'",
+    "test:e2e:delivery": "playwright test tests/e2e/delivery-workflow.spec.ts",
+    "test:all": "npm run test:run && npm run test:e2e",
+    "test:ci": "npm run test:coverage && npm run test:e2e",
+    "test:silent": "vitest run --reporter=basic",
+    "test:delivery-offline": "vitest run tests/unit/delivery-offline.service.test.ts",
+    "test:delivery-validator": "vitest run tests/unit/delivery-media-validator.test.ts",
+    "test:delivery-form": "vitest run tests/components/DeliveryConfirmationForm.test.tsx",
+    "test:delivery-api": "vitest run tests/integration/delivery-confirmation.test.ts"
+  },
+  "dependencies": {
+    "@playwright/test": "^1.40.0",
+    "@testing-library/jest-dom": "^6.1.0",
+    "@testing-library/react": "^14.0.0",
+    "@testing-library/user-event": "^14.0.0",
+    "@types/jest": "^29.5.0",
+    "@types/node": "^20.0.0",
+    "@vitejs/plugin-react": "^4.0.0",
+    "@vitest/coverage-v8": "^1.0.0",
+    "@vitest/ui": "^1.0.0",
+    "happy-dom": "^12.0.0",
+    "jsdom": "^23.0.0",
+    "typescript": "^5.0.0",
+    "vite": "^5.0.0",
+    "vitest": "^1.0.0"
+  },
+  "devDependencies": {
+    "@testing-library/jest-dom": "^6.1.0",
+    "@testing-library/react": "^14.0.0", 
+    "@testing-library/user-event": "^14.0.0",
+    "@types/jest": "^29.5.0",
+    "@vitejs/plugin-react": "^4.0.0",
+    "@vitest/coverage-v8": "^1.0.0",
+    "@vitest/ui": "^1.0.0",
+    "jsdom": "^23.0.0",
+    "vitest": "^1.0.0"
+  },
+  "testConfig": {
+    "coverageThreshold": {
+      "global": {
+        "branches": 80,
+        "functions": 80,
+        "lines": 80,
+        "statements": 80
+      }
+    },
+    "testMatch": [
+      "**/__tests__/**/*.[jt]s?(x)",
+      "**/tests/**/*.[jt]s?(x)",
+      "**/*.(test|spec).[jt]s?(x)"
+    ],
+    "collectCoverageFrom": [
+      "src/**/*.{ts,tsx}",
+      "!src/**/*.d.ts",
+      "!src/**/*.stories.{ts,tsx}",
+      "!src/tests/**/*",
+      "!src/**/__tests__/**/*"
+    ]
+  }
+}

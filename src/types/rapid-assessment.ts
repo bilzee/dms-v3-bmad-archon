@@ -1,5 +1,8 @@
 import { RapidAssessment, AssessmentType, AssessmentStatus, Priority, SyncStatus, VerificationStatus } from '@prisma/client'
 
+// Re-export Prisma enums for convenient access
+export { AssessmentType, AssessmentStatus, Priority, SyncStatus, VerificationStatus }
+
 // Type for assessments with their specific data included
 export interface RapidAssessmentWithData extends RapidAssessment {
   healthAssessment?: HealthAssessment

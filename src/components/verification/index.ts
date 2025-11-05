@@ -13,4 +13,3 @@ export { VerificationActions } from './VerificationActions';
 export { VerificationDashboard } from './VerificationDashboard';
 export { AutoApprovalConfig } from './AutoApprovalConfig';
 
-export type { StatusIndicatorProps } from './StatusIndicator';

@@ -23,13 +23,13 @@ export const GET = withAuth(async (request, context) => {
     }
 
     // Remove password hash from response
-    const { passwordHash, ...userWithoutPassword } = user
+    const { passwordHash, ...userWithoutPassword } = user as any
 
     // Extract permissions from user roles
     const permissions = Array.from(
       new Set(
         user.roles.flatMap(ur => 
-          ur.role.permissions.map(rp => rp.permission.code)
+          ur.role.permissions.map((rp: any) => rp.permission.code)
         )
       )
     )

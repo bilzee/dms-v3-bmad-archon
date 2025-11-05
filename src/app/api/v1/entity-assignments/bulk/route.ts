@@ -38,8 +38,8 @@ export const POST = withAuth(async (request: NextRequest, context) => {
     });
 
     if (users.length !== validatedData.userIds.length) {
-      const foundUserIds = users.map(u => u.id);
-      const missingUserIds = validatedData.userIds.filter(id => !foundUserIds.includes(id));
+      const foundUserIds = users.map((u: any) => u.id);
+      const missingUserIds = validatedData.userIds.filter((id: any) => !foundUserIds.includes(id));
       return NextResponse.json(
         { error: 'Some users not found', missingUserIds },
         { status: 404 }
@@ -47,18 +47,18 @@ export const POST = withAuth(async (request: NextRequest, context) => {
     }
 
     // Check if all users have assignable roles
-    const usersWithoutAssignableRoles = users.filter(user => 
-      !user.roles.some(userRole => ['ASSESSOR', 'RESPONDER'].includes(userRole.role.name))
+    const usersWithoutAssignableRoles = users.filter((user: any) => 
+      !user.roles.some((userRole: any) => ['ASSESSOR', 'RESPONDER'].includes(userRole.role.name))
     );
 
     if (usersWithoutAssignableRoles.length > 0) {
       return NextResponse.json(
         { 
           error: 'Some users do not have ASSESSOR or RESPONDER roles', 
-          invalidUsers: usersWithoutAssignableRoles.map(u => ({
+          invalidUsers: usersWithoutAssignableRoles.map((u: any) => ({
             id: u.id,
             email: u.email,
-            roles: u.roles.map(ur => ur.role.name)
+            roles: u.roles.map((ur: any) => ur.role.name)
           }))
         },
         { status: 400 }
@@ -73,8 +73,8 @@ export const POST = withAuth(async (request: NextRequest, context) => {
     });
 
     if (entities.length !== validatedData.entityIds.length) {
-      const foundEntityIds = entities.map(e => e.id);
-      const missingEntityIds = validatedData.entityIds.filter(id => !foundEntityIds.includes(id));
+      const foundEntityIds = entities.map((e: any) => e.id);
+      const missingEntityIds = validatedData.entityIds.filter((id: any) => !foundEntityIds.includes(id));
       return NextResponse.json(
         { error: 'Some entities not found', missingEntityIds },
         { status: 404 }
@@ -96,7 +96,7 @@ export const POST = withAuth(async (request: NextRequest, context) => {
       for (const entityId of validatedData.entityIds) {
         // Skip if assignment already exists
         const exists = existingAssignments.some(
-          assignment => assignment.userId === userId && assignment.entityId === entityId
+          (assignment: any) => assignment.userId === userId && assignment.entityId === entityId
         );
         
         if (!exists) {
@@ -122,7 +122,7 @@ export const POST = withAuth(async (request: NextRequest, context) => {
 
     // Bulk create assignments in a transaction
     const createdAssignments = await prisma.$transaction(
-      assignmentPairs.map(assignment =>
+      assignmentPairs.map((assignment: any) =>
         prisma.entityAssignment.create({
           data: assignment,
           include: {

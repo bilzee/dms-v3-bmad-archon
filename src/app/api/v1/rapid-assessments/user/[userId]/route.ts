@@ -1,21 +1,21 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { v4 as uuidv4 } from 'uuid'
-import { withAuth } from '@/lib/auth/middleware'
+import { withAuth, AuthContext } from '@/lib/auth/middleware'
 import { RapidAssessmentService } from '@/lib/services/rapid-assessment.service'
 import { QueryRapidAssessmentSchema } from '@/lib/validation/rapid-assessment'
 import { RapidAssessmentListResponse } from '@/types/rapid-assessment'
 
 interface RouteParams {
-  params: Promise<{ userId: string }>
+  params: { userId: string }
 }
 
 export const GET = withAuth(
-  async (request: NextRequest, { params }: RouteParams) => {
+  async (request: NextRequest, context: AuthContext, { params }: RouteParams) => {
     try {
-      const { userId } = await params
+      const { userId } = params
       
       // Verify user can only access their own assessments
-      if (userId !== (request as any).user.userId) {
+      if (userId !== context.userId) {
         return NextResponse.json(
           {
             error: 'Not authorized to access these assessments',

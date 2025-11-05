@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { withAuth } from '@/lib/auth/middleware';
+import { withAuth, AuthContext } from '@/lib/auth/middleware';
 import { MultiUserAssignmentService } from '@/lib/assignment/multi-user-service';
 import { z } from 'zod';
 
@@ -79,9 +79,21 @@ export const GET = withAuth(async (request: NextRequest, context) => {
   }
 });
 
-export const POST = requireRole('COORDINATOR')(async (request: NextRequest, context) => {
-  try {
+export const POST = withAuth(async (request: NextRequest, context: AuthContext) => {
+  const { user, roles } = context;
+  
+  // Only coordinators can create assignments
+  if (!roles.includes('COORDINATOR')) {
+    return NextResponse.json(
+      { 
+        success: false, 
+        error: 'Insufficient permissions. Coordinator role required.' 
+      },
+      { status: 403 }
+    );
+  }
 
+  try {
     const body = await request.json();
     const { entityId, userIds } = body;
 

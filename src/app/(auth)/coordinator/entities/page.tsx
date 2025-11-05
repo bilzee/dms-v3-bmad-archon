@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -65,7 +65,7 @@ export default function CoordinatorEntitiesPage() {
   const [roleFilter, setRoleFilter] = useState('ALL');
   const [activeTab, setActiveTab] = useState('assign');
 
-  const fetchData = async () => {
+  const fetchData = useCallback(async () => {
     setIsLoading(true);
     try {
       if (!token) throw new Error('No authentication token available');
@@ -95,7 +95,7 @@ export default function CoordinatorEntitiesPage() {
       console.error('Error fetching data:', error);
     }
     setIsLoading(false);
-  };
+  }, [token]);
 
   const assignUsersToEntity = async () => {
     if (!selectedEntity || selectedUserIds.length === 0) return;
@@ -115,7 +115,7 @@ export default function CoordinatorEntitiesPage() {
           body: JSON.stringify({
             userId,
             entityId: selectedEntity,
-            assignedBy: user?.id
+            assignedBy: (user as any)?.id
           })
         })
       );
@@ -161,7 +161,7 @@ export default function CoordinatorEntitiesPage() {
 
   useEffect(() => {
     fetchData();
-  }, []);
+  }, [fetchData]);
 
   if (!hasRole('COORDINATOR') && !hasRole('ADMIN')) {
     return (

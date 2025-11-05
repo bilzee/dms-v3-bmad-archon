@@ -167,7 +167,6 @@ export function LoginForm() {
             <Label htmlFor="email">Email</Label>
             <Input
               id="email"
-              name="email"
               type="email"
               placeholder="your@email.com"
               data-testid="email"
@@ -185,7 +184,6 @@ export function LoginForm() {
             <Label htmlFor="password">Password</Label>
             <Input
               id="password"
-              name="password"
               type="password"
               placeholder="Enter your password"
               data-testid="password"

@@ -14,13 +14,15 @@ export class ResponseOfflineService {
       // Store successful response in offline cache for reference
       await offlineDB.addResponse({
         uuid: response.id,
-        responderId: data.responderId,
+        responderId: 'system', // TODO: Get from auth context
         assessmentId: data.assessmentId,
         data: {
           ...data,
           ...response,
           syncStatus: 'synced'
         },
+        timestamp: new Date(),
+        lastModified: new Date(),
         syncStatus: 'synced'
       })
       
@@ -30,16 +32,18 @@ export class ResponseOfflineService {
       const responseId = crypto.randomUUID()
       const offlineResponse = {
         uuid: responseId,
-        responderId: data.responderId,
+        responderId: 'system', // TODO: Get from auth context
         assessmentId: data.assessmentId,
         data: {
           ...data,
           id: responseId,
           status: 'PLANNED',
           createdAt: new Date().toISOString(),
-          syncStatus: 'pending'
+          syncStatus: 'pending' as const
         },
-        syncStatus: 'pending'
+        timestamp: new Date(),
+        lastModified: new Date(),
+        syncStatus: 'pending' as const
       }
       
       await offlineDB.addResponse(offlineResponse)
@@ -52,7 +56,8 @@ export class ResponseOfflineService {
         entityUuid: responseId,
         data: offlineResponse.data,
         priority: 5,
-        attempts: 0
+        attempts: 0,
+        timestamp: new Date()
       })
       
       return offlineResponse.data
@@ -83,9 +88,9 @@ export class ResponseOfflineService {
           ...data,
           id,
           updatedAt: new Date().toISOString(),
-          syncStatus: 'pending'
+          syncStatus: 'pending' as const
         },
-        syncStatus: 'pending'
+        syncStatus: 'pending' as const
       }
       
       await offlineDB.updateResponse(id, offlineUpdate)
@@ -98,7 +103,8 @@ export class ResponseOfflineService {
         entityUuid: id,
         data: offlineUpdate.data,
         priority: 5,
-        attempts: 0
+        attempts: 0,
+        timestamp: new Date()
       })
       
       return offlineUpdate.data
@@ -141,7 +147,7 @@ export class ResponseOfflineService {
       const responses = await ResponseService.getPlannedResponsesForResponder(query)
       
       // Update offline cache for each response
-      for (const response of responses.data || responses) {
+      for (const response of responses.responses || responses) {
         try {
           await offlineDB.updateResponse(response.id, {
             data: { ...response, syncStatus: 'synced' },

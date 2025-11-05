@@ -49,14 +49,14 @@ export function EntitySelector({
   
   // TanStack Query hook for entities with assignment info
   const { data: entities = [], isLoading, error, refetch } = useQuery({
-    queryKey: ['entities', 'with-assignment-info', user?.id],
+    queryKey: ['entities', 'with-assignment-info', (user as any)?.id],
     queryFn: async () => {
       if (!user || !token) {
         throw new Error('User not authenticated')
       }
 
       // Get entities available for assessment by this user via API
-      const response = await fetch(`/api/entities/available-for-assessment?userId=${user.id}`, {
+      const response = await fetch(`/api/entities/available-for-assessment?userId=${(user as any).id}`, {
         headers: {
           'Authorization': `Bearer ${token}`
         }
@@ -78,7 +78,7 @@ export function EntitySelector({
 
   useEffect(() => {
     if (value) {
-      const selected = entities.find(e => e.id === value)
+      const selected = entities.find((e: any) => e.id === value)
       setSelectedEntity(selected || null)
     } else {
       setSelectedEntity(null)
@@ -86,7 +86,7 @@ export function EntitySelector({
   }, [value, entities])
 
   const handleEntityChange = (entityId: string) => {
-    const selected = entities.find(e => e.id === entityId)
+    const selected = entities.find((e: any) => e.id === entityId)
     setSelectedEntity(selected || null)
     onValueChange(entityId)
   }
@@ -95,8 +95,8 @@ export function EntitySelector({
     refetch()
   }
 
-  const getEntityTypeColor = (type: string) => {
-    const typeColors: Record<string, string> = {
+  const getEntityTypeColor = (type: string): "default" | "destructive" | "outline" | "secondary" => {
+    const typeColors: Record<string, "default" | "destructive" | "outline" | "secondary"> = {
       'COMMUNITY': 'default',
       'WARD': 'secondary',
       'LGA': 'outline',
@@ -187,7 +187,7 @@ export function EntitySelector({
           </SelectValue>
         </SelectTrigger>
         <SelectContent>
-          {entities.map((entity) => {
+          {entities.map((entity: any) => {
             const assignmentStatus = getAssignmentStatus(entity)
             return (
               <SelectItem 

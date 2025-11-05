@@ -63,7 +63,7 @@ export const POST = withAuth(async (request: NextRequest, context) => {
       const body = await request.json()
       const input = CreateIncidentSchema.parse(body)
       
-      const incident = await IncidentService.create(input, context.user.userId)
+      const incident = await IncidentService.create(input, context.userId)
 
       return NextResponse.json(
         {

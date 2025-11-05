@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import './globals.css';
 import { Header } from '@/components/shared/Header';
 import { QueryProvider } from '@/components/providers/QueryProvider';
+import { BackgroundSyncProvider } from '@/providers/BackgroundSyncProvider';
 
 export const metadata: Metadata = {
   title: 'Disaster Management System - Borno State',
@@ -35,23 +36,25 @@ export default function RootLayout({
       </head>
       <body className="bg-gray-50 min-h-screen">
         <QueryProvider>
-          <div className="min-h-screen flex flex-col">
-            <Header />
+          <BackgroundSyncProvider>
+            <div className="min-h-screen flex flex-col">
+              <Header />
 
-            {/* Main content */}
-            <main className="flex-1">
-              {children}
-            </main>
+              {/* Main content */}
+              <main className="flex-1">
+                {children}
+              </main>
 
-          {/* Footer */}
-          <footer className="bg-white border-t border-gray-200">
-            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
-              <p className="text-center text-sm text-gray-500">
-                Disaster Management System - Borno State, Nigeria
-              </p>
+            {/* Footer */}
+            <footer className="bg-white border-t border-gray-200">
+              <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
+                <p className="text-center text-sm text-gray-500">
+                  Disaster Management System - Borno State, Nigeria
+                </p>
+              </div>
+              </footer>
             </div>
-            </footer>
-          </div>
+          </BackgroundSyncProvider>
         </QueryProvider>
       </body>
     </html>

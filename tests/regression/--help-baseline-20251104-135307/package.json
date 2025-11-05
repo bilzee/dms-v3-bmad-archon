@@ -1,0 +1,14 @@
+{
+  "name": "regression-tests---help",
+  "version": "1.0.0",
+  "description": "Regression tests for Story --help: New Feature Implementation",
+  "scripts": {
+    "test": "vitest",
+    "test:watch": "vitest --watch",
+    "test:ui": "vitest --ui",
+    "test:coverage": "vitest --coverage"
+  },
+  "dependencies": {
+    "vitest": "^4.0.6"
+  }
+}

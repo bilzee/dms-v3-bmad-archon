@@ -15,7 +15,7 @@ import { Badge } from '@/components/ui/badge'
 import { GPSCapture } from '@/components/shared/GPSCapture'
 import { MediaField } from '@/components/shared/MediaField'
 import { EntitySelector } from '@/components/shared/EntitySelector'
-import { ShelterAssessmentFormProps, ShelterAssessmentInput } from '@/types/rapid-assessment'
+import { ShelterAssessmentFormProps, ShelterAssessment } from '@/types/rapid-assessment'
 import { cn } from '@/lib/utils'
 import { getCurrentUserName, getAssessmentLocationData } from '@/utils/assessment-utils'
 import { Home, AlertTriangle, Cloud, Users } from 'lucide-react'
@@ -76,7 +76,7 @@ export function ShelterAssessmentForm({
   disabled = false 
 }: ShelterAssessmentFormProps) {
   const [gpsCoordinates, setGpsCoordinates] = useState<{ lat: number; lng: number } | null>(null)
-  const [mediaFiles, setMediaFiles] = useState<string[]>(initialData?.mediaAttachments || [])
+  const [mediaFiles, setMediaFiles] = useState<string[]>((initialData as any)?.mediaAttachments || [])
   const [selectedEntity, setSelectedEntity] = useState<string>(entityId)
   const [selectedEntityData, setSelectedEntityData] = useState<any>(null)
 

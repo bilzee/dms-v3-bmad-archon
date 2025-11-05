@@ -1,4 +1,4 @@
-import { offlineDB, SyncQueueItem } from '@/lib/db/offline';
+import { offlineDB, SyncQueueItem } from '../db/offline';
 
 export interface SyncChange {
   type: 'assessment' | 'response' | 'entity';
@@ -32,10 +32,11 @@ export interface ConnectivityStatus {
 
 export class SyncEngine {
   private static instance: SyncEngine;
-  private isOnline = navigator.onLine;
+  private isOnline = typeof window !== 'undefined' && typeof navigator !== 'undefined' ? navigator.onLine : true;
   private syncInProgress = false;
   private retryTimeouts = new Map<string, NodeJS.Timeout>();
   private connectivityListeners = new Set<(status: ConnectivityStatus) => void>();
+  private isInitialized = false;
   
   // Configuration
   private readonly MAX_RETRIES = 3;
@@ -44,8 +45,12 @@ export class SyncEngine {
   private readonly SYNC_CHECK_INTERVAL = 30000; // 30 seconds
 
   private constructor() {
-    this.initializeConnectivityListeners();
-    this.startPeriodicSyncCheck();
+    // Only initialize browser-specific features on the client side
+    if (typeof window !== 'undefined' && typeof navigator !== 'undefined') {
+      this.initializeConnectivityListeners();
+      this.startPeriodicSyncCheck();
+      this.isInitialized = true;
+    }
   }
 
   static getInstance(): SyncEngine {

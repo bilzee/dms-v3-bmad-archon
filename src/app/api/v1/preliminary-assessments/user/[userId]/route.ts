@@ -1,11 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { v4 as uuidv4 } from 'uuid'
-import { withAuth } from '@/lib/auth/middleware'
+import { withAuth, AuthContext } from '@/lib/auth/middleware'
 import { PreliminaryAssessmentService } from '@/lib/services/preliminary-assessment.service'
 import { QueryPreliminaryAssessmentSchema } from '@/lib/validation/preliminary-assessment'
 import { PreliminaryAssessmentListResponse } from '@/types/preliminary-assessment'
 
-export const GET = withAuth(async (request: NextRequest, context, { params }: any) => {
+interface RouteParams {
+  params: { userId: string }
+}
+
+export const GET = withAuth(async (request: NextRequest, context: AuthContext, { params }: RouteParams) => {
   const { roles } = context;
   if (!roles.includes('ASSESSOR') && !roles.includes('COORDINATOR') && !roles.includes('ADMIN')) {
     return NextResponse.json(
@@ -15,7 +19,7 @@ export const GET = withAuth(async (request: NextRequest, context, { params }: an
   }
 
   try {
-    const { userId } = await params;
+    const { userId } = params;
       
       if (!userId) {
         return NextResponse.json(
@@ -32,7 +36,7 @@ export const GET = withAuth(async (request: NextRequest, context, { params }: an
       }
 
       // Only allow users to see their own assessments unless they're coordinator/admin
-      const requestingUserId = context.user.userId
+      const requestingUserId = context.userId
       const isCoordinatorOrAdmin = context.roles.includes('COORDINATOR') || 
                                   context.roles.includes('ADMIN')
       

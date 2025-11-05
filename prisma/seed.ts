@@ -1,4 +1,4 @@
-import { PrismaClient, RoleName } from '@prisma/client'
+import { PrismaClient } from '@prisma/client'
 import bcrypt from 'bcryptjs'
 
 const prisma = new PrismaClient()
@@ -53,46 +53,46 @@ async function main() {
   // Create Roles
   console.log('👥 Creating roles...')
   const assessorRole = await prisma.role.upsert({
-    where: { name: RoleName.ASSESSOR },
+    where: { name: 'ASSESSOR' },
     update: {},
     create: {
-      name: RoleName.ASSESSOR,
+      name: 'ASSESSOR',
       description: 'Field assessors who conduct rapid assessments',
     },
   })
 
   const coordinatorRole = await prisma.role.upsert({
-    where: { name: RoleName.COORDINATOR },
+    where: { name: 'COORDINATOR' },
     update: {},
     create: {
-      name: RoleName.COORDINATOR,
+      name: 'COORDINATOR',
       description: 'Coordinators who verify and manage assessments and responses',
     },
   })
 
   const responderRole = await prisma.role.upsert({
-    where: { name: RoleName.RESPONDER },
+    where: { name: 'RESPONDER' },
     update: {},
     create: {
-      name: RoleName.RESPONDER,
+      name: 'RESPONDER',
       description: 'Response teams who execute intervention activities',
     },
   })
 
   const donorRole = await prisma.role.upsert({
-    where: { name: RoleName.DONOR },
+    where: { name: 'DONOR' },
     update: {},
     create: {
-      name: RoleName.DONOR,
+      name: 'DONOR',
       description: 'Donors and funding organizations',
     },
   })
 
   const adminRole = await prisma.role.upsert({
-    where: { name: RoleName.ADMIN },
+    where: { name: 'ADMIN' },
     update: {},
     create: {
-      name: RoleName.ADMIN,
+      name: 'ADMIN',
       description: 'System administrators with full access',
     },
   })

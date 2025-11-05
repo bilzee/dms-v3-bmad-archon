@@ -14,7 +14,7 @@ import { Badge } from '@/components/ui/badge'
 import { GPSCapture } from '@/components/shared/GPSCapture'
 import { MediaField } from '@/components/shared/MediaField'
 import { EntitySelector } from '@/components/shared/EntitySelector'
-import { SecurityAssessmentFormProps, SecurityAssessmentInput } from '@/types/rapid-assessment'
+import { SecurityAssessmentFormProps, SecurityAssessment } from '@/types/rapid-assessment'
 import { getCurrentUserName, getAssessmentLocationData } from '@/utils/assessment-utils'
 import { Shield, AlertTriangle, Users, Lightbulb, Phone } from 'lucide-react'
 
@@ -39,7 +39,7 @@ export function SecurityAssessmentForm({
   disabled = false 
 }: SecurityAssessmentFormProps) {
   const [gpsCoordinates, setGpsCoordinates] = useState<{ lat: number; lng: number } | null>(null)
-  const [mediaFiles, setMediaFiles] = useState<string[]>(initialData?.mediaAttachments || [])
+  const [mediaFiles, setMediaFiles] = useState<string[]>((initialData as any)?.mediaAttachments || [])
   const [selectedEntity, setSelectedEntity] = useState<string>(entityId)
   const [selectedEntityData, setSelectedEntityData] = useState<any>(null)
 

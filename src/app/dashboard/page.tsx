@@ -299,8 +299,8 @@ export default function DashboardPage() {
           <CardContent>
             <div className="space-y-3">
               <div className="space-y-2 text-sm">
-                <p><strong>Name:</strong> {user.name}</p>
-                <p><strong>Email:</strong> {user.email}</p>
+                <p><strong>Name:</strong> {(user as any).name}</p>
+                <p><strong>Email:</strong> {(user as any).email}</p>
                 <div className="flex items-center gap-2">
                   <strong>Roles:</strong>
                   {user.roles?.map(r => (

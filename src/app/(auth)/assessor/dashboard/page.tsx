@@ -19,7 +19,7 @@ export default function AssessorDashboard() {
           <div>
             <h1 className="text-3xl font-bold text-gray-900">Assessor Dashboard</h1>
             <p className="text-gray-600 mt-2">
-              Welcome back, {user?.name}. Your current role is: <Badge variant="outline">{currentRole}</Badge>
+              Welcome back, {(user as any)?.name}. Your current role is: <Badge variant="outline">{currentRole}</Badge>
             </p>
           </div>
           <Link href="/assessor/rapid-assessments/new">

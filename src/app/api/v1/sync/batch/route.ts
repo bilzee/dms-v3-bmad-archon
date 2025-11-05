@@ -161,7 +161,7 @@ async function processBatchChanges(changes: z.infer<typeof SyncChangeSchema>[]) 
     console.error('Batch transaction failed and rolled back:', error);
     
     // Ensure all results are marked as failed if we reach this point
-    if (results.length === 0 || results.some(r => r.status !== 'failed')) {
+    if (results.length === 0 || results.some(r => r.status === 'success' || r.status === 'conflict')) {
       results.length = 0;
       const failedResult = {
         offlineId: '',

@@ -1,17 +1,17 @@
-import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { describe, it, expect, beforeEach } from '@jest/globals';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { VerificationActions } from '@/components/verification/VerificationActions';
 import type { VerificationQueueItem } from '@/types/verification';
 
 // Mock the hooks
-vi.mock('@/hooks/useVerification', () => ({
-  useVerifyAssessment: vi.fn(),
-  useRejectAssessment: vi.fn()
+jest.mock('@/hooks/useVerification', () => ({
+  useVerifyAssessment: jest.fn(),
+  useRejectAssessment: jest.fn()
 }));
 
 // Mock lucide-react icons
-vi.mock('lucide-react', () => ({
+jest.mock('lucide-react', () => ({
   CheckCircle: ({ className }: { className?: string }) => <div data-testid="check-circle" className={className} />,
   XCircle: ({ className }: { className?: string }) => <div data-testid="x-circle" className={className} />,
   RotateCcw: ({ className }: { className?: string }) => <div data-testid="rotate-ccw" className={className} />,
@@ -66,13 +66,13 @@ describe('VerificationActions', () => {
     
     // Setup default mock implementations
     mockUseVerifyAssessment.mockReturnValue({
-      mutate: vi.fn(),
+      mutate: jest.fn(),
       isPending: false,
       error: null
     });
     
     mockUseRejectAssessment.mockReturnValue({
-      mutate: vi.fn(),
+      mutate: jest.fn(),
       isPending: false,
       error: null
     });
@@ -83,7 +83,7 @@ describe('VerificationActions', () => {
       <TestWrapper>
         <VerificationActions 
           assessment={mockAssessment}
-          onActionComplete={vi.fn()}
+          onActionComplete={jest.fn()}
         />
       </TestWrapper>
     );
@@ -104,7 +104,7 @@ describe('VerificationActions', () => {
       <TestWrapper>
         <VerificationActions 
           assessment={verifiedAssessment}
-          onActionComplete={vi.fn()}
+          onActionComplete={jest.fn()}
         />
       </TestWrapper>
     );
@@ -118,7 +118,7 @@ describe('VerificationActions', () => {
       <TestWrapper>
         <VerificationActions 
           assessment={mockAssessment}
-          onActionComplete={vi.fn()}
+          onActionComplete={jest.fn()}
         />
       </TestWrapper>
     );
@@ -136,7 +136,7 @@ describe('VerificationActions', () => {
       <TestWrapper>
         <VerificationActions 
           assessment={mockAssessment}
-          onActionComplete={vi.fn()}
+          onActionComplete={jest.fn()}
         />
       </TestWrapper>
     );
@@ -150,8 +150,8 @@ describe('VerificationActions', () => {
   });
 
   it('submits verification with notes', async () => {
-    const mockVerify = vi.fn();
-    const mockOnComplete = vi.fn();
+    const mockVerify = jest.fn();
+    const mockOnComplete = jest.fn();
     
     mockUseVerifyAssessment.mockReturnValue({
       mutate: mockVerify,
@@ -187,8 +187,8 @@ describe('VerificationActions', () => {
   });
 
   it('submits rejection with reason and feedback', async () => {
-    const mockReject = vi.fn();
-    const mockOnComplete = vi.fn();
+    const mockReject = jest.fn();
+    const mockOnComplete = jest.fn();
     
     mockUseRejectAssessment.mockReturnValue({
       mutate: mockReject,
@@ -233,7 +233,7 @@ describe('VerificationActions', () => {
       <TestWrapper>
         <VerificationActions 
           assessment={mockAssessment}
-          onActionComplete={vi.fn()}
+          onActionComplete={jest.fn()}
         />
       </TestWrapper>
     );
@@ -252,7 +252,7 @@ describe('VerificationActions', () => {
       <TestWrapper>
         <VerificationActions 
           assessment={mockAssessment}
-          onActionComplete={vi.fn()}
+          onActionComplete={jest.fn()}
         />
       </TestWrapper>
     );
@@ -275,7 +275,7 @@ describe('VerificationActions', () => {
 
   it('shows loading state during verification', () => {
     mockUseVerifyAssessment.mockReturnValue({
-      mutate: vi.fn(),
+      mutate: jest.fn(),
       isPending: true,
       error: null
     });
@@ -284,7 +284,7 @@ describe('VerificationActions', () => {
       <TestWrapper>
         <VerificationActions 
           assessment={mockAssessment}
-          onActionComplete={vi.fn()}
+          onActionComplete={jest.fn()}
         />
       </TestWrapper>
     );
@@ -295,7 +295,7 @@ describe('VerificationActions', () => {
 
   it('shows loading state during rejection', () => {
     mockUseRejectAssessment.mockReturnValue({
-      mutate: vi.fn(),
+      mutate: jest.fn(),
       isPending: true,
       error: null
     });
@@ -304,7 +304,7 @@ describe('VerificationActions', () => {
       <TestWrapper>
         <VerificationActions 
           assessment={mockAssessment}
-          onActionComplete={vi.fn()}
+          onActionComplete={jest.fn()}
         />
       </TestWrapper>
     );
@@ -317,7 +317,7 @@ describe('VerificationActions', () => {
     const mockVerify = vi.fn((data, { onSuccess }) => {
       onSuccess();
     });
-    const mockOnComplete = vi.fn();
+    const mockOnComplete = jest.fn();
     
     mockUseVerifyAssessment.mockReturnValue({
       mutate: mockVerify,
@@ -355,7 +355,7 @@ describe('VerificationActions', () => {
       <TestWrapper>
         <VerificationActions 
           assessment={mockAssessment}
-          onActionComplete={vi.fn()}
+          onActionComplete={jest.fn()}
           inline={true}
         />
       </TestWrapper>
@@ -370,7 +370,7 @@ describe('VerificationActions', () => {
       <TestWrapper>
         <VerificationActions 
           assessment={mockAssessment}
-          onActionComplete={vi.fn()}
+          onActionComplete={jest.fn()}
           inline={false}
         />
       </TestWrapper>
@@ -385,7 +385,7 @@ describe('VerificationActions', () => {
       <TestWrapper>
         <VerificationActions 
           assessment={mockAssessment}
-          onActionComplete={vi.fn()}
+          onActionComplete={jest.fn()}
         />
       </TestWrapper>
     );
@@ -406,7 +406,7 @@ describe('VerificationActions', () => {
       <TestWrapper>
         <VerificationActions 
           assessment={mockAssessment}
-          onActionComplete={vi.fn()}
+          onActionComplete={jest.fn()}
         />
       </TestWrapper>
     );

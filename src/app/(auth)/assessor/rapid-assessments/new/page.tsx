@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, Suspense } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { RoleBasedRoute } from '@/components/shared/RoleBasedRoute'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
@@ -65,7 +65,7 @@ const assessmentTypes = [
   }
 ]
 
-export default function NewAssessmentPage() {
+function NewAssessmentContent() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const { token, user } = useAuthStore()
@@ -111,7 +111,7 @@ export default function NewAssessmentPage() {
         console.log('Submitting assessment data:', formData)
         
         // Prepare the assessment data for API submission
-        const assessmentData = {
+        const baseAssessmentData = {
           type: selectedType,
           rapidAssessmentDate: formData.rapidAssessmentDate || new Date(),
           assessorName: formData.assessorName || 'Multi Role Test User',
@@ -123,24 +123,25 @@ export default function NewAssessmentPage() {
         }
         
         // Add type-specific data
+        let assessmentData: any = { ...baseAssessmentData };
         switch (selectedType) {
           case 'HEALTH':
-            assessmentData.healthData = formData.healthData;
+            assessmentData = { ...baseAssessmentData, healthData: formData.healthData };
             break;
           case 'POPULATION':
-            assessmentData.populationData = formData.populationData;
+            assessmentData = { ...baseAssessmentData, populationData: formData.populationData };
             break;
           case 'FOOD':
-            assessmentData.foodData = formData.foodData;
+            assessmentData = { ...baseAssessmentData, foodData: formData.foodData };
             break;
           case 'WASH':
-            assessmentData.washData = formData.washData;
+            assessmentData = { ...baseAssessmentData, washData: formData.washData };
             break;
           case 'SHELTER':
-            assessmentData.shelterData = formData.shelterData;
+            assessmentData = { ...baseAssessmentData, shelterData: formData.shelterData };
             break;
           case 'SECURITY':
-            assessmentData.securityData = formData.securityData;
+            assessmentData = { ...baseAssessmentData, securityData: formData.securityData };
             break;
         }
         
@@ -289,5 +290,13 @@ export default function NewAssessmentPage() {
         )}
       </div>
     </RoleBasedRoute>
+  )
+}
+
+export default function NewAssessmentPage() {
+  return (
+    <Suspense fallback={<div>Loading...</div>}>
+      <NewAssessmentContent />
+    </Suspense>
   )
 }

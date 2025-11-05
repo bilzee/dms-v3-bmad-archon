@@ -108,7 +108,7 @@ export class RapidAssessmentService {
           if (!washData) {
             throw new Error('WASH assessment data (washData) is required but missing from input')
           }
-          typeSpecificAssessment = await tx.washAssessment.create({
+          typeSpecificAssessment = await tx.wASHAssessment.create({
             data: {
               rapidAssessmentId: rapidAssessment.id,
               ...washData,

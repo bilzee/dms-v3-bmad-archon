@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/db/client';
-import { withAuth } from '@/lib/auth/middleware';
+import { withAuth, AuthContext } from '@/lib/auth/middleware';
 
 interface RouteParams {
   params: {
@@ -8,9 +8,9 @@ interface RouteParams {
   }
 }
 
-export const GET = withAuth(async (request: NextRequest, context: RouteParams) => {
+export const GET = withAuth(async (request: NextRequest, context: AuthContext, { params }: RouteParams) => {
   try {
-    const { userId } = context.params;
+    const { userId } = params;
     const { roles, userId: currentUserId } = context;
 
     // Users can only view their own assignments unless they're a coordinator

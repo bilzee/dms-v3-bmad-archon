@@ -96,7 +96,7 @@ export const PUT = withAuth(async (request, context) => {
 
     // Verify current password if changing password
     if (validatedData.newPassword && validatedData.currentPassword) {
-      const isValidPassword = await AuthService.verifyPassword(
+      const isValidPassword = await AuthService.comparePassword(
         validatedData.currentPassword,
         existingUser.passwordHash
       )

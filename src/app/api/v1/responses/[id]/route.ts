@@ -6,7 +6,7 @@ import { GetResponseResponse, UpdateResponseResponse } from '@/types/response'
 import { UpdatePlannedResponseSchema } from '@/lib/validation/response'
 
 interface RouteParams {
-  params: Promise<{ id: string }>
+  params: { id: string }
 }
 
 export const GET = withAuth(
@@ -21,7 +21,7 @@ export const GET = withAuth(
     }
     
     try {
-        const { id } = await params
+        const { id } = params
         
         // Get response details
         const response = await ResponseService.getResponseById(
@@ -44,7 +44,7 @@ export const GET = withAuth(
         }
 
         const responseData: GetResponseResponse = {
-          data: response,
+          data: response as any,
           meta: {
             timestamp: new Date().toISOString(),
             version: '1.0.0',
@@ -83,7 +83,7 @@ export const PUT = withAuth(
     }
     
     try {
-        const { id } = await params
+        const { id } = params
         const body = await request.json()
         
         // Validate input
@@ -103,10 +103,10 @@ export const PUT = withAuth(
           )
         }
         
-        const response = await ResponseService.updateResponse(
+        const response = await ResponseService.updatePlannedResponse(
           id,
-          context.userId,
-          validationResult.data
+          validationResult.data,
+          context.userId
         )
 
         if (!response) {
@@ -124,7 +124,7 @@ export const PUT = withAuth(
         }
 
         const responseData: UpdateResponseResponse = {
-          data: response,
+          data: response as any,
           meta: {
             timestamp: new Date().toISOString(),
             version: '1.0.0',

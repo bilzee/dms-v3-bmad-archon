@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { v4 as uuidv4 } from 'uuid';
-import { withAuth } from '@/lib/auth/middleware';
+import { withAuth, AuthContext } from '@/lib/auth/middleware';
 import { PreliminaryAssessmentService } from '@/lib/services/preliminary-assessment.service';
 import { 
   CreatePreliminaryAssessmentSchema,
@@ -9,9 +9,13 @@ import {
 } from '@/lib/validation/preliminary-assessment';
 import { PreliminaryAssessmentListResponse } from '@/types/preliminary-assessment';
 
-export const GET = withAuth(async (request, context) => {
+interface RouteParams {
+  params: { id: string }
+}
+
+export const GET = withAuth(async (request: NextRequest, context: AuthContext, { params }: RouteParams) => {
   try {
-    const { id } = context.params;
+    const { id } = params;
     
     if (!id) {
       return NextResponse.json(
@@ -44,7 +48,13 @@ export const GET = withAuth(async (request, context) => {
     }
 
     const response: PreliminaryAssessmentListResponse = {
-      data: assessment,
+      data: [assessment],
+      pagination: {
+        total: 1,
+        page: 1,
+        limit: 1,
+        totalPages: 1
+      },
       meta: {
         timestamp: new Date().toISOString(),
         version: '1.0.0',
@@ -70,7 +80,7 @@ export const GET = withAuth(async (request, context) => {
   }
 });
 
-export const PUT = withAuth(async (request, context) => {
+export const PUT = withAuth(async (request: NextRequest, context: AuthContext, { params }: RouteParams) => {
   const { user, roles } = context;
   
   if (!roles.includes('ASSESSOR')) {
@@ -81,7 +91,7 @@ export const PUT = withAuth(async (request, context) => {
   }
   
   try {
-    const { id } = context.params;
+    const { id } = params;
     
     if (!id) {
       return NextResponse.json(
@@ -103,7 +113,13 @@ export const PUT = withAuth(async (request, context) => {
     const assessment = await PreliminaryAssessmentService.update(id, input);
 
     const response: PreliminaryAssessmentListResponse = {
-      data: assessment,
+      data: [assessment],
+      pagination: {
+        total: 1,
+        page: 1,
+        limit: 1,
+        totalPages: 1
+      },
       meta: {
         timestamp: new Date().toISOString(),
         version: '1.0.0',
@@ -157,7 +173,7 @@ export const PUT = withAuth(async (request, context) => {
   }
 });
 
-export const DELETE = withAuth(async (request, context) => {
+export const DELETE = withAuth(async (request: NextRequest, context: AuthContext, { params }: RouteParams) => {
   const { user, roles } = context;
   
   if (!roles.includes('ASSESSOR')) {
@@ -168,7 +184,7 @@ export const DELETE = withAuth(async (request, context) => {
   }
   
   try {
-    const { id } = context.params;
+    const { id } = params;
     
     if (!id) {
       return NextResponse.json(

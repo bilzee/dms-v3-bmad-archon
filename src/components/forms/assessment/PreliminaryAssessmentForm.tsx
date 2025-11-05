@@ -77,12 +77,10 @@ export function PreliminaryAssessmentForm({
       numberInjured: initialData?.numberInjured || 0,
       numberDisplaced: initialData?.numberDisplaced || 0,
       numberHousesAffected: initialData?.numberHousesAffected || 0,
-      numberSchoolsAffected: initialData?.numberSchoolsAffected || 0,
       schoolsAffected: initialData?.schoolsAffected || '',
-      numberMedicalFacilitiesAffected: initialData?.numberMedicalFacilitiesAffected || 0,
       medicalFacilitiesAffected: initialData?.medicalFacilitiesAffected || '',
       estimatedAgriculturalLandsAffected: initialData?.estimatedAgriculturalLandsAffected || '',
-      reportingAgent: initialData?.reportingAgent || user?.name || '',
+      reportingAgent: initialData?.reportingAgent || (user as any)?.name || '',
       additionalDetails: initialData?.additionalDetails || ''
     }
   })

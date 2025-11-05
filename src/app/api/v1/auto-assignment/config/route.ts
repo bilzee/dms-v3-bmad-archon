@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { withAuth } from '@/lib/auth/middleware';
+import { withAuth, AuthContext } from '@/lib/auth/middleware';
 import { AutoAssignmentService, AutoAssignmentConfig } from '@/lib/assignment/auto-assignment';
 import { z } from 'zod';
 
@@ -86,10 +86,23 @@ export const PUT = withAuth(async (request: NextRequest, context) => {
   }
 });
 
-export const POST = requireRole('COORDINATOR')(async (request: NextRequest, context) => {
-  try {
+export const POST = withAuth(
+  async (request: NextRequest, context: AuthContext) => {
+    const { user, roles } = context;
+    
+    // Only coordinators can modify auto-assignment config
+    if (!roles.includes('COORDINATOR')) {
+      return NextResponse.json(
+        { 
+          success: false, 
+          error: 'Insufficient permissions. Coordinator role required.' 
+        },
+        { status: 403 }
+      );
+    }
 
-    // Reset to default configuration
+    try {
+      // Reset to default configuration
     const defaultConfig = {
       rules: [
         {
@@ -136,11 +149,12 @@ export const POST = requireRole('COORDINATOR')(async (request: NextRequest, cont
       data: AutoAssignmentService.getConfig()
     });
 
-  } catch (error) {
-    console.error('Error resetting auto-assignment config:', error);
-    return NextResponse.json(
-      { error: 'Internal server error' },
-      { status: 500 }
-    );
+    } catch (error) {
+      console.error('Error resetting auto-assignment config:', error);
+      return NextResponse.json(
+        { error: 'Internal server error' },
+        { status: 500 }
+      );
+    }
   }
-});
+);

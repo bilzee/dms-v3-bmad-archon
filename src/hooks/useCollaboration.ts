@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react'
 import { useQuery, useMutation } from '@tanstack/react-query'
-import { responseService } from '@/lib/services/response-client.service'
+import { ResponseService } from '@/lib/services/response-client.service'
 import { useAuthStore } from '@/stores/auth.store'
 
 interface CollaborationState {
@@ -33,7 +33,7 @@ export function useCollaboration(responseId: string | null) {
     queryKey: ['collaboration', responseId],
     queryFn: async () => {
       if (!responseId) return null
-      return await responseService.getCollaborationStatus(responseId)
+      return await ResponseService.getCollaborationStatus(responseId)
     },
     enabled: !!responseId,
     refetchInterval: 10000 // Poll every 10 seconds
@@ -50,7 +50,7 @@ export function useCollaboration(responseId: string | null) {
   const collaborationMutation = useMutation({
     mutationFn: async ({ action }: { action: 'join' | 'leave' | 'start_editing' | 'stop_editing' }) => {
       if (!responseId) throw new Error('Response ID is required')
-      return await responseService.updateCollaboration(responseId, action)
+      return await ResponseService.updateCollaboration(responseId, action)
     },
     onSuccess: () => {
       // Refetch collaboration status after action

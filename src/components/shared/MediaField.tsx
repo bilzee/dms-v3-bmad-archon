@@ -178,6 +178,7 @@ export function MediaField({
             {existingPhotos.map((photo, index) => (
               <div key={index} className="relative group">
                 <div className="aspect-square rounded-lg overflow-hidden border">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img
                     src={photo}
                     alt={`Existing photo ${index + 1}`}
@@ -208,11 +209,14 @@ export function MediaField({
               <div key={photo.id} className="relative group">
                 <div className="aspect-square rounded-lg overflow-hidden border">
                   {isImage(photo.file) ? (
-                    <img
-                      src={photo.preview}
-                      alt={photo.file.name}
-                      className="w-full h-full object-cover"
-                    />
+                    <>
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img
+                        src={photo.preview}
+                        alt={photo.file.name}
+                        className="w-full h-full object-cover"
+                      />
+                    </>
                   ) : (
                     <div className="w-full h-full bg-gray-100 flex items-center justify-center">
                       <FileVideo className="h-8 w-8 text-gray-400" />

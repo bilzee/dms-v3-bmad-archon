@@ -381,7 +381,7 @@ export class AutoAssignmentService {
         return;
       }
 
-      const userRoles = creator.roles.map(ur => ur.role.name);
+      const userRoles = creator.roles.map((ur: any) => ur.role.name);
 
       // Auto-assign creator if they have assessor role and rule allows it
       if (assessorRule && userRoles.includes('ASSESSOR')) {

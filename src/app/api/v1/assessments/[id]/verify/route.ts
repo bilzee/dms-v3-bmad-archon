@@ -35,7 +35,7 @@ export const POST = withAuth(async (
   const assessmentId = pathname.split('/').slice(-2, -1)[0]; // Get ID before /verify
 
     // Start transaction for verification
-    const result = await prisma.$transaction(async (tx) => {
+    const result = await prisma.$transaction(async (tx: any) => {
       // Get assessment with current status
       const assessment = await tx.rapidAssessment.findUnique({
         where: { id: assessmentId },

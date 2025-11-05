@@ -1,11 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { v4 as uuidv4 } from 'uuid'
-import { withAuth, AuthContext, requireRole } from '@/lib/auth/middleware'
+import { withAuth, AuthContext } from '@/lib/auth/middleware'
 import { ResponseService } from '@/lib/services/response.service'
 import { prisma } from '@/lib/db/client'
 
 interface RouteParams {
-  params: Promise<{ assessmentId: string }>
+  params: { assessmentId: string }
 }
 
 export const GET = withAuth(
@@ -19,10 +19,10 @@ export const GET = withAuth(
       );
     }
       try {
-        const { assessmentId } = await params
+        const { assessmentId } = params
         
         // Check if there are existing responses for this assessment
-        const { data: responses, total } = await ResponseService.getPlannedResponsesForResponder(
+        const { responses, total } = await ResponseService.getPlannedResponsesForResponder(
           context.userId,
           { assessmentId, page: 1, limit: 10 }
         )

@@ -15,7 +15,7 @@ import { Badge } from '@/components/ui/badge'
 import { GPSCapture } from '@/components/shared/GPSCapture'
 import { MediaField } from '@/components/shared/MediaField'
 import { EntitySelector } from '@/components/shared/EntitySelector'
-import { WASHAssessmentFormProps, WASHAssessmentInput } from '@/types/rapid-assessment'
+import { WASHAssessmentFormProps, WASHAssessment } from '@/types/rapid-assessment'
 import { getCurrentUserName, getAssessmentLocationData } from '@/utils/assessment-utils'
 import { cn } from '@/lib/utils'
 import { Droplets, AlertTriangle, Toilet, Waves } from 'lucide-react'
@@ -82,7 +82,7 @@ export function WASHAssessmentForm({
   disabled = false 
 }: WASHAssessmentFormProps) {
   const [gpsCoordinates, setGpsCoordinates] = useState<{ lat: number; lng: number } | null>(null)
-  const [mediaFiles, setMediaFiles] = useState<string[]>(initialData?.mediaAttachments || [])
+  const [mediaFiles, setMediaFiles] = useState<string[]>((initialData as any)?.mediaAttachments || [])
   const [selectedEntity, setSelectedEntity] = useState<string>(entityId)
   const [selectedEntityData, setSelectedEntityData] = useState<any>(null)
 

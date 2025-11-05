@@ -26,7 +26,7 @@ export const POST = withAuth(async (request: NextRequest, context) => {
       const result = await IncidentService.createFromAssessment(
         assessmentId,
         incidentData,
-        context.user.userId
+        context.userId
       )
 
       return NextResponse.json(

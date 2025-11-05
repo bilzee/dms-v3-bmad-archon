@@ -74,6 +74,7 @@ export function ResponsePlanningForm({
   const [editingResponseId, setEditingResponseId] = useState<string | null>(
     mode === 'edit' && initialData?.id ? initialData.id : null
   )
+  const [submitError, setSubmitError] = useState<string | null>(null)
 
   // Collaboration hook - Only for create mode
   const collaboration = useCollaboration(mode === 'create' ? editingResponseId : null)
@@ -114,11 +115,11 @@ export function ResponsePlanningForm({
 
   // Get assigned entities for the current user
   const { data: entities = [], isLoading: entitiesLoading } = useQuery({
-    queryKey: ['entities', 'assigned', user?.id],
+    queryKey: ['entities', 'assigned', (user as any)?.id],
     queryFn: async () => {
       if (!user || !token) throw new Error('User not authenticated')
       
-      const response = await fetch(`/api/v1/entities/assigned?userId=${user.id}`, {
+      const response = await fetch(`/api/v1/entities/assigned?userId=${(user as any).id}`, {
         headers: {
           'Authorization': `Bearer ${token}`
         }
@@ -185,12 +186,13 @@ export function ResponsePlanningForm({
       if (!user) throw new Error('User not authenticated')
       
       // Add user ID to data
-      const dataWithUser = { ...data, responderId: user.id }
+      const dataWithUser = { ...data, responderId: (user as any).id }
       
       return await responseOfflineService.createPlannedResponse(dataWithUser)
     },
     onSuccess: (response) => {
-      queryClient.invalidateQueries({ queryKey: ['responses', 'planned', user?.id] })
+      setSubmitError(null) // Clear any previous errors
+      queryClient.invalidateQueries({ queryKey: ['responses', 'planned', (user as any)?.id] })
       setIsDirty(false)
       form.reset()
       
@@ -214,6 +216,19 @@ export function ResponsePlanningForm({
     },
     onError: (error: Error) => {
       console.error('Create planned response error:', error)
+      
+      // Set user-friendly error message
+      if (error.message.includes('already exists for this assessment')) {
+        setSubmitError('A response plan already exists for this assessment. You can edit the existing plan instead.')
+      } else if (error.message.includes('not assigned')) {
+        setSubmitError('You are not assigned to this entity. Please contact your coordinator.')
+      } else if (error.message.includes('not found')) {
+        setSubmitError('The selected assessment or entity was not found. Please refresh and try again.')
+      } else if (error.message.includes('not authenticated')) {
+        setSubmitError('Your session has expired. Please log in again.')
+      } else {
+        setSubmitError('Failed to create response plan. Please try again or contact support if the problem persists.')
+      }
     }
   })
 
@@ -225,7 +240,8 @@ export function ResponsePlanningForm({
       return await responseOfflineService.updatePlannedResponse(id, data)
     },
     onSuccess: (response) => {
-      queryClient.invalidateQueries({ queryKey: ['responses', 'planned', user?.id] })
+      setSubmitError(null) // Clear any previous errors
+      queryClient.invalidateQueries({ queryKey: ['responses', 'planned', (user as any)?.id] })
       setIsDirty(false)
       // Stop editing after successful update (only in create mode)
       if (mode === 'create' && collaboration.isCurrentUserCollaborating) {
@@ -252,6 +268,17 @@ export function ResponsePlanningForm({
     },
     onError: (error: Error) => {
       console.error('Update planned response error:', error)
+      
+      // Set user-friendly error message
+      if (error.message.includes('not found')) {
+        setSubmitError('The response plan was not found. It may have been deleted.')
+      } else if (error.message.includes('not assigned')) {
+        setSubmitError('You are not assigned to this entity. Please contact your coordinator.')
+      } else if (error.message.includes('not authenticated')) {
+        setSubmitError('Your session has expired. Please log in again.')
+      } else {
+        setSubmitError('Failed to update response plan. Please try again or contact support if the problem persists.')
+      }
     }
   })
 
@@ -392,7 +419,7 @@ export function ResponsePlanningForm({
           <div className="mb-6">
             <CollaborationStatus
               collaboration={collaboration}
-              currentUserId={user?.id}
+              currentUserId={(user as any)?.id}
               onJoin={collaboration.actions.joinCollaboration}
               onLeave={collaboration.actions.leaveCollaboration}
               onStartEditing={collaboration.actions.startEditing}
@@ -418,7 +445,7 @@ export function ResponsePlanningForm({
                           field.onChange(value)
                           form.setValue('assessmentId', '')
                         }}
-                        disabled={mode === 'edit'}
+                        disabled={mode !== 'create'}
                       />
                     </FormControl>
                     <FormMessage />
@@ -433,10 +460,10 @@ export function ResponsePlanningForm({
                 <label className="text-sm font-medium">Entity</label>
                 <div className="flex items-center gap-2 p-3 bg-gray-50 border rounded-md">
                   <span className="text-sm">
-                    {entities.find(e => e.id === initialData.entityId)?.name || 'Loading...'}
+                    {entities.find((e: any) => e.id === initialData.entityId)?.name || 'Loading...'}
                   </span>
                   <Badge variant="outline" className="text-xs">
-                    {entities.find(e => e.id === initialData.entityId)?.type || 'Unknown'}
+                    {entities.find((e: any) => e.id === initialData.entityId)?.type || 'Unknown'}
                   </Badge>
                 </div>
               </div>
@@ -456,9 +483,9 @@ export function ResponsePlanningForm({
                   // Note: Don't override entityId as it's already selected by the user
                   // The assessment should be for the same entity that was selected
                 }}
-                disabled={mode === 'edit'}
+                disabled={mode !== 'create'}
                 showConflictWarning={true}
-                selectedAssessment={assessments.find(a => a.id === form.watch('assessmentId'))}
+                selectedAssessment={assessments.find((a: any) => a.id === form.watch('assessmentId'))}
               />
             ) : (
               // Assessment Display - Read-only in edit mode
@@ -697,6 +724,15 @@ export function ResponsePlanningForm({
 
             {/* Form Actions */}
             <Separator />
+
+            {submitError && (
+              <Alert variant="destructive">
+                <AlertTriangle className="h-4 w-4" />
+                <AlertDescription>
+                  {submitError}
+                </AlertDescription>
+              </Alert>
+            )}
 
             {(createMutation.error || updateMutation.error) && (
               <Alert variant="destructive">

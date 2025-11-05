@@ -42,7 +42,7 @@ export const POST = withAuth(async (request: NextRequest, context: AuthContext) 
     )
 
     const apiResponse: CreatePlannedResponseResponse = {
-      data: response,
+      data: response as any,
       meta: {
         timestamp: new Date().toISOString(),
         version: '1.0.0',

@@ -5,17 +5,17 @@ import { RapidAssessmentService } from '@/lib/services/rapid-assessment.service'
 import { RapidAssessmentResponse } from '@/types/rapid-assessment'
 
 interface RouteParams {
-  params: Promise<{ id: string }>
+  params: { id: string }
 }
 
 export const POST = withAuth(
   async (request: NextRequest, context: AuthContext, { params }: RouteParams) => {
     try {
-      const { id } = await params
+      const { id } = params
       
       const assessment = await RapidAssessmentService.submit(
         id,
-        context.user.userId
+        context.userId
       )
 
       const response: RapidAssessmentResponse = {

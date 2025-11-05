@@ -9,7 +9,8 @@ import {
   CreatePlannedResponseInput,
   UpdatePlannedResponseInput,
   ResponseQueryInput,
-  ResponseItem
+  ResponseItem,
+  ConfirmDeliveryInput
 } from '@/lib/validation/response'
 
 export type RapidResponseWithData = RapidResponse & {
@@ -247,7 +248,7 @@ export class ResponseService {
 
   static async getPlannedResponsesForResponder(
     responderId: string,
-    query: ResponseQueryInput = {}
+    query: ResponseQueryInput = { limit: 20, page: 1 }
   ): Promise<{ responses: RapidResponseWithData[], total: number }> {
     const { page = 1, limit = 20, ...filters } = query
 
@@ -313,6 +314,91 @@ export class ResponseService {
     })
 
     return { responses, total }
+  }
+
+  static async confirmDelivery(
+    responseId: string,
+    input: ConfirmDeliveryInput,
+    requesterId: string
+  ): Promise<RapidResponseWithData> {
+    // Get existing response and validate access
+    const existingResponse = await this.getResponseById(responseId, requesterId)
+
+    // Can only confirm delivery for responses in PLANNED status
+    if (existingResponse.status !== 'PLANNED') {
+      throw new Error('Only planned responses can have delivery confirmed')
+    }
+
+    // Update the response to delivered status
+    const result = await prisma.$transaction(async (tx) => {
+      const oldValues = {
+        status: existingResponse.status,
+        deliveredItems: (existingResponse as any).deliveredItems,
+        deliveryLocation: (existingResponse as any).deliveryLocation,
+        deliveryNotes: (existingResponse as any).deliveryNotes,
+        mediaAttachmentIds: (existingResponse as any).mediaAttachmentIds
+      }
+
+      const response = await tx.rapidResponse.update({
+        where: { id: responseId },
+        data: {
+          status: 'DELIVERED',
+          deliveredItems: input.deliveredItems,
+          deliveryLocation: input.deliveryLocation,
+          deliveryNotes: input.deliveryNotes,
+          mediaAttachmentIds: input.mediaAttachmentIds,
+          deliveredAt: new Date(),
+          updatedAt: new Date()
+        } as any,
+        include: {
+          assessment: {
+            select: {
+              id: true,
+              rapidAssessmentType: true,
+              rapidAssessmentDate: true,
+              status: true,
+              verificationStatus: true
+            }
+          },
+          entity: {
+            select: {
+              id: true,
+              name: true,
+              type: true
+            }
+          },
+          responder: {
+            select: {
+              id: true,
+              name: true,
+              email: true
+            }
+          }
+        }
+      })
+
+      // Create audit log
+      await this.createAuditLog(
+        tx,
+        requesterId,
+        'CONFIRM_DELIVERY',
+        'RapidResponse',
+        responseId,
+        oldValues,
+        {
+          status: 'DELIVERED',
+          deliveredItems: input.deliveredItems,
+          deliveryLocation: input.deliveryLocation,
+          deliveryNotes: input.deliveryNotes,
+          mediaAttachmentIds: input.mediaAttachmentIds,
+          deliveredAt: (response as any).deliveredAt
+        }
+      )
+
+      return response
+    })
+
+    return result
   }
 
   private static async validateEntityAssignment(

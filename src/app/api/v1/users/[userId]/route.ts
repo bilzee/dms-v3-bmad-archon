@@ -16,8 +16,12 @@ const updateUserSchema = z.object({
   resetPassword: z.boolean().optional()
 })
 
+interface RouteParams {
+  params: { userId: string }
+}
+
 // Update user - requires MANAGE_USERS permission
-export const PUT = withAuth(async (request: NextRequest, context) => {
+export const PUT = withAuth(async (request: NextRequest, context, { params }: RouteParams) => {
   const { permissions } = context;
   if (!permissions.includes('MANAGE_USERS')) {
     return NextResponse.json(
@@ -27,7 +31,7 @@ export const PUT = withAuth(async (request: NextRequest, context) => {
   }
 
   try {
-    const userId = context.params?.userId
+    const { userId } = params
     
     if (!userId) {
       return NextResponse.json(
@@ -170,7 +174,7 @@ export const PUT = withAuth(async (request: NextRequest, context) => {
     }
 
     // Update user with transaction to handle role updates
-    const updatedUser = await prisma.$transaction(async (tx) => {
+    const updatedUser = await prisma.$transaction(async (tx: any) => {
       // Update user basic info
       const user = await tx.user.update({
         where: { id: userId },
@@ -189,7 +193,7 @@ export const PUT = withAuth(async (request: NextRequest, context) => {
           data: validatedData.roleIds.map(roleId => ({
             userId: userId,
             roleId: roleId,
-            assignedBy: context.user.userId,
+            assignedBy: context.userId,
             assignedAt: new Date()
           }))
         })
@@ -242,7 +246,7 @@ export const PUT = withAuth(async (request: NextRequest, context) => {
 })
 
 // Get single user - requires MANAGE_USERS permission
-export const GET = withAuth(async (request: NextRequest, context) => {
+export const GET = withAuth(async (request: NextRequest, context, { params }: RouteParams) => {
   const { permissions } = context;
   if (!permissions.includes('MANAGE_USERS')) {
     return NextResponse.json(
@@ -252,7 +256,7 @@ export const GET = withAuth(async (request: NextRequest, context) => {
   }
 
   try {
-    const userId = context.params?.userId
+    const { userId } = params
     
     if (!userId) {
       return NextResponse.json(

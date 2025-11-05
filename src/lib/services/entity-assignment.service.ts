@@ -320,7 +320,7 @@ export class EntityAssignmentServiceImpl implements EntityAssignmentService {
       const assessment = await prisma.rapidAssessment.findUnique({
         where: { id: assessmentId },
         include: {
-          affectedEntity: true
+          entity: true
         }
       });
 
@@ -329,7 +329,7 @@ export class EntityAssignmentServiceImpl implements EntityAssignmentService {
       }
 
       // Check if user is assigned to the assessment's entity
-      return await this.isUserAssigned(userId, assessment.affectedEntityId);
+      return await this.isUserAssigned(userId, assessment.entity.id);
     } catch (error) {
       console.error('Error checking assessment access:', error);
       return false;
@@ -352,7 +352,7 @@ export class EntityAssignmentServiceImpl implements EntityAssignmentService {
       // Get assessments for user's assigned entities
       const assessments = await prisma.rapidAssessment.findMany({
         where: {
-          affectedEntityId: {
+          entityId: {
             in: entityIds
           }
         }
@@ -366,7 +366,7 @@ export class EntityAssignmentServiceImpl implements EntityAssignmentService {
       });
 
       // Count unique entities with assessments
-      const entitiesWithAssessments = new Set(assessments.map(a => a.affectedEntityId)).size;
+      const entitiesWithAssessments = new Set(assessments.map(a => a.entityId)).size;
 
       return {
         totalEntities: assignedEntities.length,

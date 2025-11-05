@@ -39,7 +39,7 @@ export function withAuth(handler: AuthenticatedHandler) {
       // Get fresh user data from database (matches architecture document)
       const user = await AuthService.getUserWithRoles(payload.userId)
       
-      if (!user || !user.isActive) {
+      if (!user || !(user as any).isActive) {
         return NextResponse.json(
           { error: 'Unauthorized' },
           { status: 401 }
@@ -51,9 +51,9 @@ export function withAuth(handler: AuthenticatedHandler) {
       
       const context: AuthContext = { 
         user, // Full DB user object
-        userId: user.id,
+        userId: (user as any).id,
         roles: userRoles,
-        permissions: user.roles.flatMap(ur => ur.role.permissions.map(p => p.code)), // Extract permission codes
+        permissions: user.roles.flatMap((ur: any) => ur.role.permissions.map((p: any) => p.code)), // Extract permission codes
         request
         // Note: params not handled here - routes extract from URL manually
       }

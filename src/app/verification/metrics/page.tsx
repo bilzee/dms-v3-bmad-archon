@@ -50,10 +50,10 @@ export default function VerificationMetricsPage() {
       }
     }
 
-    if (user) {
+    if (user && token) {
       fetchMetrics()
     }
-  }, [user])
+  }, [user, token])
 
   if (!user) {
     return (

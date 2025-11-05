@@ -94,7 +94,7 @@ export const GET = withAuth(async (request, context) => {
     // Calculate average processing time (in seconds)
     let averageProcessingTime = 0;
     if (verificationTimes.length > 0) {
-      const totalTime = verificationTimes.reduce((sum, item) => {
+      const totalTime = verificationTimes.reduce((sum: any, item: any) => {
         if (item.verifiedAt) {
           const diff = item.verifiedAt.getTime() - item.createdAt.getTime();
           return sum + (diff / 1000); // Convert to seconds
@@ -111,7 +111,7 @@ export const GET = withAuth(async (request, context) => {
 
     // Format pending by type
     const pendingByTypeMap: Record<string, number> = {};
-    pendingByType.forEach(item => {
+    pendingByType.forEach((item: any) => {
       pendingByTypeMap[item.rapidAssessmentType] = item._count;
     });
 

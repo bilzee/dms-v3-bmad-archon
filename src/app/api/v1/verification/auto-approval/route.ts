@@ -70,7 +70,7 @@ export const GET = withAuth(async (request: NextRequest, context) => {
     });
 
     // Format response with auto-approval configs
-    const configurations = entities.map(entity => {
+    const configurations = entities.map((entity: any) => {
       const metadata = entity.metadata as any;
       const autoApprovalConfig = metadata?.autoApproval || {};
       
@@ -95,9 +95,9 @@ export const GET = withAuth(async (request: NextRequest, context) => {
     // Calculate summary statistics
     const summary = {
       totalEntities: entities.length,
-      enabledCount: entities.filter(e => e.autoApproveEnabled).length,
-      disabledCount: entities.filter(e => !e.autoApproveEnabled).length,
-      totalAutoVerified: entities.reduce((sum, e) => sum + e._count.rapidAssessments, 0)
+      enabledCount: entities.filter((e: any) => e.autoApproveEnabled).length,
+      disabledCount: entities.filter((e: any) => !e.autoApproveEnabled).length,
+      totalAutoVerified: entities.reduce((sum: any, e: any) => sum + e._count.rapidAssessments, 0)
     };
 
     return NextResponse.json({
@@ -143,7 +143,7 @@ export const PUT = withAuth(async (request: NextRequest, context) => {
     }
 
     // Start transaction for bulk auto-approval configuration update
-    const result = await prisma.$transaction(async (tx) => {
+    const result = await prisma.$transaction(async (tx: any) => {
       // Get entities to update
       const entities = await tx.entity.findMany({
         where: {
@@ -169,7 +169,7 @@ export const PUT = withAuth(async (request: NextRequest, context) => {
             assessmentTypes: validatedData.conditions?.assessmentTypes || [],
             maxPriority: validatedData.conditions?.maxPriority || 'MEDIUM',
             requiresDocumentation: validatedData.conditions?.requiresDocumentation || false,
-            lastModifiedBy: user.id,
+            lastModifiedBy: (user as any).id,
             lastModifiedAt: new Date().toISOString(),
           }
         };
@@ -196,7 +196,7 @@ export const PUT = withAuth(async (request: NextRequest, context) => {
         // Create audit log entry for each entity
         await tx.auditLog.create({
           data: {
-            userId: user.id,
+            userId: (user as any).id,
             action: 'BULK_AUTO_APPROVAL_CONFIG_UPDATED',
             resource: 'Entity',
             resourceId: entity.id,
@@ -207,7 +207,7 @@ export const PUT = withAuth(async (request: NextRequest, context) => {
               conditions: validatedData.conditions,
               bulkUpdate: true,
               totalEntitiesUpdated: entities.length,
-              configuredBy: user.name || user.id
+              configuredBy: (user as any).name || (user as any).id
             }
           }
         });
@@ -217,7 +217,7 @@ export const PUT = withAuth(async (request: NextRequest, context) => {
     });
 
     // Format response
-    const configurations = result.map(entity => {
+    const configurations = result.map((entity: any) => {
       const metadata = entity.metadata as any;
       const autoApprovalConfig = metadata?.autoApproval || {};
       

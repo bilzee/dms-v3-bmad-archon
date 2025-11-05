@@ -159,7 +159,6 @@ export function RegisterForm({ onSuccess }: RegisterFormProps) {
             <Label htmlFor="email">Email</Label>
             <Input
               id="email"
-              name="email"
               type="email"
               placeholder="your@email.com"
               {...register('email')}
@@ -176,7 +175,6 @@ export function RegisterForm({ onSuccess }: RegisterFormProps) {
             <Label htmlFor="username">Username</Label>
             <Input
               id="username"
-              name="username"
               type="text"
               placeholder="username"
               {...register('username')}
@@ -193,7 +191,6 @@ export function RegisterForm({ onSuccess }: RegisterFormProps) {
             <Label htmlFor="password">Password</Label>
             <Input
               id="password"
-              name="password"
               type="password"
               placeholder="Enter password (min 8 characters)"
               {...register('password')}
@@ -210,7 +207,6 @@ export function RegisterForm({ onSuccess }: RegisterFormProps) {
             <Label htmlFor="name">Full Name</Label>
             <Input
               id="name"
-              name="name"
               type="text"
               placeholder="John Doe"
               {...register('name')}
