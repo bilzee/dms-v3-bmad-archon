@@ -316,6 +316,76 @@ export class ResponseService {
     return { responses, total }
   }
 
+  static async getAssignedResponsesForResponder(
+    responderId: string,
+    query: ResponseQueryInput = { limit: 20, page: 1 }
+  ): Promise<{ responses: RapidResponseWithData[], total: number }> {
+    const { page = 1, limit = 20, ...filters } = query
+
+    // Get entities assigned to this responder
+    const assignedEntities = await prisma.entityAssignment.findMany({
+      where: { userId: responderId },
+      select: { entityId: true }
+    })
+
+    const entityIds = assignedEntities.map(ea => ea.entityId)
+
+    if (entityIds.length === 0) {
+      return { responses: [], total: 0 }
+    }
+
+    // Build where clause - include ALL statuses, not just PLANNED
+    const where: any = {
+      entityId: { in: entityIds }
+    }
+
+    if (filters.assessmentId) where.assessmentId = filters.assessmentId
+    if (filters.entityId) where.entityId = filters.entityId
+    if (filters.type) where.type = filters.type
+    if (filters.status) where.status = filters.status
+
+    // Get total count
+    const total = await prisma.rapidResponse.count({ where })
+
+    // Get paginated responses
+    const responses = await prisma.rapidResponse.findMany({
+      where,
+      include: {
+        assessment: {
+          select: {
+            id: true,
+            rapidAssessmentType: true,
+            rapidAssessmentDate: true,
+            status: true,
+            verificationStatus: true
+          }
+        },
+        entity: {
+          select: {
+            id: true,
+            name: true,
+            type: true
+          }
+        },
+        responder: {
+          select: {
+            id: true,
+            name: true,
+            email: true
+          }
+        }
+      },
+      orderBy: [
+        { priority: 'desc' },
+        { plannedDate: 'desc' }
+      ],
+      skip: (page - 1) * limit,
+      take: limit
+    })
+
+    return { responses, total }
+  }
+
   static async confirmDelivery(
     responseId: string,
     input: ConfirmDeliveryInput,
@@ -343,13 +413,17 @@ export class ResponseService {
         where: { id: responseId },
         data: {
           status: 'DELIVERED',
-          deliveredItems: input.deliveredItems,
-          deliveryLocation: input.deliveryLocation,
-          deliveryNotes: input.deliveryNotes,
-          mediaAttachmentIds: input.mediaAttachmentIds,
-          deliveredAt: new Date(),
+          verificationStatus: 'SUBMITTED', // Auto-submit for verification
+          items: input.deliveredItems, // Store delivered items in the existing JSON field
+          resources: {
+            deliveryLocation: input.deliveryLocation,
+            deliveryNotes: input.deliveryNotes,
+            mediaAttachmentIds: input.mediaAttachmentIds,
+            deliveredAt: new Date().toISOString()
+          }, // Store delivery data in resources JSON field
+          responseDate: new Date(), // Capture delivery timestamp
           updatedAt: new Date()
-        } as any,
+        },
         include: {
           assessment: {
             select: {
@@ -387,11 +461,14 @@ export class ResponseService {
         oldValues,
         {
           status: 'DELIVERED',
-          deliveredItems: input.deliveredItems,
-          deliveryLocation: input.deliveryLocation,
-          deliveryNotes: input.deliveryNotes,
-          mediaAttachmentIds: input.mediaAttachmentIds,
-          deliveredAt: (response as any).deliveredAt
+          verificationStatus: 'SUBMITTED',
+          items: input.deliveredItems,
+          resources: {
+            deliveryLocation: input.deliveryLocation,
+            deliveryNotes: input.deliveryNotes,
+            mediaAttachmentIds: input.mediaAttachmentIds
+          },
+          responseDate: response.responseDate
         }
       )
 

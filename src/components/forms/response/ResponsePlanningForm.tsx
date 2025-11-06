@@ -132,7 +132,7 @@ export function ResponsePlanningForm({
       const result = await response.json()
       return result.data || []
     },
-    enabled: !!user && !!token && mode === 'create'
+    enabled: !!user && !!token
   })
 
   // Get available assessments for selected entity

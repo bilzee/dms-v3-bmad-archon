@@ -59,7 +59,7 @@ export function withAuth(handler: AuthenticatedHandler) {
       }
       
       // Call the handler with auth context
-      return await handler(request, context)
+      return await handler(request, context, nextContext)
     } catch (error) {
       return NextResponse.json(
         { error: 'Invalid or expired token' },

@@ -12,7 +12,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Alert, AlertDescription } from '@/components/ui/alert'
 
 // Icons
-import { Package, Edit, Search, Filter, Plus, AlertTriangle, Clock, CheckCircle } from 'lucide-react'
+import { Package, Edit, Search, Filter, Plus, AlertTriangle, Clock, CheckCircle, Truck } from 'lucide-react'
 
 // Components and services
 import { ResponseService } from '@/lib/services/response-client.service'
@@ -327,15 +327,28 @@ export function ResponsePlanningDashboard({
                             Updated {new Date(response.updatedAt).toLocaleDateString()}
                           </span>
                         </div>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => onEditResponse(response.id)}
-                          className="flex items-center gap-1"
-                        >
-                          <Edit className="h-3 w-3" />
-                          Edit
-                        </Button>
+                        <div className="flex items-center gap-2">
+                          {response.status === 'PLANNED' && (
+                            <Button
+                              variant="default"
+                              size="sm"
+                              onClick={() => window.location.href = `/responder/responses/${response.id}/deliver`}
+                              className="flex items-center gap-1"
+                            >
+                              <Truck className="h-3 w-3" />
+                              Document Delivery
+                            </Button>
+                          )}
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => onEditResponse(response.id)}
+                            className="flex items-center gap-1"
+                          >
+                            <Edit className="h-3 w-3" />
+                            Edit
+                          </Button>
+                        </div>
                       </div>
                     </div>
                   </CardContent>

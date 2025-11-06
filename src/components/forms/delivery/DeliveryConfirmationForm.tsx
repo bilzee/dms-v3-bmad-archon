@@ -76,7 +76,7 @@ export function DeliveryConfirmationForm({
   const [locationCaptureTime, setLocationCaptureTime] = useState<Date | null>(null)
   const [mediaAttachments, setMediaAttachments] = useState<any[]>([])
   
-  const { user } = useAuthStore()
+  const { user, token } = useAuthStore()
   const { isOnline } = useOffline()
   const { 
     location: gpsLocation, 
@@ -109,12 +109,18 @@ export function DeliveryConfirmationForm({
   const { data: response, isLoading: isLoadingResponse, error: responseError } = useQuery({
     queryKey: ['response', responseId],
     queryFn: async () => {
-      const res = await fetch(`/api/v1/responses/${responseId}`)
+      if (!token) throw new Error('User not authenticated')
+      
+      const res = await fetch(`/api/v1/responses/${responseId}`, {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      })
       if (!res.ok) throw new Error('Failed to fetch response')
       const result = await res.json()
       return result.data as RapidResponse
     },
-    enabled: !!responseId
+    enabled: !!responseId && !!token
   })
 
   // Setup initial items from response data
@@ -167,7 +173,8 @@ export function DeliveryConfirmationForm({
           const res = await fetch(`/api/v1/responses/${responseId}/deliver`, {
             method: 'POST',
             headers: {
-              'Content-Type': 'application/json'
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${token}`
             },
             body: JSON.stringify(payload)
           })
