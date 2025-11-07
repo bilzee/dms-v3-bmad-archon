@@ -1,0 +1,33 @@
+import { defineConfig } from '@playwright/test'
+
+/**
+ * Playwright configuration for smoke tests
+ * These tests run critical path validation after builds
+ */
+export default defineConfig({
+  testDir: './tests/smoke',
+  fullyParallel: true,
+  forbidOnly: !!process.env.CI,
+  retries: process.env.CI ? 2 : 0,
+  workers: process.env.CI ? 1 : undefined,
+  reporter: 'html',
+  use: {
+    baseURL: process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3001',
+    trace: 'on-first-retry',
+    timeout: 10000, // Smoke tests should be fast
+  },
+
+  projects: [
+    {
+      name: 'chromium',
+      use: { browserName: 'chromium' },
+    },
+  ],
+
+  webServer: {
+    command: 'pnpm run dev',
+    url: 'http://localhost:3001',
+    reuseExistingServer: !process.env.CI,
+    timeout: 120 * 1000,
+  },
+})

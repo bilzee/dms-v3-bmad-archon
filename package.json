@@ -7,6 +7,7 @@
     "dev:pwa": "PWA_TESTING=true next dev",
     "build": "next build",
     "build:test": "cross-env NODE_ENV=test next build",
+    "build:validated": "npm run validate:schema && next build && npm run test:smoke",
     "start": "next start",
     "lint": "next lint",
     "type-check": "tsc --noEmit",
@@ -24,11 +25,14 @@
     "test:response-planning:unit": "jest tests/unit/services/response-planning.test.ts tests/unit/components/ResponsePlanningForm.test.tsx",
     "test:response-planning:integration": "jest tests/integration/response-planning/",
     "test:response-planning:e2e": "playwright test tests/e2e/response-planning-workflow.test.ts",
+    "test:smoke": "playwright test --config=playwright-smoke.config.ts",
+    "test:smoke:headed": "playwright test --config=playwright-smoke.config.ts --headed",
+    "validate:schema": "node scripts/validate-schema-usage.js",
     "verify:baseline": "bash scripts/testing/regression-prevention/verify-baseline.sh",
     "regression:create": "bash scripts/testing/regression-prevention/create-regression-tests.sh",
     "regression:analyze": "node scripts/testing/regression-prevention/feature-impact-analyzer.js",
     "dev:validate": "node scripts/testing/validation/development-validator.js",
-    "living-tests": "npx ts-node scripts/testing/living-tests/living-tests.cli.ts",
+    "living-tests": "node scripts/testing/living-tests/living-tests-cli-simple.js",
     "claude:dev": "set MCP_CONFIG=.mcp.dev.json && claude-code"
   },
   "dependencies": {

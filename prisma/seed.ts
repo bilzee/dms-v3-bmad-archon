@@ -180,6 +180,8 @@ async function main() {
   console.log('🏢 Creating sample entities...')
   
   // Delete existing entities to avoid conflicts (in order of dependency)
+  await prisma.donorCommitment.deleteMany({})
+  await prisma.incidentEntity.deleteMany({})
   await prisma.entityAssignment.deleteMany({})
   await prisma.rapidResponse.deleteMany({})
   await prisma.rapidAssessment.deleteMany({})
@@ -267,7 +269,7 @@ async function main() {
       update: {},
       create: {
         userId: coordinatorUser.id,
-        entityId: maiduguri.id,
+        entityId: 'entity-1',
         assignedBy: adminUser.id,
       },
     })
@@ -310,7 +312,7 @@ async function main() {
       update: {},
       create: {
         userId: multiRoleUser.id,
-        entityId: maiduguri.id,
+        entityId: 'entity-1',
         assignedBy: adminUser.id,
       },
     })
@@ -350,7 +352,7 @@ async function main() {
       update: {},
       create: {
         userId: responderUser.id,
-        entityId: maiduguri.id,
+        entityId: 'entity-1',
         assignedBy: adminUser.id,
       },
     })
@@ -390,7 +392,44 @@ async function main() {
       update: {},
       create: {
         userId: assessorUser.id,
-        entityId: maiduguri.id,
+        entityId: 'entity-1',
+        assignedBy: adminUser.id,
+      },
+    })
+  }
+
+  // Assign users to Gwoza entity (entity-3) for testing commitments
+  const gwoza = await prisma.entity.findUnique({ where: { id: 'entity-3' } })
+  if (gwoza) {
+    // Assign multi-role user to Gwoza
+    await prisma.entityAssignment.upsert({
+      where: { userId_entityId: { userId: multiRoleUser.id, entityId: gwoza.id } },
+      update: {},
+      create: {
+        userId: multiRoleUser.id,
+        entityId: gwoza.id,
+        assignedBy: adminUser.id,
+      },
+    })
+
+    // Assign responder to Gwoza
+    await prisma.entityAssignment.upsert({
+      where: { userId_entityId: { userId: responderUser.id, entityId: gwoza.id } },
+      update: {},
+      create: {
+        userId: responderUser.id,
+        entityId: gwoza.id,
+        assignedBy: adminUser.id,
+      },
+    })
+
+    // Assign assessor to Gwoza
+    await prisma.entityAssignment.upsert({
+      where: { userId_entityId: { userId: assessorUser.id, entityId: gwoza.id } },
+      update: {},
+      create: {
+        userId: assessorUser.id,
+        entityId: gwoza.id,
         assignedBy: adminUser.id,
       },
     })
@@ -468,6 +507,182 @@ async function main() {
     })
   }
 
+  // Create sample donor commitments for testing Story 4.3
+  console.log('💰 Creating sample donor commitments...')
+  
+  // Create sample commitments using hardcoded entity IDs to avoid variable conflicts
+  console.log('💰 Creating sample commitments using entity-1 and entity-2...')
+    // Create sample incidents first
+    const floodIncident = await prisma.incident.upsert({
+      where: { id: 'incident-flood-001' },
+      update: {},
+      create: {
+        id: 'incident-flood-001',
+        type: 'FLOOD',
+        subType: 'SEASONAL_FLOODING',
+        severity: 'HIGH',
+        status: 'ACTIVE',
+        description: 'Severe flooding in Maiduguri metropolitan area affecting multiple neighborhoods',
+        location: 'Maiduguri Metropolitan Area, Borno State',
+        coordinates: { latitude: 11.8311, longitude: 13.1566 },
+        createdBy: coordinatorUser.id,
+      },
+    })
+
+    const droughtIncident = await prisma.incident.upsert({
+      where: { id: 'incident-drought-001' },
+      update: {},
+      create: {
+        id: 'incident-drought-001',
+        type: 'DROUGHT',
+        subType: 'AGRICULTURAL_DROUGHT',
+        severity: 'MEDIUM',
+        status: 'ACTIVE', 
+        description: 'Agricultural drought affecting crop production in Gwoza area',
+        location: 'Gwoza Local Government Area, Borno State',
+        coordinates: { latitude: 11.0544, longitude: 13.7839 },
+        createdBy: coordinatorUser.id,
+      },
+    })
+
+    // Create IncidentEntity relationships
+    await prisma.incidentEntity.upsert({
+      where: {
+        incidentId_entityId: {
+          incidentId: floodIncident.id,
+          entityId: 'entity-1'
+        }
+      },
+      update: {},
+      create: {
+        incidentId: floodIncident.id,
+        entityId: 'entity-1',
+        severity: 'HIGH'
+      }
+    })
+
+    await prisma.incidentEntity.upsert({
+      where: {
+        incidentId_entityId: {
+          incidentId: droughtIncident.id,
+          entityId: 'entity-3'
+        }
+      },
+      update: {},
+      create: {
+        incidentId: droughtIncident.id,
+        entityId: 'entity-3',
+        severity: 'MEDIUM'
+      }
+    })
+
+    // Create sample donor
+    const unDonor = await prisma.donor.upsert({
+      where: { id: 'donor-un-001' },
+      update: {},
+      create: {
+        id: 'donor-un-001',
+        name: 'United Nations Office for the Coordination of Humanitarian Affairs',
+        type: 'ORGANIZATION',
+        contactEmail: 'ocha.nigeria@un.org',
+        contactPhone: '+234-9-461-4000',
+        organization: 'UN OCHA',
+        isActive: true,
+      },
+    })
+
+    const ngoCareDonor = await prisma.donor.upsert({
+      where: { id: 'donor-care-001' },
+      update: {},
+      create: {
+        id: 'donor-care-001', 
+        name: 'CARE International Nigeria',
+        type: 'ORGANIZATION',
+        contactEmail: 'nigeria@careinternational.org',
+        contactPhone: '+234-9-290-3000',
+        organization: 'CARE International',
+        isActive: true,
+      },
+    })
+
+    // Create sample commitments
+    const sampleCommitments = [
+      {
+        id: 'commitment-flood-001',
+        donorId: unDonor.id,
+        entityId: 'entity-1',
+        incidentId: floodIncident.id,
+        status: 'PLANNED',
+        items: [
+          { name: 'Emergency Food Rations', unit: 'packages', quantity: 500 },
+          { name: 'Clean Water Containers', unit: 'jerrycans', quantity: 1000 },
+          { name: 'Emergency Shelter Kits', unit: 'kits', quantity: 200 },
+          { name: 'Medical Supplies', unit: 'boxes', quantity: 50 }
+        ],
+        totalCommittedQuantity: 1750,
+        deliveredQuantity: 0,
+        verifiedDeliveredQuantity: 0,
+        notes: 'Emergency response package for flood-affected families in Maiduguri',
+      },
+      {
+        id: 'commitment-flood-002',
+        donorId: ngoCareDonor.id,
+        entityId: 'entity-1',
+        incidentId: floodIncident.id,
+        status: 'PLANNED',
+        items: [
+          { name: 'Hygiene Kits', unit: 'kits', quantity: 300 },
+          { name: 'Blankets', unit: 'pieces', quantity: 800 },
+          { name: 'Cooking Utensils Set', unit: 'sets', quantity: 250 }
+        ],
+        totalCommittedQuantity: 1350,
+        deliveredQuantity: 0,
+        verifiedDeliveredQuantity: 0,
+        notes: 'Essential household items for displaced families',
+      },
+      {
+        id: 'commitment-drought-001',
+        donorId: unDonor.id,
+        entityId: 'entity-3',
+        incidentId: droughtIncident.id,
+        status: 'PLANNED',
+        items: [
+          { name: 'Drought-Resistant Seeds', unit: 'kg', quantity: 2000 },
+          { name: 'Irrigation Equipment', unit: 'sets', quantity: 100 },
+          { name: 'Water Storage Tanks', unit: 'pieces', quantity: 25 }
+        ],
+        totalCommittedQuantity: 2125,
+        deliveredQuantity: 0,
+        verifiedDeliveredQuantity: 0,
+        notes: 'Agricultural support for drought-affected farmers in Gwoza',
+      },
+      {
+        id: 'commitment-partial-001',
+        donorId: ngoCareDonor.id,
+        entityId: 'entity-1',
+        incidentId: floodIncident.id,
+        status: 'PARTIAL',
+        items: [
+          { name: 'Mosquito Nets', unit: 'pieces', quantity: 600 },
+          { name: 'Water Purification Tablets', unit: 'boxes', quantity: 100 }
+        ],
+        totalCommittedQuantity: 700,
+        deliveredQuantity: 350,
+        verifiedDeliveredQuantity: 300,
+        notes: 'Health protection items - partially delivered',
+      }
+    ]
+
+    for (const commitment of sampleCommitments) {
+      await prisma.donorCommitment.upsert({
+        where: { id: commitment.id },
+        update: {},
+        create: commitment as any,
+      })
+    }
+
+  console.log('💰 Created 4 sample donor commitments')
+
   console.log('✅ Database seed completed successfully!')
   console.log('📧 Admin credentials: admin@dms.gov.ng / admin123!')
   console.log('📧 Coordinator credentials: coordinator@dms.gov.ng / coordinator123!')
@@ -475,6 +690,7 @@ async function main() {
   console.log('📧 Assessor credentials: assessor@test.com / test-password')
   console.log('📧 Multi-role credentials: multirole@dms.gov.ng / multirole123! (ASSESSOR, COORDINATOR, DONOR, RESPONDER)')
   console.log('📋 Created 5 sample assessments for verification workflow testing')
+  console.log('💰 Created 4 sample donor commitments for testing Story 4.3')
 }
 
 main()

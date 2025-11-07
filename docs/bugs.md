@@ -1,5 +1,19 @@
 # Bugs and Solutions
 
+## Recent Bug Fixes (2025-11-07)
+
+### **Bug 1: Missing userId Parameter in API Call**
+**Problem**: `ZodError: userId is Required` when accessing commitment import tab
+**Root Cause**: Frontend component called `/api/v1/entities/assigned` without required `userId` query parameter
+**Solution**: Added proper `URLSearchParams` construction with `userId` from authenticated user context
+**Pattern**: Always ensure API calls include all required parameters defined in the endpoint schema
+
+### **Bug 2: Empty String Value in Select Component**
+**Problem**: `A <Select.Item /> must have a value prop that is not an empty string` runtime error
+**Root Cause**: Radix UI Select component doesn't allow empty string values for SelectItem
+**Solution**: Replace empty string values with meaningful identifiers (e.g., `value="all"` instead of `value=""`)
+**Pattern**: Use semantic values like "all", "none", "default" instead of empty strings for Select components
+
 ## Prisma Client Browser Environment Error
 
 ### **Problem**

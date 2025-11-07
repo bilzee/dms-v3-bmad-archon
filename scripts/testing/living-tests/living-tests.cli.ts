@@ -6,10 +6,12 @@
  */
 
 import { Command } from 'commander'
-import { startLivingTestSystem, LivingTestSystem } from '../../../src/lib/testing/living-test-system'
-import { FixValidator } from '../../../src/lib/testing/fix-validator'
 import * as fs from 'fs/promises'
 import * as path from 'path'
+
+// Import directly from the TypeScript files using require
+const { startLivingTestSystem, LivingTestSystem } = require('../../../src/lib/testing/living-test-system')
+const { FixValidator } = require('../../../src/lib/testing/fix-validator')
 
 const program = new Command()
 
@@ -53,7 +55,7 @@ program
         
         if (report.recommendations.length > 0) {
           console.log('\n💡 Recommendations:')
-          report.recommendations.forEach(rec => {
+          report.recommendations.forEach((rec: string) => {
             console.log(`   • ${rec}`)
           })
         }
@@ -190,13 +192,13 @@ program
         return
       }
       
-      patterns.forEach((pattern: any, index: number) => {
+      patterns.forEach((pattern: { name: string; frequency: number; effectiveness?: number; contexts?: string[]; examples?: string[] }, index: number) => {
         console.log(`${index + 1}. ${pattern.name}`)
         console.log(`   Frequency: ${pattern.frequency}`)
         console.log(`   Effectiveness: ${pattern.effectiveness}%`)
         if (options.verbose) {
-          console.log(`   Contexts: ${pattern.contexts.join(', ')}`)
-          console.log(`   Examples: ${pattern.examples.slice(0, 2).join(', ')}`)
+          console.log(`   Contexts: ${pattern.contexts?.join(', ') || 'None'}`)
+          console.log(`   Examples: ${pattern.examples?.slice(0, 2).join(', ') || 'None'}`)
         }
         console.log('')
       })

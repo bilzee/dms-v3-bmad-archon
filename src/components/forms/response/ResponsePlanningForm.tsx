@@ -17,14 +17,16 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Badge } from '@/components/ui/badge'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Separator } from '@/components/ui/separator'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 
 // Icons
-import { Plus, Trash2, Package, AlertTriangle, Save, X, Wifi, WifiOff, Cloud, CloudOff, FileText } from 'lucide-react'
+import { Plus, Trash2, Package, AlertTriangle, Save, X, Wifi, WifiOff, Cloud, CloudOff, FileText, Download } from 'lucide-react'
 
 // Shared components
 import { EntitySelector } from '@/components/shared/EntitySelector'
 import { AssessmentSelector } from '@/components/response/AssessmentSelector'
 import { CollaborationStatus } from '@/components/response/CollaborationStatus'
+import { DonorCommitmentImportForm } from './DonorCommitmentImportForm'
 
 // Hooks
 import { useCollaboration } from '@/hooks/useCollaboration'
@@ -56,17 +58,21 @@ const ResponsePlanningFormSchema = z.object({
 type FormData = z.infer<typeof ResponsePlanningFormSchema>
 
 interface ResponsePlanningFormProps {
-  initialData?: FormData & { id?: string }
+  initialData?: FormData & { id?: string, assessment?: any }
   mode?: 'create' | 'edit'
   onSuccess?: (response: any) => void
   onCancel?: () => void
+  entityId?: string
+  assessmentId?: string
 }
 
 export function ResponsePlanningForm({ 
   initialData, 
   mode = 'create',
   onSuccess,
-  onCancel 
+  onCancel,
+  entityId: preselectedEntityId,
+  assessmentId: preselectedAssessmentId
 }: ResponsePlanningFormProps) {
   const { user, token } = useAuthStore()
   const queryClient = useQueryClient()
@@ -75,6 +81,8 @@ export function ResponsePlanningForm({
     mode === 'edit' && initialData?.id ? initialData.id : null
   )
   const [submitError, setSubmitError] = useState<string | null>(null)
+  const [inputMode, setInputMode] = useState<'manual' | 'commitment'>('manual')
+  const [commitmentImportData, setCommitmentImportData] = useState<any>(null)
 
   // Collaboration hook - Only for create mode
   const collaboration = useCollaboration(mode === 'create' ? editingResponseId : null)
@@ -103,8 +111,8 @@ export function ResponsePlanningForm({
       type: 'HEALTH' as const,
       priority: 'MEDIUM' as const,
       items: [{ name: '', unit: '', quantity: 1 }],
-      assessmentId: '',
-      entityId: ''
+      assessmentId: preselectedAssessmentId || '',
+      entityId: preselectedEntityId || ''
     }
   })
 
@@ -158,27 +166,41 @@ export function ResponsePlanningForm({
     enabled: !!selectedEntityId && !!token
   })
 
-  // Get assessment data for edit mode
-  const { data: editAssessment = null } = useQuery({
-    queryKey: ['assessment', initialData?.assessmentId],
-    queryFn: async () => {
-      if (!initialData?.assessmentId || !token) return null
+  // Use assessment data from initialData for edit mode
+  const editAssessment = mode === 'edit' ? initialData?.assessment : null
+
+  // Handle commitment import success
+  const handleCommitmentImportSuccess = (response: any) => {
+    // Populate form with commitment data
+    if (response && response.items) {
+      form.setValue('items', response.items.map((item: any) => ({
+        name: item.name,
+        unit: item.unit,
+        quantity: item.quantity,
+        notes: `Imported from ${response.donor?.name || 'donor'} commitment`
+      })))
       
-      const response = await fetch(`/api/v1/assessments/${initialData.assessmentId}`, {
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
-      })
+      // Set type to LOGISTICS for commitment-based responses
+      form.setValue('type', 'LOGISTICS')
       
-      if (!response.ok) {
-        throw new Error('Failed to fetch assessment')
+      // Set priority based on incident severity if available
+      if (response.commitment?.incident?.severity) {
+        form.setValue('priority', response.commitment.incident.severity)
       }
       
-      const result = await response.json()
-      return result.data
-    },
-    enabled: !!initialData?.assessmentId && !!token && mode === 'edit'
-  })
+      // Add description about the commitment import
+      form.setValue('description', `Imported from commitment by ${response.donor?.name || 'donor'}`)
+      
+      // Switch back to manual mode to show the populated form
+      setInputMode('manual')
+      setCommitmentImportData(response)
+      
+      // Mark form as dirty to show that changes have been made
+      setIsDirty(true)
+    }
+    
+    onSuccess?.(response)
+  }
 
   // Create planned response mutation
   const createMutation = useMutation({
@@ -188,6 +210,12 @@ export function ResponsePlanningForm({
       // Add user ID to data
       const dataWithUser = { ...data, responderId: (user as any).id }
       
+      // Add commitment data if available
+      if (commitmentImportData) {
+        dataWithUser.commitmentId = commitmentImportData.commitmentId
+        dataWithUser.donorId = commitmentImportData.donorId
+      }
+      
       return await responseOfflineService.createPlannedResponse(dataWithUser)
     },
     onSuccess: (response) => {
@@ -195,6 +223,7 @@ export function ResponsePlanningForm({
       queryClient.invalidateQueries({ queryKey: ['responses', 'planned', (user as any)?.id] })
       setIsDirty(false)
       form.reset()
+      setCommitmentImportData(null)
       
       // Show different success message based on sync status
       if (response.syncStatus === 'pending') {
@@ -320,8 +349,13 @@ export function ResponsePlanningForm({
     if (isDirty && window.confirm('Are you sure you want to cancel? All unsaved changes will be lost.')) {
       form.reset()
       setIsDirty(false)
+      setCommitmentImportData(null)
+      setInputMode('manual')
       onCancel?.()
     } else if (!isDirty) {
+      form.reset()
+      setCommitmentImportData(null)
+      setInputMode('manual')
       onCancel?.()
     }
   }
@@ -338,8 +372,8 @@ export function ResponsePlanningForm({
 
   // Watch form dirty state
   useEffect(() => {
-    setIsDirty(form.formState.isDirty)
-  }, [form.formState.isDirty])
+    setIsDirty(form.formState.isDirty || !!commitmentImportData)
+  }, [form.formState.isDirty, commitmentImportData])
 
   // Cleanup collaboration on unmount (only in create mode)
   useEffect(() => {
@@ -377,6 +411,12 @@ export function ResponsePlanningForm({
             <Badge variant="outline">
               {mode === 'create' ? 'PLANNING' : 'EDITING'}
             </Badge>
+            {commitmentImportData && (
+              <Badge variant="secondary" className="text-blue-700 border-blue-300">
+                <Download className="h-3 w-3 mr-1" />
+                From Commitment
+              </Badge>
+            )}
           </div>
           
           {/* Connection Status */}
@@ -403,7 +443,7 @@ export function ResponsePlanningForm({
         </CardTitle>
         <CardDescription>
           {mode === 'create' 
-            ? 'Plan response resources for a verified assessment. Once created, the response will be in PLANNED status and can be edited.'
+            ? 'Plan response resources for a verified assessment. Choose between manual planning or importing from donor commitments.'
             : 'Edit the planned response. Only responses in PLANNED status can be modified.'
           }
           {!isOnline && (
@@ -428,67 +468,326 @@ export function ResponsePlanningForm({
           </div>
         )}
 
-        <Form {...form}>
-          <form onSubmit={handleSubmit} className="space-y-6">
-            {/* Entity Selection - Only in create mode */}
-            {mode === 'create' && (
-              <FormField
-                control={form.control}
-                name="entityId"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Entity *</FormLabel>
-                    <FormControl>
-                      <EntitySelector
-                        value={field.value}
-                        onValueChange={(value) => {
-                          field.onChange(value)
-                          form.setValue('assessmentId', '')
-                        }}
-                        disabled={mode !== 'create'}
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            )}
-
-            {/* Entity Display - Read-only in edit mode */}
-            {mode === 'edit' && initialData?.entityId && (
+        {/* Commitment Import Data Display */}
+        {commitmentImportData && (
+          <Alert className="mb-6">
+            <Download className="h-4 w-4" />
+            <AlertDescription>
               <div className="space-y-2">
-                <label className="text-sm font-medium">Entity</label>
-                <div className="flex items-center gap-2 p-3 bg-gray-50 border rounded-md">
-                  <span className="text-sm">
-                    {entities.find((e: any) => e.id === initialData.entityId)?.name || 'Loading...'}
-                  </span>
-                  <Badge variant="outline" className="text-xs">
-                    {entities.find((e: any) => e.id === initialData.entityId)?.type || 'Unknown'}
-                  </Badge>
+                <strong>Imported from Commitment:</strong>
+                <div className="text-sm">
+                  <div>Donor: {commitmentImportData.donor?.name}</div>
+                  <div>Entity: {commitmentImportData.entity?.name}</div>
+                  <div>Items: {commitmentImportData.items?.length} items imported</div>
                 </div>
               </div>
-            )}
+            </AlertDescription>
+          </Alert>
+        )}
 
-            {/* Assessment Selection */}
-            {mode === 'create' ? (
-              <AssessmentSelector
+        {/* Mode Selection for Create Mode */}
+        {mode === 'create' && (
+          <Tabs value={inputMode} onValueChange={(value) => setInputMode(value as 'manual' | 'commitment')} className="mb-6">
+            <TabsList className="grid w-full grid-cols-2">
+              <TabsTrigger value="manual">Manual Planning</TabsTrigger>
+              <TabsTrigger value="commitment">Import from Commitment</TabsTrigger>
+            </TabsList>
+            
+            <TabsContent value="manual" className="space-y-6">
+              <Form {...form}>
+                <form onSubmit={handleSubmit} className="space-y-6">
+                  {/* Entity Selection - Only in create mode */}
+                  <FormField
+                    control={form.control}
+                    name="entityId"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Entity *</FormLabel>
+                        <FormControl>
+                          <EntitySelector
+                            value={field.value}
+                            onValueChange={(value) => {
+                              field.onChange(value)
+                              form.setValue('assessmentId', '')
+                            }}
+                            disabled={mode !== 'create'}
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+  
+                  {/* Assessment Selection */}
+                  {mode === 'create' ? (
+                    <AssessmentSelector
+                      entityId={form.watch('entityId')}
+                      value={form.watch('assessmentId')}
+                      onValueChange={(assessmentId, assessment) => {
+                        form.setValue('assessmentId', assessmentId)
+                        // Auto-match response type to assessment type
+                        if (assessment && assessment.rapidAssessmentType) {
+                          form.setValue('type', assessment.rapidAssessmentType)
+                        }
+                        // Note: Don't override entityId as it's already selected by the user
+                        // The assessment should be for the same entity that was selected
+                      }}
+                      disabled={mode !== 'create'}
+                      showConflictWarning={true}
+                      selectedAssessment={assessments.find((a: any) => a.id === form.watch('assessmentId'))}
+                    />
+                  ) : null}
+
+                  {/* Response Type and Priority */}
+                  <div className="grid grid-cols-2 gap-4">
+                    <FormField
+                      control={form.control}
+                      name="type"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Response Type *</FormLabel>
+                          <FormControl>
+                            <Select value={field.value} onValueChange={field.onChange} disabled={true}>
+                              <SelectTrigger className="bg-gray-50">
+                                <SelectValue placeholder="Auto-populated from assessment..." />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="HEALTH">Health</SelectItem>
+                                <SelectItem value="WASH">WASH</SelectItem>
+                                <SelectItem value="SHELTER">Shelter</SelectItem>
+                                <SelectItem value="FOOD">Food</SelectItem>
+                                <SelectItem value="SECURITY">Security</SelectItem>
+                                <SelectItem value="POPULATION">Population</SelectItem>
+                                <SelectItem value="LOGISTICS">Logistics</SelectItem>
+                              </SelectContent>
+                            </Select>
+                          </FormControl>
+                          <FormDescription>
+                            Auto-populated from selected assessment type
+                          </FormDescription>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    <FormField
+                      control={form.control}
+                      name="priority"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Priority *</FormLabel>
+                          <FormControl>
+                            <Select value={field.value} onValueChange={field.onChange}>
+                              <SelectTrigger>
+                                <SelectValue placeholder="Select priority..." />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="CRITICAL">
+                                  <span className="flex items-center gap-2">
+                                    <div className="w-3 h-3 bg-red-500 rounded-full"></div>
+                                    Critical
+                                  </span>
+                                </SelectItem>
+                                <SelectItem value="HIGH">
+                                  <span className="flex items-center gap-2">
+                                    <div className="w-3 h-3 bg-orange-500 rounded-full"></div>
+                                    High
+                                  </span>
+                                </SelectItem>
+                                <SelectItem value="MEDIUM">
+                                  <span className="flex items-center gap-2">
+                                    <div className="w-3 h-3 bg-yellow-500 rounded-full"></div>
+                                    Medium
+                                  </span>
+                                </SelectItem>
+                                <SelectItem value="LOW">
+                                  <span className="flex items-center gap-2">
+                                    <div className="w-3 h-3 bg-green-500 rounded-full"></div>
+                                    Low
+                                  </span>
+                                </SelectItem>
+                              </SelectContent>
+                            </Select>
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+
+                  {/* Description */}
+                  <FormField
+                    control={form.control}
+                    name="description"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Description</FormLabel>
+                        <FormControl>
+                          <Textarea
+                            placeholder="Add any additional details about this response plan..."
+                            {...field}
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  {/* Items Section */}
+                  <div>
+                    <div className="flex items-center justify-between mb-4">
+                      <FormLabel className="text-base font-medium">Resources *</FormLabel>
+                      <Button type="button" variant="outline" size="sm" onClick={addItem}>
+                        <Plus className="h-4 w-4 mr-2" />
+                        Add Item
+                      </Button>
+                    </div>
+
+                    <div className="space-y-3">
+                      {fields.map((field, index) => (
+                        <div key={field.id} className="flex items-end gap-3 p-4 border rounded-lg">
+                          <div className="flex-1 space-y-2">
+                            <FormField
+                              control={form.control}
+                              name={`items.${index}.name`}
+                              render={({ field }) => (
+                                <FormItem>
+                                  <FormLabel className="text-sm">Item Name *</FormLabel>
+                                  <FormControl>
+                                    <Input placeholder="e.g., Clean water bottles" {...field} />
+                                  </FormControl>
+                                  <FormMessage />
+                                </FormItem>
+                              )}
+                            />
+
+                            <div className="grid grid-cols-2 gap-3">
+                              <FormField
+                                control={form.control}
+                                name={`items.${index}.quantity`}
+                                render={({ field }) => (
+                                  <FormItem>
+                                    <FormLabel className="text-sm">Quantity *</FormLabel>
+                                    <FormControl>
+                                      <Input 
+                                        type="number" 
+                                        placeholder="0" 
+                                        min="1"
+                                        {...field}
+                                        onChange={(e) => field.onChange(parseInt(e.target.value) || 1)}
+                                      />
+                                    </FormControl>
+                                    <FormMessage />
+                                  </FormItem>
+                                )}
+                              />
+
+                              <FormField
+                                control={form.control}
+                                name={`items.${index}.unit`}
+                                render={({ field }) => (
+                                  <FormItem>
+                                    <FormLabel className="text-sm">Unit *</FormLabel>
+                                    <FormControl>
+                                      <Input placeholder="e.g., units, liters" {...field} />
+                                    </FormControl>
+                                    <FormMessage />
+                                  </FormItem>
+                                )}
+                              />
+                            </div>
+
+                            <FormField
+                              control={form.control}
+                              name={`items.${index}.notes`}
+                              render={({ field }) => (
+                                <FormItem>
+                                  <FormLabel className="text-sm">Notes (Optional)</FormLabel>
+                                  <FormControl>
+                                    <Input placeholder="Additional details..." {...field} />
+                                  </FormControl>
+                                  <FormMessage />
+                                </FormItem>
+                              )}
+                            />
+                          </div>
+
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            onClick={() => removeItem(index)}
+                            disabled={fields.length <= 1}
+                            className="text-red-600 hover:text-red-700"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Submit Buttons */}
+                  <div className="flex gap-3 pt-4">
+                    <Button
+                      type="submit"
+                      disabled={isLoading || !form.formState.isValid}
+                      className="flex-1"
+                    >
+                      {isLoading ? 'Saving...' : mode === 'create' ? 'Create Plan' : 'Update Plan'}
+                    </Button>
+                    
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={handleCancel}
+                      disabled={isLoading}
+                    >
+                      Cancel
+                    </Button>
+                  </div>
+
+                  {submitError && (
+                    <Alert variant="destructive">
+                      <AlertTriangle className="h-4 w-4" />
+                      <AlertDescription>{submitError}</AlertDescription>
+                    </Alert>
+                  )}
+                </form>
+              </Form>
+            </TabsContent>
+
+            <TabsContent value="commitment" className="space-y-6">
+              <DonorCommitmentImportForm
+                onSuccess={handleCommitmentImportSuccess}
+                onCancel={handleCancel}
                 entityId={form.watch('entityId')}
-                value={form.watch('assessmentId')}
-                onValueChange={(assessmentId, assessment) => {
-                  form.setValue('assessmentId', assessmentId)
-                  // Auto-match response type to assessment type
-                  if (assessment && assessment.rapidAssessmentType) {
-                    form.setValue('type', assessment.rapidAssessmentType)
-                  }
-                  // Note: Don't override entityId as it's already selected by the user
-                  // The assessment should be for the same entity that was selected
-                }}
-                disabled={mode !== 'create'}
-                showConflictWarning={true}
-                selectedAssessment={assessments.find((a: any) => a.id === form.watch('assessmentId'))}
               />
-            ) : (
-              // Assessment Display - Read-only in edit mode
+            </TabsContent>
+          </Tabs>
+        )}
+
+        {/* Edit Mode - Show the existing form */}
+        {mode === 'edit' && (
+          <Form {...form}>
+            <form onSubmit={handleSubmit} className="space-y-6">
+              {/* Entity Display - Read-only in edit mode */}
+              {initialData?.entityId && (
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">Entity</label>
+                  <div className="flex items-center gap-2 p-3 bg-gray-50 border rounded-md">
+                    <span className="text-sm">
+                      {entities.find((e: any) => e.id === initialData.entityId)?.name || 'Loading...'}
+                    </span>
+                    <Badge variant="outline" className="text-xs">
+                      {entities.find((e: any) => e.id === initialData.entityId)?.type || 'Unknown'}
+                    </Badge>
+                  </div>
+                </div>
+              )}
+
+              {/* Assessment Display - Read-only in edit mode */}
               <div className="space-y-2">
                 <label className="text-sm font-medium">Assessment</label>
                 <div className="p-3 bg-gray-50 border rounded-md">
@@ -510,286 +809,225 @@ export function ResponsePlanningForm({
                   )}
                 </div>
               </div>
-            )}
 
-            {/* Response Type and Priority */}
-            <div className="grid grid-cols-2 gap-4">
+              {/* Response Type and Priority */}
+              <div className="grid grid-cols-2 gap-4">
+                <FormField
+                  control={form.control}
+                  name="type"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Response Type *</FormLabel>
+                      <FormControl>
+                        <Select value={field.value} onValueChange={field.onChange} disabled={true}>
+                          <SelectTrigger className="bg-gray-50">
+                            <SelectValue placeholder="Auto-populated from assessment..." />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="HEALTH">Health</SelectItem>
+                            <SelectItem value="WASH">WASH</SelectItem>
+                            <SelectItem value="SHELTER">Shelter</SelectItem>
+                            <SelectItem value="FOOD">Food</SelectItem>
+                            <SelectItem value="SECURITY">Security</SelectItem>
+                            <SelectItem value="POPULATION">Population</SelectItem>
+                            <SelectItem value="LOGISTICS">Logistics</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </FormControl>
+                      <FormDescription>
+                        Auto-populated from selected assessment type
+                      </FormDescription>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="priority"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Priority *</FormLabel>
+                      <FormControl>
+                        <Select value={field.value} onValueChange={field.onChange}>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select priority..." />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="CRITICAL">
+                              <span className="flex items-center gap-2">
+                                <div className="w-3 h-3 bg-red-500 rounded-full"></div>
+                                Critical
+                              </span>
+                            </SelectItem>
+                            <SelectItem value="HIGH">
+                              <span className="flex items-center gap-2">
+                                <div className="w-3 h-3 bg-orange-500 rounded-full"></div>
+                                High
+                              </span>
+                            </SelectItem>
+                            <SelectItem value="MEDIUM">
+                              <span className="flex items-center gap-2">
+                                <div className="w-3 h-3 bg-yellow-500 rounded-full"></div>
+                                Medium
+                              </span>
+                            </SelectItem>
+                            <SelectItem value="LOW">
+                              <span className="flex items-center gap-2">
+                                <div className="w-3 h-3 bg-green-500 rounded-full"></div>
+                                Low
+                              </span>
+                            </SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+
+              {/* Description */}
               <FormField
                 control={form.control}
-                name="type"
+                name="description"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Response Type *</FormLabel>
+                    <FormLabel>Description</FormLabel>
                     <FormControl>
-                      <Select value={field.value} onValueChange={field.onChange} disabled={true}>
-                        <SelectTrigger className="bg-gray-50">
-                          <SelectValue placeholder="Auto-populated from assessment..." />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="HEALTH">Health</SelectItem>
-                          <SelectItem value="WASH">WASH</SelectItem>
-                          <SelectItem value="SHELTER">Shelter</SelectItem>
-                          <SelectItem value="FOOD">Food</SelectItem>
-                          <SelectItem value="SECURITY">Security</SelectItem>
-                          <SelectItem value="POPULATION">Population</SelectItem>
-                          <SelectItem value="LOGISTICS">Logistics</SelectItem>
-                        </SelectContent>
-                      </Select>
+                      <Textarea
+                        placeholder="Add any additional details about this response plan..."
+                        {...field}
+                      />
                     </FormControl>
-                    <FormDescription>
-                      Auto-populated from selected assessment type
-                    </FormDescription>
                     <FormMessage />
                   </FormItem>
                 )}
               />
 
-              <FormField
-                control={form.control}
-                name="priority"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Priority *</FormLabel>
-                    <FormControl>
-                      <Select value={field.value} onValueChange={field.onChange}>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select priority..." />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="CRITICAL">
-                            <span className="flex items-center gap-2">
-                              <div className="w-3 h-3 bg-red-500 rounded-full"></div>
-                              Critical
-                            </span>
-                          </SelectItem>
-                          <SelectItem value="HIGH">
-                            <span className="flex items-center gap-2">
-                              <div className="w-3 h-3 bg-orange-500 rounded-full"></div>
-                              High
-                            </span>
-                          </SelectItem>
-                          <SelectItem value="MEDIUM">
-                            <span className="flex items-center gap-2">
-                              <div className="w-3 h-3 bg-yellow-500 rounded-full"></div>
-                              Medium
-                            </span>
-                          </SelectItem>
-                          <SelectItem value="LOW">
-                            <span className="flex items-center gap-2">
-                              <div className="w-3 h-3 bg-green-500 rounded-full"></div>
-                              Low
-                            </span>
-                          </SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            </div>
+              {/* Items Section */}
+              <div>
+                <div className="flex items-center justify-between mb-4">
+                  <FormLabel className="text-base font-medium">Resources *</FormLabel>
+                  <Button type="button" variant="outline" size="sm" onClick={addItem}>
+                    <Plus className="h-4 w-4 mr-2" />
+                    Add Item
+                  </Button>
+                </div>
 
-            {/* Description */}
-            <FormField
-              control={form.control}
-              name="description"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Description</FormLabel>
-                  <FormControl>
-                    <Textarea
-                      placeholder="Provide additional details about the response plan..."
-                      className="min-h-[100px]"
-                      {...field}
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+                <div className="space-y-3">
+                  {fields.map((field, index) => (
+                    <div key={field.id} className="flex items-end gap-3 p-4 border rounded-lg">
+                      <div className="flex-1 space-y-2">
+                        <FormField
+                          control={form.control}
+                          name={`items.${index}.name`}
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel className="text-sm">Item Name *</FormLabel>
+                              <FormControl>
+                                <Input placeholder="e.g., Clean water bottles" {...field} />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
 
-            {/* Response Items */}
-            <div className="space-y-4">
-              <div className="flex items-center justify-between">
-                <FormLabel className="text-base font-medium">Response Items *</FormLabel>
+                        <div className="grid grid-cols-2 gap-3">
+                          <FormField
+                            control={form.control}
+                            name={`items.${index}.quantity`}
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel className="text-sm">Quantity *</FormLabel>
+                                <FormControl>
+                                  <Input 
+                                    type="number" 
+                                    placeholder="0" 
+                                    min="1"
+                                    {...field}
+                                    onChange={(e) => field.onChange(parseInt(e.target.value) || 1)}
+                                  />
+                                </FormControl>
+                                <FormMessage />
+                              </FormItem>
+                            )}
+                          />
+
+                          <FormField
+                            control={form.control}
+                            name={`items.${index}.unit`}
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel className="text-sm">Unit *</FormLabel>
+                                <FormControl>
+                                  <Input placeholder="e.g., units, liters" {...field} />
+                                </FormControl>
+                                <FormMessage />
+                              </FormItem>
+                            )}
+                          />
+                        </div>
+
+                        <FormField
+                          control={form.control}
+                          name={`items.${index}.notes`}
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel className="text-sm">Notes (Optional)</FormLabel>
+                              <FormControl>
+                                <Input placeholder="Additional details..." {...field} />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                      </div>
+
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => removeItem(index)}
+                        disabled={fields.length <= 1}
+                        className="text-red-600 hover:text-red-700"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Submit Buttons */}
+              <div className="flex gap-3 pt-4">
+                <Button
+                  type="submit"
+                  disabled={isLoading || !form.formState.isValid}
+                  className="flex-1"
+                >
+                  {isLoading ? 'Saving...' : 'Update Plan'}
+                </Button>
+                
                 <Button
                   type="button"
                   variant="outline"
-                  size="sm"
-                  onClick={addItem}
-                  className="flex items-center gap-2"
+                  onClick={handleCancel}
+                  disabled={isLoading}
                 >
-                  <Plus className="h-4 w-4" />
-                  Add Item
+                  Cancel
                 </Button>
               </div>
 
-              {fields.map((field, index) => (
-                <Card key={field.id} className="p-4">
-                  <div className="space-y-4">
-                    <div className="flex items-center justify-between">
-                      <span className="text-sm font-medium text-muted-foreground">
-                        Item {index + 1}
-                      </span>
-                      {fields.length > 1 && (
-                        <Button
-                          type="button"
-                          variant="outline"
-                          size="sm"
-                          onClick={() => removeItem(index)}
-                          className="text-destructive hover:text-destructive"
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      )}
-                    </div>
-
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                      <FormField
-                        control={form.control}
-                        name={`items.${index}.name`}
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Item Name *</FormLabel>
-                            <FormControl>
-                              <Input
-                                placeholder="e.g., Clean Water Kits"
-                                {...field}
-                              />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-
-                      <FormField
-                        control={form.control}
-                        name={`items.${index}.unit`}
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Unit *</FormLabel>
-                            <FormControl>
-                              <Input
-                                placeholder="e.g., kits, boxes, liters"
-                                {...field}
-                              />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-
-                      <FormField
-                        control={form.control}
-                        name={`items.${index}.quantity`}
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Quantity *</FormLabel>
-                            <FormControl>
-                              <Input
-                                type="number"
-                                min="1"
-                                placeholder="1"
-                                {...field}
-                                onChange={(e) => field.onChange(parseInt(e.target.value) || 0)}
-                              />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-                    </div>
-
-                    <FormField
-                      control={form.control}
-                      name={`items.${index}.notes`}
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Notes</FormLabel>
-                          <FormControl>
-                            <Textarea
-                              placeholder="Additional notes about this item..."
-                              className="min-h-[60px]"
-                              {...field}
-                            />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                      />
-                  </div>
-                </Card>
-              ))}
-            </div>
-
-            {/* Form Actions */}
-            <Separator />
-
-            {submitError && (
-              <Alert variant="destructive">
-                <AlertTriangle className="h-4 w-4" />
-                <AlertDescription>
-                  {submitError}
-                </AlertDescription>
-              </Alert>
-            )}
-
-            {(createMutation.error || updateMutation.error) && (
-              <Alert variant="destructive">
-                <AlertTriangle className="h-4 w-4" />
-                <AlertDescription>
-                  {(createMutation.error || updateMutation.error)?.message}
-                </AlertDescription>
-              </Alert>
-            )}
-
-            {/* Sync Progress Indicator */}
-            {isSyncing && (
-              <Alert className="bg-blue-50 border-blue-200">
-                <Cloud className="h-4 w-4 text-blue-600" />
-                <AlertDescription className="text-blue-800">
-                  <div className="flex items-center justify-between">
-                    <span>Syncing your response plan...</span>
-                    <span className="text-sm">{Math.round(syncProgress)}%</span>
-                  </div>
-                  <div className="w-full bg-blue-200 rounded-full h-2 mt-2">
-                    <div 
-                      className="bg-blue-600 h-2 rounded-full transition-all duration-300" 
-                      style={{ width: `${syncProgress}%` }}
-                    ></div>
-                  </div>
-                </AlertDescription>
-              </Alert>
-            )}
-
-            <div className="flex justify-end gap-3 pt-4">
-              <Button
-                type="button"
-                variant="outline"
-                onClick={handleCancel}
-                disabled={isLoading}
-              >
-                <X className="h-4 w-4 mr-2" />
-                Cancel
-              </Button>
-
-              <Button
-                type="submit"
-                disabled={isLoading || !form.formState.isValid}
-                className="min-w-[120px]"
-              >
-                <Save className="h-4 w-4 mr-2" />
-                {isLoading ? 'Saving...' : (
-                  !isOnline ? (
-                    <>Save Locally</>
-                  ) : (
-                    mode === 'create' ? 'Create Plan' : 'Update Plan'
-                  )
-                )}
-              </Button>
-            </div>
-          </form>
-        </Form>
+              {submitError && (
+                <Alert variant="destructive">
+                  <AlertTriangle className="h-4 w-4" />
+                  <AlertDescription>{submitError}</AlertDescription>
+                </Alert>
+              )}
+            </form>
+          </Form>
+        )}
       </CardContent>
     </Card>
   )

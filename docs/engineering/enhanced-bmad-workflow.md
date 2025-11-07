@@ -96,6 +96,41 @@ User confirms to QA that implementation is complete with:
 
 ---
 
+---
+
+## **🚨 Critical Addition: Build Validation After Story 4.3 Login Regression**
+
+### **Issue Discovered**
+Story 4.3 database migration wiped out users, breaking login functionality. Build process (`next build`) succeeded but did not validate critical functionality.
+
+### **Root Cause** 
+- Build process only validates compilation, not functionality
+- Deleted failing integration tests weren't replaced with working ones
+- No smoke tests to validate critical paths after build
+
+### **Solution Implemented**
+```bash
+# New validated build process
+npm run build:validated  # Runs schema validation + build + smoke tests
+
+# New smoke test suite
+npm run test:smoke       # Validates critical paths
+
+# New schema validation
+npm run validate:schema  # Validates Prisma field usage
+```
+
+### **Files Added**
+- `tests/smoke/critical-paths.test.ts` - Critical path validation
+- `playwright-smoke.config.ts` - Smoke test configuration
+- `scripts/validate-schema-usage.js` - Schema validation script
+- Updated `package.json` with validation commands
+
+### **Lesson Learned**
+**Build ≠ System Health**. Always validate critical functionality post-build.
+
+---
+
 ### **Phase 3: Post-Implementation (QA Lead with Dev Results)**
 
 #### **3.1 Enhanced Comprehensive Review**
@@ -155,7 +190,16 @@ Once pre-implementation commands succeed:
 /dev implement story {story-id}
 ```
 
-### 🧹 Post-Implementation Cleanup (Execute After Dev Completion):
+### 🧹 Post-Implementation Validation (Execute After Dev Completion):
+
+**Step 1: Schema Validation (MANDATORY for DB Changes)**
+```bash
+npm run validate:schema
+```
+✅ **Must Pass:** All Prisma field references in code match schema definitions
+📚 **Generates:** Fresh schema reference documentation
+
+**Step 2: Living Test Cleanup**
 ```bash
 npm run living-tests stop
 ```
@@ -164,6 +208,7 @@ npm run living-tests stop
 - [ ] Baseline verification passes
 - [ ] Living test capture started (if regression risks)
 - [ ] Dev agent implementation completed
+- [ ] Schema validation passes (for DB changes)
 - [ ] Living test capture stopped
 - [ ] Ready for QA review
 
@@ -178,6 +223,7 @@ No real-time validation required - dev agent implements normally!
 - [x] `npm run verify:baseline` - ✅ PASSED
 - [x] `npm run living-tests start` - ✅ STARTED (if applicable)
 - [x] `/dev implement story {story-id}` - ✅ COMPLETED
+- [x] `npm run validate:schema` - ✅ PASSED (for DB changes)
 - [x] `npm run living-tests stop` - ✅ COMPLETED (if applicable)
 
 ### 🛠️ Implementation Summary:

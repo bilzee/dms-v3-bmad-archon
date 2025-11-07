@@ -115,21 +115,32 @@ export default function ResponderResponsesPage() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-center gap-4">
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-4">
+          <Button
+            variant="outline"
+            onClick={handleBackToPlanning}
+            className="flex items-center gap-2"
+          >
+            <ArrowLeft className="h-4 w-4" />
+            Back to Planning
+          </Button>
+          <Badge variant="outline">
+            RESPONSE DELIVERY
+          </Badge>
+          <span className="text-sm text-muted-foreground">
+            {new Date().toLocaleDateString('en-GB')}
+          </span>
+        </div>
+        
         <Button
-          variant="outline"
+          variant="default"
           onClick={handleBackToPlanning}
           className="flex items-center gap-2"
         >
-          <ArrowLeft className="h-4 w-4" />
-          Back to Planning
+          <Package className="h-4 w-4" />
+          View Planning Dashboard
         </Button>
-        <Badge variant="outline">
-          RESPONSE DELIVERY
-        </Badge>
-        <span className="text-sm text-muted-foreground">
-          {new Date().toLocaleDateString('en-GB')}
-        </span>
       </div>
 
       {/* Statistics Cards */}

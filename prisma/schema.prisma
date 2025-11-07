@@ -90,6 +90,8 @@ model Entity {
   assignments        EntityAssignment[]
   rapidAssessments   RapidAssessment[]
   responses          RapidResponse[]    @relation("EntityResponses")
+  incidents          IncidentEntity[]    // NEW: Direct incident relationship
+  commitments        DonorCommitment[]   // NEW: Commitment relationship
 
   @@unique([name, type])
   @@map("entities")
@@ -121,6 +123,8 @@ model Incident {
   createdAt              DateTime                @default(now())
   updatedAt              DateTime                @updatedAt
   preliminaryAssessments PreliminaryAssessment[]
+  entities               IncidentEntity[]         // NEW: Direct entity relationship
+  commitments            DonorCommitment[]        // NEW: Commitment relationship
 
   @@map("incidents")
 }
@@ -149,6 +153,22 @@ model PreliminaryAssessment {
   incident                           Incident? @relation(fields: [incidentId], references: [id])
 
   @@map("preliminary_assessments")
+}
+
+model IncidentEntity {
+  id         String    @id @default(uuid())
+  incidentId String
+  entityId   String
+  affectedAt DateTime  @default(now())
+  severity   Priority  @default(MEDIUM)
+  
+  incident   Incident  @relation(fields: [incidentId], references: [id], onDelete: Cascade)
+  entity     Entity    @relation(fields: [entityId], references: [id], onDelete: Cascade)
+  
+  @@unique([incidentId, entityId])
+  @@index([incidentId])
+  @@index([entityId])
+  @@map("incident_entities")
 }
 
 model RapidAssessment {
@@ -309,6 +329,7 @@ model RapidResponse {
   createdAt          DateTime           @default(now())
   updatedAt          DateTime           @updatedAt
   donorId            String?
+  commitmentId       String?            // NEW: Track commitment import source
   items              Json
   offlineId          String?            @unique
   plannedDate        DateTime           @default(now())
@@ -319,10 +340,12 @@ model RapidResponse {
   mediaAttachments   MediaAttachment[]
   assessment         RapidAssessment    @relation("AssessmentResponses", fields: [assessmentId], references: [id])
   donor              Donor?             @relation("DonorResponses", fields: [donorId], references: [id])
+  commitment         DonorCommitment?   @relation("CommitmentResponses", fields: [commitmentId], references: [id]) // NEW
   entity             Entity             @relation("EntityResponses", fields: [entityId], references: [id])
   responder          User               @relation("UserResponses", fields: [responderId], references: [id])
   conflicts          SyncConflict[]     @relation("ResponseConflicts")
 
+  @@index([commitmentId]) // NEW: Index for commitment-based queries
   @@map("rapid_responses")
 }
 
@@ -337,8 +360,35 @@ model Donor {
   createdAt    DateTime        @default(now())
   updatedAt    DateTime        @updatedAt
   responses    RapidResponse[] @relation("DonorResponses")
+  commitments  DonorCommitment[] // NEW: Add this relation
 
   @@map("donors")
+}
+
+model DonorCommitment {
+  id                      String             @id @default(uuid())
+  donorId                 String
+  entityId                String
+  incidentId              String
+  status                  CommitmentStatus   @default(PLANNED)
+  items                   Json               // [{ name: string, unit: string, quantity: number }]
+  totalCommittedQuantity  Int                @default(0)
+  deliveredQuantity       Int                @default(0)
+  verifiedDeliveredQuantity Int              @default(0)
+  commitmentDate          DateTime           @default(now())
+  lastUpdated             DateTime           @updatedAt
+  notes                   String?
+  
+  donor                   Donor              @relation(fields: [donorId], references: [id])
+  entity                  Entity             @relation(fields: [entityId], references: [id])
+  incident                Incident           @relation(fields: [incidentId], references: [id])
+  responses               RapidResponse[]    @relation("CommitmentResponses")
+  
+  @@index([donorId, entityId])
+  @@index([donorId, incidentId])
+  @@index([status])
+  @@index([entityId, incidentId])
+  @@map("donor_commitments")
 }
 
 model MediaAttachment {
@@ -474,4 +524,11 @@ enum IncidentStatus {
   ACTIVE
   CONTAINED
   RESOLVED
+}
+
+enum CommitmentStatus {
+  PLANNED
+  PARTIAL
+  COMPLETE
+  CANCELLED
 }

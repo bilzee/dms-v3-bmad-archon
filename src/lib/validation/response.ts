@@ -15,7 +15,10 @@ export const CreatePlannedResponseSchema = z.object({
   priority: z.enum(['CRITICAL', 'HIGH', 'MEDIUM', 'LOW']).default('MEDIUM'),
   description: z.string().optional(),
   items: z.array(ResponseItemSchema).min(1, 'At least one item is required'),
-  timeline: z.record(z.any()).optional()
+  timeline: z.record(z.any()).optional(),
+  // Commitment import fields
+  commitmentId: z.string().uuid().optional(),
+  donorId: z.string().uuid().optional()
 })
 
 export const UpdatePlannedResponseSchema = z.object({

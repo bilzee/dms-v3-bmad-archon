@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { useQuery } from '@tanstack/react-query'
+import { useRouter } from 'next/navigation'
 
 // UI components
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
@@ -10,7 +11,7 @@ import { Button } from '@/components/ui/button'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 
 // Icons
-import { Plus, Edit, Package, AlertTriangle, Search, Filter } from 'lucide-react'
+import { Plus, Edit, Package, AlertTriangle, Search, Filter, CheckCircle } from 'lucide-react'
 
 // Forms and components
 import { ResponsePlanningForm } from '@/components/forms/response'
@@ -21,6 +22,7 @@ import { useAuthStore } from '@/stores/auth.store'
 
 export default function ResponsePlanningPage() {
   const { user, token } = useAuthStore()
+  const router = useRouter()
   const [showCreateForm, setShowCreateForm] = useState(false)
   const [editingResponse, setEditingResponse] = useState<string | null>(null)
   const [isClient, setIsClient] = useState(false)
@@ -180,6 +182,7 @@ export default function ResponsePlanningPage() {
             type: editingResponseData?.type || 'HEALTH',
             priority: editingResponseData?.priority || 'MEDIUM',
             description: editingResponseData?.description || '',
+            assessment: editingResponseData?.assessment,
             items: editingResponseData?.items?.map((item: any) => ({
               ...item,
               // Remove category from display since it's auto-assigned
@@ -202,13 +205,25 @@ export default function ResponsePlanningPage() {
   // Show response plans dashboard
   return (
     <div className="space-y-6">
-      <div className="flex items-center gap-4">
-        <Badge variant="outline">
-          RESPONSE PLANNING MODE
-        </Badge>
-        <span className="text-sm text-muted-foreground">
-          {new Date().toLocaleDateString()}
-        </span>
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-4">
+          <Badge variant="outline">
+            RESPONSE PLANNING MODE
+          </Badge>
+          <span className="text-sm text-muted-foreground">
+            {new Date().toLocaleDateString()}
+          </span>
+        </div>
+        
+        <Button
+          variant="default"
+          size="lg"
+          onClick={() => router.push('/responder/responses')}
+          className="flex items-center gap-2 bg-green-600 hover:bg-green-700 text-white font-semibold px-6 py-3 shadow-lg"
+        >
+          <CheckCircle className="h-5 w-5" />
+          View Response Deliveries
+        </Button>
       </div>
       
       <ResponsePlanningDashboard

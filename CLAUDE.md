@@ -44,6 +44,32 @@ The coding standards are **sharded** for optimal context usage (8-13KB per shard
   - Use Zod schemas with enum values for request/response validation
   - Example: `z.enum(['HEALTH', 'WASH', 'SHELTER', 'FOOD', 'SECURITY', 'POPULATION'])`
 
+# Schema Validation & Anti-Hallucination
+
+## Critical Rule
+**ALWAYS validate schema field references before implementing database operations.**
+
+## Pre-Implementation Commands
+```bash
+# Validate all Prisma field references match schema
+npm run validate:schema
+
+# View current schema reference 
+cat docs/schema-reference.md
+```
+
+## Schema Field Validation Pattern
+1. **Check schema first**: Use `docs/schema-reference.md` or `prisma/schema.prisma`
+2. **Validate field names**: Ensure exact field names match schema
+3. **Run validation**: `npm run validate:schema` catches mismatches
+4. **No hallucination**: Never assume field names exist without verification
+
+## Common Schema Errors to Avoid
+- ❌ `rapidAssessmentStatus` → ✅ `verificationStatus` 
+- ❌ `summary` (doesn't exist) → ✅ Remove non-existent fields
+- ❌ `status` vs `rapidAssessmentStatus` confusion
+- ✅ Always reference generated `docs/schema-reference.md`
+
 # Archon MCP Integration & Workflow
 
 **CRITICAL: This project uses Archon MCP server for knowledge management.**
