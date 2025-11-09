@@ -399,6 +399,62 @@ export class ResponseService {
       throw new Error('Only planned responses can have delivery confirmed')
     }
 
+    // Check if entity has auto-approval configured
+    const entityAutoApproval = await prisma.entity.findUnique({
+      where: { id: existingResponse.entityId },
+      select: {
+        id: true,
+        autoApproveEnabled: true,
+        metadata: true
+      }
+    })
+
+    // Determine verification status based on auto-approval
+    let verificationStatus: VerificationStatus = 'SUBMITTED'
+    
+    console.log('🔍 Auto-approval check:', {
+      entityId: existingResponse.entityId,
+      entityFound: !!entityAutoApproval,
+      autoApproveEnabled: entityAutoApproval?.autoApproveEnabled,
+      metadata: entityAutoApproval?.metadata,
+      hasConfig: !!(entityAutoApproval?.metadata as any)?.autoApproval
+    })
+
+    if (entityAutoApproval?.autoApproveEnabled) {
+      // Check if auto-approval conditions are met
+      const config = (entityAutoApproval.metadata as any)?.autoApproval
+      
+      console.log('🔍 Auto-approval config:', config)
+      
+      // Create enhanced response object with delivery data for evaluation
+      const responseWithDeliveryData = {
+        ...existingResponse,
+        resources: {
+          deliveryLocation: input.deliveryLocation,
+          deliveryNotes: input.deliveryNotes,
+          mediaAttachmentIds: input.mediaAttachmentIds,
+          deliveredAt: new Date().toISOString()
+        }
+      }
+      
+      const shouldAutoVerify = this.checkAutoApprovalConditions(responseWithDeliveryData, config)
+      
+      console.log('🔍 Auto-approval evaluation:', {
+        shouldAutoVerify,
+        responseType: existingResponse.type,
+        priority: existingResponse.priority,
+        hasDeliveryData: {
+          location: !!input.deliveryLocation,
+          notes: !!input.deliveryNotes,
+          media: !!input.mediaAttachmentIds?.length
+        }
+      })
+      
+      if (shouldAutoVerify) {
+        verificationStatus = 'VERIFIED'
+      }
+    }
+
     // Update the response to delivered status
     const result = await prisma.$transaction(async (tx) => {
       const oldValues = {
@@ -406,24 +462,33 @@ export class ResponseService {
         deliveredItems: (existingResponse as any).deliveredItems,
         deliveryLocation: (existingResponse as any).deliveryLocation,
         deliveryNotes: (existingResponse as any).deliveryNotes,
-        mediaAttachmentIds: (existingResponse as any).mediaAttachmentIds
+        mediaAttachmentIds: (existingResponse as any).mediaAttachmentIds,
+        verificationStatus: existingResponse.verificationStatus
+      }
+
+      const updateData: any = {
+        status: 'DELIVERED',
+        verificationStatus,
+        items: input.deliveredItems, // Store delivered items in the existing JSON field
+        resources: {
+          deliveryLocation: input.deliveryLocation,
+          deliveryNotes: input.deliveryNotes,
+          mediaAttachmentIds: input.mediaAttachmentIds,
+          deliveredAt: new Date().toISOString()
+        }, // Store delivery data in resources JSON field
+        responseDate: new Date(), // Capture delivery timestamp
+        updatedAt: new Date()
+      }
+
+      // If auto-verified, add verification details
+      if (verificationStatus === 'VERIFIED') {
+        updateData.verifiedAt = new Date()
+        updateData.verifiedBy = 'auto-approval'
       }
 
       const response = await tx.rapidResponse.update({
         where: { id: responseId },
-        data: {
-          status: 'DELIVERED',
-          verificationStatus: 'SUBMITTED', // Auto-submit for verification
-          items: input.deliveredItems, // Store delivered items in the existing JSON field
-          resources: {
-            deliveryLocation: input.deliveryLocation,
-            deliveryNotes: input.deliveryNotes,
-            mediaAttachmentIds: input.mediaAttachmentIds,
-            deliveredAt: new Date().toISOString()
-          }, // Store delivery data in resources JSON field
-          responseDate: new Date(), // Capture delivery timestamp
-          updatedAt: new Date()
-        },
+        data: updateData,
         include: {
           assessment: {
             select: {
@@ -461,14 +526,16 @@ export class ResponseService {
         oldValues,
         {
           status: 'DELIVERED',
-          verificationStatus: 'SUBMITTED',
+          verificationStatus,
           items: input.deliveredItems,
           resources: {
             deliveryLocation: input.deliveryLocation,
             deliveryNotes: input.deliveryNotes,
             mediaAttachmentIds: input.mediaAttachmentIds
           },
-          responseDate: response.responseDate
+          responseDate: response.responseDate,
+          verifiedAt: verificationStatus === 'VERIFIED' ? new Date() : null,
+          verifiedBy: verificationStatus === 'VERIFIED' ? 'auto-approval' : null
         }
       )
 
@@ -476,6 +543,76 @@ export class ResponseService {
     })
 
     return result
+  }
+
+  private static checkAutoApprovalConditions(
+    response: any,
+    config: any
+  ): boolean {
+    console.log('🔍 Checking auto-approval conditions:', {
+      hasConfig: !!config,
+      configStructure: config
+    })
+
+    if (!config) {
+      console.log('❌ No auto-approval config found')
+      return false
+    }
+
+    // Check response scope
+    if (config.scope && config.scope !== 'both' && config.scope !== 'responses') {
+      console.log('❌ Scope check failed:', config.scope)
+      return false
+    }
+    
+    // Check response types (if specified)
+    if (config.responseTypes && config.responseTypes.length > 0) {
+      if (!config.responseTypes.includes(response.type)) {
+        console.log('❌ Response type check failed:', { 
+          allowedTypes: config.responseTypes, 
+          actualType: response.type 
+        })
+        return false
+      }
+    }
+    
+    // Check priority level
+    if (config.maxPriority) {
+      const priorityLevels = { 'LOW': 1, 'MEDIUM': 2, 'HIGH': 3, 'CRITICAL': 4 } as const
+      const maxPriorityLevel = priorityLevels[config.maxPriority as keyof typeof priorityLevels] || 2
+      const responsePriorityLevel = priorityLevels[response.priority as keyof typeof priorityLevels] || 2
+      
+      if (responsePriorityLevel > maxPriorityLevel) {
+        console.log('❌ Priority check failed:', { 
+          maxAllowed: config.maxPriority, 
+          actualPriority: response.priority 
+        })
+        return false
+      }
+    }
+    
+    // Check documentation requirement
+    if (config.requiresDocumentation) {
+      const resources = response.resources || {}
+      const hasDocumentation = resources.deliveryNotes && 
+        (resources.mediaAttachmentIds?.length > 0 || resources.deliveryLocation)
+      
+      console.log('🔍 Documentation check:', {
+        requiresDocumentation: config.requiresDocumentation,
+        hasDeliveryNotes: !!resources.deliveryNotes,
+        hasMediaAttachments: !!resources.mediaAttachmentIds?.length,
+        hasDeliveryLocation: !!resources.deliveryLocation,
+        hasDocumentation
+      })
+      
+      if (!hasDocumentation) {
+        console.log('❌ Documentation check failed')
+        return false
+      }
+    }
+    
+    console.log('✅ All auto-approval conditions passed')
+    return true
   }
 
   private static async validateEntityAssignment(
