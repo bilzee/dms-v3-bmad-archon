@@ -5,6 +5,29 @@
 3. Testing strategy can be found in docs/prd/testing-strategy.md
 4. When troubleshooting, do not take shortcuts, instead, first search the Archon knowledge base for solution, and if no solution is found, create a detailed report on the problem and what has been tried in docs/to-toubleshoot/ so it can be fixed separately.
 
+# 🧪 Testing - Single Source of Truth
+
+## **CONSOLIDATED TESTING GUIDE**: `docs/architecture/coding-standards/testing-guide.md`
+
+**ALL testing standards, patterns, and templates are consolidated in one document.**
+This replaces the previous sharded approach for testing to prevent framework conflicts.
+
+### **Critical Testing Rules**:
+- **✅ JEST ONLY**: Use `jest.mock()` - NEVER `vi.mock()` (ESLint enforced)
+- **✅ USE TEMPLATES**: Copy from `tests/templates/` for consistent patterns
+- **✅ REAL DATABASE**: Integration tests use seeded data, no API mocking
+- **✅ PRE-VALIDATION**: Run `bash scripts/validate-pre-story.sh` before implementation
+
+### **Quick Commands**:
+```bash
+# Before story implementation
+bash scripts/validate-pre-story.sh
+grep -r "vi\.mock" tests/  # Must return nothing
+
+# After implementation  
+npm run test:unit && npm run test:e2e && npm run validate:schema
+```
+
 # 📚 Sharded Coding Standards
 
 The coding standards are **sharded** for optimal context usage (8-13KB per shard vs 63KB total).
@@ -14,14 +37,14 @@ The coding standards are **sharded** for optimal context usage (8-13KB per shard
  - **React & Next.js**: `02-react-nextjs.md` - Components, server/client patterns
  - **State & Performance**: `03-state-performance.md` - Zustand, TanStack Query, PWA
  - **Database & API**: `04-database-api.md` - Prisma, Supabase, API routes
- - **Testing**: `05-testing.md` - Unit tests, integration tests, E2E patterns
+ - **🧪 Testing Guide**: `testing-guide.md` - **CONSOLIDATED**: All testing standards, patterns, templates
  - **Anti-Patterns**: `06-anti-patterns.md` - Common issues to avoid
 
 ## **🎯 Quick Reference**
  - **🚨 Debugging Issues**: Load `06-anti-patterns.md` first
  - **⚛️ Component Work**: Load `02-react-nextjs.md` + `01-core-typescript.md`
  - **🗄️ Database/API**: Load `04-database-api.md` + `01-core-typescript.md`
- - **🧪 Testing**: Load `05-testing.md` + `01-core-typescript.md`
+ - **🧪 Testing**: **USE `testing-guide.md` ONLY** - Single source of truth for all testing
  - **📊 Performance**: Load `03-state-performance.md` + `06-anti-patterns.md`
 
 ## **💡 Usage Tips**

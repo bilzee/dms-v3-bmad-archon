@@ -1,0 +1,535 @@
+'use client'
+
+import React, { useState, useEffect } from 'react'
+import { useForm, useFieldArray } from 'react-hook-form'
+import { zodResolver } from '@hookform/resolvers/zod'
+import { useMutation, useQuery } from '@tanstack/react-query'
+import { z } from 'zod'
+import { toast } from 'sonner'
+import { useRouter } from 'next/navigation'
+
+// UI components
+import { Button } from '@/components/ui/button'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form'
+import { Input } from '@/components/ui/input'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { Textarea } from '@/components/ui/textarea'
+import { Alert, AlertDescription } from '@/components/ui/alert'
+import { Badge } from '@/components/ui/badge'
+import { Separator } from '@/components/ui/separator'
+import { Skeleton } from '@/components/ui/skeleton'
+
+// Icons
+import { Plus, Trash2, Package, MapPin, AlertTriangle, DollarSign, CheckCircle2, ArrowLeft } from 'lucide-react'
+
+// Types and validation
+import { CreateCommitmentInput, CommitmentItemInput } from '@/lib/validation/commitment'
+
+// Form validation schema
+const CommitmentFormSchema = z.object({
+  entityId: z.string().uuid('Please select a valid entity'),
+  incidentId: z.string().uuid('Please select a valid incident'),
+  items: z.array(
+    z.object({
+      name: z.string().min(1, 'Item name is required'),
+      unit: z.string().min(1, 'Unit is required'),
+      quantity: z.number().positive('Quantity must be greater than 0'),
+      estimatedValue: z.number().positive('Value must be greater than 0').optional()
+    })
+  ).min(1, 'At least one item is required'),
+  notes: z.string().max(500, 'Notes cannot exceed 500 characters').optional()
+})
+
+type CommitmentFormData = z.infer<typeof CommitmentFormSchema>
+
+// Predefined item values for estimation
+const ITEM_VALUES: Record<string, number> = {
+  'Rice': 0.50,
+  'Wheat': 0.45,
+  'Blankets': 15.00,
+  'Tents': 100.00,
+  'Medical Supplies': 25.00,
+  'Water Bottles': 0.10,
+  'Canned Food': 2.00,
+  'Clothing': 10.00,
+  'Hygiene Kits': 5.00,
+  'Sleeping Mats': 8.00
+}
+
+const COMMON_UNITS = ['kg', 'pieces', 'boxes', 'bottles', 'kits', 'bags', 'liters']
+
+interface CommitmentFormProps {
+  donorId: string
+  onSuccess?: () => void
+  onCancel?: () => void
+  initialData?: Partial<CommitmentFormData>
+}
+
+export function CommitmentForm({ donorId, onSuccess, onCancel, initialData }: CommitmentFormProps) {
+  const router = useRouter()
+  const [showPreview, setShowPreview] = useState(false)
+  
+  // Fetch available entities
+  const { data: entities, isLoading: entitiesLoading } = useQuery({
+    queryKey: ['entities'],
+    queryFn: async () => {
+      const response = await fetch('/api/v1/entities')
+      if (!response.ok) throw new Error('Failed to fetch entities')
+      const data = await response.json()
+      return data.success ? data.data : []
+    }
+  })
+
+  // Fetch available incidents
+  const { data: incidents, isLoading: incidentsLoading } = useQuery({
+    queryKey: ['incidents'],
+    queryFn: async () => {
+      const response = await fetch('/api/v1/incidents')
+      if (!response.ok) throw new Error('Failed to fetch incidents')
+      const data = await response.json()
+      return data.success ? data.data : []
+    }
+  })
+
+  const form = useForm<CommitmentFormData>({
+    resolver: zodResolver(CommitmentFormSchema),
+    defaultValues: {
+      entityId: initialData?.entityId || '',
+      incidentId: initialData?.incidentId || '',
+      items: initialData?.items || [{ name: '', unit: '', quantity: 1 }],
+      notes: initialData?.notes || ''
+    }
+  })
+
+  const { fields, append, remove } = useFieldArray({
+    control: form.control,
+    name: 'items'
+  })
+
+  // Calculate total estimated value
+  const totalEstimatedValue = form.watch('items').reduce((total, item) => {
+    if (!item.name || !item.quantity) return total
+    const unitValue = item.estimatedValue || ITEM_VALUES[item.name] || 0
+    return total + (unitValue * item.quantity)
+  }, 0)
+
+  const createCommitmentMutation = useMutation({
+    mutationFn: async (data: CommitmentFormData) => {
+      const response = await fetch(`/api/v1/donors/${donorId}/commitments`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data)
+      })
+      
+      if (!response.ok) {
+        const errorData = await response.json()
+        throw new Error(errorData.error || 'Failed to create commitment')
+      }
+      
+      const result = await response.json()
+      return result.data
+    },
+    onSuccess: (data) => {
+      toast.success('Commitment created successfully!')
+      onSuccess?.()
+      router.push(`/donor/commitments/${data.id}`)
+    },
+    onError: (error: Error) => {
+      toast.error(error.message)
+    }
+  })
+
+  const onSubmit = (data: CommitmentFormData) => {
+    if (showPreview) {
+      createCommitmentMutation.mutate(data)
+    } else {
+      setShowPreview(true)
+    }
+  }
+
+  const addItem = () => {
+    append({ name: '', unit: '', quantity: 1 })
+  }
+
+  const removeItem = (index: number) => {
+    if (fields.length > 1) {
+      remove(index)
+    }
+  }
+
+  const handleItemNameChange = (index: number, value: string) => {
+    const itemValue = ITEM_VALUES[value]
+    if (itemValue) {
+      form.setValue(`items.${index}.estimatedValue`, itemValue)
+    }
+  }
+
+  if (entitiesLoading || incidentsLoading) {
+    return (
+      <Card className="w-full max-w-4xl mx-auto">
+        <CardHeader>
+          <Skeleton className="h-8 w-64" />
+          <Skeleton className="h-4 w-96" />
+        </CardHeader>
+        <CardContent className="space-y-6">
+          <Skeleton className="h-10 w-full" />
+          <Skeleton className="h-10 w-full" />
+          <Skeleton className="h-32 w-full" />
+        </CardContent>
+      </Card>
+    )
+  }
+
+  if (showPreview) {
+    const formData = form.getValues()
+    const selectedEntity = entities?.find((e: any) => e.id === formData.entityId)
+    const selectedIncident = incidents?.find((i: any) => i.id === formData.incidentId)
+
+    return (
+      <Card className="w-full max-w-4xl mx-auto">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <CheckCircle2 className="h-5 w-5 text-green-600" />
+            Commitment Preview
+          </CardTitle>
+          <CardDescription>
+            Please review your commitment details before submission
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div>
+              <h4 className="font-medium mb-2 flex items-center gap-2">
+                <MapPin className="h-4 w-4" />
+                Target Entity
+              </h4>
+              <p className="text-sm text-muted-foreground">{selectedEntity?.name}</p>
+              <Badge variant="outline" className="mt-1">{selectedEntity?.type}</Badge>
+            </div>
+            <div>
+              <h4 className="font-medium mb-2">Incident</h4>
+              <p className="text-sm text-muted-foreground">{selectedIncident?.description}</p>
+              <Badge variant="outline" className="mt-1">{selectedIncident?.type}</Badge>
+            </div>
+          </div>
+
+          <Separator />
+
+          <div>
+            <h4 className="font-medium mb-4 flex items-center gap-2">
+              <Package className="h-4 w-4" />
+              Commitment Items
+            </h4>
+            <div className="space-y-3">
+              {formData.items.map((item, index) => (
+                <div key={index} className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
+                  <div>
+                    <p className="font-medium">{item.name}</p>
+                    <p className="text-sm text-muted-foreground">
+                      {item.quantity} {item.unit}
+                    </p>
+                  </div>
+                  <div className="text-right">
+                    <p className="font-medium">
+                      ${((item.estimatedValue || ITEM_VALUES[item.name] || 0) * item.quantity).toFixed(2)}
+                    </p>
+                    <p className="text-xs text-muted-foreground">est. value</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <Separator />
+
+          <div className="flex justify-between items-center">
+            <div>
+              <h4 className="font-medium flex items-center gap-2">
+                <DollarSign className="h-4 w-4" />
+                Total Estimated Value
+              </h4>
+              <p className="text-2xl font-bold text-green-600">
+                ${totalEstimatedValue.toFixed(2)}
+              </p>
+            </div>
+            <div className="flex gap-2">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setShowPreview(false)}
+                disabled={createCommitmentMutation.isPending}
+              >
+                Back to Edit
+              </Button>
+              <Button
+                type="button"
+                onClick={() => createCommitmentMutation.mutate(formData)}
+                disabled={createCommitmentMutation.isPending}
+              >
+                {createCommitmentMutation.isPending ? 'Creating...' : 'Create Commitment'}
+              </Button>
+            </div>
+          </div>
+
+          {formData.notes && (
+            <>
+              <Separator />
+              <div>
+                <h4 className="font-medium mb-2">Additional Notes</h4>
+                <p className="text-sm text-muted-foreground">{formData.notes}</p>
+              </div>
+            </>
+          )}
+        </CardContent>
+      </Card>
+    )
+  }
+
+  return (
+    <Card className="w-full max-w-4xl mx-auto">
+      <CardHeader>
+        <div className="flex items-center gap-2">
+          {onCancel && (
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              onClick={onCancel}
+              className="p-0 h-8"
+            >
+              <ArrowLeft className="h-4 w-4" />
+            </Button>
+          )}
+          <CardTitle>Create New Commitment</CardTitle>
+        </div>
+        <CardDescription>
+          Specify the items you&apos;re committing to donate for this incident
+        </CardDescription>
+      </CardHeader>
+      <CardContent>
+        <Form {...form}>
+          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+            {/* Entity and Incident Selection */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <FormField
+                control={form.control}
+                name="entityId"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Target Entity *</FormLabel>
+                    <Select onValueChange={field.onChange} defaultValue={field.value}>
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select an entity" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        {entities?.map((entity: any) => (
+                          <SelectItem key={entity.id} value={entity.id}>
+                            {entity.name} ({entity.type})
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="incidentId"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Incident *</FormLabel>
+                    <Select onValueChange={field.onChange} defaultValue={field.value}>
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select an incident" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        {incidents?.map((incident: any) => (
+                          <SelectItem key={incident.id} value={incident.id}>
+                            {incident.type} - {incident.severity}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
+
+            {/* Commitment Items */}
+            <div>
+              <div className="flex items-center justify-between mb-4">
+                <FormLabel className="text-base font-medium">Commitment Items *</FormLabel>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={addItem}
+                  className="flex items-center gap-2"
+                >
+                  <Plus className="h-4 w-4" />
+                  Add Item
+                </Button>
+              </div>
+
+              <div className="space-y-4">
+                {fields.map((field, index) => (
+                  <Card key={field.id} className="p-4">
+                    <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                      <FormField
+                        control={form.control}
+                        name={`items.${index}.name`}
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Item Name *</FormLabel>
+                            <FormControl>
+                              <Input 
+                                placeholder="e.g., Rice, Blankets" 
+                                {...field}
+                                onChange={(e) => {
+                                  field.onChange(e)
+                                  handleItemNameChange(index, e.target.value)
+                                }}
+                              />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+
+                      <FormField
+                        control={form.control}
+                        name={`items.${index}.quantity`}
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Quantity *</FormLabel>
+                            <FormControl>
+                              <Input 
+                                type="number" 
+                                placeholder="0" 
+                                min="1"
+                                {...field}
+                                onChange={(e) => field.onChange(parseInt(e.target.value) || 0)}
+                              />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+
+                      <FormField
+                        control={form.control}
+                        name={`items.${index}.unit`}
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Unit *</FormLabel>
+                            <Select onValueChange={field.onChange} defaultValue={field.value}>
+                              <FormControl>
+                                <SelectTrigger>
+                                  <SelectValue placeholder="Unit" />
+                                </SelectTrigger>
+                              </FormControl>
+                              <SelectContent>
+                                {COMMON_UNITS.map((unit) => (
+                                  <SelectItem key={unit} value={unit}>
+                                    {unit}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+
+                      <div className="flex items-end gap-2">
+                        <div className="flex-1">
+                          <FormLabel>Est. Value (optional)</FormLabel>
+                          <Input
+                            type="number"
+                            placeholder="0.00"
+                            step="0.01"
+                            min="0"
+                            {...form.register(`items.${index}.estimatedValue`)}
+                          />
+                        </div>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="icon"
+                          onClick={() => removeItem(index)}
+                          disabled={fields.length === 1}
+                          className="shrink-0"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </div>
+                  </Card>
+                ))}
+              </div>
+            </div>
+
+            {/* Notes */}
+            <FormField
+              control={form.control}
+              name="notes"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Additional Notes (optional)</FormLabel>
+                  <FormControl>
+                    <Textarea
+                      placeholder="Any additional information about your commitment..."
+                      className="min-h-[100px]"
+                      {...field}
+                    />
+                  </FormControl>
+                  <FormDescription>
+                    Maximum 500 characters
+                  </FormDescription>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            {/* Value Summary */}
+            <Alert>
+              <DollarSign className="h-4 w-4" />
+              <AlertDescription>
+                Total Estimated Value: <span className="font-bold text-green-600">${totalEstimatedValue.toFixed(2)}</span>
+              </AlertDescription>
+            </Alert>
+
+            {/* Form Actions */}
+            <div className="flex justify-end gap-4 pt-6">
+              {onCancel && (
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={onCancel}
+                  disabled={createCommitmentMutation.isPending}
+                >
+                  Cancel
+                </Button>
+              )}
+              <Button
+                type="submit"
+                disabled={createCommitmentMutation.isPending}
+                className="min-w-[120px]"
+              >
+                {createCommitmentMutation.isPending ? 'Creating...' : 'Preview Commitment'}
+              </Button>
+            </div>
+          </form>
+        </Form>
+      </CardContent>
+    </Card>
+  )
+}

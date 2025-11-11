@@ -259,7 +259,7 @@
 **Acceptance Criteria:**
 
 1. Commitment form (item, unit, quantity)
-2. Entity selection (self or coordinator-assigned)
+2. Entity assignment by coordinator
 3. Commitment is per incident
 4. Reporting of commitment delivery should indicate the affected entities (self or verified by responder)  
 5. Commitment editing before delivery

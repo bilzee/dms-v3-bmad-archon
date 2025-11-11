@@ -307,7 +307,7 @@ describe('Delivery Confirmation Integration Tests', () => {
 
       // Mock a database error during transaction
       const originalUpdate = prisma.response.update
-      prisma.response.update = vi.fn().mockRejectedValueOnce(new Error('Database error'))
+      prisma.response.update = jest.fn().mockRejectedValueOnce(new Error('Database error'))
 
       await expect(
         ResponseService.confirmDelivery(testResponse.id, deliveryData, testUser.id)

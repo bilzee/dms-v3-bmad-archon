@@ -5,48 +5,83 @@
 3. Testing strategy can be found in docs/prd/testing-strategy.md
 4. When troubleshooting, do not take shortcuts, instead, first search the Archon knowledge base for solution, and if no solution is found, create a detailed report on the problem and what has been tried in docs/to-toubleshoot/ so it can be fixed separately.
 
-# 🧪 Pre-Story Testing Validation
+# 🧪 Streamlined Testing Workflow
 
-## Critical Workflow Rules
+## **SINGLE SOURCE OF TRUTH**: Use `docs/architecture/coding-standards/testing-guide.md`
 
-### Before Story Implementation
-1. **Run Pre-Story Validation**: `bash scripts/validate-pre-story.sh`
-2. **Reload Testing Standards**: Always reload `docs/architecture/coding-standards/05-testing.md` when context is compacted
-3. **Framework Consistency**: This project uses **Jest** (NOT Vitest) - enforce strictly
-4. **Component Mocks**: Ensure UI mocks support React Hook Form `{...field}` props
+This document consolidates ALL testing standards. The workflow below provides quick access to critical validation steps.
 
-### During Story Implementation
-- **Use Jest Syntax**: `jest.mock()` not `vi.mock()`
-- **Form Testing**: Test React Hook Form with proper user interactions
-- **UI Components**: Mock Radix UI components with proper event handling
-- **Context Loading**: Reload testing standards if context becomes compacted
-
-### After Story Implementation
-1. **Run All Tests**: `npm run test:unit` and `npm run test:e2e`
-2. **Schema Validation**: `npm run validate:schema`
-3. **Framework Check**: `grep -r "vi\.mock" tests/` should return nothing
-4. **Coverage Check**: Ensure coverage thresholds are met
-
-## Quick Testing Commands
+### **Pre-Story Implementation (MANDATORY)**
 ```bash
-# Validate before story implementation
+# 1. Run enhanced validation script
 bash scripts/validate-pre-story.sh
 
-# Check for framework consistency issues
-grep -r "vi\.mock" tests/  # Should return nothing
-grep -r "jest\.mock" tests/ # Should show mock usage
-
-# Run full test suite
-npm run test:unit
-npm run test:e2e
+# 2. Framework consistency check (CRITICAL)
+grep -r "vi\.mock" tests/  # Must return nothing
 npm run validate:schema
 ```
 
-## Common Testing Issues & Solutions
-- **Missing React Import**: Add `import React from 'react';` to components
-- **Framework Mixing**: Replace all `vi.mock()` with `jest.mock()`
-- **Form Validation**: Use `user.keyboard('{ArrowDown}{Enter}')` for Radix UI Select
-- **Context Loss**: Reload `05-testing.md` when session is compacted
+### **During Story Implementation**
+- **✅ JEST ONLY**: Use `jest.mock()` - NEVER `vi.mock()` (blocked by ESLint)
+- **✅ USE TEMPLATES**: Copy from `tests/templates/` for consistent patterns
+- **✅ CONSOLIDATED GUIDE**: Follow `docs/architecture/coding-standards/testing-guide.md`
+- **✅ CONTEXT LOADING**: Reload consolidated guide if session is compacted
+
+### **Post-Implementation Validation (MANDATORY)**
+```bash
+# 1. Run all test suites
+npm run test:unit
+npm run test:e2e
+
+# 2. Framework consistency validation
+grep -r "vi\.mock" tests/  # Must return nothing
+
+# 3. Schema validation
+npm run validate:schema
+
+# 4. Coverage verification
+npm run test:coverage  # Must meet 80% thresholds
+```
+
+## **Quick Reference - Test Templates Available**
+```bash
+# Unit Component Tests
+cp tests/templates/unit-component.template.test.tsx tests/unit/components/[feature]/[Component].test.tsx
+
+# Integration API Tests  
+cp tests/templates/integration-api.template.test.ts tests/integration/api/[feature]/[endpoint].test.ts
+
+# E2E Workflow Tests
+cp tests/templates/e2e-workflow.template.spec.ts tests/e2e/[role]/[workflow].spec.ts
+```
+
+## **Critical Quality Gates**
+- **✅ Framework Consistency**: Automated ESLint rules prevent Vitest usage
+- **✅ Schema Compatibility**: All tests must use actual Prisma schema
+- **✅ Template Usage**: Use provided templates for consistent patterns
+- **✅ Real Database**: Integration tests use seeded data, no API mocking
+- **✅ E2E Workflows**: Complete user journeys with role-based access
+
+## **Common Issues & Solutions**
+- **❌ Framework Mixing**: ESLint will block Vitest imports automatically
+- **❌ Missing React Import**: Add `import React from 'react';` to components  
+- **❌ Form Testing**: Use `user.keyboard('{ArrowDown}{Enter}')` for Radix UI Select
+- **❌ Context Loss**: Reload `testing-guide.md` when session is compacted
+
+## **Story 5.2 (Commitment Management) Test Requirements**
+```bash
+# Before implementing Story 5.2:
+bash scripts/validate-pre-story.sh  # Must pass
+
+# Required test files:
+- tests/unit/components/commitments/CommitmentForm.test.tsx
+- tests/unit/components/commitments/CommitmentDashboard.test.tsx  
+- tests/integration/api/commitments.test.ts
+- tests/e2e/donor/commitment-management.spec.ts
+
+# Validation after implementation:
+npm run test:unit && npm run test:e2e && npm run validate:schema
+```
 
 # 📚 Sharded Coding Standards
 
@@ -57,14 +92,14 @@ The coding standards are **sharded** for optimal context usage (8-13KB per shard
  - **React & Next.js**: `02-react-nextjs.md` - Components, server/client patterns
  - **State & Performance**: `03-state-performance.md` - Zustand, TanStack Query, PWA
  - **Database & API**: `04-database-api.md` - Prisma, Supabase, API routes
- - **Testing**: `05-testing.md` - Unit tests, integration tests, E2E patterns
+ - **🧪 Testing Guide**: `testing-guide.md` - **CONSOLIDATED**: All testing standards, patterns, templates
  - **Anti-Patterns**: `06-anti-patterns.md` - Common issues to avoid
 
 ## **🎯 Quick Reference**
  - **🚨 Debugging Issues**: Load `06-anti-patterns.md` first
  - **⚛️ Component Work**: Load `02-react-nextjs.md` + `01-core-typescript.md`
  - **🗄️ Database/API**: Load `04-database-api.md` + `01-core-typescript.md`
- - **🧪 Testing**: Load `05-testing.md` + `01-core-typescript.md`
+ - **🧪 Testing**: **USE `testing-guide.md` ONLY** - Single source of truth for all testing
  - **📊 Performance**: Load `03-state-performance.md` + `06-anti-patterns.md`
 
 ## **💡 Usage Tips**

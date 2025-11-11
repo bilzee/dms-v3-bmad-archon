@@ -301,6 +301,35 @@ Object.defineProperty(window, 'indexedDB', {
 // Mock fetch and related Web APIs
 global.fetch = jest.fn();
 
+// Mock NextRequest properly
+jest.mock('next/server', () => ({
+  NextRequest: class MockNextRequest {
+    url: string;
+    method: string;
+    headers: any;
+    
+    constructor(url: string, options: any = {}) {
+      this.url = url;
+      this.method = options.method || 'GET';
+      this.headers = new Map();
+      if (options.headers) {
+        Object.entries(options.headers).forEach(([key, value]) => {
+          this.headers.set(key.toLowerCase(), value);
+        });
+      }
+    }
+    
+    json() { return Promise.resolve({}); }
+    text() { return Promise.resolve(''); }
+  },
+  NextResponse: {
+    json: (body: any, options?: any) => ({
+      status: options?.status || 200,
+      json: () => Promise.resolve(body)
+    })
+  }
+}));
+
 // Mock Request class with proper Headers
 global.Request = class MockRequest {
   url: string;

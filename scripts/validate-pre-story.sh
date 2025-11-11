@@ -1,236 +1,242 @@
 #!/bin/bash
 
-# Pre-Story Validation Script for DMS v3
-# Catches testing framework issues before story implementation
+# Enhanced Pre-Story Validation Script for Disaster Management PWA
+# Validates system health and testing framework consistency before story implementation
 
-set -e
-
-echo "🔍 Pre-Story Validation for DMS v3 Stories"
-echo "=========================================="
+set -e  # Exit on any error
 
 # Colors for output
 RED='\033[0;31m'
 GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
+BLUE='\033[0;34m'
 NC='\033[0m' # No Color
 
-# Track validation results
-VALIDATION_ERRORS=0
-VALIDATION_WARNINGS=0
-
-# Function to log error
-error() {
-    echo -e "${RED}❌ $1${NC}"
-    ((VALIDATION_ERRORS++))
+# Function to print colored output
+print_status() {
+    echo -e "${BLUE}[VALIDATE]${NC} $1"
 }
 
-# Function to log warning
-warning() {
-    echo -e "${YELLOW}⚠️  $1${NC}"
-    ((VALIDATION_WARNINGS++))
+print_success() {
+    echo -e "${GREEN}[PASS]${NC} $1"
 }
 
-# Function to log success
-success() {
-    echo -e "${GREEN}✅ $1${NC}"
+print_warning() {
+    echo -e "${YELLOW}[WARN]${NC} $1"
 }
 
-# Function to log info
-info() {
-    echo "ℹ️  $1"
+print_error() {
+    echo -e "${RED}[FAIL]${NC} $1"
 }
 
+# Track overall validation result
+VALIDATION_PASSED=true
+
+print_status "Starting enhanced pre-story validation..."
+
+# 1. Check if required directories exist
+print_status "Checking project structure..."
+
+required_dirs=("tests" "tests/unit" "tests/integration" "tests/e2e" "tests/templates" "docs/architecture/coding-standards")
+for dir in "${required_dirs[@]}"; do
+    if [ -d "$dir" ]; then
+        print_success "✓ Directory exists: $dir"
+    else
+        print_error "✗ Missing directory: $dir"
+        VALIDATION_PASSED=false
+    fi
+done
+
+# 2. Validate testing framework consistency
+print_status "Checking testing framework consistency..."
+
+# Check for forbidden Vitest syntax
+if grep -r "vi\.mock" tests/ 2>/dev/null; then
+    print_error "✗ Found Vitest syntax (vi.mock) - this project uses Jest only"
+    print_warning "  Run: grep -r \"vi\.mock\" tests/ to find all instances"
+    print_warning "  Replace with: jest.mock()"
+    VALIDATION_PASSED=false
+else
+    print_success "✓ No Vitest syntax found"
+fi
+
+# Check for other Vitest patterns
+if grep -r "vi\." tests/ 2>/dev/null | grep -v ".git"; then
+    print_warning "⚠ Found potential Vitest patterns:"
+    grep -r "vi\." tests/ 2>/dev/null | grep -v ".git" | head -5
+    print_warning "  Please ensure these are valid Jest patterns"
+fi
+
+# Check for correct Jest imports
+if grep -r "from.*vitest" tests/ 2>/dev/null; then
+    print_error "✗ Found Vitest imports - this project uses Jest only"
+    print_warning "  Replace @testing-library/react/vitest with @testing-library/react"
+    VALIDATION_PASSED=false
+else
+    print_success "✓ No Vitest imports found"
+fi
+
+# 3. Validate package.json testing scripts
+print_status "Checking package.json test scripts..."
+
+if [ -f "package.json" ]; then
+    if grep -q '"test:unit"' package.json && grep -q '"test:e2e"' package.json; then
+        print_success "✓ Required test scripts found in package.json"
+    else
+        print_warning "⚠ Test scripts not found in package.json"
+        print_warning "  Ensure you have: \"test:unit\" and \"test:e2e\" scripts"
+    fi
+    
+    if grep -q '"validate:schema"' package.json; then
+        print_success "✓ Schema validation script found"
+    else
+        print_warning "⚠ Schema validation script not found"
+    fi
+else
+    print_error "✗ package.json not found"
+    VALIDATION_PASSED=false
+fi
+
+# 4. Check Jest configuration
+print_status "Checking Jest configuration..."
+
+if [ -f "jest.config.js" ] || [ -f "jest.config.json" ] || grep -q "jestConfig" package.json; then
+    print_success "✓ Jest configuration found"
+else
+    print_warning "⚠ No Jest configuration found - using Next.js defaults"
+fi
+
+if [ -f "jest.setup.js" ]; then
+    print_success "✓ Jest setup file found"
+else
+    print_warning "⚠ No jest.setup.js found - testing library setup may be missing"
+fi
+
+# 5. Validate ESLint configuration for framework consistency
+print_status "Checking ESLint framework validation rules..."
+
+if [ -f ".eslintrc.json" ] || [ -f ".eslintrc.js" ]; then
+    if grep -q "no-restricted-imports" .eslintrc* 2>/dev/null; then
+        print_success "✓ ESLint framework validation rules found"
+    else
+        print_warning "⚠ ESLint framework validation rules not found"
+        print_warning "  Consider adding vitest import restrictions to prevent framework mixing"
+    fi
+else
+    print_warning "⚠ No ESLint configuration found"
+fi
+
+# 6. Check test templates are available
+print_status "Checking test templates..."
+
+template_files=(
+    "tests/templates/unit-component.template.test.tsx"
+    "tests/templates/integration-api.template.test.ts"
+    "tests/templates/e2e-workflow.template.spec.ts"
+    "tests/templates/README.md"
+)
+
+for template in "${template_files[@]}"; do
+    if [ -f "$template" ]; then
+        print_success "✓ Template available: $template"
+    else
+        print_warning "⚠ Template missing: $template"
+    fi
+done
+
+# 7. Validate Prisma schema
+print_status "Validating Prisma schema..."
+
+if command -v npm &> /dev/null; then
+    if npm run validate:schema &> /dev/null; then
+        print_success "✓ Prisma schema validation passed"
+    else
+        print_error "✗ Prisma schema validation failed"
+        print_warning "  Run: npm run validate:schema to fix schema issues"
+        VALIDATION_PASSED=false
+    fi
+else
+    print_warning "⚠ npm not available - skipping schema validation"
+fi
+
+# 8. Check for testing dependencies
+print_status "Checking testing dependencies..."
+
+if [ -f "package.json" ]; then
+    testing_deps=(
+        "@testing-library/react"
+        "@testing-library/jest-dom"
+        "@testing-library/user-event"
+        "jest"
+        "@playwright/test"
+    )
+    
+    for dep in "${testing_deps[@]}"; do
+        if grep -q "\"$dep\"" package.json; then
+            print_success "✓ Testing dependency found: $dep"
+        else
+            print_warning "⚠ Testing dependency missing: $dep"
+        fi
+    done
+fi
+
+# 9. Validate consolidated testing guide
+print_status "Checking consolidated testing standards..."
+
+if [ -f "docs/architecture/coding-standards/testing-guide.md" ]; then
+    print_success "✓ Consolidated testing guide found"
+else
+    print_warning "⚠ Consolidated testing guide not found"
+    print_warning "  Expected at: docs/architecture/coding-standards/testing-guide.md"
+fi
+
+# 10. Environment and node modules check
+print_status "Checking development environment..."
+
+if [ -d "node_modules" ] && [ -d ".next" ]; then
+    print_success "✓ Node modules and build artifacts present"
+else
+    print_warning "⚠ Node modules or build artifacts missing"
+    print_warning "  Run: npm install && npm run build (if needed)"
+fi
+
+# 11. Git status check (optional)
+if command -v git &> /dev/null && [ -d ".git" ]; then
+    if git diff --quiet HEAD 2>/dev/null; then
+        print_success "✓ No uncommitted changes"
+    else
+        print_warning "⚠ Uncommitted changes detected"
+        print_warning "  Consider committing or stashing changes before story implementation"
+    fi
+fi
+
+# Summary
 echo ""
-echo "📋 Step 1: Framework Consistency Validation"
-echo "--------------------------------------------"
-
-# Check for Vitest contamination (should not exist in Jest project)
-info "Checking for Vitest syntax contamination..."
-VITEST_FILES=$(grep -r "vi\.mock\|vi\.describe\|vi\.it\|vi\.test\|from.*vitest" tests/ 2>/dev/null || true)
-if [[ -n "$VITEST_FILES" ]]; then
-    error "Vitest syntax found in Jest project:"
-    echo "$VITEST_FILES"
+echo "=========================================="
+if [ "$VALIDATION_PASSED" = true ]; then
+    print_success "🎉 PRE-STORY VALIDATION PASSED"
     echo ""
-    info "Replace vi.mock() with jest.mock() and remove Vitest imports"
-else
-    success "No Vitest contamination found"
-fi
-
-# Check for proper Jest usage
-info "Checking for proper Jest mock patterns..."
-JEST_MOCKS=$(grep -r "jest\.mock" tests/ 2>/dev/null | wc -l)
-if [[ $JEST_MOCKS -gt 0 ]]; then
-    success "Found $JEST_MOCKS Jest mock(s) - framework consistency OK"
-else
-    warning "No Jest mocks found - ensure mocks use jest.mock() pattern"
-fi
-
-echo ""
-echo "📋 Step 2: Component Mock Validation"
-echo "--------------------------------------"
-
-# Check React Hook Form mock support
-info "Checking React Hook Form mock support..."
-RHFFIELD_SUPPORT=$(grep -r "\\.\\.\\.field\|\\.\\.\\.props" tests/setup.ts 2>/dev/null || true)
-if [[ -n "$RHFFIELD_SUPPORT" ]]; then
-    success "React Hook Form field prop support found in setup"
-else
-    error "React Hook Form field prop support missing from tests/setup.ts"
-    info "Add props spreading to UI component mocks: {...field}, {...props}"
-fi
-
-# Check Radix UI Select mocking
-info "Checking Radix UI Select component mocks..."
-RADIX_MOCKS=$(grep -r "radix-ui/react-select" tests/setup.ts 2>/dev/null || true)
-if [[ -n "$RADIX_MOCKS" ]]; then
-    success "Radix UI Select mocks found"
-else
-    warning "Radix UI Select mocks missing - tests may fail for Select components"
-fi
-
-echo ""
-echo "📋 Step 3: Test Structure Validation"
-echo "--------------------------------------"
-
-# Check for test files following project patterns
-info "Validating test file structure..."
-UNIT_TESTS=$(find tests/unit -name "*.test.tsx" -o -name "*.test.ts" 2>/dev/null | wc -l)
-E2E_TESTS=$(find tests/e2e -name "*.test.ts" 2>/dev/null | wc -l)
-INTEGRATION_TESTS=$(find tests/integration -name "*.test.ts" 2>/dev/null | wc -l)
-
-info "Found $UNIT_TESTS unit test(s), $INTEGRATION_TESTS integration test(s), $E2E_TESTS E2E test(s)"
-
-if [[ $UNIT_TESTS -eq 0 && $INTEGRATION_TESTS -eq 0 && $E2E_TESTS -eq 0 ]]; then
-    warning "No test files found - ensure tests follow project naming convention"
-else
-    success "Test files found following project structure"
-fi
-
-echo ""
-echo "📋 Step 4: Configuration Validation"
-echo "-------------------------------------"
-
-# Check Jest configuration
-info "Validating Jest configuration..."
-if [[ -f "jest.config.js" ]]; then
-    success "jest.config.js found"
-    
-    # Check for critical Jest settings
-    if grep -q "testEnvironment.*jsdom" jest.config.js; then
-        success "Jest jsdom environment configured"
-    else
-        error "Jest jsdom environment missing from jest.config.js"
-    fi
-    
-    if grep -q "setupFilesAfterEnv.*jest.setup" jest.config.js; then
-        success "Jest setup file configured"
-    else
-        warning "Jest setup file may not be configured"
-    fi
-else
-    error "jest.config.js not found"
-fi
-
-# Check package.json test scripts
-info "Validating package.json test scripts..."
-if [[ -f "package.json" ]]; then
-    if grep -q "\"test:unit\"" package.json; then
-        success "Unit test script found"
-    else
-        warning "Unit test script not found in package.json"
-    fi
-    
-    if grep -q "\"test:e2e\"" package.json; then
-        success "E2E test script found"
-    else
-        warning "E2E test script not found in package.json"
-    fi
-else
-    error "package.json not found"
-fi
-
-echo ""
-echo "📋 Step 5: Schema Validation"
-echo "------------------------------"
-
-# Check schema validation script
-info "Checking schema validation..."
-if [[ -f "package.json" ]] && grep -q "validate:schema" package.json; then
-    success "Schema validation script found"
-    
-    # Run schema validation if available
-    if npm run validate:schema >/dev/null 2>&1; then
-        success "Schema validation passes"
-    else
-        warning "Schema validation has issues - check schema references"
-    fi
-else
-    warning "Schema validation script not found"
-fi
-
-echo ""
-echo "📋 Step 6: Documentation Context Validation"
-echo "--------------------------------------------"
-
-# Check if testing standards are loaded in dev config
-info "Checking if testing standards are in dev load list..."
-if [[ -f ".bmad-core/core-config.yaml" ]]; then
-    if grep -q "05-testing.md" .bmad-core/core-config.yaml; then
-        success "Testing standards in dev load list"
-    else
-        error "Testing standards missing from .bmad-core/core-config.yaml devLoadAlwaysFiles"
-    fi
-else
-    error ".bmad-core/core-config.yaml not found"
-fi
-
-echo ""
-echo "📋 Step 7: React Import Validation"
-echo "-----------------------------------"
-
-# Check for missing React imports in components (common issue)
-info "Checking for missing React imports in components..."
-MISSING_REACT_IMPORTS=$(find src/components -name "*.tsx" -exec grep -L "import React" {} \; 2>/dev/null || true)
-if [[ -n "$MISSING_REACT_IMPORTS" ]]; then
-    error "Components missing React import:"
-    echo "$MISSING_REACT_IMPORTS"
-    info "Add 'import React from 'react';' to these components"
-else
-    success "No missing React imports found"
-fi
-
-echo ""
-echo "📊 Validation Summary"
-echo "====================="
-
-if [[ $VALIDATION_ERRORS -eq 0 ]]; then
-    success "All critical validations passed! ✨"
-    if [[ $VALIDATION_WARNINGS -eq 0 ]]; then
-        echo -e "${GREEN}🎉 Ready for story implementation!${NC}"
-        EXIT_CODE=0
-    else
-        echo -e "${YELLOW}⚠️  $VALIDATION_WARNINGS warning(s) - review before implementation${NC}"
-        EXIT_CODE=1
-    fi
-else
-    error -e "$VALIDATION_ERRORS error(s) found - fix before story implementation"
+    echo "You're ready to start story implementation!"
     echo ""
-    echo "🔧 Common Fixes:"
-    echo "  • Replace vi.mock() with jest.mock() in test files"
-    echo "  • Add {...field} props support to UI component mocks in tests/setup.ts"
-    echo "  • Add 'import React' to React components"
-    echo "  • Ensure Jest configuration matches project standards"
-    echo "  • Add 05-testing.md to .bmad-core/core-config.yaml devLoadAlwaysFiles"
-    EXIT_CODE=2
+    echo "Next Steps:"
+    echo "1. Follow the consolidated testing guide: docs/architecture/coding-standards/testing-guide.md"
+    echo "2. Use test templates from: tests/templates/"
+    echo "3. Focus on Jest syntax only (NO Vitest)"
+    echo "4. Run 'npm run test:unit' and 'npm run test:e2e' after implementation"
+    echo "=========================================="
+    exit 0
+else
+    print_error "❌ PRE-STORY VALIDATION FAILED"
+    echo ""
+    echo "Please fix the issues above before implementing the story."
+    echo "The validation script will help prevent framework mixing issues"
+    echo "and reduce post-implementation test fixing time."
+    echo ""
+    echo "Common fixes:"
+    echo "• Replace vi.mock() with jest.mock()"
+    echo "• Update Vitest imports to Jest equivalents"
+    echo "• Install missing testing dependencies"
+    echo "• Run npm run validate:schema"
+    echo "=========================================="
+    exit 1
 fi
-
-echo ""
-echo "📚 Pre-Story Checklist:"
-echo "  ☑️  Review docs/architecture/coding-standards/05-testing.md"
-echo "  ☑️  Reload testing standards when context is compacted"
-echo "  ☑️  Use jest.mock() patterns, not vi.mock()"
-echo "  ☑️  Ensure UI mocks support React Hook Form field props"
-echo "  ☑️  Test form validation with user interactions"
-echo "  ☑️  Run npm run test:unit and npm run test:e2e after implementation"
-
-exit $EXIT_CODE

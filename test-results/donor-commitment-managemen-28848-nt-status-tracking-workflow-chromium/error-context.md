@@ -1,0 +1,63 @@
+# Page snapshot
+
+```yaml
+- generic [active] [ref=e1]:
+  - generic [ref=e2]:
+    - banner [ref=e3]:
+      - generic [ref=e5]:
+        - link "DMS Borno" [ref=e7] [cursor=pointer]:
+          - /url: /dashboard
+        - generic [ref=e8]:
+          - generic [ref=e9]:
+            - img [ref=e10]
+            - generic [ref=e12]: Synced
+          - generic [ref=e14]:
+            - img [ref=e15]
+            - generic [ref=e17]: Online
+          - generic [ref=e18]:
+            - generic [ref=e19]: Test Donor User
+            - button "Logout" [ref=e20] [cursor=pointer]
+    - main [ref=e21]:
+      - generic [ref=e23]:
+        - generic [ref=e24]:
+          - heading "Disaster Management System" [level=2] [ref=e25]
+          - paragraph [ref=e26]: Field assessment and response coordination for Nigeria
+        - generic [ref=e27]:
+          - generic [ref=e28]:
+            - generic [ref=e29]: Login
+            - generic [ref=e30]: Enter your credentials to access the disaster management system
+          - generic [ref=e32]:
+            - generic [ref=e33]:
+              - generic [ref=e34]:
+                - img [ref=e35]
+                - generic [ref=e38]: Development Test Users
+              - combobox [ref=e39] [cursor=pointer]:
+                - generic: Select a test user for quick login...
+                - img [ref=e40]
+              - combobox [ref=e42]
+              - paragraph [ref=e43]: Selecting a test user will automatically fill the email and password fields below.
+            - generic [ref=e44]:
+              - text: Email
+              - textbox "Email" [ref=e45]:
+                - /placeholder: your@email.com
+                - text: donor@test.com
+            - generic [ref=e46]:
+              - text: Password
+              - textbox "Password" [ref=e47]:
+                - /placeholder: Enter your password
+                - text: password123
+            - button "Sign in" [ref=e48] [cursor=pointer]
+        - paragraph [ref=e50]: Contact your administrator for account access
+    - contentinfo [ref=e51]:
+      - paragraph [ref=e53]: Disaster Management System - Borno State, Nigeria
+  - generic [ref=e54]:
+    - img [ref=e56]
+    - button "Open Tanstack query devtools" [ref=e104] [cursor=pointer]:
+      - img [ref=e105]
+  - alert [ref=e153]
+  - generic [ref=e156] [cursor=pointer]:
+    - img [ref=e157]
+    - generic [ref=e159]: 1 error
+    - button "Hide Errors" [ref=e160]:
+      - img [ref=e161]
+```

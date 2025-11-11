@@ -1,3 +1,53 @@
 {
-  "extends": ["next/core-web-vitals"]
+  "extends": ["next/core-web-vitals"],
+  "rules": {
+    "no-restricted-imports": [
+      "error",
+      {
+        "name": "vitest",
+        "message": "This project uses Jest, not Vitest. Use jest.mock() instead of vi.mock(), and @testing-library/react instead of @testing-library/react/vitest."
+      },
+      {
+        "name": "@testing-library/react/vitest",
+        "message": "Use @testing-library/react for Jest testing, not @testing-library/react/vitest."
+      }
+    ],
+    "no-restricted-properties": [
+      "error",
+      {
+        "object": "vi",
+        "property": "mock",
+        "message": "Use jest.mock() instead of vi.mock() - this project uses Jest exclusively."
+      },
+      {
+        "object": "vi",
+        "property": "fn",
+        "message": "Use jest.fn() instead of vi.fn() - this project uses Jest exclusively."
+      },
+      {
+        "object": "vi",
+        "property": "describe",
+        "message": "Use jest.describe() or global describe() instead of vi.describe() - this project uses Jest exclusively."
+      },
+      {
+        "object": "vi",
+        "property": "test",
+        "message": "Use jest.test() or global test() instead of vi.test() - this project uses Jest exclusively."
+      },
+      {
+        "object": "vi",
+        "property": "expect",
+        "message": "Use jest.expect() or global expect() instead of vi.expect() - this project uses Jest exclusively."
+      }
+    ]
+  },
+  "overrides": [
+    {
+      "files": ["**/*.test.{js,jsx,ts,tsx}", "**/__tests__/**/*"],
+      "rules": {
+        "no-console": "warn",
+        "@typescript-eslint/no-unused-vars": "error"
+      }
+    }
+  ]
 }

@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/db/client';
 import { withAuth } from '@/lib/auth/middleware';
 import { EntityAssignmentServiceImpl } from '@/lib/services/entity-assignment.service';
+import { CreateCommitmentSchema, CommitmentQuerySchema } from '@/lib/validation/commitment';
+import { AuditLogServiceImpl } from '@/lib/services/audit-log.service';
 
 interface RouteParams {
   params: { id: string }
@@ -128,6 +130,176 @@ export const GET = withAuth(async (request: NextRequest, context, { params }: Ro
 
   } catch (error) {
     console.error('Error fetching donor commitments:', error);
+    return NextResponse.json(
+      { success: false, error: 'Internal server error' },
+      { status: 500 }
+    );
+  }
+});
+
+export const POST = withAuth(async (request: NextRequest, context, { params }: RouteParams) => {
+  const { user, roles } = context;
+  const { id: donorId } = params;
+  
+  try {
+    // Validate donor exists and is active
+    const donor = await prisma.donor.findUnique({
+      where: { id: donorId, isActive: true },
+      include: {
+        user: {
+          select: { id: true, name: true, email: true }
+        }
+      }
+    });
+
+    if (!donor) {
+      return NextResponse.json(
+        { success: false, error: 'Donor not found or inactive' },
+        { status: 404 }
+      );
+    }
+
+    // Check authorization - only the donor themselves, coordinators, or admins can create commitments
+    const isDonorUser = donor.userId === user.id;
+    const isAuthorized = isDonorUser || roles.includes('COORDINATOR') || roles.includes('ADMIN');
+
+    if (!isAuthorized) {
+      return NextResponse.json(
+        { success: false, error: 'Insufficient permissions to create commitments' },
+        { status: 403 }
+      );
+    }
+
+    // Parse and validate request body
+    const body = await request.json();
+    const validatedData = CreateCommitmentSchema.parse(body);
+
+    // Validate that entity exists and is part of the incident
+    const [entity, incident] = await Promise.all([
+      prisma.entity.findUnique({
+        where: { id: validatedData.entityId },
+        select: { id: true, name: true, type: true, location: true, incidentId: true }
+      }),
+      prisma.incident.findUnique({
+        where: { id: validatedData.incidentId },
+        select: { id: true, type: true, status: true }
+      })
+    ]);
+
+    if (!entity) {
+      return NextResponse.json(
+        { success: false, error: 'Entity not found' },
+        { status: 404 }
+      );
+    }
+
+    if (!incident) {
+      return NextResponse.json(
+        { success: false, error: 'Incident not found' },
+        { status: 404 }
+      );
+    }
+
+    // If entity has an incidentId, ensure it matches the selected incident
+    if (entity.incidentId && entity.incidentId !== validatedData.incidentId) {
+      return NextResponse.json(
+        { success: false, error: 'Entity is not part of the selected incident' },
+        { status: 400 }
+      );
+    }
+
+    // Calculate total committed quantity
+    const totalCommittedQuantity = validatedData.items.reduce(
+      (sum, item) => sum + item.quantity, 
+      0
+    );
+
+    // Create commitment
+    const commitment = await prisma.donorCommitment.create({
+      data: {
+        donorId,
+        entityId: validatedData.entityId,
+        incidentId: validatedData.incidentId,
+        status: 'PLANNED',
+        items: validatedData.items,
+        totalCommittedQuantity,
+        deliveredQuantity: 0,
+        verifiedDeliveredQuantity: 0,
+        notes: validatedData.notes
+      },
+      include: {
+        donor: {
+          select: {
+            id: true,
+            name: true,
+            type: true,
+            organization: true,
+            contactEmail: true,
+            contactPhone: true
+          }
+        },
+        entity: {
+          select: {
+            id: true,
+            name: true,
+            type: true,
+            location: true
+          }
+        },
+        incident: {
+          select: {
+            id: true,
+            type: true,
+            subType: true,
+            severity: true,
+            status: true,
+            description: true,
+            location: true
+          }
+        }
+      }
+    });
+
+    // Log audit trail
+    const auditLogService = new AuditLogServiceImpl();
+    await auditLogService.logAction({
+      userId: user.id,
+      action: 'CREATE_COMMITMENT',
+      entityType: 'DonorCommitment',
+      entityId: commitment.id,
+      oldValues: null,
+      newValues: {
+        donorId,
+        entityId: validatedData.entityId,
+        incidentId: validatedData.incidentId,
+        items: validatedData.items,
+        totalCommittedQuantity,
+        notes: validatedData.notes
+      },
+      ipAddress: request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip') || 'unknown',
+      userAgent: request.headers.get('user-agent') || 'unknown'
+    });
+
+    return NextResponse.json({
+      success: true,
+      data: commitment,
+      message: 'Commitment created successfully'
+    }, { status: 201 });
+
+  } catch (error) {
+    console.error('Error creating commitment:', error);
+    
+    if (error instanceof Error && error.name === 'ZodError') {
+      return NextResponse.json(
+        { 
+          success: false, 
+          error: 'Validation failed', 
+          details: error.message 
+        },
+        { status: 400 }
+      );
+    }
+
     return NextResponse.json(
       { success: false, error: 'Internal server error' },
       { status: 500 }
