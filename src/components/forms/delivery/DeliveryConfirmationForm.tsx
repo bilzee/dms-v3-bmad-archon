@@ -125,15 +125,19 @@ export function DeliveryConfirmationForm({
 
   // Setup initial items from response data
   useEffect(() => {
-    if (response && !initialData?.deliveredItems) {
+    if (response && !initialData?.deliveredItems && fields.length === 0) {
       const responseItems = response.items as ResponseItem[] || []
-      if (responseItems.length > 0 && fields.length === 0) {
-        responseItems.forEach(item => {
-          append(item)
-        })
+      if (responseItems.length > 0) {
+        // Use a flag to prevent multiple appends during React strict mode
+        const hasItems = form.getValues('deliveredItems').length > 0
+        if (!hasItems) {
+          responseItems.forEach(item => {
+            append(item)
+          })
+        }
       }
     }
-  }, [response, initialData, fields.length, append])
+  }, [response, initialData, fields.length, append, form])
 
   // Capture GPS location
   const captureGPSLocation = useCallback(async () => {

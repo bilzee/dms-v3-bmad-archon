@@ -8,13 +8,45 @@
 import { describe, it, expect, beforeAll, afterAll, beforeEach, afterEach } from '@jest/globals';
 import { PrismaClient } from '@prisma/client';
 
-const prisma = new PrismaClient({
-  datasources: {
-    db: {
-      url: process.env.DATABASE_URL || "file:./test.db"
-    }
-  }
-});
+// Mock implementation for when database is not available
+const mockPrisma = {
+  $connect: jest.fn().mockRejectedValue(new Error('Test database not available')),
+  $disconnect: jest.fn(),
+  $transaction: jest.fn(),
+  donorCommitment: {
+    create: jest.fn(),
+    findUnique: jest.fn(),
+    findMany: jest.fn(),
+    update: jest.fn(),
+    delete: jest.fn(),
+    deleteMany: jest.fn()
+  },
+  donor: {
+    create: jest.fn(),
+    findUnique: jest.fn(),
+    deleteMany: jest.fn()
+  },
+  entity: {
+    create: jest.fn(),
+    findUnique: jest.fn(),
+    deleteMany: jest.fn()
+  },
+  incident: {
+    create: jest.fn(),
+    findUnique: jest.fn(),
+    deleteMany: jest.fn()
+  },
+  rapidResponse: {
+    create: jest.fn(),
+    deleteMany: jest.fn()
+  },
+  auditLog: { deleteMany: jest.fn() },
+  incidentEntity: { deleteMany: jest.fn() },
+  preliminaryAssessment: { deleteMany: jest.fn() }
+};
+
+let prisma: PrismaClient | typeof mockPrisma;
+let isDatabaseAvailable = false;
 
 describe('Commitment Integration Tests - Story 4.3', () => {
   let testDonor: any;
@@ -23,20 +55,46 @@ describe('Commitment Integration Tests - Story 4.3', () => {
   let testCommitment: any;
 
   beforeAll(async () => {
-    // Ensure test database is clean and connected
+    // Try to connect to real database first
     try {
-      await prisma.$connect();
+      const realPrisma = new PrismaClient({
+        datasources: {
+          db: {
+            url: process.env.DATABASE_URL || "file:./test.db"
+          }
+        }
+      });
+      
+      await realPrisma.$connect();
+      prisma = realPrisma;
+      isDatabaseAvailable = true;
     } catch (error) {
       console.warn('Database connection failed, using mock for integration tests');
-      return;
+      prisma = mockPrisma;
+      isDatabaseAvailable = false;
     }
   });
 
   afterAll(async () => {
-    await prisma.$disconnect();
+    if (isDatabaseAvailable && prisma.$disconnect) {
+      try {
+        await prisma.$disconnect();
+      } catch (error) {
+        // Ignore disconnect errors
+      }
+    }
   });
 
   beforeEach(async () => {
+    if (!isDatabaseAvailable) {
+      // Set up mock data for tests
+      testDonor = { id: 'mock-donor-1', name: 'Test Integration Donor' };
+      testEntity = { id: 'mock-entity-1', name: 'Test Integration Entity' };
+      testIncident = { id: 'mock-incident-1', type: 'FLOOD' };
+      testCommitment = { id: 'mock-commitment-1' };
+      return;
+    }
+
     // Clean up any existing test data
     try {
       await prisma.auditLog.deleteMany();
@@ -48,10 +106,10 @@ describe('Commitment Integration Tests - Story 4.3', () => {
       await prisma.entity.deleteMany();
       await prisma.donor.deleteMany();
     } catch (error) {
-      // Tables may not exist, continue with test
+      console.warn('Database schema not available for integration tests:', error);
     }
 
-    // Create test data
+    // Create test data only if database is available
     try {
       testDonor = await prisma.donor.create({
         data: {
@@ -128,7 +186,7 @@ describe('Commitment Integration Tests - Story 4.3', () => {
 
   describe('Database Schema Validation', () => {
     it('should have donor commitment table with proper structure', async () => {
-      if (!testCommitment) {
+      if (!isDatabaseAvailable) {
         console.log('Skipping database schema test - tables not available');
         return;
       }
@@ -147,7 +205,7 @@ describe('Commitment Integration Tests - Story 4.3', () => {
     });
 
     it('should support incident-entity relationships', async () => {
-      if (!testIncident || !testEntity) {
+      if (!isDatabaseAvailable) {
         console.log('Skipping relationship test - tables not available');
         return;
       }
@@ -167,7 +225,7 @@ describe('Commitment Integration Tests - Story 4.3', () => {
     });
 
     it('should enforce foreign key constraints', async () => {
-      if (!testDonor) {
+      if (!isDatabaseAvailable) {
         console.log('Skipping constraint test - tables not available');
         return;
       }
@@ -190,7 +248,7 @@ describe('Commitment Integration Tests - Story 4.3', () => {
 
   describe('Commitment Business Logic', () => {
     it('should track partial commitment usage', async () => {
-      if (!testCommitment) {
+      if (!isDatabaseAvailable) {
         console.log('Skipping business logic test - tables not available');
         return;
       }
@@ -211,7 +269,7 @@ describe('Commitment Integration Tests - Story 4.3', () => {
     });
 
     it('should create response from commitment', async () => {
-      if (!testCommitment || !testDonor || !testEntity) {
+      if (!isDatabaseAvailable) {
         console.log('Skipping response creation test - tables not available');
         return;
       }
@@ -242,7 +300,7 @@ describe('Commitment Integration Tests - Story 4.3', () => {
     });
 
     it('should maintain audit trail for commitment operations', async () => {
-      if (!testCommitment) {
+      if (!isDatabaseAvailable) {
         console.log('Skipping audit trail test - tables not available');
         return;
       }
@@ -267,7 +325,7 @@ describe('Commitment Integration Tests - Story 4.3', () => {
 
   describe('Query Performance and Indexes', () => {
     it('should efficiently query commitments by donor and status', async () => {
-      if (!testDonor) {
+      if (!isDatabaseAvailable) {
         console.log('Skipping performance test - tables not available');
         return;
       }
@@ -293,7 +351,7 @@ describe('Commitment Integration Tests - Story 4.3', () => {
     });
 
     it('should efficiently query available commitments for responders', async () => {
-      if (!testEntity) {
+      if (!isDatabaseAvailable) {
         console.log('Skipping responder query test - tables not available');
         return;
       }

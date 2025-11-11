@@ -1,0 +1,130 @@
+import { NextRequest, NextResponse } from 'next/server';
+import { withAuth } from '@/lib/auth/middleware';
+import { z } from 'zod';
+import { prisma } from '@/lib/db/client';
+import { createAuditLog } from '@/lib/utils/audit-logger';
+
+// Validation schema for response rejection
+const RejectResponseSchema = z.object({
+  rejectionReason: z.string().min(1, 'Rejection reason is required'),
+  notes: z.string().optional(),
+});
+
+export const POST = withAuth(async (request: NextRequest, context, { params }) => {
+  try {
+    const { roles } = context;
+    
+    // Check coordinator permissions
+    if (!roles.includes('COORDINATOR')) {
+      return NextResponse.json(
+        { success: false, error: 'Insufficient permissions. Coordinator role required.' },
+        { status: 403 }
+      );
+    }
+
+    const { id } = params;
+    const body = await request.json();
+    const validatedData = RejectResponseSchema.parse(body);
+    
+    // Get user ID from auth context (you may need to adjust this based on your auth setup)
+    const userId = (request as any).user?.id || 'system';
+
+    // Find the response
+    const response = await prisma.rapidResponse.findUnique({
+      where: { id },
+      include: {
+        entity: {
+          select: { id: true, name: true, type: true }
+        },
+        donor: {
+          select: { id: true, name: true, contactEmail: true }
+        },
+        commitment: {
+          select: { id: true, totalCommittedQuantity: true, items: true }
+        }
+      }
+    });
+
+    if (!response) {
+      return NextResponse.json(
+        { success: false, error: 'Response not found' },
+        { status: 404 }
+      );
+    }
+
+    // Check if response is in a rejectable state
+    if (response.verificationStatus !== 'SUBMITTED') {
+      return NextResponse.json(
+        { 
+          success: false, 
+          error: `Response cannot be rejected. Current status: ${response.verificationStatus}` 
+        },
+        { status: 400 }
+      );
+    }
+
+    // Update response verification status
+    const updatedResponse = await prisma.rapidResponse.update({
+      where: { id },
+      data: {
+        verificationStatus: 'REJECTED',
+        verifiedAt: new Date(),
+        verifiedBy: userId,
+        rejectionReason: validatedData.rejectionReason,
+        rejectionFeedback: validatedData.notes,
+        updatedAt: new Date()
+      },
+      include: {
+        entity: {
+          select: { id: true, name: true, type: true }
+        },
+        donor: {
+          select: { id: true, name: true, contactEmail: true }
+        },
+        commitment: {
+          select: { id: true, totalCommittedQuantity: true, items: true }
+        }
+      }
+    });
+
+    // Create audit log
+    await createAuditLog({
+      userId,
+      action: 'REJECT_RESPONSE',
+      resource: 'RapidResponse',
+      resourceId: id,
+      oldValues: { verificationStatus: response.verificationStatus },
+      newValues: { 
+        verificationStatus: 'REJECTED', 
+        verifiedAt: new Date(),
+        rejectionReason: validatedData.rejectionReason 
+      }
+    });
+
+    return NextResponse.json({
+      success: true,
+      data: updatedResponse,
+      message: 'Response rejected successfully',
+      meta: {
+        timestamp: new Date().toISOString(),
+        version: '1.0',
+        requestId: crypto.randomUUID()
+      }
+    });
+
+  } catch (error) {
+    console.error('Response rejection error:', error);
+    
+    if (error instanceof z.ZodError) {
+      return NextResponse.json(
+        { success: false, error: 'Invalid request data', details: error.errors },
+        { status: 400 }
+      );
+    }
+
+    return NextResponse.json(
+      { success: false, error: 'Internal server error' },
+      { status: 500 }
+    );
+  }
+});

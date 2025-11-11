@@ -33,15 +33,13 @@ const customJestConfig = {
     '<rootDir>/coverage/',
     '<rootDir>/tests/e2e/',
     '<rootDir>/tests/unit/delivery-offline.service.test.ts',
-    '<rootDir>/tests/unit/verification/',
     '<rootDir>/tests/components/DeliveryConfirmationForm.test.tsx',
     '<rootDir>/tests/integration/delivery-confirmation.test.ts',
-    '<rootDir>/tests/integration/verification/',
     '<rootDir>/tests/unit/delivery-media-validator.test.ts',
     '<rootDir>/tests/regression/',
   ],
   transformIgnorePatterns: [
-    'node_modules/(?!(uuid)/)',
+    'node_modules/(?!(uuid|@uuid|jose|openid-client|next-auth|@prisma|prisma)/)',
   ],
   collectCoverage: true,
   coverageThreshold: {

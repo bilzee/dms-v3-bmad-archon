@@ -720,6 +720,130 @@ Object.defineProperty(window, 'matchMedia', {
 
 ---
 
+## 8. Framework Consistency & Quality Gates
+
+### Critical Validation Rules
+
+#### Framework Consistency
+```yaml
+# Project uses Jest (NOT Vitest) - Enforce this strictly
+testFramework: jest
+testEnvironment: jsdom
+setupFilesAfterEnv: jest.setup.js
+```
+
+**Common Framework Errors to Avoid:**
+- ❌ Using `vi.mock()` (Vitest syntax) → ✅ Use `jest.mock()`
+- ❌ Using `beforeAll` without proper cleanup → ✅ Use `beforeEach` with cleanup
+- ❌ Importing `@testing-library/react/vitest` → ✅ Use `@testing-library/react`
+
+#### Component Integration Standards
+```typescript
+// ✅ CORRECT: React Hook Form + Radix UI integration
+jest.mock('@radix-ui/react-select', () => ({
+  SelectRoot: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
+  SelectTrigger: ({ children, ...props }: any) => <button {...props}>{children}</button>,
+  SelectValue: ({ placeholder }: { placeholder: string }) => <span>{placeholder}</span>,
+  SelectContent: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
+  SelectItem: ({ children, value, onSelect }: any) => (
+    <div onClick={() => onSelect && onSelect(value)}>{children}</div>
+  ),
+}));
+
+// ✅ CORRECT: React Hook Form field prop support
+jest.mock('@/components/ui/input', () => ({
+  Input: ({ className, ...props }: any) => <input className={className} {...props} />,
+}));
+```
+
+#### Pre-Story Validation Checklist
+```markdown
+## Before Story Implementation
+- [ ] Jest configuration loaded and verified
+- [ ] React Hook Form mock patterns reviewed
+- [ ] Radix UI component mocks verified
+- [ ] Testing framework consistency confirmed
+
+## During Story Implementation  
+- [ ] Unit tests use `jest.mock()` not `vi.mock()`
+- [ ] Component mocks support `{...field}` props
+- [ ] E2E tests use Playwright patterns
+- [ ] Form validation tested with user interactions
+
+## After Story Implementation
+- [ ] Run `npm run test:unit` - all pass
+- [ ] Run `npm run test:e2e` - all pass  
+- [ ] Check test coverage meets thresholds
+- [ ] Validate framework consistency across all tests
+```
+
+#### Context Loading Strategy for Testing
+```markdown
+## Testing Context Maintenance
+When context becomes compacted during story implementation:
+
+1. **Reload Testing Standards**: Always reload `05-testing.md` before implementing tests
+2. **Verify Framework Configuration**: Check jest.config.js matches examples
+3. **Review Component Mock Patterns**: Ensure UI mocks support React Hook Form
+4. **Validate E2E Patterns**: Check Playwright tests follow project patterns
+
+### Implementation Commands
+```bash
+# Before implementing tests (reload context)
+# Load: docs/architecture/coding-standards/05-testing.md
+
+# Validate framework consistency
+grep -r "vi\.mock" tests/ # Should return nothing
+grep -r "jest\.mock" tests/ # Should show mock usage
+
+# Run validation
+npm run validate:schema
+npm run test:unit
+npm run test:e2e
+```
+
+#### React Hook Form Integration Patterns
+```typescript
+// ✅ CORRECT: Testing React Hook Form with Radix UI
+import { render, screen, waitFor } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
+import { useForm } from 'react-hook-form';
+
+// Mock Radix UI Select with proper form integration
+jest.mock('@radix-ui/react-select', () => ({
+  SelectRoot: ({ children, onValueChange }: any) => <div onChange={onValueChange}>{children}</div>,
+  SelectTrigger: ({ children, ...props }: any) => <button {...props}>{children}</button>,
+  SelectValue: ({ placeholder }: { placeholder: string }) => <span>{placeholder}</span>,
+  SelectContent: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
+  SelectItem: ({ children, value, onSelect }: any) => (
+    <div onClick={() => onSelect && onSelect(value)}>{children}</div>
+  ),
+}));
+
+// Test form validation properly
+it('validates form submission with React Hook Form', async () => {
+  const user = userEvent.setup();
+  render(<DonorRegistrationForm />);
+  
+  // Fill required fields
+  await user.type(screen.getByLabelText(/email/i), 'test@example.com');
+  await user.click(screen.getByRole('button', { name: /country/i }));
+  await user.keyboard('{ArrowDown}{Enter}'); // Radix UI Select pattern
+  
+  // Submit form
+  await user.click(screen.getByRole('button', { name: /create account/i }));
+  
+  await waitFor(() => {
+    expect(mockOnSubmit).toHaveBeenCalledWith(expect.objectContaining({
+      email: 'test@example.com',
+      country: 'US'
+    }));
+  });
+});
+```
+
+---
+
 ## Summary
 
 These testing standards ensure:
@@ -729,4 +853,7 @@ These testing standards ensure:
 - **State Testing**: Zustand store testing patterns
 - **Server Component Testing**: Next.js App Router testing
 - **Real-world Scenarios**: User workflow testing with Playwright
+- **Framework Consistency**: Jest enforcement, no Vitest syntax mixing
 - **Quality Gates**: Coverage thresholds and validation standards
+- **Context Loading**: Strategies for maintaining testing standards in compacted sessions
+- **Component Integration**: React Hook Form + Radix UI testing patterns

@@ -61,6 +61,15 @@ const DEV_TEST_USERS = [
     description: 'Plans and delivers disaster response resources'
   },
   {
+    id: 'donor',
+    name: 'Donor Organization Contact',
+    email: 'donor@test.com',
+    password: 'donor123!',
+    roles: ['Donor'],
+    icon: Heart,
+    description: 'Donor role only - manages contributions and assessments'
+  },
+  {
     id: 'multirole',
     name: 'Multi Role Test User',
     email: 'multirole@dms.gov.ng',

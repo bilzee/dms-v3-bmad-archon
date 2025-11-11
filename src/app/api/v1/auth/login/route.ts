@@ -51,17 +51,43 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
 
     const { user, token } = authResult
 
-    // Remove password hash from response
-    const { passwordHash, ...userWithoutPassword } = user as any
-    
-    // Extract roles for response
-    const roles = user.roles.map(ur => ur.role)
+    // Construct user object with proper role structure for auth store
+    const userWithoutPassword = {
+      id: user.id,
+      email: user.email,
+      username: user.username,
+      name: user.name,
+      phone: user.phone,
+      organization: user.organization,
+      isActive: user.isActive,
+      isLocked: user.isLocked,
+      lastLogin: user.lastLogin,
+      createdAt: user.createdAt,
+      updatedAt: user.updatedAt,
+      // Reconstruct roles with proper nested structure
+      roles: user.roles.map(ur => ({
+        role: {
+          id: ur.role.id,
+          name: ur.role.name,
+          description: ur.role.description,
+          // Include permissions with proper nested structure
+          permissions: ur.role.permissions.map(rp => ({
+            permission: {
+              id: rp.permission.id,
+              code: rp.permission.code,
+              name: rp.permission.name,
+              description: rp.permission.description
+            }
+          }))
+        }
+      }))
+    }
 
     const response: LoginResponse = {
       data: {
         user: userWithoutPassword,
         token,
-        roles
+        roles: user.roles.map(ur => ur.role)
       },
       meta: {
         timestamp: new Date().toISOString(),

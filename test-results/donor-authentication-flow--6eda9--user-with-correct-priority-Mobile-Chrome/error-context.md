@@ -1,0 +1,53 @@
+# Page snapshot
+
+```yaml
+- generic [active] [ref=e1]:
+  - generic [ref=e2]:
+    - banner [ref=e3]:
+      - generic [ref=e5]:
+        - link "DMS Borno" [ref=e7] [cursor=pointer]:
+          - /url: /dashboard
+        - generic [ref=e8]:
+          - generic [ref=e9]:
+            - img [ref=e10]
+            - generic [ref=e12]: Synced
+          - generic [ref=e14]:
+            - img [ref=e15]
+            - generic [ref=e17]: Online
+    - main [ref=e18]:
+      - generic [ref=e20]:
+        - generic [ref=e21]:
+          - heading "Disaster Management System" [level=2] [ref=e22]
+          - paragraph [ref=e23]: Field assessment and response coordination for Nigeria
+        - generic [ref=e24]:
+          - generic [ref=e25]:
+            - generic [ref=e26]: Login
+            - generic [ref=e27]: Enter your credentials to access the disaster management system
+          - generic [ref=e29]:
+            - generic [ref=e30]:
+              - generic [ref=e31]:
+                - img [ref=e32]
+                - generic [ref=e35]: Development Test Users
+              - combobox [ref=e36] [cursor=pointer]:
+                - generic: Select a test user for quick login...
+                - img [ref=e37]
+              - combobox [ref=e39]
+              - paragraph [ref=e40]: Selecting a test user will automatically fill the email and password fields below.
+            - generic [ref=e41]:
+              - text: Email
+              - textbox "Email" [ref=e42]:
+                - /placeholder: your@email.com
+            - generic [ref=e43]:
+              - text: Password
+              - textbox "Password" [ref=e44]:
+                - /placeholder: Enter your password
+            - button "Sign in" [ref=e45] [cursor=pointer]
+        - paragraph [ref=e47]: Contact your administrator for account access
+    - contentinfo [ref=e48]:
+      - paragraph [ref=e50]: Disaster Management System - Borno State, Nigeria
+  - generic [ref=e51]:
+    - img [ref=e53]
+    - button "Open Tanstack query devtools" [ref=e101] [cursor=pointer]:
+      - img [ref=e102]
+  - alert [ref=e150]
+```

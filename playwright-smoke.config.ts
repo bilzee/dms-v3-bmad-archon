@@ -11,10 +11,10 @@ export default defineConfig({
   retries: process.env.CI ? 2 : 0,
   workers: process.env.CI ? 1 : undefined,
   reporter: 'html',
+  timeout: 10000, // Smoke tests should be fast
   use: {
     baseURL: process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3001',
     trace: 'on-first-retry',
-    timeout: 10000, // Smoke tests should be fast
   },
 
   projects: [

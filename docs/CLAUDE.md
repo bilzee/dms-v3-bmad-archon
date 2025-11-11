@@ -5,6 +5,49 @@
 3. Testing strategy can be found in docs/prd/testing-strategy.md
 4. When troubleshooting, do not take shortcuts, instead, first search the Archon knowledge base for solution, and if no solution is found, create a detailed report on the problem and what has been tried in docs/to-toubleshoot/ so it can be fixed separately.
 
+# 🧪 Pre-Story Testing Validation
+
+## Critical Workflow Rules
+
+### Before Story Implementation
+1. **Run Pre-Story Validation**: `bash scripts/validate-pre-story.sh`
+2. **Reload Testing Standards**: Always reload `docs/architecture/coding-standards/05-testing.md` when context is compacted
+3. **Framework Consistency**: This project uses **Jest** (NOT Vitest) - enforce strictly
+4. **Component Mocks**: Ensure UI mocks support React Hook Form `{...field}` props
+
+### During Story Implementation
+- **Use Jest Syntax**: `jest.mock()` not `vi.mock()`
+- **Form Testing**: Test React Hook Form with proper user interactions
+- **UI Components**: Mock Radix UI components with proper event handling
+- **Context Loading**: Reload testing standards if context becomes compacted
+
+### After Story Implementation
+1. **Run All Tests**: `npm run test:unit` and `npm run test:e2e`
+2. **Schema Validation**: `npm run validate:schema`
+3. **Framework Check**: `grep -r "vi\.mock" tests/` should return nothing
+4. **Coverage Check**: Ensure coverage thresholds are met
+
+## Quick Testing Commands
+```bash
+# Validate before story implementation
+bash scripts/validate-pre-story.sh
+
+# Check for framework consistency issues
+grep -r "vi\.mock" tests/  # Should return nothing
+grep -r "jest\.mock" tests/ # Should show mock usage
+
+# Run full test suite
+npm run test:unit
+npm run test:e2e
+npm run validate:schema
+```
+
+## Common Testing Issues & Solutions
+- **Missing React Import**: Add `import React from 'react';` to components
+- **Framework Mixing**: Replace all `vi.mock()` with `jest.mock()`
+- **Form Validation**: Use `user.keyboard('{ArrowDown}{Enter}')` for Radix UI Select
+- **Context Loss**: Reload `05-testing.md` when session is compacted
+
 # 📚 Sharded Coding Standards
 
 The coding standards are **sharded** for optimal context usage (8-13KB per shard vs 63KB total).

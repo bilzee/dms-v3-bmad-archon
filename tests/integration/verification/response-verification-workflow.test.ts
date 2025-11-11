@@ -12,8 +12,8 @@ import { POST as updateResponseAutoApproval } from '@/app/api/v1/verification/au
 import { GET as getDonorMetrics } from '@/app/api/v1/donors/metrics/route';
 
 // Mock authentication
-vi.mock('next-auth');
-vi.mock('@/lib/auth/config', () => ({ authConfig: {} }));
+jest.mock('next-auth');
+jest.mock('@/lib/auth/config', () => ({ authConfig: {} }));
 
 const mockGetServerSession = getServerSession as any;
 

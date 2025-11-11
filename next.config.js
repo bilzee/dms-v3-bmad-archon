@@ -61,6 +61,25 @@ const nextConfig = {
     PWA_ENABLED: pwaConfig.shouldEnablePWA().toString(),
     PWA_ENVIRONMENT: process.env.NODE_ENV,
   },
+  webpack: (config, { isServer }) => {
+    if (!isServer) {
+      // Client-side webpack configuration
+      const MiniCssExtractPlugin = require('mini-css-extract-plugin');
+      
+      // Add MiniCssExtractPlugin if not already present
+      const hasPlugin = config.plugins.some(plugin => 
+        plugin instanceof MiniCssExtractPlugin
+      );
+      
+      if (!hasPlugin) {
+        config.plugins.push(new MiniCssExtractPlugin({
+          filename: 'static/css/[name].[contenthash].css',
+          chunkFilename: 'static/css/[name].[contenthash].chunk.css',
+        }));
+      }
+    }
+    return config;
+  },
 };
 
 module.exports = withPWA(nextConfig);

@@ -6,8 +6,10 @@ import { prisma } from '@/lib/db/client';
 const bulkUpdateSchema = z.object({
   entityIds: z.array(z.string()),
   enabled: z.boolean(),
+  scope: z.enum(['assessments', 'responses', 'both']).default('assessments'),
   conditions: z.object({
     assessmentTypes: z.array(z.string()).optional(),
+    responseTypes: z.array(z.string()).optional(),
     maxPriority: z.enum(['LOW', 'MEDIUM', 'HIGH', 'CRITICAL']).optional(),
     requiresDocumentation: z.boolean().optional(),
   }).optional(),
@@ -59,6 +61,11 @@ export const GET = withAuth(async (request: NextRequest, context) => {
               where: {
                 verificationStatus: 'AUTO_VERIFIED'
               }
+            },
+            responses: {
+              where: {
+                verificationStatus: 'AUTO_VERIFIED'
+              }
             }
           }
         }
@@ -80,14 +87,18 @@ export const GET = withAuth(async (request: NextRequest, context) => {
         entityType: entity.type,
         entityLocation: entity.location,
         enabled: entity.autoApproveEnabled,
+        scope: autoApprovalConfig.scope || 'assessments',
         conditions: {
           assessmentTypes: autoApprovalConfig.assessmentTypes || [],
+          responseTypes: autoApprovalConfig.responseTypes || [],
           maxPriority: autoApprovalConfig.maxPriority || 'MEDIUM',
           requiresDocumentation: autoApprovalConfig.requiresDocumentation || false,
         },
         lastModified: entity.updatedAt,
         stats: {
-          autoVerifiedCount: entity._count.rapidAssessments
+          autoVerifiedAssessments: entity._count.rapidAssessments,
+          autoVerifiedResponses: entity._count.responses,
+          totalAutoVerified: entity._count.rapidAssessments + entity._count.responses
         }
       };
     });
@@ -97,7 +108,9 @@ export const GET = withAuth(async (request: NextRequest, context) => {
       totalEntities: entities.length,
       enabledCount: entities.filter((e: any) => e.autoApproveEnabled).length,
       disabledCount: entities.filter((e: any) => !e.autoApproveEnabled).length,
-      totalAutoVerified: entities.reduce((sum: any, e: any) => sum + e._count.rapidAssessments, 0)
+      totalAutoVerifiedAssessments: entities.reduce((sum: any, e: any) => sum + e._count.rapidAssessments, 0),
+      totalAutoVerifiedResponses: entities.reduce((sum: any, e: any) => sum + e._count.responses, 0),
+      totalAutoVerified: entities.reduce((sum: any, e: any) => sum + e._count.rapidAssessments + e._count.responses, 0)
     };
 
     return NextResponse.json({
@@ -166,7 +179,9 @@ export const PUT = withAuth(async (request: NextRequest, context) => {
         const updatedMetadata = {
           ...currentMetadata,
           autoApproval: {
+            scope: validatedData.scope || 'assessments',
             assessmentTypes: validatedData.conditions?.assessmentTypes || [],
+            responseTypes: validatedData.conditions?.responseTypes || [],
             maxPriority: validatedData.conditions?.maxPriority || 'MEDIUM',
             requiresDocumentation: validatedData.conditions?.requiresDocumentation || false,
             lastModifiedBy: (user as any).id,
@@ -204,6 +219,7 @@ export const PUT = withAuth(async (request: NextRequest, context) => {
               entityName: entity.name,
               previousEnabled: entity.autoApproveEnabled,
               newEnabled: validatedData.enabled,
+              scope: validatedData.scope,
               conditions: validatedData.conditions,
               bulkUpdate: true,
               totalEntitiesUpdated: entities.length,
@@ -226,6 +242,7 @@ export const PUT = withAuth(async (request: NextRequest, context) => {
         entityName: entity.name,
         entityType: entity.type,
         enabled: entity.autoApproveEnabled,
+        scope: autoApprovalConfig.scope || 'assessments',
         conditions: autoApprovalConfig,
         lastModified: entity.updatedAt,
       };

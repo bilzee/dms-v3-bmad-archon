@@ -11,10 +11,10 @@ import { GET as getMetrics } from '@/app/api/v1/verification/metrics/route';
 import { POST as updateAutoApproval } from '@/app/api/v1/entities/[id]/auto-approval/route';
 
 // Mock authentication
-vi.mock('next-auth');
-vi.mock('@/lib/auth/config', () => ({ authConfig: {} }));
+jest.mock('next-auth');
+jest.mock('@/lib/auth/config', () => ({ authConfig: {} }));
 
-const mockGetServerSession = getServerSession as vi.Mock;
+const mockGetServerSession = getServerSession as jest.Mock;
 
 // Test data
 const coordinatorSession = {

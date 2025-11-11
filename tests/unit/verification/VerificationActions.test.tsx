@@ -20,8 +20,8 @@ jest.mock('lucide-react', () => ({
 
 import { useVerifyAssessment, useRejectAssessment } from '@/hooks/useVerification';
 
-const mockUseVerifyAssessment = useVerifyAssessment as vi.Mock;
-const mockUseRejectAssessment = useRejectAssessment as vi.Mock;
+const mockUseVerifyAssessment = useVerifyAssessment as jest.Mock;
+const mockUseRejectAssessment = useRejectAssessment as jest.Mock;
 
 const mockAssessment: VerificationQueueItem = {
   id: 'assessment-1',
@@ -62,7 +62,7 @@ function TestWrapper({ children }: { children: React.ReactNode }) {
 
 describe('VerificationActions', () => {
   beforeEach(() => {
-    vi.clearAllMocks();
+    jest.clearAllMocks();
     
     // Setup default mock implementations
     mockUseVerifyAssessment.mockReturnValue({
@@ -314,7 +314,7 @@ describe('VerificationActions', () => {
   });
 
   it('closes dialog and calls onActionComplete after successful verification', async () => {
-    const mockVerify = vi.fn((data, { onSuccess }) => {
+    const mockVerify = jest.fn((data, { onSuccess }) => {
       onSuccess();
     });
     const mockOnComplete = jest.fn();

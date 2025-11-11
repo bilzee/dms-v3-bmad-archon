@@ -299,7 +299,10 @@ test.describe('Commitment Import Workflow - Story 4.3', () => {
     await page.goto('/responder/planning');
     
     // Should redirect or show access denied
-    await expect(page.locator('[data-testid="access-denied"]')).toBeVisible();
-    or await expect(page.url()).toContain('/assessor');
+    try {
+      await expect(page.locator('[data-testid="access-denied"]')).toBeVisible();
+    } catch {
+      await expect(page.url()).toContain('/assessor');
+    }
   });
 });

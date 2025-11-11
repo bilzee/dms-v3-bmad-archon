@@ -1,0 +1,426 @@
+'use client';
+
+import { useState } from 'react';
+import { useDonorMetrics, useVerifiedBadgeDisplay, type DonorMetrics } from '@/hooks/useDonorMetrics';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { Progress } from '@/components/ui/progress';
+import { VerifiedBadge } from '@/components/dashboards/crisis/VerifiedBadge';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { 
+  TrendingUp, 
+  Users, 
+  HandHeart, 
+  CheckCircle, 
+  Star,
+  Shield,
+  BarChart3,
+  RefreshCw,
+  Calendar,
+  Activity
+} from 'lucide-react';
+import { cn } from '@/lib/utils';
+
+
+export function DonorMetricsDashboard() {
+  const [dateRange, setDateRange] = useState<'7d' | '30d' | '90d'>('30d');
+  const [selectedDonor, setSelectedDonor] = useState<string | null>(null);
+
+  const { 
+    data: donorMetrics, 
+    isLoading, 
+    error, 
+    refetch 
+  } = useDonorMetrics({ dateRange });
+
+  const handleRefresh = () => {
+    refetch();
+  };
+
+  const filteredDonors = selectedDonor 
+    ? donorMetrics?.donors.filter(d => d.donorId === selectedDonor) || []
+    : donorMetrics?.donors || [];
+
+  return (
+    <div className="container mx-auto p-6 space-y-6">
+      {/* Header */}
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-3xl font-bold tracking-tight">Donor Metrics</h1>
+          <p className="text-muted-foreground">
+            Comprehensive donor performance and response verification metrics
+          </p>
+        </div>
+        
+        <div className="flex items-center gap-3">
+          {/* Date Range Selector */}
+          <Tabs value={dateRange} onValueChange={(value) => setDateRange(value as '7d' | '30d' | '90d')}>
+            <TabsList>
+              <TabsTrigger value="7d">7 Days</TabsTrigger>
+              <TabsTrigger value="30d">30 Days</TabsTrigger>
+              <TabsTrigger value="90d">90 Days</TabsTrigger>
+            </TabsList>
+          </Tabs>
+          
+          <Button
+            variant="outline"
+            onClick={handleRefresh}
+            disabled={isLoading}
+          >
+            <RefreshCw className={cn('h-4 w-4 mr-2', isLoading && 'animate-spin')} />
+            Refresh
+          </Button>
+        </div>
+      </div>
+
+      {/* Error State */}
+      {error && (
+        <Card className="border-red-200 bg-red-50">
+          <CardContent className="p-6">
+            <div className="text-center">
+              <BarChart3 className="h-12 w-12 text-red-500 mx-auto mb-4" />
+              <h3 className="text-lg font-semibold text-red-900 mb-2">
+                Failed to load donor metrics
+              </h3>
+              <p className="text-red-700">{error?.message || 'Unknown error'}</p>
+              <Button onClick={handleRefresh} variant="outline" className="mt-4">
+                Try Again
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Overall Statistics */}
+      {donorMetrics && (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+          <MetricCard
+            title="Total Donors"
+            value={donorMetrics.overall.totalDonors}
+            icon={Users}
+            iconColor="text-blue-600"
+            loading={isLoading}
+          />
+          
+          <MetricCard
+            title="Total Commitments"
+            value={donorMetrics.overall.totalCommitments}
+            icon={HandHeart}
+            iconColor="text-green-600"
+            loading={isLoading}
+          />
+          
+          <MetricCard
+            title="Verified Responses"
+            value={donorMetrics.overall.totalVerifiedResponses}
+            icon={CheckCircle}
+            iconColor="text-purple-600"
+            loading={isLoading}
+          />
+          
+          <MetricCard
+            title="Average Verification Rate"
+            value={`${(donorMetrics.overall.averageVerificationRate * 100).toFixed(1)}%`}
+            icon={TrendingUp}
+            iconColor="text-orange-600"
+            loading={isLoading}
+          />
+        </div>
+      )}
+
+      {/* Top Performers */}
+      {donorMetrics?.overall.topPerformers && donorMetrics.overall.topPerformers.length > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Star className="h-5 w-5" />
+              Top Performing Donors
+            </CardTitle>
+            <CardDescription>
+              Donors with the highest success rates across commitments and responses
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-4">
+              {donorMetrics.overall.topPerformers.map((donor, index) => (
+                <div key={donor.donorName} className="flex items-center justify-between p-3 border rounded-lg">
+                  <div className="flex items-center gap-3">
+                    <div className="flex items-center justify-center w-8 h-8 rounded-full bg-gradient-to-r from-blue-500 to-purple-500 text-white text-sm font-bold">
+                      {index + 1}
+                    </div>
+                    <div>
+                      <p className="font-medium">{donor.donorName}</p>
+                      <p className="text-sm text-muted-foreground">
+                        {donor.verifiedActivities} / {donor.totalActivities} activities
+                      </p>
+                    </div>
+                  </div>
+                  
+                  <div className="text-right">
+                    <div className="font-semibold text-lg">
+                      {(donor.successRate * 100).toFixed(1)}%
+                    </div>
+                    <div className="text-sm text-muted-foreground">
+                      success rate
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Detailed Donor Metrics */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Activity className="h-5 w-5" />
+            Donor Performance Details
+          </CardTitle>
+          <CardDescription>
+            Detailed breakdown of each donor&apos;s commitment fulfillment and response verification metrics
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          {isLoading ? (
+            <div className="space-y-4">
+              {[...Array(5)].map((_, i) => (
+                <div key={i} className="p-4 border rounded-lg animate-pulse">
+                  <div className="h-4 bg-gray-200 rounded w-48 mb-2"></div>
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                    <div className="h-3 bg-gray-200 rounded"></div>
+                    <div className="h-3 bg-gray-200 rounded"></div>
+                    <div className="h-3 bg-gray-200 rounded"></div>
+                    <div className="h-3 bg-gray-200 rounded"></div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : filteredDonors.length === 0 ? (
+            <div className="text-center py-12 text-muted-foreground">
+              <Users className="h-12 w-12 mx-auto mb-4 opacity-50" />
+              <h3 className="text-lg font-semibold mb-2">No donors found</h3>
+              <p>No donor data available for the selected criteria</p>
+            </div>
+          ) : (
+            <div className="space-y-4">
+              {filteredDonors.map((donor) => (
+                <DonorRow key={donor.donorId} donor={donor} />
+              ))}
+            </div>
+          )}
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
+
+// Donor Row Component
+interface DonorRowProps {
+  donor: DonorMetrics;
+}
+
+function DonorRow({ donor }: DonorRowProps) {
+  const verifiedDisplay = useVerifiedBadgeDisplay(donor.donorId);
+  
+  return (
+    <div className="p-4 border rounded-lg space-y-4">
+      {/* Donor Header */}
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-3">
+          <div>
+            <h3 className="font-semibold text-lg">{donor.donorName}</h3>
+            <p className="text-sm text-muted-foreground">{donor.donorEmail}</p>
+            <p className="text-xs text-gray-500">
+              Donor since {new Date(donor.donorSince).toLocaleDateString()}
+            </p>
+          </div>
+          
+          {verifiedDisplay.showVerifiedBadge && (
+            <VerifiedBadge
+              isVerified={verifiedDisplay.showVerifiedBadge}
+              verificationMethod={verifiedDisplay.verificationMethod || 'manual'}
+              size="sm"
+              metrics={{
+                totalVerified: verifiedDisplay.totalVerified,
+                totalActivities: verifiedDisplay.totalActivities,
+                verificationRate: verifiedDisplay.verificationRate,
+                responseVerified: donor.metrics.responses.verified,
+                commitmentFulfilled: donor.metrics.commitments.fulfilled
+              }}
+              showTooltip
+            />
+          )}
+        </div>
+      </div>
+
+      {/* Metrics Grid */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        {/* Commitment Metrics */}
+        <div className="space-y-3">
+          <h4 className="font-medium text-sm text-gray-700 flex items-center gap-2">
+            <HandHeart className="h-4 w-4" />
+            Commitments
+          </h4>
+          
+          <div className="space-y-2">
+            <MetricRow
+              label="Total"
+              value={donor.metrics.commitments.total}
+              color="text-blue-600"
+            />
+            <MetricRow
+              label="Available"
+              value={donor.metrics.commitments.available}
+              color="text-green-600"
+            />
+            <MetricRow
+              label="Fulfilled"
+              value={donor.metrics.commitments.fulfilled}
+              color="text-purple-600"
+            />
+            
+            <div className="space-y-1">
+              <div className="flex justify-between text-sm">
+                <span>Fulfillment Rate</span>
+                <span className="font-medium">
+                  {(donor.metrics.commitments.fulfillmentRate * 100).toFixed(1)}%
+                </span>
+              </div>
+              <Progress 
+                value={donor.metrics.commitments.fulfillmentRate * 100} 
+                className="h-2"
+              />
+            </div>
+          </div>
+        </div>
+
+        {/* Response Verification Metrics */}
+        <div className="space-y-3">
+          <h4 className="font-medium text-sm text-gray-700 flex items-center gap-2">
+            <CheckCircle className="h-4 w-4" />
+            Response Verification
+          </h4>
+          
+          <div className="space-y-2">
+            <MetricRow
+              label="Total"
+              value={donor.metrics.responses.total}
+              color="text-blue-600"
+            />
+            <MetricRow
+              label="Verified"
+              value={donor.metrics.responses.verified}
+              color="text-green-600"
+            />
+            <MetricRow
+              label="Auto-Verified"
+              value={donor.metrics.responses.autoVerified}
+              color="text-blue-500"
+            />
+            <MetricRow
+              label="Pending"
+              value={donor.metrics.responses.pending}
+              color="text-orange-600"
+            />
+            
+            <div className="space-y-1">
+              <div className="flex justify-between text-sm">
+                <span>Verification Rate</span>
+                <span className="font-medium">
+                  {(donor.metrics.responses.verificationRate * 100).toFixed(1)}%
+                </span>
+              </div>
+              <Progress 
+                value={donor.metrics.responses.verificationRate * 100} 
+                className="h-2"
+              />
+            </div>
+          </div>
+        </div>
+
+        {/* Overall Performance */}
+        <div className="space-y-3">
+          <h4 className="font-medium text-sm text-gray-700 flex items-center gap-2">
+            <TrendingUp className="h-4 w-4" />
+            Overall Performance
+          </h4>
+          
+          <div className="space-y-2">
+            <MetricRow
+              label="Total Activities"
+              value={donor.metrics.combined.totalActivities}
+              color="text-blue-600"
+            />
+            <MetricRow
+              label="Verified Activities"
+              value={donor.metrics.combined.verifiedActivities}
+              color="text-green-600"
+            />
+            
+            <div className="pt-2 border-t">
+              <div className="flex justify-between text-sm">
+                <span>Overall Success Rate</span>
+                <span className="font-bold text-lg">
+                  {(donor.metrics.combined.overallSuccessRate * 100).toFixed(1)}%
+                </span>
+              </div>
+              <Progress 
+                value={donor.metrics.combined.overallSuccessRate * 100} 
+                className="h-2 mt-2"
+              />
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// Helper Components
+interface MetricCardProps {
+  title: string;
+  value: string | number;
+  icon: React.ComponentType<{ className?: string }>;
+  iconColor?: string;
+  loading?: boolean;
+}
+
+function MetricCard({ title, value, icon: Icon, iconColor = "text-gray-600", loading }: MetricCardProps) {
+  return (
+    <Card>
+      <CardContent className="p-4">
+        <div className="flex items-center justify-between">
+          <div>
+            <p className="text-sm font-medium text-gray-600">{title}</p>
+            {loading ? (
+              <div className="h-8 w-20 bg-gray-200 animate-pulse rounded mt-1"></div>
+            ) : (
+              <p className="text-2xl font-bold">{value}</p>
+            )}
+          </div>
+          <Icon className={cn("h-6 w-6", iconColor)} />
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
+function MetricRow({ 
+  label, 
+  value, 
+  color 
+}: { 
+  label: string; 
+  value: number; 
+  color: string; 
+}) {
+  return (
+    <div className="flex justify-between">
+      <span className="text-sm text-gray-600">{label}</span>
+      <span className={cn("text-sm font-medium", color)}>{value}</span>
+    </div>
+  );
+}

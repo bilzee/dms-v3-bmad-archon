@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, afterEach, vi, Mock } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach } from '@jest/globals';
 import { NextRequest } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { db } from '@/lib/db/client';
@@ -10,13 +10,13 @@ import { POST as rejectAssessment } from '@/app/api/v1/assessments/[id]/reject/r
 import { GET as getMetrics } from '@/app/api/v1/verification/metrics/route';
 
 // Mock dependencies
-vi.mock('next-auth');
-vi.mock('@/lib/db/client');
-vi.mock('@/lib/auth/config', () => ({
+jest.mock('next-auth');
+jest.mock('@/lib/db/client');
+jest.mock('@/lib/auth/config', () => ({
   authConfig: {}
 }));
 
-const mockGetServerSession = getServerSession as Mock;
+const mockGetServerSession = getServerSession as jest.MockedFunction<typeof getServerSession>;
 const mockDb = db as any;
 
 // Mock session data
@@ -56,25 +56,25 @@ const mockAssessment = {
 
 describe('Verification API Endpoints', () => {
   beforeEach(() => {
-    vi.clearAllMocks();
+    jest.clearAllMocks();
     
     // Setup default mocks
     mockGetServerSession.mockResolvedValue(mockCoordinatorSession);
     mockDb.user = {
-      findUnique: vi.fn().mockResolvedValue(mockCoordinatorUser)
+      findUnique: jest.fn().mockResolvedValue(mockCoordinatorUser)
     };
   });
 
   afterEach(() => {
-    vi.clearAllMocks();
+    jest.clearAllMocks();
   });
 
   describe('GET /api/v1/verification/queue/assessments', () => {
     it('should return verification queue for coordinator', async () => {
       // Setup mocks
       mockDb.rapidAssessment = {
-        count: vi.fn().mockResolvedValue(5),
-        findMany: vi.fn().mockResolvedValue([mockAssessment])
+        count: jest.fn().mockResolvedValue(5),
+        findMany: jest.fn().mockResolvedValue([mockAssessment])
       };
 
       const request = new NextRequest('http://localhost/api/v1/verification/queue/assessments?status=SUBMITTED');
@@ -121,8 +121,8 @@ describe('Verification API Endpoints', () => {
 
     it('should filter by status parameter', async () => {
       mockDb.rapidAssessment = {
-        count: vi.fn().mockResolvedValue(3),
-        findMany: vi.fn().mockResolvedValue([mockAssessment])
+        count: jest.fn().mockResolvedValue(3),
+        findMany: jest.fn().mockResolvedValue([mockAssessment])
       };
 
       const request = new NextRequest('http://localhost/api/v1/verification/queue/assessments?status=VERIFIED');
@@ -141,8 +141,8 @@ describe('Verification API Endpoints', () => {
 
     it('should support pagination', async () => {
       mockDb.rapidAssessment = {
-        count: vi.fn().mockResolvedValue(25),
-        findMany: vi.fn().mockResolvedValue([mockAssessment])
+        count: jest.fn().mockResolvedValue(25),
+        findMany: jest.fn().mockResolvedValue([mockAssessment])
       };
 
       const request = new NextRequest('http://localhost/api/v1/verification/queue/assessments?page=2&limit=5');
@@ -172,14 +172,14 @@ describe('Verification API Endpoints', () => {
         verifiedBy: 'coordinator-1'
       };
 
-      mockDb.$transaction = vi.fn().mockImplementation(async (callback) => {
+      mockDb.$transaction = jest.fn().mockImplementation(async (callback) => {
         return await callback({
           rapidAssessment: {
-            findUnique: vi.fn().mockResolvedValue(mockAssessment),
-            update: vi.fn().mockResolvedValue(mockUpdatedAssessment)
+            findUnique: jest.fn().mockResolvedValue(mockAssessment),
+            update: jest.fn().mockResolvedValue(mockUpdatedAssessment)
           },
           auditLog: {
-            create: vi.fn().mockResolvedValue({})
+            create: jest.fn().mockResolvedValue({})
           }
         });
       });
@@ -205,10 +205,10 @@ describe('Verification API Endpoints', () => {
         verificationStatus: 'VERIFIED'
       };
 
-      mockDb.$transaction = vi.fn().mockImplementation(async (callback) => {
+      mockDb.$transaction = jest.fn().mockImplementation(async (callback) => {
         return await callback({
           rapidAssessment: {
-            findUnique: vi.fn().mockResolvedValue(alreadyVerifiedAssessment)
+            findUnique: jest.fn().mockResolvedValue(alreadyVerifiedAssessment)
           }
         });
       });
@@ -228,10 +228,10 @@ describe('Verification API Endpoints', () => {
     });
 
     it('should handle non-existent assessment', async () => {
-      mockDb.$transaction = vi.fn().mockImplementation(async (callback) => {
+      mockDb.$transaction = jest.fn().mockImplementation(async (callback) => {
         return await callback({
           rapidAssessment: {
-            findUnique: vi.fn().mockResolvedValue(null)
+            findUnique: jest.fn().mockResolvedValue(null)
           }
         });
       });
@@ -262,14 +262,14 @@ describe('Verification API Endpoints', () => {
         verifiedBy: 'coordinator-1'
       };
 
-      mockDb.$transaction = vi.fn().mockImplementation(async (callback) => {
+      mockDb.$transaction = jest.fn().mockImplementation(async (callback) => {
         return await callback({
           rapidAssessment: {
-            findUnique: vi.fn().mockResolvedValue(mockAssessment),
-            update: vi.fn().mockResolvedValue(mockRejectedAssessment)
+            findUnique: jest.fn().mockResolvedValue(mockAssessment),
+            update: jest.fn().mockResolvedValue(mockRejectedAssessment)
           },
           auditLog: {
-            create: vi.fn().mockResolvedValue({})
+            create: jest.fn().mockResolvedValue({})
           }
         });
       });
@@ -334,17 +334,17 @@ describe('Verification API Endpoints', () => {
     it('should return verification metrics', async () => {
       // Mock database queries for metrics
       mockDb.rapidAssessment = {
-        count: vi.fn()
+        count: jest.fn()
           .mockResolvedValueOnce(10) // totalPending
           .mockResolvedValueOnce(25) // totalVerified
           .mockResolvedValueOnce(5)  // totalRejected
           .mockResolvedValueOnce(15), // totalAutoVerified
-        groupBy: vi.fn().mockResolvedValue([
+        groupBy: jest.fn().mockResolvedValue([
           { rapidAssessmentType: 'HEALTH', _count: 5 },
           { rapidAssessmentType: 'WASH', _count: 3 },
           { rapidAssessmentType: 'FOOD', _count: 2 }
         ]),
-        findMany: vi.fn().mockResolvedValue([
+        findMany: jest.fn().mockResolvedValue([
           {
             createdAt: new Date('2025-01-01T10:00:00Z'),
             verifiedAt: new Date('2025-01-01T10:30:00Z')
@@ -387,9 +387,9 @@ describe('Verification API Endpoints', () => {
       const fifteenMinutesAgo = new Date(now.getTime() - 15 * 60 * 1000);
 
       mockDb.rapidAssessment = {
-        count: vi.fn().mockResolvedValue(0),
-        groupBy: vi.fn().mockResolvedValue([]),
-        findMany: vi.fn().mockResolvedValue([
+        count: jest.fn().mockResolvedValue(0),
+        groupBy: jest.fn().mockResolvedValue([]),
+        findMany: jest.fn().mockResolvedValue([
           {
             createdAt: thirtyMinutesAgo,
             verifiedAt: now
@@ -412,9 +412,9 @@ describe('Verification API Endpoints', () => {
 
     it('should handle zero verification times gracefully', async () => {
       mockDb.rapidAssessment = {
-        count: vi.fn().mockResolvedValue(0),
-        groupBy: vi.fn().mockResolvedValue([]),
-        findMany: vi.fn().mockResolvedValue([]) // No verification times
+        count: jest.fn().mockResolvedValue(0),
+        groupBy: jest.fn().mockResolvedValue([]),
+        findMany: jest.fn().mockResolvedValue([]) // No verification times
       };
 
       const request = new NextRequest('http://localhost/api/v1/verification/metrics');

@@ -1,33 +1,33 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from '@jest/globals'
+import { describe, it, expect, jest, beforeEach, afterEach } from '@jest/globals'
 import { deliveryOfflineService } from '@/lib/services/delivery-offline.service'
 import { offlineDB } from '@/lib/db/offline'
 import { ConfirmDeliveryInput } from '@/lib/validation/response'
 
 // Mock offlineDB
-vi.mock('@/lib/db/offline', () => ({
+jest.mock('@/lib/db/offline', () => ({
   offlineDB: {
-    addDeliveryOfflineOperation: vi.fn(),
-    addDeliveryConfirmation: vi.fn(),
-    storeOfflineFile: vi.fn(),
-    getDeliveryOfflineOperations: vi.fn(),
-    updateDeliveryOfflineOperation: vi.fn(),
-    getDeliveryConfirmation: vi.fn()
+    addDeliveryOfflineOperation: jest.fn(),
+    addDeliveryConfirmation: jest.fn(),
+    storeOfflineFile: jest.fn(),
+    getDeliveryOfflineOperations: jest.fn(),
+    updateDeliveryOfflineOperation: jest.fn(),
+    getDeliveryConfirmation: jest.fn()
   }
 }))
 
 // Mock fetch
-global.fetch = vi.fn()
+global.fetch = jest.fn()
 
 describe('DeliveryOfflineService', () => {
   beforeEach(() => {
-    vi.clearAllMocks()
-    vi.stubGlobal('navigator', {
+    jest.clearAllMocks()
+    jest.stubGlobal('navigator', {
       onLine: true
     })
   })
 
   afterEach(() => {
-    vi.restoreAllMocks()
+    jest.restoreAllMocks()
   })
 
   describe('storeDeliveryConfirmation', () => {
@@ -69,13 +69,13 @@ describe('DeliveryOfflineService', () => {
         }
       }
 
-      vi.mocked(fetch).mockResolvedValueOnce({
+      jest.mocked(fetch).mockResolvedValueOnce({
         ok: true,
-        json: vi.fn().mockResolvedValueOnce(mockResponse)
+        json: jest.fn().mockResolvedValueOnce(mockResponse)
       } as Response)
 
-      vi.mocked(offlineDB.addDeliveryConfirmation).mockResolvedValueOnce(1)
-      vi.mocked(offlineDB.getDeliveryConfirmation).mockResolvedValueOnce(null)
+      jest.mocked(offlineDB.addDeliveryConfirmation).mockResolvedValueOnce(1)
+      jest.mocked(offlineDB.getDeliveryConfirmation).mockResolvedValueOnce(null)
 
       const result = await deliveryOfflineService.storeDeliveryConfirmation(
         mockDeliveryData,
@@ -98,9 +98,9 @@ describe('DeliveryOfflineService', () => {
     })
 
     it('should fallback to offline storage when online fails', async () => {
-      vi.mocked(fetch).mockRejectedValueOnce(new Error('Network error'))
-      vi.mocked(offlineDB.addDeliveryOfflineOperation).mockResolvedValueOnce(1)
-      vi.mocked(offlineDB.addDeliveryConfirmation).mockResolvedValueOnce(1)
+      jest.mocked(fetch).mockRejectedValueOnce(new Error('Network error'))
+      jest.mocked(offlineDB.addDeliveryOfflineOperation).mockResolvedValueOnce(1)
+      jest.mocked(offlineDB.addDeliveryConfirmation).mockResolvedValueOnce(1)
 
       const result = await deliveryOfflineService.storeDeliveryConfirmation(
         mockDeliveryData,
@@ -130,8 +130,8 @@ describe('DeliveryOfflineService', () => {
         timestamp: new Date()
       }
 
-      vi.mocked(fetch).mockRejectedValueOnce(new Error('Network error'))
-      vi.mocked(offlineDB.addDeliveryOfflineOperation).mockResolvedValueOnce(1)
+      jest.mocked(fetch).mockRejectedValueOnce(new Error('Network error'))
+      jest.mocked(offlineDB.addDeliveryOfflineOperation).mockResolvedValueOnce(1)
 
       const result = await deliveryOfflineService.storeDeliveryConfirmation(
         mockDeliveryData,
@@ -157,7 +157,7 @@ describe('DeliveryOfflineService', () => {
     const mockResponderId = 'user-123'
 
     it('should store media files successfully', async () => {
-      vi.mocked(offlineDB.storeOfflineFile).mockResolvedValueOnce(1)
+      jest.mocked(offlineDB.storeOfflineFile).mockResolvedValueOnce(1)
 
       const result = await deliveryOfflineService.storeMediaFilesOffline(
         mockMediaFiles,
@@ -171,7 +171,7 @@ describe('DeliveryOfflineService', () => {
     })
 
     it('should handle file storage errors', async () => {
-      vi.mocked(offlineDB.storeOfflineFile).mockRejectedValueOnce(new Error('Storage error'))
+      jest.mocked(offlineDB.storeOfflineFile).mockRejectedValueOnce(new Error('Storage error'))
 
       const result = await deliveryOfflineService.storeMediaFilesOffline(
         mockMediaFiles,
@@ -216,7 +216,7 @@ describe('DeliveryOfflineService', () => {
         }
       ]
 
-      vi.mocked(offlineDB.getDeliveryOfflineOperations).mockResolvedValueOnce(mockOperations as any)
+      jest.mocked(offlineDB.getDeliveryOfflineOperations).mockResolvedValueOnce(mockOperations as any)
 
       const queue = await deliveryOfflineService.getOfflineQueueStatus()
 
@@ -226,7 +226,7 @@ describe('DeliveryOfflineService', () => {
     })
 
     it('should handle database errors gracefully', async () => {
-      vi.mocked(offlineDB.getDeliveryOfflineOperations).mockRejectedValueOnce(new Error('DB error'))
+      jest.mocked(offlineDB.getDeliveryOfflineOperations).mockRejectedValueOnce(new Error('DB error'))
 
       const queue = await deliveryOfflineService.getOfflineQueueStatus()
 
@@ -257,12 +257,12 @@ describe('DeliveryOfflineService', () => {
         responseId: 'resp-1'
       }
 
-      vi.mocked(offlineDB.getDeliveryOfflineOperations).mockResolvedValueOnce([mockOperation] as any)
-      vi.mocked(fetch).mockResolvedValueOnce({
+      jest.mocked(offlineDB.getDeliveryOfflineOperations).mockResolvedValueOnce([mockOperation] as any)
+      jest.mocked(fetch).mockResolvedValueOnce({
         ok: true,
-        json: vi.fn().mockResolvedValueOnce({ success: true })
+        json: jest.fn().mockResolvedValueOnce({ success: true })
       } as Response)
-      vi.mocked(offlineDB.updateDeliveryOfflineOperation).mockResolvedValueOnce(1)
+      jest.mocked(offlineDB.updateDeliveryOfflineOperation).mockResolvedValueOnce(1)
 
       const results = await deliveryOfflineService.syncPendingOperations()
 
@@ -283,7 +283,7 @@ describe('DeliveryOfflineService', () => {
         priority: 1
       }
 
-      vi.mocked(offlineDB.getDeliveryOfflineOperations).mockResolvedValueOnce([mockOperation] as any)
+      jest.mocked(offlineDB.getDeliveryOfflineOperations).mockResolvedValueOnce([mockOperation] as any)
 
       const results = await deliveryOfflineService.syncPendingOperations()
 
@@ -303,9 +303,9 @@ describe('DeliveryOfflineService', () => {
         priority: 1
       }
 
-      vi.mocked(offlineDB.getDeliveryOfflineOperations).mockResolvedValueOnce([mockOperation] as any)
-      vi.mocked(fetch).mockRejectedValueOnce(new Error('Network error'))
-      vi.mocked(offlineDB.updateDeliveryOfflineOperation).mockResolvedValueOnce(1)
+      jest.mocked(offlineDB.getDeliveryOfflineOperations).mockResolvedValueOnce([mockOperation] as any)
+      jest.mocked(fetch).mockRejectedValueOnce(new Error('Network error'))
+      jest.mocked(offlineDB.updateDeliveryOfflineOperation).mockResolvedValueOnce(1)
 
       const results = await deliveryOfflineService.syncPendingOperations()
 
@@ -333,7 +333,7 @@ describe('DeliveryOfflineService', () => {
         cancelled: []
       }
 
-      vi.spyOn(deliveryOfflineService, 'getOfflineQueueStatus').mockResolvedValueOnce(mockQueue as any)
+      jest.spyOn(deliveryOfflineService, 'getOfflineQueueStatus').mockResolvedValueOnce(mockQueue as any)
 
       const stats = await deliveryOfflineService.getOfflineStats()
 

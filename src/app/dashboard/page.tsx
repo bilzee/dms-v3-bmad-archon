@@ -25,11 +25,16 @@ import {
   HandHeart,
   TrendingUp,
   Clock,
-  Loader2
+  Loader2,
+  UserPlus,
+  Heart,
+  Award,
+  Target,
+  Building2
 } from 'lucide-react'
 
 export default function DashboardPage() {
-  const { user, hasPermission } = useAuth()
+  const { user, hasPermission, hasRole } = useAuth()
   const { stats, recentCommitments, loading, error } = useCommitmentStats()
 
   if (!user) {
@@ -282,7 +287,7 @@ export default function DashboardPage() {
         </Card>
 
         {/* Commitment Statistics - Story 4.3 */}
-        {hasPermission('RESPONDER') && (
+        {hasRole('RESPONDER') && (
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
@@ -365,6 +370,113 @@ export default function DashboardPage() {
                     </Link>
                   </div>
                 )}
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Donor Registration - Story 5.1 */}
+        <Card className="border-green-200 bg-green-50/30">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <UserPlus className="h-5 w-5 text-green-600" />
+              Donor Registration
+            </CardTitle>
+            <CardDescription>
+              Register donor organizations and manage their contributions to disaster response
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-3">
+              <div className="flex items-center gap-2">
+                <Badge variant="outline" className="text-xs">Story 5.1</Badge>
+                <Badge variant="secondary" className="text-xs">Public Access</Badge>
+                <Badge variant="outline" className="text-xs bg-green-50 text-green-700 border-green-200">New</Badge>
+                <Badge variant="outline" className="text-xs bg-blue-50 text-blue-700 border-green-200">Complete</Badge>
+              </div>
+              <div className="grid grid-cols-1 gap-2">
+                <Link href="/register">
+                  <Button className="w-full justify-start bg-green-600 hover:bg-green-700">
+                    <UserPlus className="h-4 w-4 mr-2" />
+                    Register as Donor
+                  </Button>
+                </Link>
+                {hasPermission('MANAGE_USERS') && (
+                  <Link href="/admin/donors">
+                    <Button variant="outline" className="w-full justify-start">
+                      <Building2 className="h-4 w-4 mr-2" />
+                      Manage Donors (Admin)
+                    </Button>
+                  </Link>
+                )}
+              </div>
+              <div className="text-xs text-muted-foreground">
+                Features multi-step registration, organization profile management, and entity assignment
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Donor Portal & Management - Story 5.1 */}
+        {(hasPermission('VIEW_DONOR_DASHBOARD') || hasPermission('MANAGE_USERS')) && (
+          <Card className="border-emerald-200 bg-emerald-50/30">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Heart className="h-5 w-5 text-emerald-600" />
+                Donor Portal
+              </CardTitle>
+              <CardDescription>
+                Access donor dashboard, manage profiles, view assessments, and track contribution impact
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-3">
+                <div className="flex items-center gap-2">
+                  <Badge variant="outline" className="text-xs">Story 5.1</Badge>
+                  <Badge variant="secondary" className="text-xs">Donor Role</Badge>
+                  <Badge variant="outline" className="text-xs bg-emerald-50 text-emerald-700 border-emerald-200">Complete</Badge>
+                </div>
+                <div className="grid grid-cols-1 gap-2">
+                  {hasPermission('VIEW_DONOR_DASHBOARD') && (
+                    <Link href="/donor/dashboard">
+                      <Button className="w-full justify-start bg-emerald-600 hover:bg-emerald-700">
+                        <Heart className="h-4 w-4 mr-2" />
+                        Donor Dashboard
+                      </Button>
+                    </Link>
+                  )}
+                  {hasPermission('VIEW_DONOR_DASHBOARD') && (
+                    <Link href="/rapid-assessments">
+                      <Button variant="outline" className="w-full justify-start">
+                        <FileText className="h-4 w-4 mr-2" />
+                        View Assessments
+                      </Button>
+                    </Link>
+                  )}
+                  <Link href="/donor/profile">
+                    <Button variant="outline" className="w-full justify-start">
+                      <User className="h-4 w-4 mr-2" />
+                      Donor Profile
+                    </Button>
+                  </Link>
+                  <Link href="/donor/entities">
+                    <Button variant="outline" className="w-full justify-start">
+                      <MapPin className="h-4 w-4 mr-2" />
+                      Assigned Entities
+                    </Button>
+                  </Link>
+                  {hasPermission('MANAGE_USERS') && (
+                    <Link href="/admin/donors/metrics">
+                      <Button variant="outline" className="w-full justify-start">
+                        <Award className="h-4 w-4 mr-2" />
+                        Donor Metrics
+                      </Button>
+                    </Link>
+                  )}
+                </div>
+                <div className="text-xs text-muted-foreground">
+                  Features performance metrics, commitment tracking, and read-only assessment viewing
+                </div>
               </div>
             </CardContent>
           </Card>
@@ -484,6 +596,52 @@ export default function DashboardPage() {
               </div>
               <div className="text-xs text-muted-foreground">
                 Review delivery documentation, GPS data, and photo evidence
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Response Verification Process - Story 4.4 */}
+        <Card className="border-purple-200 bg-purple-50/30">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <CheckCircle className="h-5 w-5 text-purple-600" />
+              Response Verification Process
+            </CardTitle>
+            <CardDescription>
+              Complete response verification workflow with donor attribution and auto-approval
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-3">
+              <div className="flex items-center gap-2">
+                <Badge variant="outline" className="text-xs">Story 4.4</Badge>
+                <Badge variant="secondary" className="text-xs">Coordinator</Badge>
+                <Badge variant="outline" className="text-xs bg-purple-50 text-purple-700 border-purple-200">Latest</Badge>
+                <Badge variant="outline" className="text-xs bg-green-50 text-green-700 border-green-200">Complete</Badge>
+              </div>
+              <div className="grid grid-cols-1 gap-2">
+                <Link href="/coordinator/verification?tab=responses">
+                  <Button className="w-full justify-start bg-purple-600 hover:bg-purple-700">
+                    <CheckCircle className="h-4 w-4 mr-2" />
+                    Response Verification Queue
+                  </Button>
+                </Link>
+                <Link href="/coordinator/verification/auto-approval">
+                  <Button variant="outline" className="w-full justify-start">
+                    <Settings className="h-4 w-4 mr-2" />
+                    Auto-Approval Configuration
+                  </Button>
+                </Link>
+                <Link href="/coordinator/verification">
+                  <Button variant="outline" className="w-full justify-start">
+                    <BarChart3 className="h-4 w-4 mr-2" />
+                    Verification Dashboard
+                  </Button>
+                </Link>
+              </div>
+              <div className="text-xs text-muted-foreground">
+                Features response queue filtering, donor attribution visibility, approve/reject with feedback, and auto-approval support
               </div>
             </div>
           </CardContent>

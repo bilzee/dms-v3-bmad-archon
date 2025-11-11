@@ -119,7 +119,7 @@ export const POST = withAuth(async (request: NextRequest, context) => {
         assessment = await tx.rapidAssessment.create({
           data: {
             id: `assessment-commitment-${commitment.id}`,
-            rapidAssessmentType: 'LOGISTICS',
+            rapidAssessmentType: 'SECURITY',
             rapidAssessmentDate: new Date(),
             assessorId: user.id,
             entityId: commitment.entityId,

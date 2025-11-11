@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, vi } from 'vitest'
+import { describe, it, expect, beforeEach, jest } from '@jest/globals'
 import { render, screen, fireEvent, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
@@ -9,16 +9,16 @@ import { useOffline } from '@/hooks/useOffline'
 import * as deliveryOfflineService from '@/lib/services/delivery-offline.service'
 
 // Mock dependencies
-vi.mock('@/stores/auth.store')
-vi.mock('@/hooks/useGPS')
-vi.mock('@/hooks/useOffline')
-vi.mock('@/lib/services/delivery-offline.service')
-vi.mock('@/hooks/useToast')
+jest.mock('@/stores/auth.store')
+jest.mock('@/hooks/useGPS')
+jest.mock('@/hooks/useOffline')
+jest.mock('@/lib/services/delivery-offline.service')
+jest.mock('@/hooks/useToast')
 
-const mockUseAuthStore = vi.mocked(useAuthStore)
-const mockUseGPS = vi.mocked(useGPS)
-const mockUseOffline = vi.mocked(useOffline)
-const mockDeliveryOfflineService = vi.mocked(deliveryOfflineService)
+const mockUseAuthStore = jest.mocked(useAuthStore)
+const mockUseGPS = jest.mocked(useGPS)
+const mockUseOffline = jest.mocked(useOffline)
+const mockDeliveryOfflineService = jest.mocked(deliveryOfflineService)
 
 describe('DeliveryConfirmationForm', () => {
   let queryClient: QueryClient
@@ -51,7 +51,7 @@ describe('DeliveryConfirmationForm', () => {
     } as any)
 
     mockUseGPS.mockReturnValue({
-      getCurrentLocation: vi.fn().mockResolvedValue(mockGPSLocation),
+      getCurrentLocation: jest.fn().mockResolvedValue(mockGPSLocation),
       isCapturing: false,
       error: null
     } as any)
@@ -62,18 +62,18 @@ describe('DeliveryConfirmationForm', () => {
     } as any)
 
     // Mock fetch for API calls
-    global.fetch = vi.fn()
+    global.fetch = jest.fn()
   })
 
   afterEach(() => {
-    vi.clearAllMocks()
+    jest.clearAllMocks()
   })
 
   const renderComponent = (props = {}) => {
     const defaultProps = {
       responseId: 'resp-123',
-      onSuccess: vi.fn(),
-      onCancel: vi.fn()
+      onSuccess: jest.fn(),
+      onCancel: jest.fn()
     }
 
     return render(
@@ -86,9 +86,9 @@ describe('DeliveryConfirmationForm', () => {
   describe('Form Initialization', () => {
     it('should render form with all required fields', async () => {
       // Mock the response data
-      vi.mocked(fetch).mockResolvedValueOnce({
+      jest.mocked(fetch).mockResolvedValueOnce({
         ok: true,
-        json: vi.fn().mockResolvedValueOnce({
+        json: jest.fn().mockResolvedValueOnce({
           data: {
             id: 'resp-123',
             status: 'PLANNED',
@@ -112,16 +112,16 @@ describe('DeliveryConfirmationForm', () => {
     })
 
     it('should capture GPS location on mount', async () => {
-      const mockGetCurrentLocation = vi.fn().mockResolvedValue(mockGPSLocation)
+      const mockGetCurrentLocation = jest.fn().mockResolvedValue(mockGPSLocation)
       mockUseGPS.mockReturnValue({
         getCurrentLocation: mockGetCurrentLocation,
         isCapturing: false,
         error: null
       } as any)
 
-      vi.mocked(fetch).mockResolvedValueOnce({
+      jest.mocked(fetch).mockResolvedValueOnce({
         ok: true,
-        json: vi.fn().mockResolvedValueOnce({
+        json: jest.fn().mockResolvedValueOnce({
           data: { id: 'resp-123', status: 'PLANNED', items: [] }
         })
       } as Response)
@@ -139,9 +139,9 @@ describe('DeliveryConfirmationForm', () => {
         connectionType: 'none'
       } as any)
 
-      vi.mocked(fetch).mockResolvedValueOnce({
+      jest.mocked(fetch).mockResolvedValueOnce({
         ok: true,
-        json: vi.fn().mockResolvedValueOnce({
+        json: jest.fn().mockResolvedValueOnce({
           data: { id: 'resp-123', status: 'PLANNED', items: [] }
         })
       } as Response)
@@ -156,9 +156,9 @@ describe('DeliveryConfirmationForm', () => {
 
   describe('Form Validation', () => {
     beforeEach(async () => {
-      vi.mocked(fetch).mockResolvedValueOnce({
+      jest.mocked(fetch).mockResolvedValueOnce({
         ok: true,
-        json: vi.fn().mockResolvedValueOnce({
+        json: jest.fn().mockResolvedValueOnce({
           data: { id: 'resp-123', status: 'PLANNED', items: [] }
         })
       } as Response)
@@ -171,7 +171,7 @@ describe('DeliveryConfirmationForm', () => {
 
     it('should require GPS location for submission', async () => {
       mockUseGPS.mockReturnValue({
-        getCurrentLocation: vi.fn().mockResolvedValue(null),
+        getCurrentLocation: jest.fn().mockResolvedValue(null),
         isCapturing: false,
         error: 'GPS unavailable'
       } as any)
@@ -191,9 +191,9 @@ describe('DeliveryConfirmationForm', () => {
 
     it('should require at least one delivered item', async () => {
       // Mock empty items array
-      vi.mocked(fetch).mockResolvedValueOnce({
+      jest.mocked(fetch).mockResolvedValueOnce({
         ok: true,
-        json: vi.fn().mockResolvedValueOnce({
+        json: jest.fn().mockResolvedValueOnce({
           data: { id: 'resp-123', status: 'PLANNED', items: [] }
         })
       } as Response)
@@ -221,9 +221,9 @@ describe('DeliveryConfirmationForm', () => {
     })
 
     it('should submit delivery confirmation online successfully', async () => {
-      vi.mocked(fetch).mockResolvedValueOnce({
+      jest.mocked(fetch).mockResolvedValueOnce({
         ok: true,
-        json: vi.fn().mockResolvedValueOnce({
+        json: jest.fn().mockResolvedValueOnce({
           data: { 
             id: 'resp-123', 
             status: 'PLANNED', 
@@ -234,7 +234,7 @@ describe('DeliveryConfirmationForm', () => {
         })
       } as Response)
 
-      const mockOnSuccess = vi.fn()
+      const mockOnSuccess = jest.fn()
       renderComponent({ onSuccess: mockOnSuccess })
 
       await waitFor(() => {
@@ -242,9 +242,9 @@ describe('DeliveryConfirmationForm', () => {
       })
 
       // Mock successful delivery confirmation
-      vi.mocked(fetch).mockResolvedValueOnce({
+      jest.mocked(fetch).mockResolvedValueOnce({
         ok: true,
-        json: vi.fn().mockResolvedValueOnce({
+        json: jest.fn().mockResolvedValueOnce({
           success: true,
           data: {
             id: 'resp-123',
@@ -268,9 +268,9 @@ describe('DeliveryConfirmationForm', () => {
     })
 
     it('should fallback to offline mode when online submission fails', async () => {
-      vi.mocked(fetch).mockResolvedValueOnce({
+      jest.mocked(fetch).mockResolvedValueOnce({
         ok: true,
-        json: vi.fn().mockResolvedValueOnce({
+        json: jest.fn().mockResolvedValueOnce({
           data: { 
             id: 'resp-123', 
             status: 'PLANNED', 
@@ -281,7 +281,7 @@ describe('DeliveryConfirmationForm', () => {
         })
       } as Response)
 
-      const mockOnSuccess = vi.fn()
+      const mockOnSuccess = jest.fn()
       renderComponent({ onSuccess: mockOnSuccess })
 
       await waitFor(() => {
@@ -289,7 +289,7 @@ describe('DeliveryConfirmationForm', () => {
       })
 
       // Mock online failure, then offline success
-      vi.mocked(fetch).mockRejectedValueOnce(new Error('Network error'))
+      jest.mocked(fetch).mockRejectedValueOnce(new Error('Network error'))
       
       mockDeliveryOfflineService.storeDeliveryConfirmation.mockResolvedValueOnce({
         success: false,
@@ -325,9 +325,9 @@ describe('DeliveryConfirmationForm', () => {
     })
 
     it('should store delivery confirmation offline when offline', async () => {
-      vi.mocked(fetch).mockResolvedValueOnce({
+      jest.mocked(fetch).mockResolvedValueOnce({
         ok: true,
-        json: vi.fn().mockResolvedValueOnce({
+        json: jest.fn().mockResolvedValueOnce({
           data: { 
             id: 'resp-123', 
             status: 'PLANNED', 
@@ -338,7 +338,7 @@ describe('DeliveryConfirmationForm', () => {
         })
       } as Response)
 
-      const mockOnSuccess = vi.fn()
+      const mockOnSuccess = jest.fn()
       renderComponent({ onSuccess: mockOnSuccess })
 
       await waitFor(() => {
@@ -380,9 +380,9 @@ describe('DeliveryConfirmationForm', () => {
         connectionType: 'none'
       } as any)
 
-      vi.mocked(fetch).mockResolvedValueOnce({
+      jest.mocked(fetch).mockResolvedValueOnce({
         ok: true,
-        json: vi.fn().mockResolvedValueOnce({
+        json: jest.fn().mockResolvedValueOnce({
           data: { id: 'resp-123', status: 'PLANNED', items: [] }
         })
       } as Response)
@@ -398,9 +398,9 @@ describe('DeliveryConfirmationForm', () => {
 
   describe('Media Handling', () => {
     it('should handle media attachment callbacks', async () => {
-      vi.mocked(fetch).mockResolvedValueOnce({
+      jest.mocked(fetch).mockResolvedValueOnce({
         ok: true,
-        json: vi.fn().mockResolvedValueOnce({
+        json: jest.fn().mockResolvedValueOnce({
           data: { id: 'resp-123', status: 'PLANNED', items: [] }
         })
       } as Response)
@@ -428,7 +428,7 @@ describe('DeliveryConfirmationForm', () => {
 
   describe('Error Handling', () => {
     it('should handle response loading errors gracefully', async () => {
-      vi.mocked(fetch).mockRejectedValueOnce(new Error('Failed to load response'))
+      jest.mocked(fetch).mockRejectedValueOnce(new Error('Failed to load response'))
 
       renderComponent()
 
@@ -439,14 +439,14 @@ describe('DeliveryConfirmationForm', () => {
 
     it('should handle GPS capture errors', async () => {
       mockUseGPS.mockReturnValue({
-        getCurrentLocation: vi.fn().mockRejectedValue(new Error('GPS error')),
+        getCurrentLocation: jest.fn().mockRejectedValue(new Error('GPS error')),
         isCapturing: false,
         error: 'GPS error'
       } as any)
 
-      vi.mocked(fetch).mockResolvedValueOnce({
+      jest.mocked(fetch).mockResolvedValueOnce({
         ok: true,
-        json: vi.fn().mockResolvedValueOnce({
+        json: jest.fn().mockResolvedValueOnce({
           data: { id: 'resp-123', status: 'PLANNED', items: [] }
         })
       } as Response)
@@ -467,9 +467,9 @@ describe('DeliveryConfirmationForm', () => {
 
   describe('Accessibility', () => {
     it('should have proper form labels and ARIA attributes', async () => {
-      vi.mocked(fetch).mockResolvedValueOnce({
+      jest.mocked(fetch).mockResolvedValueOnce({
         ok: true,
-        json: vi.fn().mockResolvedValueOnce({
+        json: jest.fn().mockResolvedValueOnce({
           data: { id: 'resp-123', status: 'PLANNED', items: [] }
         })
       } as Response)
@@ -487,9 +487,9 @@ describe('DeliveryConfirmationForm', () => {
     })
 
     it('should support keyboard navigation', async () => {
-      vi.mocked(fetch).mockResolvedValueOnce({
+      jest.mocked(fetch).mockResolvedValueOnce({
         ok: true,
-        json: vi.fn().mockResolvedValueOnce({
+        json: jest.fn().mockResolvedValueOnce({
           data: { id: 'resp-123', status: 'PLANNED', items: [] }
         })
       } as Response)

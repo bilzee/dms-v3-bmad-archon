@@ -1,4 +1,5 @@
 import '@testing-library/jest-dom';
+import React from 'react';
 
 // Mock Zustand - consolidated mock
 const mockStore = {
@@ -13,6 +14,10 @@ const mockStore = {
   roleSessionState: {},
   login: jest.fn(),
   logout: jest.fn(function() {
+    // Remove token from localStorage
+    if (typeof window !== 'undefined') {
+      localStorage.removeItem('auth_token');
+    }
     mockStore.user = null;
     mockStore.token = null;
     mockStore.isAuthenticated = false;
@@ -27,16 +32,49 @@ const mockStore = {
     mockStore.user = user;
     mockStore.token = token;
     mockStore.isAuthenticated = true;
-    const userRoles = user?.roles?.map((r: any) => r.role.name) || [];
+    const userRoles = user?.roles?.map((ur: any) => ur.role.name) || [];
     mockStore.roles = userRoles;
     mockStore.availableRoles = userRoles;
-    // Preserve current role if it exists in the user's roles, otherwise set to first available role
+    
+    // Role priority logic matching real auth store
+    const getHighestPriorityRole = (roleList: string[]) => {
+      if (roleList.length === 0) return null;
+      const rolePriority = ['COORDINATOR', 'ASSESSOR', 'RESPONDER', 'DONOR', 'ADMIN'];
+      return roleList.reduce((highest: string | null, role: string) => {
+        if (!highest) return role;
+        return rolePriority.indexOf(role) < rolePriority.indexOf(highest) ? role : highest;
+      }, null);
+    };
+    
+    const highestPriorityRole = getHighestPriorityRole(userRoles);
+    
+    // Add role property to user object to match real behavior
+    mockStore.user = {
+      ...user,
+      role: highestPriorityRole
+    };
+    
+    // Preserve current role if it exists in the user's roles, otherwise set to highest priority role
     if (mockStore.currentRole && userRoles.includes(mockStore.currentRole)) {
       // Keep existing currentRole
     } else {
-      mockStore.currentRole = userRoles[0] || null;
+      mockStore.currentRole = highestPriorityRole;
     }
-    mockStore.permissions = user?.roles?.flatMap((r: any) => r.role.permissions?.map((p: any) => p.code) || []) || [];
+    
+    // Extract permissions from the nested permission objects
+    const permissions = Array.from(
+      new Set(
+        user?.roles?.flatMap((ur: any) => 
+          ur.role.permissions?.map((rp: any) => rp.permission.code) || []
+        ) || []
+      )
+    );
+    mockStore.permissions = permissions;
+    
+    // Set token in localStorage if window is available
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('auth_token', token);
+    }
   }),
   switchRole: jest.fn(function(role: string) {
     if (!mockStore.roles.includes(role)) {
@@ -341,3 +379,162 @@ Object.defineProperty(window, 'matchMedia', {
 
 // Setup test environment
 process.env.NODE_ENV = 'test';
+
+// Polyfill for TextEncoder and TextDecoder for integration tests
+import { TextEncoder, TextDecoder } from 'util'
+global.TextEncoder = TextEncoder
+global.TextDecoder = TextDecoder
+
+// Mock FormData
+global.FormData = class MockFormData {
+  private data = new Map<string, any>()
+  
+  append(name: string, value: any) {
+    this.data.set(name, value)
+  }
+  
+  get(name: string) {
+    return this.data.get(name)
+  }
+  
+  entries() {
+    return this.data.entries()
+  }
+} as any
+
+// Mock all UI components for testing
+jest.mock('@/components/ui/button', () => ({
+  Button: ({ children, onClick, ...props }: any) => 
+    React.createElement('button', { onClick, ...props }, children)
+}))
+
+jest.mock('@/components/ui/card', () => ({
+  Card: ({ children, ...props }: any) => 
+    React.createElement('div', { 'data-testid': 'card', ...props }, children),
+  CardHeader: ({ children, ...props }: any) => 
+    React.createElement('div', { 'data-testid': 'card-header', ...props }, children),
+  CardContent: ({ children, ...props }: any) => 
+    React.createElement('div', { 'data-testid': 'card-content', ...props }, children),
+  CardDescription: ({ children, ...props }: any) => 
+    React.createElement('p', { 'data-testid': 'card-description', ...props }, children),
+  CardTitle: ({ children, ...props }: any) => 
+    React.createElement('h3', { 'data-testid': 'card-title', ...props }, children)
+}))
+
+jest.mock('@/components/ui/input', () => ({
+  Input: (props: any) => {
+    const { 'data-testid': testId, ...fieldProps } = props
+    // Support React Hook Form field props
+    const field = fieldProps
+    if (field.onChange && typeof field.onChange === 'function') {
+      return React.createElement('input', { 
+        'data-testid': testId || 'input', 
+        onChange: (e) => field.onChange?.(e.target.value),
+        value: field.value || '',
+        ...fieldProps 
+      })
+    }
+    return React.createElement('input', { 'data-testid': testId || 'input', ...props })
+  }
+}))
+
+jest.mock('@/components/ui/select', () => ({
+  Select: ({ children, ...props }: any) => 
+    React.createElement('div', { 'data-testid': 'select', ...props }, children),
+  SelectContent: ({ children, ...props }: any) => 
+    React.createElement('div', { 'data-testid': 'select-content', ...props }, children),
+  SelectItem: ({ children, value, ...props }: any) => 
+    React.createElement('div', { 'data-testid': 'select-item', 'data-value': value, ...props }, children),
+  SelectTrigger: ({ children, ...props }: any) => 
+    React.createElement('button', { 'data-testid': 'select-trigger', ...props }, children),
+  SelectValue: (props: any) => React.createElement('span', { 'data-testid': 'select-value', ...props })
+}))
+
+jest.mock('@/components/ui/form', () => ({
+  Form: ({ children, ...props }: any) => 
+    React.createElement('form', { 'data-testid': 'form', ...props }, children),
+  FormControl: ({ children, ...props }: any) => 
+    React.createElement('div', { 'data-testid': 'form-control', ...props }, children),
+  FormDescription: ({ children, ...props }: any) => 
+    React.createElement('p', { 'data-testid': 'form-description', ...props }, children),
+  FormField: ({ children, ...props }: any) => 
+    React.createElement('div', { 'data-testid': 'form-field', ...props }, children),
+  FormItem: ({ children, ...props }: any) => 
+    React.createElement('div', { 'data-testid': 'form-item', ...props }, children),
+  FormLabel: ({ children, ...props }: any) => 
+    React.createElement('label', { 'data-testid': 'form-label', ...props }, children),
+  FormMessage: ({ children, ...props }: any) => 
+    React.createElement('span', { 'data-testid': 'form-message', ...props }, children)
+}))
+
+jest.mock('@/components/ui/alert', () => ({
+  Alert: ({ children, ...props }: any) => 
+    React.createElement('div', { 'data-testid': 'alert', ...props }, children),
+  AlertDescription: ({ children, ...props }: any) => 
+    React.createElement('div', { 'data-testid': 'alert-description', ...props }, children)
+}))
+
+jest.mock('@/components/ui/progress', () => ({
+  Progress: ({ value, ...props }: any) => 
+    React.createElement('div', { 'data-testid': 'progress', 'data-value': value, ...props }, 
+      React.createElement('div', { style: { width: `${value}%` } }, `${value}%`)
+    )
+}))
+
+jest.mock('@/components/ui/separator', () => ({
+  Separator: (props: any) => React.createElement('hr', { 'data-testid': 'separator', ...props })
+}))
+
+jest.mock('@/components/ui/tabs', () => ({
+  Tabs: ({ children, ...props }: any) => 
+    React.createElement('div', { 'data-testid': 'tabs', ...props }, children),
+  TabsContent: ({ children, ...props }: any) => 
+    React.createElement('div', { 'data-testid': 'tabs-content', ...props }, children),
+  TabsList: ({ children, ...props }: any) => 
+    React.createElement('div', { 'data-testid': 'tabs-list', ...props }, children),
+  TabsTrigger: ({ children, ...props }: any) => 
+    React.createElement('button', { 'data-testid': 'tabs-trigger', ...props }, children)
+}))
+
+jest.mock('@/components/ui/badge', () => ({
+  Badge: ({ children, ...props }: any) => 
+    React.createElement('span', { 'data-testid': 'badge', ...props }, children)
+}))
+
+// Mock lucide-react icons
+jest.mock('lucide-react', () => ({
+  Building: (props: any) => React.createElement('div', { 'data-testid': 'building-icon', ...props }, 'Building'),
+  User: (props: any) => React.createElement('div', { 'data-testid': 'user-icon', ...props }, 'User'),
+  Mail: (props: any) => React.createElement('div', { 'data-testid': 'mail-icon', ...props }, 'Mail'),
+  Phone: (props: any) => React.createElement('div', { 'data-testid': 'phone-icon', ...props }, 'Phone'),
+  Shield: (props: any) => React.createElement('div', { 'data-testid': 'shield-icon', ...props }, 'Shield'),
+  CheckCircle: (props: any) => React.createElement('div', { 'data-testid': 'check-circle-icon', ...props }, 'Check'),
+  AlertCircle: (props: any) => React.createElement('div', { 'data-testid': 'alert-circle-icon', ...props }, 'Alert'),
+  Eye: (props: any) => React.createElement('div', { 'data-testid': 'eye-icon', ...props }, 'Eye'),
+  EyeOff: (props: any) => React.createElement('div', { 'data-testid': 'eye-off-icon', ...props }, 'EyeOff'),
+  Search: (props: any) => React.createElement('div', { 'data-testid': 'search-icon', ...props }, 'Search'),
+  MapPin: (props: any) => React.createElement('div', { 'data-testid': 'map-pin-icon', ...props }, 'MapPin'),
+  Filter: (props: any) => React.createElement('div', { 'data-testid': 'filter-icon', ...props }, 'Filter'),
+  RefreshCw: (props: any) => React.createElement('div', { 'data-testid': 'refresh-cw-icon', ...props }, 'RefreshCw'),
+  AlertTriangle: (props: any) => React.createElement('div', { 'data-testid': 'alert-triangle-icon', ...props }, 'AlertTriangle'),
+  Clock: (props: any) => React.createElement('div', { 'data-testid': 'clock-icon', ...props }, 'Clock'),
+  Users: (props: any) => React.createElement('div', { 'data-testid': 'users-icon', ...props }, 'Users'),
+  Activity: (props: any) => React.createElement('div', { 'data-testid': 'activity-icon', ...props }, 'Activity'),
+  Package: (props: any) => React.createElement('div', { 'data-testid': 'package-icon', ...props }, 'Package'),
+  Edit: (props: any) => React.createElement('div', { 'data-testid': 'edit-icon', ...props }, 'Edit'),
+  Edit2: (props: any) => React.createElement('div', { 'data-testid': 'edit2-icon', ...props }, 'Edit2'),
+  Edit3: (props: any) => React.createElement('div', { 'data-testid': 'edit3-icon', ...props }, 'Edit3'),
+  TrendingUp: (props: any) => React.createElement('div', { 'data-testid': 'trending-up-icon', ...props }, 'TrendingUp'),
+  Plus: (props: any) => React.createElement('div', { 'data-testid': 'plus-icon', ...props }, 'Plus'),
+  MoreHorizontal: (props: any) => React.createElement('div', { 'data-testid': 'more-horizontal-icon', ...props }, 'MoreHorizontal'),
+  ChevronRight: (props: any) => React.createElement('div', { 'data-testid': 'chevron-right-icon', ...props }, 'ChevronRight'),
+  ArrowRight: (props: any) => React.createElement('div', { 'data-testid': 'arrow-right-icon', ...props }, 'ArrowRight')
+}))
+
+// Mock sonner toast
+jest.mock('sonner', () => ({
+  toast: {
+    success: jest.fn(),
+    error: jest.fn()
+  }
+}))

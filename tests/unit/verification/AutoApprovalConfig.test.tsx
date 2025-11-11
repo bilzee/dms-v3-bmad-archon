@@ -1,21 +1,21 @@
-import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { describe, it, expect, beforeEach } from '@jest/globals';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { AutoApprovalConfig } from '@/components/verification/AutoApprovalConfig';
 
 // Mock the hooks
-vi.mock('@/hooks/useAutoApproval', () => ({
-  useAutoApprovalEntities: vi.fn(),
-  useUpdateAutoApproval: vi.fn(),
-  useBulkUpdateAutoApproval: vi.fn()
+jest.mock('@/hooks/useAutoApproval', () => ({
+  useAutoApprovalEntities: jest.fn(),
+  useUpdateAutoApproval: jest.fn(),
+  useBulkUpdateAutoApproval: jest.fn()
 }));
 
-vi.mock('@/hooks/useEntities', () => ({
-  useEntities: vi.fn()
+jest.mock('@/hooks/useEntities', () => ({
+  useEntities: jest.fn()
 }));
 
 // Mock lucide-react icons
-vi.mock('lucide-react', () => ({
+jest.mock('lucide-react', () => ({
   Shield: ({ className }: { className?: string }) => <div data-testid="shield" className={className} />,
   Settings: ({ className }: { className?: string }) => <div data-testid="settings" className={className} />,
   Search: ({ className }: { className?: string }) => <div data-testid="search" className={className} />,
@@ -30,10 +30,10 @@ vi.mock('lucide-react', () => ({
 import { useAutoApprovalEntities, useUpdateAutoApproval, useBulkUpdateAutoApproval } from '@/hooks/useAutoApproval';
 import { useEntities } from '@/hooks/useEntities';
 
-const mockUseAutoApprovalEntities = useAutoApprovalEntities as vi.Mock;
-const mockUseUpdateAutoApproval = useUpdateAutoApproval as vi.Mock;
-const mockUseBulkUpdateAutoApproval = useBulkUpdateAutoApproval as vi.Mock;
-const mockUseEntities = useEntities as vi.Mock;
+const mockUseAutoApprovalEntities = useAutoApprovalEntities as jest.Mock;
+const mockUseUpdateAutoApproval = useUpdateAutoApproval as jest.Mock;
+const mockUseBulkUpdateAutoApproval = useBulkUpdateAutoApproval as jest.Mock;
+const mockUseEntities = useEntities as jest.Mock;
 
 const mockEntityWithAutoApproval = {
   id: 'entity-1',
@@ -85,14 +85,14 @@ function TestWrapper({ children }: { children: React.ReactNode }) {
 
 describe('AutoApprovalConfig', () => {
   beforeEach(() => {
-    vi.clearAllMocks();
+    jest.clearAllMocks();
     
     // Setup default mock implementations
     mockUseAutoApprovalEntities.mockReturnValue({
       data: mockEntitiesData,
       isLoading: false,
       error: null,
-      refetch: vi.fn()
+      refetch: jest.fn()
     });
 
     mockUseEntities.mockReturnValue({
@@ -102,13 +102,13 @@ describe('AutoApprovalConfig', () => {
     });
     
     mockUseUpdateAutoApproval.mockReturnValue({
-      mutate: vi.fn(),
+      mutate: jest.fn(),
       isPending: false,
       error: null
     });
     
     mockUseBulkUpdateAutoApproval.mockReturnValue({
-      mutate: vi.fn(),
+      mutate: jest.fn(),
       isPending: false,
       error: null
     });
@@ -243,7 +243,7 @@ describe('AutoApprovalConfig', () => {
   });
 
   it('submits configuration changes', async () => {
-    const mockUpdate = vi.fn();
+    const mockUpdate = jest.fn();
     mockUseUpdateAutoApproval.mockReturnValue({
       mutate: mockUpdate,
       isPending: false,
@@ -279,7 +279,7 @@ describe('AutoApprovalConfig', () => {
   });
 
   it('performs bulk enable operation', async () => {
-    const mockBulkUpdate = vi.fn();
+    const mockBulkUpdate = jest.fn();
     mockUseBulkUpdateAutoApproval.mockReturnValue({
       mutate: mockBulkUpdate,
       isPending: false,
@@ -316,7 +316,7 @@ describe('AutoApprovalConfig', () => {
       data: null,
       isLoading: true,
       error: null,
-      refetch: vi.fn()
+      refetch: jest.fn()
     });
 
     render(
@@ -334,7 +334,7 @@ describe('AutoApprovalConfig', () => {
       data: null,
       isLoading: false,
       error: mockError,
-      refetch: vi.fn()
+      refetch: jest.fn()
     });
 
     render(

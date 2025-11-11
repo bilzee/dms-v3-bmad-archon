@@ -5,6 +5,7 @@ import { useVerificationMetrics } from '@/hooks/useVerification';
 import { VerificationQueue } from './VerificationQueue';
 import { VerificationActions } from './VerificationActions';
 import { StatusIndicator } from './StatusIndicator';
+import { ResponseVerificationQueue } from '@/components/dashboards/crisis/ResponseVerificationQueue';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -19,7 +20,8 @@ import {
   RefreshCw,
   FileText,
   Users,
-  BarChart3
+  BarChart3,
+  Package
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import type { VerificationQueueItem } from '@/types/verification';
@@ -154,9 +156,10 @@ export function VerificationDashboard() {
 
       {/* Main Content Tabs */}
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
-        <TabsList className="grid w-full grid-cols-3">
+        <TabsList className="grid w-full grid-cols-4">
           <TabsTrigger value="overview">Overview</TabsTrigger>
-          <TabsTrigger value="queue">Verification Queue</TabsTrigger>
+          <TabsTrigger value="queue">Assessments</TabsTrigger>
+          <TabsTrigger value="responses" data-tab="responses">Responses</TabsTrigger>
           <TabsTrigger value="analytics">Analytics</TabsTrigger>
         </TabsList>
 
@@ -344,6 +347,25 @@ export function VerificationDashboard() {
                 <BarChart3 className="h-12 w-12 mx-auto mb-4" />
                 <h3 className="text-lg font-semibold mb-2">Analytics Coming Soon</h3>
                 <p>Detailed verification analytics and reporting will be available here.</p>
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="responses" className="space-y-4">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Package className="h-5 w-5" />
+                Response Verification Queue
+              </CardTitle>
+              <CardDescription>
+                Review and verify humanitarian response deliveries
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div data-testid="response-verification-queue-wrapper">
+                <ResponseVerificationQueue />
               </div>
             </CardContent>
           </Card>

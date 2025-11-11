@@ -433,6 +433,62 @@ async function main() {
         assignedBy: adminUser.id,
       },
     })
+
+    // Create sample donor user with only DONOR role for testing Story 5.1
+    console.log('👤 Creating sample donor user (Donor-only role)...')
+    const donorPasswordHash = await bcrypt.hash('donor123!', 10)
+    
+    const donorUser = await prisma.user.upsert({
+      where: { email: 'donor@test.com' },
+      update: {},
+      create: {
+        email: 'donor@test.com',
+        username: 'donor',
+        passwordHash: donorPasswordHash,
+        name: 'Donor Organization Contact',
+        organization: 'Test Donor Organization',
+      },
+    })
+
+    // Assign ONLY donor role to the donor user
+    await prisma.userRole.upsert({
+      where: { userId_roleId: { userId: donorUser.id, roleId: donorRole.id } },
+      update: {},
+      create: {
+        userId: donorUser.id,
+        roleId: donorRole.id,
+        assignedBy: adminUser.id,
+      },
+    })
+
+    // Assign donor user to entities for testing entity access
+    if (maiduguri) {
+      await prisma.entityAssignment.upsert({
+        where: { userId_entityId: { userId: donorUser.id, entityId: maiduguri.id } },
+        update: {},
+        create: {
+          userId: donorUser.id,
+          entityId: maiduguri.id,
+          assignedBy: adminUser.id,
+        },
+      })
+    }
+
+    // Create sample donor record for the donor user
+    console.log('🏢 Creating donor record for donor user...')
+    const testDonor = await prisma.donor.upsert({
+      where: { id: 'donor-test-001' },
+      update: {},
+      create: {
+        id: 'donor-test-001',
+        name: 'Test Donor Organization',
+        type: 'ORGANIZATION',
+        contactEmail: 'donor@test.com',
+        contactPhone: '+234-800-000-0000',
+        organization: 'Test Donor Organization',
+        isActive: true,
+      },
+    })
   }
 
   // Create sample rapid assessments for verification workflow testing
@@ -683,14 +739,75 @@ async function main() {
 
   console.log('💰 Created 4 sample donor commitments')
 
+  // Create E2E test users
+  console.log('🎭 Creating E2E test users...')
+  
+  // E2E Coordinator test user
+  const e2eCoordinatorPasswordHash = await bcrypt.hash('testpassword123', 10)
+  const e2eCoordinatorUser = await prisma.user.upsert({
+    where: { email: 'coordinator@test.com' },
+    update: {},
+    create: {
+      email: 'coordinator@test.com',
+      username: 'e2e-coordinator',
+      passwordHash: e2eCoordinatorPasswordHash,
+      name: 'E2E Test Coordinator',
+      organization: 'Test Organization',
+    },
+  })
+
+  // Assign coordinator role to E2E user
+  await prisma.userRole.upsert({
+    where: { userId_roleId: { userId: e2eCoordinatorUser.id, roleId: coordinatorRole.id } },
+    update: {},
+    create: {
+      userId: e2eCoordinatorUser.id,
+      roleId: coordinatorRole.id,
+      assignedBy: adminUser.id,
+    },
+  })
+
+  // Update E2E assessor test user password
+  const e2eAssessorPasswordHash = await bcrypt.hash('testpassword123', 10)
+  const e2eAssessorUser = await prisma.user.upsert({
+    where: { email: 'assessor@test.com' },
+    update: { 
+      passwordHash: e2eAssessorPasswordHash,
+      username: 'e2e-assessor' 
+    },
+    create: {
+      email: 'assessor@test.com',
+      username: 'e2e-assessor',
+      passwordHash: e2eAssessorPasswordHash,
+      name: 'E2E Test Assessor',
+      organization: 'Test Organization',
+    },
+  })
+
+  // Ensure assessor role is assigned
+  await prisma.userRole.upsert({
+    where: { userId_roleId: { userId: e2eAssessorUser.id, roleId: assessorRole.id } },
+    update: {},
+    create: {
+      userId: e2eAssessorUser.id,
+      roleId: assessorRole.id,
+      assignedBy: adminUser.id,
+    },
+  })
+
   console.log('✅ Database seed completed successfully!')
   console.log('📧 Admin credentials: admin@dms.gov.ng / admin123!')
   console.log('📧 Coordinator credentials: coordinator@dms.gov.ng / coordinator123!')
   console.log('📧 Responder credentials: responder@dms.gov.ng / responder123!')
   console.log('📧 Assessor credentials: assessor@test.com / test-password')
+  console.log('📧 Donor credentials: donor@test.com / donor123! (DONOR role only)')
   console.log('📧 Multi-role credentials: multirole@dms.gov.ng / multirole123! (ASSESSOR, COORDINATOR, DONOR, RESPONDER)')
+  console.log('🎭 E2E Test Credentials:')
+  console.log('   📧 E2E Coordinator: coordinator@test.com / testpassword123')
+  console.log('   📧 E2E Assessor: assessor@test.com / testpassword123')
   console.log('📋 Created 5 sample assessments for verification workflow testing')
   console.log('💰 Created 4 sample donor commitments for testing Story 4.3')
+  console.log('🏢 Created donor organization for testing Story 5.1')
 }
 
 main()

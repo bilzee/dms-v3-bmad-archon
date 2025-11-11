@@ -72,8 +72,21 @@ export const useAuthStore = create<AuthState>()(
           )
         )
 
-        // Set first available role as current if none is set
-        const currentRole = get().currentRole || roles[0] || null
+        // Set current role based on role switching priority
+        // For donor users, prioritize DONOR role over other roles
+        const getHighestPriorityRole = (roleList: RoleName[]): RoleName | null => {
+          if (roleList.length === 0) return null;
+          
+          // Priority order for role selection
+          const rolePriority = ['DONOR', 'ASSESSOR', 'COORDINATOR', 'RESPONDER', 'ADMIN'];
+          
+          return roleList.reduce((highest: RoleName | null, role: RoleName) => {
+            if (!highest) return role;
+            return rolePriority.indexOf(role) < rolePriority.indexOf(highest) ? role : highest;
+          }, null);
+        };
+
+        const currentRole = get().currentRole || getHighestPriorityRole(roles) || null;
 
         set({
           user,
@@ -85,6 +98,11 @@ export const useAuthStore = create<AuthState>()(
           currentRole,
           isLoading: false
         })
+
+        // Save token to localStorage for API calls
+        if (typeof window !== 'undefined') {
+          localStorage.setItem('auth_token', token)
+        }
       },
 
       login: async (email: string, password: string) => {
@@ -137,6 +155,11 @@ export const useAuthStore = create<AuthState>()(
           roleSessionState: {},
           isLoading: false
         })
+
+        // Clear token from localStorage
+        if (typeof window !== 'undefined') {
+          localStorage.removeItem('auth_token')
+        }
       },
 
       refresh: async () => {

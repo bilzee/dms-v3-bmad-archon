@@ -49,14 +49,18 @@ interface AutoApprovalConfigData {
   entityType: string;
   entityLocation?: string;
   enabled: boolean;
+  scope: 'assessments' | 'responses' | 'both';
   conditions: {
     assessmentTypes: string[];
+    responseTypes: string[];
     maxPriority: 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL';
     requiresDocumentation: boolean;
   };
   lastModified: string;
   stats?: {
-    autoVerifiedCount: number;
+    autoVerifiedAssessments: number;
+    autoVerifiedResponses: number;
+    totalAutoVerified: number;
   };
 }
 
@@ -67,6 +71,8 @@ async function fetchAutoApprovalConfigs(token: string): Promise<{
     totalEntities: number;
     enabledCount: number;
     disabledCount: number;
+    totalAutoVerifiedAssessments: number;
+    totalAutoVerifiedResponses: number;
     totalAutoVerified: number;
   };
 }> {
@@ -137,8 +143,10 @@ export function AutoApprovalConfig({ className }: AutoApprovalConfigProps) {
   const [showBulkDialog, setShowBulkDialog] = useState(false);
   const [bulkConfig, setBulkConfig] = useState({
     enabled: true,
+    scope: 'both' as 'assessments' | 'responses' | 'both',
     conditions: {
       assessmentTypes: [] as string[],
+      responseTypes: [] as string[],
       maxPriority: 'MEDIUM' as const,
       requiresDocumentation: false,
     }
@@ -200,6 +208,7 @@ export function AutoApprovalConfig({ className }: AutoApprovalConfigProps) {
   });
 
   const assessmentTypes = ['HEALTH', 'WASH', 'SHELTER', 'FOOD', 'SECURITY', 'POPULATION'];
+  const responseTypes = ['HEALTH', 'WASH', 'SHELTER', 'FOOD', 'SECURITY', 'LOGISTICS', 'POPULATION'];
   
   const handleToggleEntity = (entityId: string) => {
     const newSelected = new Set(selectedEntities);
@@ -263,7 +272,7 @@ export function AutoApprovalConfig({ className }: AutoApprovalConfigProps) {
   }
 
   return (
-    <div className={cn('space-y-6', className)}>
+    <div className={cn('space-y-6', className)} data-testid="auto-approval-config">
       {/* Header with summary */}
       <div className="flex items-center justify-between">
         <div>
@@ -328,10 +337,22 @@ export function AutoApprovalConfig({ className }: AutoApprovalConfigProps) {
             <CardContent className="p-4">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-medium text-gray-600">Auto-Verified Total</p>
-                  <p className="text-2xl font-bold text-blue-600">{configData.summary.totalAutoVerified}</p>
+                  <p className="text-sm font-medium text-gray-600">Auto-Verified Assessments</p>
+                  <p className="text-2xl font-bold text-blue-600">{configData.summary.totalAutoVerifiedAssessments}</p>
                 </div>
                 <CheckCircle className="h-6 w-6 text-blue-600" />
+              </div>
+            </CardContent>
+          </Card>
+          
+          <Card>
+            <CardContent className="p-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-gray-600">Auto-Verified Responses</p>
+                  <p className="text-2xl font-bold text-green-600">{configData.summary.totalAutoVerifiedResponses}</p>
+                </div>
+                <CheckCircle className="h-6 w-6 text-green-600" />
               </div>
             </CardContent>
           </Card>
@@ -434,6 +455,7 @@ export function AutoApprovalConfig({ className }: AutoApprovalConfigProps) {
         selectedCount={selectedEntities.size}
         isLoading={bulkUpdateMutation.isPending}
         assessmentTypes={assessmentTypes}
+        responseTypes={responseTypes}
       />
     </div>
   );
@@ -484,9 +506,14 @@ function EntityConfigCard({
           
           <div className="flex items-center gap-3">
             {entity.stats && (
-              <Badge variant="outline" className="text-blue-700 border-blue-300">
-                {entity.stats.autoVerifiedCount} auto-verified
-              </Badge>
+              <>
+                <Badge variant="outline" className="text-blue-700 border-blue-300">
+                  {entity.stats.autoVerifiedAssessments} assessments
+                </Badge>
+                <Badge variant="outline" className="text-green-700 border-green-300">
+                  {entity.stats.autoVerifiedResponses} responses
+                </Badge>
+              </>
             )}
             
             <div className="flex items-center gap-2">
@@ -506,13 +533,45 @@ function EntityConfigCard({
         {/* Configuration details */}
         {entity.enabled && (
           <div className="mt-4 pt-4 border-t border-gray-100">
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-4 text-sm">
+              <div>
+                <Label className="font-medium text-gray-700">Scope</Label>
+                <div className="mt-1">
+                  <Badge 
+                    className={cn(
+                      entity.scope === 'assessments' && 'bg-blue-100 text-blue-800',
+                      entity.scope === 'responses' && 'bg-green-100 text-green-800',
+                      entity.scope === 'both' && 'bg-purple-100 text-purple-800'
+                    )}
+                  >
+                    {entity.scope}
+                  </Badge>
+                </div>
+              </div>
+              
               <div>
                 <Label className="font-medium text-gray-700">Assessment Types</Label>
                 <div className="mt-1">
                   {entity.conditions.assessmentTypes.length > 0 ? (
                     <div className="flex flex-wrap gap-1">
                       {entity.conditions.assessmentTypes.map(type => (
+                        <Badge key={type} variant="secondary" className="text-xs">
+                          {type}
+                        </Badge>
+                      ))}
+                    </div>
+                  ) : (
+                    <span className="text-gray-500">All types</span>
+                  )}
+                </div>
+              </div>
+              
+              <div>
+                <Label className="font-medium text-gray-700">Response Types</Label>
+                <div className="mt-1">
+                  {entity.conditions.responseTypes.length > 0 ? (
+                    <div className="flex flex-wrap gap-1">
+                      {entity.conditions.responseTypes.map(type => (
                         <Badge key={type} variant="secondary" className="text-xs">
                           {type}
                         </Badge>
@@ -570,6 +629,7 @@ interface BulkConfigDialogProps {
   selectedCount: number;
   isLoading: boolean;
   assessmentTypes: string[];
+  responseTypes: string[];
 }
 
 function BulkConfigDialog({
@@ -580,14 +640,15 @@ function BulkConfigDialog({
   onConfigChange,
   selectedCount,
   isLoading,
-  assessmentTypes
+  assessmentTypes,
+  responseTypes
 }: BulkConfigDialogProps) {
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-lg">
+      <DialogContent className="sm:max-w-lg bg-white dark:bg-gray-900 border-2 border-gray-300 dark:border-gray-600 shadow-xl backdrop-blur-sm bg-opacity-95 dark:bg-opacity-95">
         <DialogHeader>
-          <DialogTitle>Bulk Auto-Approval Configuration</DialogTitle>
-          <DialogDescription>
+          <DialogTitle className="text-gray-900 dark:text-gray-100">Bulk Auto-Approval Configuration</DialogTitle>
+          <DialogDescription className="text-gray-600 dark:text-gray-300">
             Configure auto-approval settings for {selectedCount} selected entities.
           </DialogDescription>
         </DialogHeader>
@@ -601,14 +662,37 @@ function BulkConfigDialog({
                 onConfigChange({ ...config, enabled })
               }
             />
-            <Label htmlFor="bulk-enabled">Enable auto-approval</Label>
+            <Label htmlFor="bulk-enabled" className="text-gray-800 dark:text-gray-200">Enable auto-approval</Label>
           </div>
 
           {config.enabled && (
             <>
               <div>
-                <Label>Assessment Types (leave empty for all)</Label>
-                <div className="mt-2 space-y-2">
+                <Label className="text-gray-800 dark:text-gray-200">Auto-Approval Scope</Label>
+                <Select
+                  value={config.scope}
+                  onValueChange={(value) =>
+                    onConfigChange({
+                      ...config,
+                      scope: value
+                    })
+                  }
+                >
+                  <SelectTrigger className="mt-1">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="assessments">Assessments Only</SelectItem>
+                    <SelectItem value="responses">Responses Only</SelectItem>
+                    <SelectItem value="both">Both Assessments & Responses</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {config.scope !== 'responses' && (
+                <div>
+                  <Label className="text-gray-800 dark:text-gray-200">Assessment Types (leave empty for all)</Label>
+                  <div className="mt-2 space-y-2">
                   {assessmentTypes.map(type => (
                     <div key={type} className="flex items-center space-x-2">
                       <Checkbox
@@ -625,14 +709,42 @@ function BulkConfigDialog({
                           });
                         }}
                       />
-                      <Label htmlFor={`bulk-type-${type}`}>{type}</Label>
+                      <Label htmlFor={`bulk-type-${type}`} className="text-gray-700 dark:text-gray-300">{type}</Label>
                     </div>
                   ))}
                 </div>
               </div>
+              )}
+
+              {config.scope !== 'assessments' && (
+                <div>
+                  <Label className="text-gray-800 dark:text-gray-200">Response Types (leave empty for all)</Label>
+                  <div className="mt-2 space-y-2">
+                  {responseTypes.map(type => (
+                    <div key={type} className="flex items-center space-x-2">
+                      <Checkbox
+                        id={`bulk-response-type-${type}`}
+                        checked={config.conditions.responseTypes.includes(type)}
+                        onCheckedChange={(checked) => {
+                          const types = config.conditions.responseTypes;
+                          const newTypes = checked
+                            ? [...types, type]
+                            : types.filter((t: string) => t !== type);
+                          onConfigChange({
+                            ...config,
+                            conditions: { ...config.conditions, responseTypes: newTypes }
+                          });
+                        }}
+                      />
+                      <Label htmlFor={`bulk-response-type-${type}`} className="text-gray-700 dark:text-gray-300">{type}</Label>
+                    </div>
+                  ))}
+                </div>
+              </div>
+              )}
 
               <div>
-                <Label>Maximum Priority Level</Label>
+                <Label className="text-gray-800 dark:text-gray-200">Maximum Priority Level</Label>
                 <Select
                   value={config.conditions.maxPriority}
                   onValueChange={(value) =>
@@ -665,7 +777,7 @@ function BulkConfigDialog({
                     })
                   }
                 />
-                <Label htmlFor="bulk-documentation">Require documentation</Label>
+                <Label htmlFor="bulk-documentation" className="text-gray-700 dark:text-gray-300">Require documentation</Label>
               </div>
             </>
           )}

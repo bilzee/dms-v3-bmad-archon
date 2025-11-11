@@ -1,8 +1,8 @@
 {
-  "sessionId": "session_1762521084351",
-  "context": "general",
-  "startTime": "2025-11-07T13:11:24.351Z",
-  "endTime": "2025-11-07T13:20:01.058Z",
+  "sessionId": "session_1762522541207",
+  "context": "4.3-regression-monitoring",
+  "startTime": "2025-11-07T13:35:41.207Z",
+  "endTime": "2025-11-07T16:22:07.153Z",
   "fixesCaptured": 0,
   "testsGenerated": 0,
   "patternsIdentified": 0,

@@ -1,5 +1,67 @@
 # Bugs and Solutions
 
+## Story 5.1 Bug Fixes (2025-11-09)
+
+### **Bug 1: Missing React Import in Donor Components**
+**Problem**: All donor components in Story 5.1 were missing `import React from 'react'` statements
+**Root Cause**: Next.js App Router with 'use client' directive still requires explicit React import for JSX to work properly
+**Affected Components**:
+- `src/components/donor/DonorRegistrationForm.tsx`
+- `src/components/donor/DonorProfile.tsx` 
+- `src/components/donor/DonorDashboard.tsx`
+- `src/components/donor/EntitySelector.tsx`
+
+**Solution Implemented**: Added `import React from 'react'` to all affected donor components
+**Pattern**: Always include React import when using JSX in Next.js App Router client components, even with 'use client' directive
+
+### **Bug 2: Authentication Token Not Persisting to LocalStorage**
+**Problem**: Donor users getting 401 Unauthorized errors on all API calls despite successful login
+**Root Cause**: Auth store `setUser()` function wasn't persisting JWT token to localStorage, causing token to be lost on page reload
+**Symptoms**: 
+- Login succeeds (200 OK) but subsequent API calls fail (401 Unauthorized)
+- Server logs show successful authentication but browser shows auth failures
+- User gets logged out immediately after page refresh
+
+**Solution Implemented**: 
+```typescript
+// In src/stores/auth.store.ts - setUser() function
+if (typeof window !== 'undefined') {
+  localStorage.setItem('auth_token', token)
+}
+```
+
+**Pattern**: Always persist authentication tokens to localStorage in client-side auth state management
+
+### **Bug 3: Incorrect Post-Registration Redirect URL**
+**Problem**: Donor registration redirected to `/dashboard` instead of `/donor/dashboard` after successful registration
+**Root Cause**: Hardcoded redirect URL in DonorRegistrationForm.tsx didn't account for role-based routing
+**Solution Implemented**: Updated redirect to `/donor/dashboard` for donor users
+**Pattern**: Use role-specific redirect URLs after authentication flows
+
+### **Bug 4: Login API Response Structure Mismatch**
+**Problem**: Auth store expected nested role/permission structure but API returned flat structure
+**Root Cause**: Login API wasn't reconstructing user object with proper role relationships from Prisma
+**Solution Implemented**: Reconstructed user object in login route with nested role.permissions structure
+**Pattern**: Ensure API response structure matches frontend expectations, especially for nested relationships
+
+### **Bug 5: Role Priority Logic Missing in Auth Store**
+**Problem**: Multi-role users getting assigned wrong primary role (donor instead of coordinator)
+**Root Cause**: Auth store didn't implement role priority logic when user has multiple roles
+**Solution Implemented**: Added role priority system with COORDINATOR > ASSESSOR > RESPONDER > DONOR hierarchy
+**Pattern**: Implement role priority logic for multi-role user scenarios
+
+### **Bug 6: Permission Checks Using Wrong Permission Codes**
+**Problem**: Dashboard visibility checks using `hasPermission('DONOR')` instead of actual permission codes
+**Root Cause**: Confusion between role names and permission codes in permission system
+**Solution Implemented**: Changed to `hasPermission('VIEW_DONOR_DASHBOARD')` and other specific permission codes
+**Pattern**: Use specific permission codes, not role names, for access control checks
+
+### **Bug 7: Select Component Empty String Value Validation**
+**Problem**: "A <Select.Item /> must have a value prop that is not an empty string" error on /donor/entities page
+**Root Cause**: Radix UI Select component doesn't allow empty string values for SelectItem components
+**Solution Implemented**: Changed `<SelectItem value="">` to `<SelectItem value="all">` and updated filter logic
+**Pattern**: Use semantic identifiers instead of empty strings for Select component values
+
 ## Recent Bug Fixes (2025-11-07)
 
 ### **Bug 1: Missing userId Parameter in API Call**

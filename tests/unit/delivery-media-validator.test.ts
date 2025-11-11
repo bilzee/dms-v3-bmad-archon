@@ -283,7 +283,7 @@ describe('DeliveryMediaValidator', () => {
         name: 'corrupted.jpg',
         size: 1024,
         type: 'image/jpeg',
-        arrayBuffer: vi.fn().mockRejectedValue(new Error('File read error'))
+        arrayBuffer: jest.fn().mockRejectedValue(new Error('File read error'))
       } as any
 
       const result = await DeliveryMediaValidator.validateDeliveryMedia(file)

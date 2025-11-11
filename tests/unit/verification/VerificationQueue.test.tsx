@@ -1,16 +1,16 @@
-import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { describe, it, expect, beforeEach } from '@jest/globals';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { VerificationQueue } from '@/components/verification/VerificationQueue';
 import type { VerificationQueueItem } from '@/types/verification';
 
 // Mock the hooks
-vi.mock('@/hooks/useVerification', () => ({
-  useVerificationQueue: vi.fn()
+jest.mock('@/hooks/useVerification', () => ({
+  useVerificationQueue: jest.fn()
 }));
 
 // Mock lucide-react icons
-vi.mock('lucide-react', () => ({
+jest.mock('lucide-react', () => ({
   ChevronDown: ({ className }: { className?: string }) => <div data-testid="chevron-down" className={className} />,
   ChevronUp: ({ className }: { className?: string }) => <div data-testid="chevron-up" className={className} />,
   RefreshCw: ({ className }: { className?: string }) => <div data-testid="refresh-icon" className={className} />,
@@ -22,7 +22,7 @@ vi.mock('lucide-react', () => ({
 
 import { useVerificationQueue } from '@/hooks/useVerification';
 
-const mockUseVerificationQueue = useVerificationQueue as vi.Mock;
+const mockUseVerificationQueue = useVerificationQueue as jest.Mock;
 
 const mockAssessment: VerificationQueueItem = {
   id: 'assessment-1',
@@ -73,7 +73,7 @@ function TestWrapper({ children }: { children: React.ReactNode }) {
 
 describe('VerificationQueue', () => {
   beforeEach(() => {
-    vi.clearAllMocks();
+    jest.clearAllMocks();
   });
 
   it('renders empty state when no assessments', () => {
@@ -81,12 +81,12 @@ describe('VerificationQueue', () => {
       data: { data: [], pagination: { total: 0 } },
       isLoading: false,
       error: null,
-      refetch: vi.fn()
+      refetch: jest.fn()
     });
 
     render(
       <TestWrapper>
-        <VerificationQueue onAssessmentSelect={vi.fn()} />
+        <VerificationQueue onAssessmentSelect={jest.fn()} />
       </TestWrapper>
     );
 
@@ -99,12 +99,12 @@ describe('VerificationQueue', () => {
       data: null,
       isLoading: true,
       error: null,
-      refetch: vi.fn()
+      refetch: jest.fn()
     });
 
     render(
       <TestWrapper>
-        <VerificationQueue onAssessmentSelect={vi.fn()} />
+        <VerificationQueue onAssessmentSelect={jest.fn()} />
       </TestWrapper>
     );
 
@@ -117,12 +117,12 @@ describe('VerificationQueue', () => {
       data: null,
       isLoading: false,
       error: mockError,
-      refetch: vi.fn()
+      refetch: jest.fn()
     });
 
     render(
       <TestWrapper>
-        <VerificationQueue onAssessmentSelect={vi.fn()} />
+        <VerificationQueue onAssessmentSelect={jest.fn()} />
       </TestWrapper>
     );
 
@@ -135,12 +135,12 @@ describe('VerificationQueue', () => {
       data: mockQueueData,
       isLoading: false,
       error: null,
-      refetch: vi.fn()
+      refetch: jest.fn()
     });
 
     render(
       <TestWrapper>
-        <VerificationQueue onAssessmentSelect={vi.fn()} />
+        <VerificationQueue onAssessmentSelect={jest.fn()} />
       </TestWrapper>
     );
 
@@ -151,12 +151,12 @@ describe('VerificationQueue', () => {
   });
 
   it('handles assessment selection', () => {
-    const mockOnSelect = vi.fn();
+    const mockOnSelect = jest.fn();
     mockUseVerificationQueue.mockReturnValue({
       data: mockQueueData,
       isLoading: false,
       error: null,
-      refetch: vi.fn()
+      refetch: jest.fn()
     });
 
     render(
@@ -177,12 +177,12 @@ describe('VerificationQueue', () => {
       data: mockQueueData,
       isLoading: false,
       error: null,
-      refetch: vi.fn()
+      refetch: jest.fn()
     });
 
     render(
       <TestWrapper>
-        <VerificationQueue onAssessmentSelect={vi.fn()} />
+        <VerificationQueue onAssessmentSelect={jest.fn()} />
       </TestWrapper>
     );
 
@@ -194,7 +194,7 @@ describe('VerificationQueue', () => {
   });
 
   it('filters assessments by status', async () => {
-    const mockRefetch = vi.fn();
+    const mockRefetch = jest.fn();
     mockUseVerificationQueue.mockReturnValue({
       data: mockQueueData,
       isLoading: false,
@@ -204,7 +204,7 @@ describe('VerificationQueue', () => {
 
     render(
       <TestWrapper>
-        <VerificationQueue onAssessmentSelect={vi.fn()} />
+        <VerificationQueue onAssessmentSelect={jest.fn()} />
       </TestWrapper>
     );
 
@@ -217,7 +217,7 @@ describe('VerificationQueue', () => {
   });
 
   it('searches assessments by entity name', async () => {
-    const mockRefetch = vi.fn();
+    const mockRefetch = jest.fn();
     mockUseVerificationQueue.mockReturnValue({
       data: mockQueueData,
       isLoading: false,
@@ -227,7 +227,7 @@ describe('VerificationQueue', () => {
 
     render(
       <TestWrapper>
-        <VerificationQueue onAssessmentSelect={vi.fn()} />
+        <VerificationQueue onAssessmentSelect={jest.fn()} />
       </TestWrapper>
     );
 
@@ -254,12 +254,12 @@ describe('VerificationQueue', () => {
       data: multiPageData,
       isLoading: false,
       error: null,
-      refetch: vi.fn()
+      refetch: jest.fn()
     });
 
     render(
       <TestWrapper>
-        <VerificationQueue onAssessmentSelect={vi.fn()} />
+        <VerificationQueue onAssessmentSelect={jest.fn()} />
       </TestWrapper>
     );
 
@@ -268,7 +268,7 @@ describe('VerificationQueue', () => {
   });
 
   it('refreshes data when refresh button is clicked', () => {
-    const mockRefetch = vi.fn();
+    const mockRefetch = jest.fn();
     mockUseVerificationQueue.mockReturnValue({
       data: mockQueueData,
       isLoading: false,
@@ -278,7 +278,7 @@ describe('VerificationQueue', () => {
 
     render(
       <TestWrapper>
-        <VerificationQueue onAssessmentSelect={vi.fn()} />
+        <VerificationQueue onAssessmentSelect={jest.fn()} />
       </TestWrapper>
     );
 
@@ -293,13 +293,13 @@ describe('VerificationQueue', () => {
       data: mockQueueData,
       isLoading: false,
       error: null,
-      refetch: vi.fn()
+      refetch: jest.fn()
     });
 
     render(
       <TestWrapper>
         <VerificationQueue 
-          onAssessmentSelect={vi.fn()} 
+          onAssessmentSelect={jest.fn()} 
           selectedAssessmentId="assessment-1"
         />
       </TestWrapper>
@@ -322,12 +322,12 @@ describe('VerificationQueue', () => {
       },
       isLoading: false,
       error: null,
-      refetch: vi.fn()
+      refetch: jest.fn()
     });
 
     render(
       <TestWrapper>
-        <VerificationQueue onAssessmentSelect={vi.fn()} />
+        <VerificationQueue onAssessmentSelect={jest.fn()} />
       </TestWrapper>
     );
 
