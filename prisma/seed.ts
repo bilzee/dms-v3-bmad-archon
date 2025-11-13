@@ -433,6 +433,37 @@ async function main() {
         assignedBy: adminUser.id,
       },
     })
+  }
+
+  // Assign multirole user to additional entities for comprehensive testing
+  console.log('🏢 Assigning multirole user to additional entities...')
+  
+  // Assign to Jere Local Government (entity-2)
+  const jere = await prisma.entity.findUnique({ where: { id: 'entity-2' } })
+  if (jere) {
+    await prisma.entityAssignment.upsert({
+      where: { userId_entityId: { userId: multiRoleUser.id, entityId: jere.id } },
+      update: {},
+      create: {
+        userId: multiRoleUser.id,
+        entityId: jere.id,
+        assignedBy: adminUser.id,
+      },
+    })
+  }
+
+  // Assign to Primary Health Center (entity-4)
+  const healthCenter = await prisma.entity.findUnique({ where: { id: 'entity-4' } })
+  if (healthCenter) {
+    await prisma.entityAssignment.upsert({
+      where: { userId_entityId: { userId: multiRoleUser.id, entityId: healthCenter.id } },
+      update: {},
+      create: {
+        userId: multiRoleUser.id,
+        entityId: healthCenter.id,
+        assignedBy: adminUser.id,
+      },
+    })
 
     // Create sample donor user with only DONOR role for testing Story 5.1
     console.log('👤 Creating sample donor user (Donor-only role)...')
@@ -486,6 +517,22 @@ async function main() {
         contactEmail: 'donor@test.com',
         contactPhone: '+234-800-000-0000',
         organization: 'Test Donor Organization',
+        isActive: true,
+      },
+    })
+
+    // Create donor record for the multi-role user
+    console.log('🏢 Creating donor record for multi-role user...')
+    await prisma.donor.upsert({
+      where: { id: 'donor-multirole-001' },
+      update: {},
+      create: {
+        id: 'donor-multirole-001',
+        name: 'Borno State Emergency Management Agency',
+        type: 'ORGANIZATION',
+        contactEmail: 'multirole@dms.gov.ng',
+        contactPhone: '+234-800-555-0000',
+        organization: 'Borno State Emergency Management Agency',
         isActive: true,
       },
     })
@@ -629,6 +676,38 @@ async function main() {
         incidentId: droughtIncident.id,
         entityId: 'entity-3',
         severity: 'MEDIUM'
+      }
+    })
+
+    // Add flood incident to Jere Local Government (entity-2)
+    await prisma.incidentEntity.upsert({
+      where: {
+        incidentId_entityId: {
+          incidentId: floodIncident.id,
+          entityId: 'entity-2'
+        }
+      },
+      update: {},
+      create: {
+        incidentId: floodIncident.id,
+        entityId: 'entity-2',
+        severity: 'MEDIUM'
+      }
+    })
+
+    // Add flood incident to Primary Health Center (entity-4) 
+    await prisma.incidentEntity.upsert({
+      where: {
+        incidentId_entityId: {
+          incidentId: floodIncident.id,
+          entityId: 'entity-4'
+        }
+      },
+      update: {},
+      create: {
+        incidentId: floodIncident.id,
+        entityId: 'entity-4',
+        severity: 'HIGH'
       }
     })
 

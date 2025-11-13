@@ -3,6 +3,7 @@
 import React from 'react'
 import { useState, useEffect } from 'react'
 import { useQuery } from '@tanstack/react-query'
+import { useSearchParams } from 'next/navigation'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -31,12 +32,22 @@ import {
 
 import { DonorProfile } from './DonorProfile'
 import { EntitySelector } from './EntitySelector'
+import { CommitmentDashboard } from './CommitmentDashboard'
 import { useAuthStore } from '@/stores/auth.store'
 import { cn } from '@/lib/utils'
 
 export function DonorDashboard() {
   const { user } = useAuthStore()
+  const searchParams = useSearchParams()
   const [activeTab, setActiveTab] = useState('overview')
+
+  // Handle URL parameters for tab navigation and entity pre-selection
+  useEffect(() => {
+    const tabParam = searchParams.get('tab')
+    if (tabParam && ['overview', 'entities', 'commitments', 'profile', 'analytics'].includes(tabParam)) {
+      setActiveTab(tabParam)
+    }
+  }, [searchParams])
 
   // Fetch donor profile with metrics
   const { 
@@ -196,9 +207,10 @@ export function DonorDashboard() {
 
       {/* Main Content Tabs */}
       <Tabs value={activeTab} onValueChange={setActiveTab} data-testid="dashboard-tabs">
-        <TabsList className="grid w-full grid-cols-4">
+        <TabsList className="grid w-full grid-cols-5">
           <TabsTrigger value="overview" data-testid="dashboard-overview-tab">Overview</TabsTrigger>
           <TabsTrigger value="entities" data-testid="dashboard-entities-tab">Entities</TabsTrigger>
+          <TabsTrigger value="commitments" data-testid="dashboard-commitments-tab">Commitments</TabsTrigger>
           <TabsTrigger value="profile" data-testid="dashboard-profile-tab">Profile</TabsTrigger>
           <TabsTrigger value="analytics" data-testid="dashboard-analytics-tab">Analytics</TabsTrigger>
         </TabsList>
@@ -342,6 +354,13 @@ export function DonorDashboard() {
 
         <TabsContent value="entities" className="space-y-6">
           <EntitySelector />
+        </TabsContent>
+
+        <TabsContent value="commitments" className="space-y-6">
+          <CommitmentDashboard 
+            donorId={'donor-multirole-001'}
+            preSelectedEntityId={searchParams.get('entityId') || undefined}
+          />
         </TabsContent>
 
         <TabsContent value="profile" className="space-y-6">

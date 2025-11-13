@@ -28,14 +28,14 @@ import { CreateCommitmentInput, CommitmentItemInput } from '@/lib/validation/com
 
 // Form validation schema
 const CommitmentFormSchema = z.object({
-  entityId: z.string().uuid('Please select a valid entity'),
-  incidentId: z.string().uuid('Please select a valid incident'),
+  entityId: z.string().min(1, 'Please select a valid entity'),
+  incidentId: z.string().min(1, 'Please select a valid incident'),
   items: z.array(
     z.object({
       name: z.string().min(1, 'Item name is required'),
       unit: z.string().min(1, 'Unit is required'),
       quantity: z.number().positive('Quantity must be greater than 0'),
-      estimatedValue: z.number().positive('Value must be greater than 0').optional()
+      estimatedValue: z.number().positive('Value must be greater than 0').optional().or(z.literal(0))
     })
   ).min(1, 'At least one item is required'),
   notes: z.string().max(500, 'Notes cannot exceed 500 characters').optional()
@@ -64,43 +64,78 @@ interface CommitmentFormProps {
   onSuccess?: () => void
   onCancel?: () => void
   initialData?: Partial<CommitmentFormData>
+  preSelectedEntityId?: string
 }
 
-export function CommitmentForm({ donorId, onSuccess, onCancel, initialData }: CommitmentFormProps) {
+export function CommitmentForm({ donorId, onSuccess, onCancel, initialData, preSelectedEntityId }: CommitmentFormProps) {
   const router = useRouter()
-  const [showPreview, setShowPreview] = useState(false)
   
-  // Fetch available entities
-  const { data: entities, isLoading: entitiesLoading } = useQuery({
-    queryKey: ['entities'],
+  // Fetch available entities (assigned to donor)
+  const { data: entitiesData, isLoading: entitiesLoading } = useQuery({
+    queryKey: ['donor-entities'],
     queryFn: async () => {
-      const response = await fetch('/api/v1/entities')
+      const response = await fetch('/api/v1/donors/entities', {
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('auth_token')}`
+        }
+      })
       if (!response.ok) throw new Error('Failed to fetch entities')
       const data = await response.json()
-      return data.success ? data.data : []
+      return data.success ? data.data : {}
     }
   })
 
-  // Fetch available incidents
-  const { data: incidents, isLoading: incidentsLoading } = useQuery({
-    queryKey: ['incidents'],
-    queryFn: async () => {
-      const response = await fetch('/api/v1/incidents')
-      if (!response.ok) throw new Error('Failed to fetch incidents')
-      const data = await response.json()
-      return data.success ? data.data : []
-    }
-  })
+  const entities = entitiesData?.entities || []
 
   const form = useForm<CommitmentFormData>({
     resolver: zodResolver(CommitmentFormSchema),
     defaultValues: {
-      entityId: initialData?.entityId || '',
+      entityId: preSelectedEntityId || initialData?.entityId || '',
       incidentId: initialData?.incidentId || '',
-      items: initialData?.items || [{ name: '', unit: '', quantity: 1 }],
+      items: initialData?.items || [{ name: '', unit: '', quantity: 1, estimatedValue: undefined }],
       notes: initialData?.notes || ''
     }
   })
+
+  // Watch the selected entity ID
+  const selectedEntityId = form.watch('entityId')
+
+  // Fetch available incidents filtered by selected entity
+  const { data: incidentsData, isLoading: incidentsLoading } = useQuery({
+    queryKey: ['incidents', selectedEntityId],
+    queryFn: async () => {
+      // If no entity is selected, return empty array
+      if (!selectedEntityId) return []
+      
+      const response = await fetch(`/api/v1/incidents?entityId=${selectedEntityId}`, {
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('auth_token')}`
+        }
+      })
+      if (!response.ok) throw new Error('Failed to fetch incidents')
+      const data = await response.json()
+      return data.data || []
+    },
+    enabled: !!selectedEntityId // Only run query when entity is selected
+  })
+  
+  const incidents = incidentsData || []
+
+  // Update form when preSelectedEntityId changes
+  React.useEffect(() => {
+    if (preSelectedEntityId && preSelectedEntityId !== form.getValues('entityId')) {
+      form.setValue('entityId', preSelectedEntityId)
+      // Clear incident selection when entity changes
+      form.setValue('incidentId', '')
+    }
+  }, [preSelectedEntityId])
+
+  // Clear incident selection when entity changes
+  React.useEffect(() => {
+    if (selectedEntityId) {
+      form.setValue('incidentId', '')
+    }
+  }, [selectedEntityId])
 
   const { fields, append, remove } = useFieldArray({
     control: form.control,
@@ -118,7 +153,10 @@ export function CommitmentForm({ donorId, onSuccess, onCancel, initialData }: Co
     mutationFn: async (data: CommitmentFormData) => {
       const response = await fetch(`/api/v1/donors/${donorId}/commitments`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${localStorage.getItem('auth_token')}`
+        },
         body: JSON.stringify(data)
       })
       
@@ -141,15 +179,20 @@ export function CommitmentForm({ donorId, onSuccess, onCancel, initialData }: Co
   })
 
   const onSubmit = (data: CommitmentFormData) => {
-    if (showPreview) {
-      createCommitmentMutation.mutate(data)
-    } else {
-      setShowPreview(true)
+    // Ensure estimatedValue is properly handled
+    const cleanedData = {
+      ...data,
+      items: data.items.map(item => ({
+        ...item,
+        estimatedValue: item.estimatedValue || undefined
+      }))
     }
+    
+    createCommitmentMutation.mutate(cleanedData)
   }
 
   const addItem = () => {
-    append({ name: '', unit: '', quantity: 1 })
+    append({ name: '', unit: '', quantity: 1, estimatedValue: undefined })
   }
 
   const removeItem = (index: number) => {
@@ -181,111 +224,7 @@ export function CommitmentForm({ donorId, onSuccess, onCancel, initialData }: Co
     )
   }
 
-  if (showPreview) {
-    const formData = form.getValues()
-    const selectedEntity = entities?.find((e: any) => e.id === formData.entityId)
-    const selectedIncident = incidents?.find((i: any) => i.id === formData.incidentId)
-
-    return (
-      <Card className="w-full max-w-4xl mx-auto">
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <CheckCircle2 className="h-5 w-5 text-green-600" />
-            Commitment Preview
-          </CardTitle>
-          <CardDescription>
-            Please review your commitment details before submission
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-6">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div>
-              <h4 className="font-medium mb-2 flex items-center gap-2">
-                <MapPin className="h-4 w-4" />
-                Target Entity
-              </h4>
-              <p className="text-sm text-muted-foreground">{selectedEntity?.name}</p>
-              <Badge variant="outline" className="mt-1">{selectedEntity?.type}</Badge>
-            </div>
-            <div>
-              <h4 className="font-medium mb-2">Incident</h4>
-              <p className="text-sm text-muted-foreground">{selectedIncident?.description}</p>
-              <Badge variant="outline" className="mt-1">{selectedIncident?.type}</Badge>
-            </div>
-          </div>
-
-          <Separator />
-
-          <div>
-            <h4 className="font-medium mb-4 flex items-center gap-2">
-              <Package className="h-4 w-4" />
-              Commitment Items
-            </h4>
-            <div className="space-y-3">
-              {formData.items.map((item, index) => (
-                <div key={index} className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
-                  <div>
-                    <p className="font-medium">{item.name}</p>
-                    <p className="text-sm text-muted-foreground">
-                      {item.quantity} {item.unit}
-                    </p>
-                  </div>
-                  <div className="text-right">
-                    <p className="font-medium">
-                      ${((item.estimatedValue || ITEM_VALUES[item.name] || 0) * item.quantity).toFixed(2)}
-                    </p>
-                    <p className="text-xs text-muted-foreground">est. value</p>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          <Separator />
-
-          <div className="flex justify-between items-center">
-            <div>
-              <h4 className="font-medium flex items-center gap-2">
-                <DollarSign className="h-4 w-4" />
-                Total Estimated Value
-              </h4>
-              <p className="text-2xl font-bold text-green-600">
-                ${totalEstimatedValue.toFixed(2)}
-              </p>
-            </div>
-            <div className="flex gap-2">
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => setShowPreview(false)}
-                disabled={createCommitmentMutation.isPending}
-              >
-                Back to Edit
-              </Button>
-              <Button
-                type="button"
-                onClick={() => createCommitmentMutation.mutate(formData)}
-                disabled={createCommitmentMutation.isPending}
-              >
-                {createCommitmentMutation.isPending ? 'Creating...' : 'Create Commitment'}
-              </Button>
-            </div>
-          </div>
-
-          {formData.notes && (
-            <>
-              <Separator />
-              <div>
-                <h4 className="font-medium mb-2">Additional Notes</h4>
-                <p className="text-sm text-muted-foreground">{formData.notes}</p>
-              </div>
-            </>
-          )}
-        </CardContent>
-      </Card>
-    )
-  }
-
+  
   return (
     <Card className="w-full max-w-4xl mx-auto">
       <CardHeader>
@@ -343,18 +282,38 @@ export function CommitmentForm({ donorId, onSuccess, onCancel, initialData }: Co
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Incident *</FormLabel>
-                    <Select onValueChange={field.onChange} defaultValue={field.value}>
+                    <Select 
+                      onValueChange={field.onChange} 
+                      defaultValue={field.value}
+                      disabled={!selectedEntityId || incidentsLoading}
+                    >
                       <FormControl>
                         <SelectTrigger>
-                          <SelectValue placeholder="Select an incident" />
+                          <SelectValue placeholder={
+                            !selectedEntityId 
+                              ? "Select an entity first" 
+                              : incidentsLoading 
+                                ? "Loading incidents..." 
+                                : "Select an incident"
+                          } />
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
                         {incidents?.map((incident: any) => (
                           <SelectItem key={incident.id} value={incident.id}>
-                            {incident.type} - {incident.severity}
+                            <div className="flex items-center gap-2">
+                              <span>{incident.type}</span>
+                              <Badge variant="outline" className="text-xs">
+                                {incident.severity}
+                              </Badge>
+                            </div>
                           </SelectItem>
                         ))}
+                        {incidents?.length === 0 && selectedEntityId && !incidentsLoading && (
+                          <div className="px-2 py-1 text-sm text-muted-foreground">
+                            No incidents found for this entity
+                          </div>
+                        )}
                       </SelectContent>
                     </Select>
                     <FormMessage />
@@ -457,8 +416,14 @@ export function CommitmentForm({ donorId, onSuccess, onCancel, initialData }: Co
                             placeholder="0.00"
                             step="0.01"
                             min="0"
-                            {...form.register(`items.${index}.estimatedValue`)}
+                            {...form.register(`items.${index}.estimatedValue`, {
+                              valueAsNumber: true,
+                              setValueAs: (value) => value === '' ? undefined : parseFloat(value)
+                            })}
                           />
+                          {form.formState.errors.items?.[index]?.estimatedValue && (
+                            <FormMessage>{form.formState.errors.items[index]?.estimatedValue?.message}</FormMessage>
+                          )}
                         </div>
                         <Button
                           type="button"
@@ -524,7 +489,7 @@ export function CommitmentForm({ donorId, onSuccess, onCancel, initialData }: Co
                 disabled={createCommitmentMutation.isPending}
                 className="min-w-[120px]"
               >
-                {createCommitmentMutation.isPending ? 'Creating...' : 'Preview Commitment'}
+                {createCommitmentMutation.isPending ? 'Creating...' : 'Create Commitment'}
               </Button>
             </div>
           </form>

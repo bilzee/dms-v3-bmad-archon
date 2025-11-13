@@ -189,7 +189,7 @@ export default function CoordinatorEntitiesPage() {
   });
 
   const getUserRoles = (user: User) => {
-    return user.roles.filter(role => ['ASSESSOR', 'RESPONDER'].includes(role.role.name));
+    return user.roles.filter(role => ['ASSESSOR', 'RESPONDER', 'DONOR'].includes(role.role.name));
   };
 
   // Get users not assigned to selected entity
@@ -243,7 +243,7 @@ export default function CoordinatorEntitiesPage() {
           <div>
             <h2 className="text-2xl font-bold tracking-tight">Entity Assignment Management</h2>
             <p className="text-muted-foreground">
-              Assign entities to assessors and responders for role-based access control
+              Assign entities to assessors, responders, and donors for role-based access control
             </p>
           </div>
         </div>
@@ -382,6 +382,7 @@ export default function CoordinatorEntitiesPage() {
                               <SelectItem value="ALL">All roles</SelectItem>
                               <SelectItem value="ASSESSOR">Assessor</SelectItem>
                               <SelectItem value="RESPONDER">Responder</SelectItem>
+                              <SelectItem value="DONOR">Donor</SelectItem>
                             </SelectContent>
                           </Select>
                         </div>
@@ -493,7 +494,7 @@ export default function CoordinatorEntitiesPage() {
                             <TableCell>
                               <div className="flex gap-1">
                                 {users.find(u => u.id === user.id)?.roles
-                                  .filter(role => ['ASSESSOR', 'RESPONDER'].includes(role.role.name))
+                                  .filter(role => ['ASSESSOR', 'RESPONDER', 'DONOR'].includes(role.role.name))
                                   .map((role) => (
                                     <Badge key={role.role.id} variant="secondary" className="text-xs">
                                       {role.role.name}

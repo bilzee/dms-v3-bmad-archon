@@ -55,6 +55,47 @@ export default function DashboardPage() {
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        {/* Donor Entity Assignment - Story 5.2 Enhancement */}
+        {hasPermission('MANAGE_ENTITIES') && (
+          <Card className="border-indigo-200 bg-indigo-50/30">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <HandHeart className="h-5 w-5 text-indigo-600" />
+                Donor Entity Assignment
+              </CardTitle>
+              <CardDescription>
+                Manage entity assignments for donor organizations and commitment tracking
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-3">
+                <div className="flex items-center gap-2">
+                  <Badge variant="outline" className="text-xs">Story 5.2</Badge>
+                  <Badge variant="secondary" className="text-xs">Coordinator</Badge>
+                  <Badge variant="outline" className="text-xs bg-indigo-50 text-indigo-700 border-indigo-200">Enhanced</Badge>
+                </div>
+                <div className="grid grid-cols-1 gap-2">
+                  <Link href="/coordinator/entities?filter=donor">
+                    <Button className="w-full justify-start bg-indigo-600 hover:bg-indigo-700">
+                      <HandHeart className="h-4 w-4 mr-2" />
+                      Assign Donor Entities
+                    </Button>
+                  </Link>
+                  <Link href="/coordinator/entities">
+                    <Button variant="outline" className="w-full justify-start">
+                      <Users className="h-4 w-4 mr-2" />
+                      All Entity Assignments
+                    </Button>
+                  </Link>
+                </div>
+                <div className="text-xs text-muted-foreground">
+                  Enhanced entity assignment system with donor support, bulk assignment capabilities, and commitment overview interface
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
         {/* Entity Assignment Management - Story 2.3 & 3.3 */}
         <Card>
           <CardHeader>
@@ -476,6 +517,118 @@ export default function DashboardPage() {
                 </div>
                 <div className="text-xs text-muted-foreground">
                   Features performance metrics, commitment tracking, and read-only assessment viewing
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Commitment Management - Story 5.2 */}
+        {hasPermission('VIEW_DONOR_DASHBOARD') && (
+          <Card className="border-violet-200 bg-violet-50/30">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Target className="h-5 w-5 text-violet-600" />
+                Commitment Management
+              </CardTitle>
+              <CardDescription>
+                Register and manage aid commitments with real-time status tracking and value estimation
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-3">
+                <div className="flex items-center gap-2">
+                  <Badge variant="outline" className="text-xs">Story 5.2</Badge>
+                  <Badge variant="secondary" className="text-xs">Donor Role</Badge>
+                  <Badge variant="outline" className="text-xs bg-violet-50 text-violet-700 border-violet-200">New</Badge>
+                  <Badge variant="outline" className="text-xs bg-green-50 text-green-700 border-green-200">Complete</Badge>
+                </div>
+                
+                {/* Live Commitment Stats */}
+                {!loading && stats && (
+                  <div className="bg-white/60 rounded-lg p-3 border border-violet-100">
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm font-medium">Your Commitments</span>
+                      <span className="text-lg font-bold text-violet-600">
+                        {stats.totalCommitments}
+                      </span>
+                    </div>
+                    <div className="text-xs text-violet-600 mt-1">
+                      ✓ Multi-step form with preview functionality
+                    </div>
+                  </div>
+                )}
+                
+                <div className="grid grid-cols-1 gap-2">
+                  <Link href="/donor/dashboard?tab=commitments">
+                    <Button className="w-full justify-start bg-violet-600 hover:bg-violet-700">
+                      <Target className="h-4 w-4 mr-2" />
+                      Manage Commitments
+                    </Button>
+                  </Link>
+                  <Link href="/donor/dashboard?action=new-commitment">
+                    <Button variant="outline" className="w-full justify-start">
+                      <PlusCircle className="h-4 w-4 mr-2" />
+                      Register New Commitment
+                    </Button>
+                  </Link>
+                </div>
+                <div className="text-xs text-muted-foreground">
+                  Features commitment form (item/unit/quantity), entity assignment, incident tracking, delivery reporting, status tracking (Planned/Partial/Complete), and value estimation
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Commitment Status Tracking - Story 5.2 */}
+        {(hasPermission('VIEW_DONOR_DASHBOARD') || hasPermission('VIEW_RESPONSE')) && (
+          <Card className="border-emerald-200 bg-emerald-50/30">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <TrendingUp className="h-5 w-5 text-emerald-600" />
+                Commitment Status Tracking
+              </CardTitle>
+              <CardDescription>
+                Track commitment delivery progress with real-time status updates and reporting
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-3">
+                <div className="flex items-center gap-2">
+                  <Badge variant="outline" className="text-xs">Story 5.2</Badge>
+                  <Badge variant="secondary" className="text-xs">All Roles</Badge>
+                  <Badge variant="outline" className="text-xs bg-emerald-50 text-emerald-700 border-emerald-200">Complete</Badge>
+                </div>
+                
+                <div className="grid grid-cols-1 gap-2">
+                  {hasPermission('VIEW_DONOR_DASHBOARD') && (
+                    <Link href="/donor/dashboard?tab=commitments">
+                      <Button className="w-full justify-start bg-emerald-600 hover:bg-emerald-700">
+                        <TrendingUp className="h-4 w-4 mr-2" />
+                        Your Commitment Status
+                      </Button>
+                    </Link>
+                  )}
+                  {hasPermission('VIEW_DONOR_DASHBOARD') && (
+                    <Link href="/donor/responses">
+                      <Button variant="outline" className="w-full justify-start">
+                        <Truck className="h-4 w-4 mr-2" />
+                        All Commitments Status
+                      </Button>
+                    </Link>
+                  )}
+                  {hasPermission('VIEW_RESPONSE') && (
+                    <Link href="/responder/planning?tab=commitments&filter=status">
+                      <Button variant="outline" className="w-full justify-start">
+                        <Clock className="h-4 w-4 mr-2" />
+                        Response Planning
+                      </Button>
+                    </Link>
+                  )}
+                </div>
+                <div className="text-xs text-muted-foreground">
+                  Real-time status tracking: Planned → Partial → Complete with delivery verification and affected entity reporting
                 </div>
               </div>
             </CardContent>

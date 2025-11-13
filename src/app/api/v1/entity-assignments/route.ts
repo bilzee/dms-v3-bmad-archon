@@ -22,7 +22,7 @@ export const POST = withAuth(async (request: NextRequest, context: AuthContext) 
     const body = await request.json();
     const validatedData = createAssignmentSchema.parse(body);
 
-    // Check if user exists and has appropriate role (ASSESSOR or RESPONDER)
+    // Check if user exists and has appropriate role (ASSESSOR, RESPONDER, or DONOR)
     const targetUser = await prisma.user.findUnique({
       where: { id: validatedData.userId },
       include: {
@@ -42,12 +42,12 @@ export const POST = withAuth(async (request: NextRequest, context: AuthContext) 
     }
 
     const hasAssignableRole = targetUser.roles.some(
-      (userRole: any) => ['ASSESSOR', 'RESPONDER'].includes(userRole.role.name)
+      (userRole: any) => ['ASSESSOR', 'RESPONDER', 'DONOR'].includes(userRole.role.name)
     );
 
     if (!hasAssignableRole) {
       return NextResponse.json(
-        { error: 'User must have at least one ASSESSOR or RESPONDER role to be assigned to entities' },
+        { error: 'User must have at least one ASSESSOR, RESPONDER, or DONOR role to be assigned to entities' },
         { status: 400 }
       );
     }

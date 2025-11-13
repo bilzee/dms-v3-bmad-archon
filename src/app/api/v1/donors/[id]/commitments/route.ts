@@ -31,6 +31,7 @@ export const GET = withAuth(async (request: NextRequest, context, { params }: Ro
     const entityId = url.searchParams.get('entityId');
     const incidentId = url.searchParams.get('incidentId');
     const status = url.searchParams.get('status') as any;
+    const includeResponses = url.searchParams.get('includeResponses') === 'true';
     const page = parseInt(url.searchParams.get('page') || '1');
     const limit = parseInt(url.searchParams.get('limit') || '50');
     const skip = (page - 1) * limit;
@@ -66,11 +67,37 @@ export const GET = withAuth(async (request: NextRequest, context, { params }: Ro
         const assignedEntityIds = assignedEntities.map(e => e.id);
         whereClause.entityId = { in: assignedEntityIds };
       }
-    } else if (!roles.includes('COORDINATOR') && !roles.includes('ADMIN')) {
+    } else if (!roles.includes('COORDINATOR') && !roles.includes('ADMIN') && !roles.includes('DONOR')) {
       return NextResponse.json(
         { success: false, error: 'Insufficient permissions' },
         { status: 403 }
       );
+    }
+    
+    // For donors, ensure they can only access their own commitments
+    if (roles.includes('DONOR') && !roles.includes('COORDINATOR') && !roles.includes('ADMIN')) {
+      // Need to verify the donor ID matches a donor record linked to this user's organization
+      const user = await prisma.user.findUnique({
+        where: { id: userId },
+        select: { organization: true }
+      });
+      
+      const userDonor = await prisma.donor.findFirst({
+        where: {
+          OR: [
+            { name: user?.organization },
+            { organization: user?.organization }
+          ],
+          isActive: true
+        }
+      });
+      
+      if (!userDonor || userDonor.id !== donorId) {
+        return NextResponse.json(
+          { success: false, error: 'Access denied. Can only view own commitments.' },
+          { status: 403 }
+        );
+      }
     }
 
     // Get commitments with related data
@@ -108,7 +135,33 @@ export const GET = withAuth(async (request: NextRequest, context, { params }: Ro
               description: true,
               location: true
             }
-          }
+          },
+          ...(includeResponses && {
+            responses: {
+              select: {
+                id: true,
+                type: true,
+                priority: true,
+                status: true,
+                description: true,
+                items: true,
+                plannedDate: true,
+                responseDate: true,
+                verificationStatus: true,
+                verifiedAt: true,
+                createdAt: true,
+                updatedAt: true,
+                entity: {
+                  select: {
+                    id: true,
+                    name: true,
+                    type: true,
+                    location: true
+                  }
+                }
+              }
+            }
+          })
         },
         orderBy: {
           commitmentDate: 'desc'
@@ -144,12 +197,7 @@ export const POST = withAuth(async (request: NextRequest, context, { params }: R
   try {
     // Validate donor exists and is active
     const donor = await prisma.donor.findUnique({
-      where: { id: donorId, isActive: true },
-      include: {
-        user: {
-          select: { id: true, name: true, email: true }
-        }
-      }
+      where: { id: donorId, isActive: true }
     });
 
     if (!donor) {
@@ -160,14 +208,20 @@ export const POST = withAuth(async (request: NextRequest, context, { params }: R
     }
 
     // Check authorization - only the donor themselves, coordinators, or admins can create commitments
-    const isDonorUser = donor.userId === user.id;
-    const isAuthorized = isDonorUser || roles.includes('COORDINATOR') || roles.includes('ADMIN');
-
-    if (!isAuthorized) {
-      return NextResponse.json(
-        { success: false, error: 'Insufficient permissions to create commitments' },
-        { status: 403 }
-      );
+    if (roles.includes('DONOR') && !roles.includes('COORDINATOR') && !roles.includes('ADMIN')) {
+      // For donor-only users, verify they can only create commitments for their own organization
+      const currentUser = await prisma.user.findUnique({
+        where: { id: user.id },
+        select: { organization: true }
+      });
+      
+      if (!currentUser?.organization || 
+          (donor.name !== currentUser.organization && donor.organization !== currentUser.organization)) {
+        return NextResponse.json(
+          { success: false, error: 'Access denied. Can only create commitments for your own organization.' },
+          { status: 403 }
+        );
+      }
     }
 
     // Parse and validate request body

@@ -17,11 +17,11 @@ export const GET = withAuth(async (request: NextRequest, context: AuthContext) =
 
   try {
     const url = new URL(request.url);
-    const roleFilter = url.searchParams.get('role'); // Optional role filter (ASSESSOR, RESPONDER)
+    const roleFilter = url.searchParams.get('role'); // Optional role filter (ASSESSOR, RESPONDER, DONOR)
 
     // Build where clause for role filtering
     let roleWhere = {};
-    if (roleFilter && ['ASSESSOR', 'RESPONDER'].includes(roleFilter)) {
+    if (roleFilter && ['ASSESSOR', 'RESPONDER', 'DONOR'].includes(roleFilter)) {
       roleWhere = {
         roles: {
           some: {
@@ -32,13 +32,13 @@ export const GET = withAuth(async (request: NextRequest, context: AuthContext) =
         }
       };
     } else {
-      // Default: get users with ASSESSOR or RESPONDER roles
+      // Default: get users with ASSESSOR, RESPONDER, or DONOR roles (all assignable roles)
       roleWhere = {
         roles: {
           some: {
             role: {
               name: {
-                in: ['ASSESSOR', 'RESPONDER']
+                in: ['ASSESSOR', 'RESPONDER', 'DONOR']
               }
             }
           }
@@ -46,7 +46,7 @@ export const GET = withAuth(async (request: NextRequest, context: AuthContext) =
       };
     }
 
-    // Get assignable users (ASSESSOR and RESPONDER roles)
+    // Get assignable users (ASSESSOR, RESPONDER, and DONOR roles)
     const users = await prisma.user.findMany({
       where: {
         isActive: true,

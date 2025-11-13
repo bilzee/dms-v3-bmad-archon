@@ -26,6 +26,7 @@ import { DonorCommitment } from '@/types/commitment'
 
 interface CommitmentDashboardProps {
   donorId: string
+  preSelectedEntityId?: string
 }
 
 const STATUS_COLORS = {
@@ -42,16 +43,25 @@ const STATUS_ICONS = {
   CANCELLED: XCircle
 }
 
-export function CommitmentDashboard({ donorId }: CommitmentDashboardProps) {
+export function CommitmentDashboard({ donorId, preSelectedEntityId }: CommitmentDashboardProps) {
   const router = useRouter()
   const queryClient = useQueryClient()
+  
+  console.log('CommitmentDashboard received donorId:', donorId)
   const [showForm, setShowForm] = useState(false)
   const [filters, setFilters] = useState({
-    status: '',
-    incidentId: '',
-    entityId: '',
+    status: 'all',
+    incidentId: 'all',
+    entityId: preSelectedEntityId || 'all',
     search: ''
   })
+
+  // Auto-open form if entity is pre-selected
+  React.useEffect(() => {
+    if (preSelectedEntityId) {
+      setShowForm(true)
+    }
+  }, [preSelectedEntityId])
 
   // Fetch commitments
   const { data: commitmentsData, isLoading, error } = useQuery({
@@ -59,7 +69,7 @@ export function CommitmentDashboard({ donorId }: CommitmentDashboardProps) {
     queryFn: async () => {
       const params = new URLSearchParams()
       Object.entries(filters).forEach(([key, value]) => {
-        if (value) params.append(key, value)
+        if (value && value !== 'all') params.append(key, value)
       })
 
       const response = await fetch(`/api/v1/donors/${donorId}/commitments?${params}`)
@@ -97,9 +107,9 @@ export function CommitmentDashboard({ donorId }: CommitmentDashboardProps) {
 
   const clearFilters = () => {
     setFilters({
-      status: '',
-      incidentId: '',
-      entityId: '',
+      status: 'all',
+      incidentId: 'all',
+      entityId: 'all',
       search: ''
     })
   }
@@ -154,6 +164,7 @@ export function CommitmentDashboard({ donorId }: CommitmentDashboardProps) {
           donorId={donorId}
           onSuccess={handleCommitmentSuccess}
           onCancel={() => setShowForm(false)}
+          preSelectedEntityId={preSelectedEntityId}
         />
       </div>
     )
@@ -257,7 +268,7 @@ export function CommitmentDashboard({ donorId }: CommitmentDashboardProps) {
                 <SelectValue placeholder="All Status" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">All Status</SelectItem>
+                <SelectItem value="all">All Status</SelectItem>
                 <SelectItem value="PLANNED">Planned</SelectItem>
                 <SelectItem value="PARTIAL">In Progress</SelectItem>
                 <SelectItem value="COMPLETE">Complete</SelectItem>
@@ -270,7 +281,7 @@ export function CommitmentDashboard({ donorId }: CommitmentDashboardProps) {
                 <SelectValue placeholder="All Incidents" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">All Incidents</SelectItem>
+                <SelectItem value="all">All Incidents</SelectItem>
                 {incidents?.map((incident: any) => (
                   <SelectItem key={incident.id} value={incident.id}>
                     {incident.type} - {incident.severity}
@@ -284,7 +295,7 @@ export function CommitmentDashboard({ donorId }: CommitmentDashboardProps) {
                 <SelectValue placeholder="All Entities" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">All Entities</SelectItem>
+                <SelectItem value="all">All Entities</SelectItem>
                 {entities?.map((entity: any) => (
                   <SelectItem key={entity.id} value={entity.id}>
                     {entity.name}

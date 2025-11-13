@@ -36,24 +36,98 @@ export const GET = withAuth(async (request: NextRequest, context) => {
       );
     }
 
-    // Find donor by organization name match (since User has organization field)
-    const donor = await prisma.donor.findFirst({
-      where: {
-        name: user.organization || undefined
-      },
-      include: {
-        _count: {
-          select: {
-            commitments: true,
-            responses: true
+    // Find donor by multiple criteria - more flexible matching
+    let donor = null;
+    
+    // First try: exact match on donor.name = user.organization
+    if (user.organization) {
+      donor = await prisma.donor.findFirst({
+        where: {
+          name: user.organization
+        },
+        include: {
+          _count: {
+            select: {
+              commitments: true,
+              responses: true
+            }
           }
         }
+      });
+    }
+    
+    // Second try: match donor.organization = user.organization
+    if (!donor && user.organization) {
+      donor = await prisma.donor.findFirst({
+        where: {
+          organization: user.organization
+        },
+        include: {
+          _count: {
+            select: {
+              commitments: true,
+              responses: true
+            }
+          }
+        }
+      });
+    }
+    
+    // Third try: partial name matching (case insensitive)
+    if (!donor && user.organization) {
+      donor = await prisma.donor.findFirst({
+        where: {
+          OR: [
+            {
+              name: {
+                contains: user.organization,
+                mode: 'insensitive'
+              }
+            },
+            {
+              organization: {
+                contains: user.organization,
+                mode: 'insensitive'
+              }
+            }
+          ]
+        },
+        include: {
+          _count: {
+            select: {
+              commitments: true,
+              responses: true
+            }
+          }
+        }
+      });
+    }
+    
+    // Fourth try: find any active donor for users with DONOR role (fallback for multi-role users)
+    if (!donor) {
+      const donorCount = await prisma.donor.count({
+        where: { isActive: true }
+      });
+      
+      // If there's only one active donor, use it as fallback
+      if (donorCount === 1) {
+        donor = await prisma.donor.findFirst({
+          where: { isActive: true },
+          include: {
+            _count: {
+              select: {
+                commitments: true,
+                responses: true
+              }
+            }
+          }
+        });
       }
-    });
+    }
 
     if (!donor) {
       return NextResponse.json(
-        { success: false, error: 'Donor profile not found' },
+        { success: false, error: 'Donor profile not found. Please ensure your user profile organization matches a registered donor organization.' },
         { status: 404 }
       );
     }

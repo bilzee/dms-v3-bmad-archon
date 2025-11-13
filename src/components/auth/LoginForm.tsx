@@ -13,6 +13,7 @@ import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Separator } from '@/components/ui/separator'
 import { useAuth } from '@/hooks/useAuth'
+import { useAuthStore } from '@/stores/auth.store'
 import { User, Shield, Users, Heart, Package } from 'lucide-react'
 
 const loginSchema = z.object({
@@ -114,7 +115,7 @@ export function LoginForm() {
       // Get auth state to determine role-based redirect
       // Use a timeout to allow auth state to update
       setTimeout(() => {
-        const { currentRole, availableRoles } = useAuth.getState()
+        const { currentRole, availableRoles } = useAuthStore.getState()
         const roles = availableRoles || []
         
         // Priority order for role-based redirects (matches auth store priority)

@@ -23,7 +23,8 @@ export const QueryIncidentSchema = z.object({
   limit: z.coerce.number().int().min(1).max(100).default(10),
   type: z.string().optional(),
   severity: z.enum(['CRITICAL', 'HIGH', 'MEDIUM', 'LOW']).optional(),
-  status: z.enum(['ACTIVE', 'CONTAINED', 'RESOLVED']).optional()
+  status: z.enum(['ACTIVE', 'CONTAINED', 'RESOLVED']).optional(),
+  entityId: z.string().optional()
 })
 
 export type IncidentInput = z.infer<typeof IncidentSchema>

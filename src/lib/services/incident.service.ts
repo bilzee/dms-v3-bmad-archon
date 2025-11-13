@@ -91,7 +91,7 @@ export class IncidentService {
     total: number
     totalPages: number
   }> {
-    const { page, limit, type, severity, status } = query
+    const { page, limit, type, severity, status, entityId } = query
 
     const where: any = {}
 
@@ -106,6 +106,15 @@ export class IncidentService {
 
     if (status) {
       where.status = status
+    }
+
+    // Filter by entity if specified
+    if (entityId) {
+      where.entities = {
+        some: {
+          entityId: entityId
+        }
+      }
     }
 
     // Get total count

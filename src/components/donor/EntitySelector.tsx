@@ -3,6 +3,7 @@
 import React from 'react'
 import { useState, useEffect } from 'react'
 import { useQuery } from '@tanstack/react-query'
+import { useRouter } from 'next/navigation'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
@@ -50,6 +51,7 @@ interface EntitySelectorProps {
 
 export function EntitySelector({ onEntitySelect, showStats = true }: EntitySelectorProps) {
   const { user } = useAuthStore()
+  const router = useRouter()
   const [search, setSearch] = useState('')
   const [typeFilter, setTypeFilter] = useState<string>('')
   const [selectedEntity, setSelectedEntity] = useState<Entity | null>(null)
@@ -91,6 +93,16 @@ export function EntitySelector({ onEntitySelect, showStats = true }: EntitySelec
     if (onEntitySelect) {
       onEntitySelect(entity)
     }
+  }
+
+  const handleMakeCommitment = (entity: Entity) => {
+    // Navigate to donor dashboard with commitments tab and entity pre-selected
+    router.push(`/donor/dashboard?tab=commitments&entityId=${entity.id}`)
+  }
+
+  const handleViewAssessments = (entity: Entity) => {
+    // Navigate to rapid assessments page filtered by entity
+    router.push(`/donor/rapid-assessments?entityId=${entity.id}`)
   }
 
   const getEntityTypeColor = (type: string) => {
@@ -457,10 +469,15 @@ export function EntitySelector({ onEntitySelect, showStats = true }: EntitySelec
             
             <div className="mt-6 pt-4 border-t">
               <div className="flex justify-end space-x-2">
-                <Button variant="outline">
+                <Button 
+                  variant="outline"
+                  onClick={() => handleViewAssessments(selectedEntity)}
+                >
                   View Assessments
                 </Button>
-                <Button>
+                <Button
+                  onClick={() => handleMakeCommitment(selectedEntity)}
+                >
                   Make Commitment
                 </Button>
               </div>

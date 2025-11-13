@@ -1,5 +1,58 @@
 # Bugs and Solutions
 
+## Current Bug Fixes (2025-11-12)
+
+### **Bug 1: useAuth.getState() is not a function in LoginForm**
+**Problem**: Users getting "TypeError: _hooks_useAuth__WEBPACK_IMPORTED_MODULE_11__.useAuth.getState is not a function" runtime error when attempting to login
+**Root Cause**: LoginForm component was incorrectly calling `useAuth.getState()` instead of `useAuthStore.getState()`. The `useAuth` hook is a wrapper that returns store methods/data, while `useAuthStore` is the actual Zustand store with the `getState()` method.
+**Location**: `src/components/auth/LoginForm.tsx:117`
+**Error Details**: 
+```
+TypeError: useAuth.getState is not a function
+Source: src\components\auth\LoginForm.tsx (117:57) @ getState
+```
+
+**Solution Implemented**: 
+1. Added import for `useAuthStore` from `@/stores/auth.store`
+2. Changed line 117 from `useAuth.getState()` to `useAuthStore.getState()`
+```typescript
+// Before (incorrect)
+const { currentRole, availableRoles } = useAuth.getState()
+
+// After (correct)  
+const { currentRole, availableRoles } = useAuthStore.getState()
+```
+
+**Pattern**: When accessing Zustand store state directly (like in timeouts or callbacks), use the store directly (`useAuthStore.getState()`), not the hook wrapper (`useAuth`)
+
+### **Bug 2: Donor user password hash mismatch after Story 5.2**
+**Problem**: Donor user (`donor@test.com`) getting "401 Unauthorized" error during login while multirole user authentication worked correctly
+**Root Cause**: Database contained stale donor user data with incorrect password hash. The Prisma seed script uses `upsert` with `update: {}`, which doesn't update existing user passwords when they already exist in the database.
+**Investigation**: 
+- Git history showed donor authentication was working after Story 5.1 (commit 949215e)
+- Issue appeared after Story 5.2 implementation (commit a7ec373)
+- Debug script revealed password hash mismatch for stored vs expected password
+- Stored hash: `$2b$12$wJH54tas3Em0XYBv.xIaA.QeCOQo4qvzD/0.A0My/xBJHZuk01vnq`
+- Expected password: `donor123!`
+
+**Solution Implemented**: 
+1. Created `fix-donor-password.js` script to update the donor user with correct password hash
+2. Updated user data to match seed file expectations:
+```javascript
+await prisma.user.update({
+  where: { email: 'donor@test.com' },
+  data: {
+    passwordHash: await bcrypt.hash('donor123!', 10),
+    name: 'Donor Organization Contact',
+    organization: 'Test Donor Organization',
+    isActive: true,
+    isLocked: false
+  }
+});
+```
+
+**Pattern**: When using Prisma `upsert` with `update: {}`, existing records won't be updated. For test environments, consider using `update: create` to ensure data consistency, or run explicit update scripts to fix stale test data.
+
 ## Story 5.1 Bug Fixes (2025-11-09)
 
 ### **Bug 1: Missing React Import in Donor Components**
