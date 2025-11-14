@@ -72,11 +72,11 @@ export const GET = withAuth(async (request: NextRequest, context) => {
       // Donor trends over time
       (prisma.$queryRaw`
         SELECT 
-          DATE(d.createdAt) as date,
+          DATE(d."createdAt") as date,
           COUNT(*) as newDonors
-        FROM Donor d
-        WHERE d.createdAt >= ${startDate}
-        GROUP BY DATE(d.createdAt)
+        FROM donors d
+        WHERE d."createdAt" >= ${startDate}
+        GROUP BY DATE(d."createdAt")
         ORDER BY date DESC
         LIMIT 30
       ` as Promise<Array<{

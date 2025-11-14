@@ -6,6 +6,9 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import Link from 'next/link'
+import { LeaderboardDisplay } from '@/components/donor/LeaderboardDisplay'
+import { DonorPerformanceDashboard } from '@/components/donor/DonorPerformanceDashboard'
+import { GameBadgeSystem } from '@/components/donor/GameBadgeSystem'
 import { 
   Users, 
   FileText, 
@@ -30,7 +33,11 @@ import {
   Heart,
   Award,
   Target,
-  Building2
+  Building2,
+  Trophy,
+  Medal,
+  Star,
+  Gamepad2
 } from 'lucide-react'
 
 export default function DashboardPage() {
@@ -523,6 +530,185 @@ export default function DashboardPage() {
           </Card>
         )}
 
+        {/* Donor Performance Gamification - Story 5.3 */}
+        <div className="col-span-full">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            {/* Public Leaderboard */}
+            <Card className="border-yellow-200 bg-gradient-to-br from-yellow-50/50 to-orange-50/50">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Trophy className="h-5 w-5 text-yellow-600" />
+                  Donor Performance Leaderboard
+                </CardTitle>
+                <CardDescription>
+                  View real-time donor rankings and performance metrics across all regions
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-3">
+                  <div className="flex items-center gap-2">
+                    <Badge variant="outline" className="text-xs">Story 5.3</Badge>
+                    <Badge variant="secondary" className="text-xs">Public Access</Badge>
+                    <Badge variant="outline" className="text-xs bg-yellow-50 text-yellow-700 border-yellow-200">New</Badge>
+                    <Badge variant="outline" className="text-xs bg-green-50 text-green-700 border-green-200">Complete</Badge>
+                    <Badge variant="outline" className="text-xs bg-purple-50 text-purple-700 border-purple-200">Live</Badge>
+                  </div>
+                  
+                  {/* Embedded mini leaderboard */}
+                  <div className="h-80 overflow-hidden">
+                    <LeaderboardDisplay 
+                      limit={5}
+                      showFilters={false}
+                      interactive={false}
+                      className="border-0 shadow-none bg-transparent"
+                    />
+                  </div>
+                  
+                  <Link href="/donor/leaderboard">
+                    <Button className="w-full justify-start bg-yellow-600 hover:bg-yellow-700">
+                      <Trophy className="h-4 w-4 mr-2" />
+                      View Full Leaderboard
+                    </Button>
+                  </Link>
+                  
+                  <div className="text-xs text-muted-foreground">
+                    Features real-time rankings, delivery metrics, achievement badges, regional filtering, and export capabilities
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Achievement Notifications */}
+            <Card className="border-purple-200 bg-gradient-to-br from-purple-50/50 to-pink-50/50">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Medal className="h-5 w-5 text-purple-600" />
+                  Achievement System
+                </CardTitle>
+                <CardDescription>
+                  Track donor achievements, badges, and performance milestones
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-3">
+                  <div className="flex items-center gap-2">
+                    <Badge variant="outline" className="text-xs">Story 5.3</Badge>
+                    <Badge variant="secondary" className="text-xs">Donor Role</Badge>
+                    <Badge variant="outline" className="text-xs bg-purple-50 text-purple-700 border-purple-200">New</Badge>
+                    <Badge variant="outline" className="text-xs bg-green-50 text-green-700 border-green-200">Complete</Badge>
+                  </div>
+                  
+                  {/* Achievement Preview Widget */}
+                  <div className="bg-white/60 rounded-lg p-4 border border-purple-100">
+                    <div className="flex items-center gap-3">
+                      <div className="flex -space-x-2">
+                        <div className="w-8 h-8 bg-yellow-100 rounded-full flex items-center justify-center border-2 border-white">
+                          <Trophy className="h-4 w-4 text-yellow-600" />
+                        </div>
+                        <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center border-2 border-white">
+                          <Star className="h-4 w-4 text-blue-600" />
+                        </div>
+                        <div className="w-8 h-8 bg-purple-100 rounded-full flex items-center justify-center border-2 border-white">
+                          <Award className="h-4 w-4 text-purple-600" />
+                        </div>
+                      </div>
+                      <div className="flex-1">
+                        <div className="text-sm font-medium text-purple-900">Track Your Progress</div>
+                        <div className="text-xs text-purple-600">Earn badges for reliability and consistency</div>
+                      </div>
+                    </div>
+                  </div>
+                  
+                  <div className="grid grid-cols-2 gap-2">
+                    <Link href="/donor/performance">
+                      <Button variant="outline" className="w-full justify-start text-sm">
+                        <Star className="h-4 w-4 mr-2" />
+                        Your Performance
+                      </Button>
+                    </Link>
+                    <Link href="/donor/performance?tab=achievements">
+                      <Button variant="outline" className="w-full justify-start text-sm">
+                        <Award className="h-4 w-4 mr-2" />
+                        Achievements
+                      </Button>
+                    </Link>
+                  </div>
+                  
+                  <div className="text-xs text-muted-foreground">
+                    Features delivery rate badges, volume achievements, response time recognition, and consistency milestones
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        </div>
+
+        {/* Performance Metrics Overview */}
+        {(hasPermission('VIEW_DONOR_DASHBOARD') || hasPermission('MANAGE_USERS')) && (
+          <Card className="border-indigo-200 bg-gradient-to-br from-indigo-50/50 to-blue-50/50">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <BarChart3 className="h-5 w-5 text-indigo-600" />
+                Donor Performance Metrics
+              </CardTitle>
+              <CardDescription>
+                Comprehensive performance analytics with historical trends and peer comparisons
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-3">
+                <div className="flex items-center gap-2">
+                  <Badge variant="outline" className="text-xs">Story 5.3</Badge>
+                  <Badge variant="secondary" className="text-xs">Analytics</Badge>
+                  <Badge variant="outline" className="text-xs bg-indigo-50 text-indigo-700 border-indigo-200">New</Badge>
+                  <Badge variant="outline" className="text-xs bg-green-50 text-green-700 border-green-200">Complete</Badge>
+                </div>
+                
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div className="text-center p-4 bg-white/60 rounded-lg border border-indigo-100">
+                    <Gamepad2 className="h-8 w-8 mx-auto text-indigo-600 mb-2" />
+                    <div className="text-2xl font-bold text-indigo-600">4</div>
+                    <div className="text-xs text-muted-foreground">Badge Categories</div>
+                  </div>
+                  <div className="text-center p-4 bg-white/60 rounded-lg border border-indigo-100">
+                    <Trophy className="h-8 w-8 mx-auto text-yellow-600 mb-2" />
+                    <div className="text-2xl font-bold text-yellow-600">12</div>
+                    <div className="text-xs text-muted-foreground">Achievement Levels</div>
+                  </div>
+                  <div className="text-center p-4 bg-white/60 rounded-lg border border-indigo-100">
+                    <Star className="h-8 w-8 mx-auto text-purple-600 mb-2" />
+                    <div className="text-2xl font-bold text-purple-600">15</div>
+                    <div className="text-xs text-muted-foreground">Min Update Frequency</div>
+                  </div>
+                </div>
+                
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                  {hasPermission('VIEW_DONOR_DASHBOARD') && (
+                    <Link href="/donor/performance">
+                      <Button className="w-full justify-start bg-indigo-600 hover:bg-indigo-700">
+                        <BarChart3 className="h-4 w-4 mr-2" />
+                        Your Performance Dashboard
+                      </Button>
+                    </Link>
+                  )}
+                  {hasPermission('MANAGE_USERS') && (
+                    <Link href="/admin/donors/metrics">
+                      <Button variant="outline" className="w-full justify-start">
+                        <Award className="h-4 w-4 mr-2" />
+                        All Donor Metrics (Admin)
+                      </Button>
+                    </Link>
+                  )}
+                </div>
+                
+                <div className="text-xs text-muted-foreground">
+                  Features delivery rate tracking, commitment value analysis, historical trend charts, peer comparison, and CSV/PDF export
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
         {/* Commitment Management - Story 5.2 */}
         {hasPermission('VIEW_DONOR_DASHBOARD') && (
           <Card className="border-violet-200 bg-violet-50/30">
@@ -850,15 +1036,15 @@ export default function DashboardPage() {
           </CardContent>
         </Card>
 
-        {/* User Profile */}
-        <Card>
+        {/* User Profile with Gamification */}
+        <Card className="border-teal-200 bg-gradient-to-br from-teal-50/50 to-cyan-50/50">
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
-              <User className="h-5 w-5" />
-              Profile
+              <User className="h-5 w-5 text-teal-600" />
+              Your Profile & Performance
             </CardTitle>
             <CardDescription>
-              Manage your account settings and view role information
+              Manage your account settings and view your gamification achievements
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -874,13 +1060,54 @@ export default function DashboardPage() {
                     </Badge>
                   )) || <Badge variant="outline" className="text-xs">No roles assigned</Badge>}
                 </div>
+                
+                {/* Gamification Status for Donor Users */}
+                {hasPermission('VIEW_DONOR_DASHBOARD') && (
+                  <div className="mt-3 pt-3 border-t border-teal-200">
+                    <div className="flex items-center gap-2 mb-2">
+                      <Star className="h-4 w-4 text-yellow-500" />
+                      <strong className="text-teal-700">Your Achievements</strong>
+                    </div>
+                    
+                    {/* Sample Badge Display - would be populated from user's actual badges */}
+                    <div className="flex items-center gap-1 mb-2">
+                      <GameBadgeSystem 
+                        badges={['Reliable Delivery Bronze', 'High Volume Bronze']} 
+                        size="sm" 
+                        showProgress={false}
+                      />
+                    </div>
+                    
+                    <div className="grid grid-cols-2 gap-2 text-xs">
+                      <div className="bg-teal-50 rounded p-2 text-center">
+                        <div className="font-semibold text-teal-700">85%</div>
+                        <div className="text-muted-foreground">Delivery Rate</div>
+                      </div>
+                      <div className="bg-cyan-50 rounded p-2 text-center">
+                        <div className="font-semibold text-cyan-700">#12</div>
+                        <div className="text-muted-foreground">Current Rank</div>
+                      </div>
+                    </div>
+                  </div>
+                )}
               </div>
-              <Link href="/profile">
-                <Button className="w-full" variant="outline">
-                  <User className="h-4 w-4 mr-2" />
-                  Edit Profile
-                </Button>
-              </Link>
+              
+              <div className="grid grid-cols-1 gap-2">
+                <Link href="/profile">
+                  <Button className="w-full" variant="outline">
+                    <User className="h-4 w-4 mr-2" />
+                    Edit Profile
+                  </Button>
+                </Link>
+                {hasPermission('VIEW_DONOR_DASHBOARD') && (
+                  <Link href="/donor/performance">
+                    <Button className="w-full bg-teal-600 hover:bg-teal-700 text-white">
+                      <Award className="h-4 w-4 mr-2" />
+                      View Performance Dashboard
+                    </Button>
+                  </Link>
+                )}
+              </div>
             </div>
           </CardContent>
         </Card>

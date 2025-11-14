@@ -1,6 +1,6 @@
 # Prisma Schema Reference
 
-_Auto-generated on 2025-11-11T16:30:21.351Z_
+_Auto-generated on 2025-11-13T17:19:43.652Z_
 
 ## User
 
@@ -320,6 +320,9 @@ _Auto-generated on 2025-11-11T16:30:21.351Z_
 - `contactPhone`
 - `organization`
 - `isActive`
+- `selfReportedDeliveryRate`
+- `verifiedDeliveryRate`
+- `leaderboardRank`
 - `createdAt`
 - `updatedAt`
 - `responses`

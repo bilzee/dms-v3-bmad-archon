@@ -77,16 +77,16 @@ export const GET = withAuth(async (request: NextRequest, context, { params }: Ro
     // For donors, ensure they can only access their own commitments
     if (roles.includes('DONOR') && !roles.includes('COORDINATOR') && !roles.includes('ADMIN')) {
       // Need to verify the donor ID matches a donor record linked to this user's organization
-      const user = await prisma.user.findUnique({
-        where: { id: userId },
+      const currentUser = await prisma.user.findUnique({
+        where: { id: user.id },
         select: { organization: true }
       });
       
       const userDonor = await prisma.donor.findFirst({
         where: {
           OR: [
-            { name: user?.organization },
-            { organization: user?.organization }
+            { name: currentUser?.organization },
+            { organization: currentUser?.organization }
           ],
           isActive: true
         }

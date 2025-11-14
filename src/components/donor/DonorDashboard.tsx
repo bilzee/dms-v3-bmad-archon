@@ -27,12 +27,19 @@ import {
   Activity,
   BarChart3,
   Target,
-  Truck
+  Truck,
+  Trophy,
+  Award,
+  TrendingDown,
+  Star
 } from 'lucide-react'
 
 import { DonorProfile } from './DonorProfile'
 import { EntitySelector } from './EntitySelector'
 import { CommitmentDashboard } from './CommitmentDashboard'
+import { DonorPerformanceDashboard } from './DonorPerformanceDashboard'
+import { LeaderboardDisplay } from './LeaderboardDisplay'
+import { GameBadgeSystem, BadgeProgress } from './GameBadgeSystem'
 import { useAuthStore } from '@/stores/auth.store'
 import { cn } from '@/lib/utils'
 
@@ -93,6 +100,46 @@ export function DonorDashboard() {
       
       const result = await response.json()
       return result.data
+    },
+    enabled: !!user
+  })
+
+  // Fetch gamification metrics
+  const { 
+    data: gamificationData, 
+    isLoading: gamificationLoading 
+  } = useQuery({
+    queryKey: ['donor-gamification-metrics'],
+    queryFn: async () => {
+      const response = await fetch('/api/v1/donors/metrics?timeframe=30d', {
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('auth_token')}`
+        }
+      })
+      
+      if (!response.ok) {
+        throw new Error('Failed to fetch gamification metrics')
+      }
+      
+      const result = await response.json()
+      return result.data
+    },
+    enabled: !!user
+  })
+
+  // Fetch leaderboard position
+  const { 
+    data: leaderboardData 
+  } = useQuery({
+    queryKey: ['donor-leaderboard-position'],
+    queryFn: async () => {
+      const response = await fetch('/api/v1/leaderboard?limit=100&sortBy=overall')
+      if (!response.ok) {
+        throw new Error('Failed to fetch leaderboard')
+      }
+      const result = await response.json()
+      const userPosition = result.data.rankings.find((r: any) => r.donor.id === user?.id)
+      return userPosition
     },
     enabled: !!user
   })
@@ -203,14 +250,31 @@ export function DonorDashboard() {
           description="Deliveries made"
           data-testid="total-responses-metric"
         />
+        
+        <MetricCard
+          title="Leaderboard Rank"
+          value={`#${leaderboardData?.rank || 'N/A'}`}
+          icon={Trophy}
+          iconColor="text-yellow-600"
+          description={
+            leaderboardData?.trend === 'up' ? '📈 Rising' :
+            leaderboardData?.trend === 'down' ? '📉 Declining' :
+            leaderboardData?.trend === 'stable' ? '➡️ Stable' : 'Ranking'
+          }
+          data-testid="leaderboard-rank-metric"
+        />
       </div>
 
       {/* Main Content Tabs */}
       <Tabs value={activeTab} onValueChange={setActiveTab} data-testid="dashboard-tabs">
-        <TabsList className="grid w-full grid-cols-5">
+        <TabsList className="grid w-full grid-cols-6">
           <TabsTrigger value="overview" data-testid="dashboard-overview-tab">Overview</TabsTrigger>
           <TabsTrigger value="entities" data-testid="dashboard-entities-tab">Entities</TabsTrigger>
           <TabsTrigger value="commitments" data-testid="dashboard-commitments-tab">Commitments</TabsTrigger>
+          <TabsTrigger value="gamification" data-testid="dashboard-gamification-tab">
+            <Trophy className="w-4 h-4 mr-1" />
+            Gamification
+          </TabsTrigger>
           <TabsTrigger value="profile" data-testid="dashboard-profile-tab">Profile</TabsTrigger>
           <TabsTrigger value="analytics" data-testid="dashboard-analytics-tab">Analytics</TabsTrigger>
         </TabsList>
@@ -357,10 +421,149 @@ export function DonorDashboard() {
         </TabsContent>
 
         <TabsContent value="commitments" className="space-y-6">
-          <CommitmentDashboard 
-            donorId={'donor-multirole-001'}
-            preSelectedEntityId={searchParams.get('entityId') || undefined}
-          />
+          {donor ? (
+            <CommitmentDashboard 
+              donorId={donor.id}
+              preSelectedEntityId={searchParams.get('entityId') || undefined}
+            />
+          ) : (
+            <div className="text-center py-8 text-gray-500">
+              <Package className="h-8 w-8 mx-auto mb-2 opacity-50" />
+              <p>Loading donor information...</p>
+            </div>
+          )}
+        </TabsContent>
+
+        <TabsContent value="gamification" className="space-y-6">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            {/* Achievements & Badges */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center">
+                  <Award className="mr-2 h-5 w-5" />
+                  Achievements & Badges
+                </CardTitle>
+                <CardDescription>
+                  Your earned achievements and current progress
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                {gamificationLoading ? (
+                  <div className="animate-pulse space-y-2">
+                    <div className="h-4 bg-gray-200 rounded w-3/4"></div>
+                    <div className="h-4 bg-gray-200 rounded w-1/2"></div>
+                    <div className="h-4 bg-gray-200 rounded w-2/3"></div>
+                  </div>
+                ) : gamificationData?.donors?.[0]?.badges ? (
+                  <div className="space-y-4">
+                    <GameBadgeSystem 
+                      badges={gamificationData.donors[0].badges}
+                      showProgress={true}
+                      size="md"
+                    />
+                    <BadgeProgress 
+                      currentBadges={gamificationData.donors[0].badges}
+                      totalPossibleBadges={14}
+                    />
+                  </div>
+                ) : (
+                  <div className="text-center py-4 text-gray-500">
+                    <Award className="h-8 w-8 mx-auto mb-2 opacity-50" />
+                    <p>No achievements yet</p>
+                    <p className="text-sm">Start making commitments to earn badges!</p>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+
+            {/* Performance Overview */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center">
+                  <TrendingUp className="mr-2 h-5 w-5" />
+                  Performance Overview
+                </CardTitle>
+                <CardDescription>
+                  Your gamification metrics and ranking
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                {gamificationLoading ? (
+                  <div className="animate-pulse space-y-4">
+                    <div className="h-4 bg-gray-200 rounded"></div>
+                    <div className="h-8 bg-gray-200 rounded"></div>
+                    <div className="h-4 bg-gray-200 rounded w-2/3"></div>
+                  </div>
+                ) : gamificationData?.donors?.[0] ? (
+                  <div className="space-y-4">
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="text-center p-3 bg-blue-50 rounded">
+                        <div className="text-lg font-bold text-blue-700">
+                          {gamificationData.donors[0].metrics?.deliveryRate?.toFixed(1) || '0'}%
+                        </div>
+                        <div className="text-xs text-gray-600">Delivery Rate</div>
+                      </div>
+                      <div className="text-center p-3 bg-green-50 rounded">
+                        <div className="text-lg font-bold text-green-700">
+                          {gamificationData.donors[0].metrics?.commitments?.total || 0}
+                        </div>
+                        <div className="text-xs text-gray-600">Total Activities</div>
+                      </div>
+                    </div>
+                    
+                    <div className="pt-4 border-t">
+                      <div className="flex items-center justify-between mb-2">
+                        <span className="text-sm font-medium">Current Ranking</span>
+                        <Badge variant="secondary">
+                          #{leaderboardData?.rank || 'N/A'}
+                        </Badge>
+                      </div>
+                      {leaderboardData && (
+                        <div className="flex items-center gap-2 text-xs text-gray-600">
+                          {leaderboardData.trend === 'up' && <TrendingUp className="w-3 h-3 text-green-500" />}
+                          {leaderboardData.trend === 'down' && <TrendingDown className="w-3 h-3 text-red-500" />}
+                          <span>
+                            {leaderboardData.previousRank 
+                              ? `#${leaderboardData.previousRank} → #${leaderboardData.rank}`
+                              : 'New to leaderboard'
+                            }
+                          </span>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                ) : (
+                  <div className="text-center py-4 text-gray-500">
+                    <TrendingUp className="h-8 w-8 mx-auto mb-2 opacity-50" />
+                    <p>No performance data available</p>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Leaderboard Preview */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center justify-between">
+                <div className="flex items-center">
+                  <Trophy className="mr-2 h-5 w-5" />
+                  Leaderboard
+                </div>
+                <Button variant="outline" size="sm" asChild>
+                  <a href="/donor/leaderboard">View Full Leaderboard</a>
+                </Button>
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <LeaderboardDisplay 
+                limit={5}
+                showFilters={false}
+                timeframe="30d"
+                sortBy="overall"
+              />
+            </CardContent>
+          </Card>
         </TabsContent>
 
         <TabsContent value="profile" className="space-y-6">
@@ -375,6 +578,9 @@ export function DonorDashboard() {
                   <Target className="mr-2 h-5 w-5" />
                   Commitment Analytics
                 </CardTitle>
+                <CardDescription>
+                  Track your commitment trends and patterns
+                </CardDescription>
               </CardHeader>
               <CardContent>
                 <div className="text-center py-8 text-gray-500">
@@ -391,6 +597,9 @@ export function DonorDashboard() {
                   <TrendingUp className="mr-2 h-5 w-5" />
                   Performance Trends
                 </CardTitle>
+                <CardDescription>
+                  Historical performance data and insights
+                </CardDescription>
               </CardHeader>
               <CardContent>
                 <div className="text-center py-8 text-gray-500">
@@ -401,6 +610,37 @@ export function DonorDashboard() {
               </CardContent>
             </Card>
           </div>
+
+          {/* Full Performance Dashboard */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center justify-between">
+                <div className="flex items-center">
+                  <Star className="mr-2 h-5 w-5" />
+                  Comprehensive Performance Dashboard
+                </div>
+                <Button variant="outline" size="sm" asChild>
+                  <a href="/donor/performance">Full Dashboard</a>
+                </Button>
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              {user ? (
+                <DonorPerformanceDashboard 
+                  donorId={user.id}
+                  donorName={user.name || user.organization}
+                  showRanking={true}
+                  showBadges={true}
+                  showTrends={true}
+                  compact={true}
+                />
+              ) : (
+                <div className="text-center py-8 text-gray-500">
+                  <p>Please log in to view your performance dashboard</p>
+                </div>
+              )}
+            </CardContent>
+          </Card>
         </TabsContent>
       </Tabs>
     </div>

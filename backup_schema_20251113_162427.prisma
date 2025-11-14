@@ -350,38 +350,34 @@ model RapidResponse {
 }
 
 model Donor {
-  id                       String          @id @default(uuid())
-  name                     String
-  type                     DonorType       @default(ORGANIZATION)
-  contactEmail             String?
-  contactPhone             String?
-  organization             String?
-  isActive                 Boolean         @default(true)
-  selfReportedDeliveryRate Float?          @default(0) // Gamification: Self-reported delivery percentage (0-100)
-  verifiedDeliveryRate     Float?          @default(0) // Gamification: Verified delivery percentage (0-100)
-  leaderboardRank          Int?            @default(0) // Gamification: Current ranking position
-  createdAt                DateTime        @default(now())
-  updatedAt                DateTime        @updatedAt
-  responses                RapidResponse[] @relation("DonorResponses")
-  commitments              DonorCommitment[] // NEW: Add this relation
+  id           String          @id @default(uuid())
+  name         String
+  type         DonorType       @default(ORGANIZATION)
+  contactEmail String?
+  contactPhone String?
+  organization String?
+  isActive     Boolean         @default(true)
+  createdAt    DateTime        @default(now())
+  updatedAt    DateTime        @updatedAt
+  responses    RapidResponse[] @relation("DonorResponses")
+  commitments  DonorCommitment[] // NEW: Add this relation
 
   @@map("donors")
 }
 
 model DonorCommitment {
-  id                        String             @id @default(uuid())
-  donorId                   String
-  entityId                  String
-  incidentId                String
-  status                    CommitmentStatus   @default(PLANNED)
-  items                     Json               // [{ name: string, unit: string, quantity: number }]
-  totalCommittedQuantity    Int                @default(0)
-  deliveredQuantity         Int                @default(0)
-  verifiedDeliveredQuantity Int                @default(0)
-  totalValueEstimated       Float?             @default(0) // Gamification: Estimated total value of commitment
-  commitmentDate            DateTime           @default(now())
-  lastUpdated               DateTime           @updatedAt
-  notes                     String?
+  id                      String             @id @default(uuid())
+  donorId                 String
+  entityId                String
+  incidentId              String
+  status                  CommitmentStatus   @default(PLANNED)
+  items                   Json               // [{ name: string, unit: string, quantity: number }]
+  totalCommittedQuantity  Int                @default(0)
+  deliveredQuantity       Int                @default(0)
+  verifiedDeliveredQuantity Int              @default(0)
+  commitmentDate          DateTime           @default(now())
+  lastUpdated             DateTime           @updatedAt
+  notes                   String?
   
   donor                   Donor              @relation(fields: [donorId], references: [id])
   entity                  Entity             @relation(fields: [entityId], references: [id])

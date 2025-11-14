@@ -1,5 +1,36 @@
 # Bugs and Solutions
 
+## Current Bug Fixes (2025-11-14)
+
+### **Bug 8: currentRole Not Set to DONOR for Donor-Only Users**
+**Problem**: Donor-only users were getting default role from persisted state instead of correct DONOR role, causing dashboard routing issues
+**Root Cause**: Auth store initialization logic prioritized persisted `currentRole` over recalculating highest priority role for single-role users
+**Location**: `src/stores/auth.store.ts:89-93`
+**Error Details**: 
+```
+Symptoms:
+- Donor users redirected to /assessor/dashboard instead of /donor/dashboard
+- currentRole remained as previous role from persisted state
+- Single-role users should always get their only assigned role
+```
+
+**Solution Implemented**: 
+Updated role initialization logic in `src/stores/auth.store.ts` to prioritize single-role users:
+```typescript
+// Before (problematic)
+const currentRole = (get().currentRole && roles.includes(get().currentRole) ? get().currentRole : getHighestPriorityRole(roles)) || null;
+
+// After (fixed)  
+const currentRole = roles.length === 1 ? roles[0] : (get().currentRole && roles.includes(get().currentRole) ? get().currentRole : getHighestPriorityRole(roles)) || null;
+```
+
+**Key Changes**:
+1. Added `roles.length === 1 ? roles[0]` check to always assign the only available role to single-role users
+2. Maintained existing priority logic for multi-role users
+3. Ensured donor-only users always get `DONOR` role regardless of persisted state
+
+**Pattern**: For role-based authentication, always check if user has only one role and assign it directly, bypassing persisted state which may contain stale data
+
 ## Current Bug Fixes (2025-11-12)
 
 ### **Bug 1: useAuth.getState() is not a function in LoginForm**

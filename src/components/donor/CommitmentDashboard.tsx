@@ -4,6 +4,7 @@ import React, { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
 import { useRouter } from 'next/navigation'
+import { useAuth } from '@/hooks/useAuth'
 
 // UI components
 import { Button } from '@/components/ui/button'
@@ -46,8 +47,26 @@ const STATUS_ICONS = {
 export function CommitmentDashboard({ donorId, preSelectedEntityId }: CommitmentDashboardProps) {
   const router = useRouter()
   const queryClient = useQueryClient()
+  const { token } = useAuth()
   
   console.log('CommitmentDashboard received donorId:', donorId)
+
+  // Helper function to handle different data structures for items
+  const getItemsArray = (items: any): any[] => {
+    if (!items) return []
+    
+    // Handle direct array format: [{ name, unit, quantity }]
+    if (Array.isArray(items)) {
+      return items
+    }
+    
+    // Handle nested object format: { items: [{ name, unit, quantity }] }
+    if (items.items && Array.isArray(items.items)) {
+      return items.items
+    }
+    
+    return []
+  }
   const [showForm, setShowForm] = useState(false)
   const [filters, setFilters] = useState({
     status: 'all',
@@ -65,14 +84,19 @@ export function CommitmentDashboard({ donorId, preSelectedEntityId }: Commitment
 
   // Fetch commitments
   const { data: commitmentsData, isLoading, error } = useQuery({
-    queryKey: ['donor-commitments', donorId, filters],
+    queryKey: ['donor-commitments', donorId, filters, token],
+    enabled: !!donorId && !!token,
     queryFn: async () => {
       const params = new URLSearchParams()
       Object.entries(filters).forEach(([key, value]) => {
         if (value && value !== 'all') params.append(key, value)
       })
 
-      const response = await fetch(`/api/v1/donors/${donorId}/commitments?${params}`)
+      const response = await fetch(`/api/v1/donors/${donorId}/commitments?${params}`, {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      })
       if (!response.ok) throw new Error('Failed to fetch commitments')
       const data = await response.json()
       return data
@@ -82,8 +106,13 @@ export function CommitmentDashboard({ donorId, preSelectedEntityId }: Commitment
   // Fetch available entities for filter
   const { data: entities } = useQuery({
     queryKey: ['entities'],
+    enabled: !!token,
     queryFn: async () => {
-      const response = await fetch('/api/v1/entities')
+      const response = await fetch('/api/v1/entities', {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      })
       if (!response.ok) return []
       const data = await response.json()
       return data.success ? data.data : []
@@ -93,8 +122,13 @@ export function CommitmentDashboard({ donorId, preSelectedEntityId }: Commitment
   // Fetch available incidents for filter
   const { data: incidents } = useQuery({
     queryKey: ['incidents'],
+    enabled: !!token,
     queryFn: async () => {
-      const response = await fetch('/api/v1/incidents')
+      const response = await fetch('/api/v1/incidents', {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      })
       if (!response.ok) return []
       const data = await response.json()
       return data.success ? data.data : []
@@ -418,7 +452,7 @@ export function CommitmentDashboard({ donorId, preSelectedEntityId }: Commitment
                     <div className="bg-muted/50 rounded-lg p-3">
                       <h4 className="font-medium text-sm mb-2">Items:</h4>
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
-                        {commitment.items.map((item, index) => (
+                        {getItemsArray(commitment.items).map((item, index) => (
                           <div key={index} className="flex justify-between text-sm">
                             <span>{item.quantity} {item.unit} of {item.name}</span>
                             <span className="text-muted-foreground">

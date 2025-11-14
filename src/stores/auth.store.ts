@@ -86,7 +86,11 @@ export const useAuthStore = create<AuthState>()(
           }, null);
         };
 
-        const currentRole = get().currentRole || getHighestPriorityRole(roles) || null;
+        // Always set the highest priority role, especially for single-role users
+        // This ensures donor-only users always get DONOR role even if currentRole was previously set to something else
+        const currentRole = roles.length === 1 
+          ? roles[0] 
+          : (get().currentRole && roles.includes(get().currentRole) ? get().currentRole : getHighestPriorityRole(roles)) || null;
 
         set({
           user,
