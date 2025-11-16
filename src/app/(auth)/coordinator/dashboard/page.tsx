@@ -5,11 +5,22 @@ import { RoleBasedRoute } from '@/components/shared/RoleBasedRoute';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Users, AlertTriangle, CheckCircle, Clock, FileText, Activity, PlusCircle } from 'lucide-react';
+import { Users, AlertTriangle, CheckCircle, Clock, FileText, Activity, PlusCircle, TrendingUp } from 'lucide-react';
 import Link from 'next/link';
+import { VerificationQueueManagement } from '@/components/dashboards/crisis/VerificationQueueManagement';
+import { useVerificationStore } from '@/stores/verification.store';
+import { useEffect } from 'react';
 
 export default function CoordinatorDashboard() {
   const { currentRole, user } = useAuth();
+  const { assessmentQueueDepth, deliveryQueueDepth, refreshAll } = useVerificationStore();
+
+  // Load verification queue data on mount
+  useEffect(() => {
+    refreshAll();
+  }, [refreshAll]);
+
+  const totalPendingVerifications = (assessmentQueueDepth?.total || 0) + (deliveryQueueDepth?.total || 0);
 
   return (
     <RoleBasedRoute requiredRole="COORDINATOR">
@@ -62,9 +73,9 @@ export default function CoordinatorDashboard() {
               <Clock className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">15</div>
+              <div className="text-2xl font-bold">{totalPendingVerifications}</div>
               <p className="text-xs text-muted-foreground">
-                8 high priority
+                {(assessmentQueueDepth?.critical || 0) + (deliveryQueueDepth?.critical || 0)} critical priority
               </p>
             </CardContent>
           </Card>
@@ -82,6 +93,45 @@ export default function CoordinatorDashboard() {
             </CardContent>
           </Card>
         </div>
+
+        {/* Verification Queue Management */}
+        <VerificationQueueManagement />
+
+        {/* Quick Actions */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Quick Actions</CardTitle>
+            <CardDescription>
+              Common coordinator tasks and shortcuts
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="grid gap-4 md:grid-cols-2">
+              <Link href="/coordinator/verification">
+                <Button variant="outline" className="w-full justify-start">
+                  <Activity className="mr-2 h-4 w-4" />
+                  Verification Queue ({totalPendingVerifications})
+                </Button>
+              </Link>
+              <Link href="/assessor/rapid-assessments">
+                <Button variant="outline" className="w-full justify-start">
+                  <TrendingUp className="mr-2 h-4 w-4" />
+                  View Assessments
+                </Button>
+              </Link>
+              <Link href="/coordinator/verification/auto-approval">
+                <Button variant="outline" className="w-full justify-start">
+                  <CheckCircle className="mr-2 h-4 w-4" />
+                  Auto-Approval Settings
+                </Button>
+              </Link>
+              <Button variant="outline" className="w-full justify-start">
+                <PlusCircle className="mr-2 h-4 w-4" />
+                New Response
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
 
         {/* Rapid Assessments Access */}
         <Card>

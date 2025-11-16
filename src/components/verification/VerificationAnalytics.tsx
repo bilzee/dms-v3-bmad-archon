@@ -1,0 +1,606 @@
+'use client';
+
+import React, { useState, useEffect, useMemo } from 'react';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { 
+  TrendingUp, 
+  TrendingDown, 
+  Clock, 
+  CheckCircle, 
+  Users, 
+  Activity,
+  BarChart3,
+  LineChart,
+  PieChart,
+  Calendar,
+  Download,
+  RefreshCw
+} from 'lucide-react';
+import { useVerificationMetrics, useAssessmentQueue, useDeliveryQueue } from '@/hooks/useRealTimeVerification';
+import { cn } from '@/lib/utils';
+import { format, subDays, startOfDay, endOfDay } from 'date-fns';
+
+interface VerificationAnalyticsProps {
+  className?: string;
+}
+
+export function VerificationAnalytics({ className }: VerificationAnalyticsProps) {
+  const [timeRange, setTimeRange] = useState('24h');
+  const [isLoading, setIsLoading] = useState(false);
+  
+  const { combined: metrics, assessmentQueueDepth, deliveryQueueDepth } = useVerificationMetrics();
+  const { assessments, refresh: refreshAssessments } = useAssessmentQueue();
+  const { deliveries, refresh: refreshDeliveries } = useDeliveryQueue();
+
+  // Time range options
+  const timeRanges = [
+    { value: '1h', label: 'Last Hour' },
+    { value: '24h', label: 'Last 24 Hours' },
+    { value: '7d', label: 'Last 7 Days' },
+    { value: '30d', label: 'Last 30 Days' },
+    { value: 'custom', label: 'Custom Range' }
+  ];
+
+  // Calculate trends
+  const calculateTrend = (current: number, previous: number) => {
+    if (previous === 0) return { trend: 'neutral', value: 0 };
+    const change = ((current - previous) / previous) * 100;
+    return {
+      trend: change > 0 ? 'up' : change < 0 ? 'down' : 'neutral',
+      value: Math.abs(change)
+    };
+  };
+
+  // Performance metrics
+  const performanceMetrics = useMemo(() => {
+    return {
+      totalProcessed: Math.floor(Math.random() * 100) + 50, // Mock data
+      averageProcessingTime: metrics.averageWaitTime,
+      throughput: Math.floor(Math.random() * 10) + 5, // items per hour
+      backlogTrend: calculateTrend(assessmentQueueDepth.total, assessmentQueueDepth.total + 5)
+    };
+  }, [metrics, assessmentQueueDepth]);
+
+  // Queue distribution data
+  const queueDistribution = useMemo(() => {
+    return {
+      assessments: {
+        total: assessmentQueueDepth.total,
+        critical: assessmentQueueDepth.critical,
+        high: assessmentQueueDepth.high,
+        medium: assessmentQueueDepth.medium,
+        low: assessmentQueueDepth.low
+      },
+      deliveries: {
+        total: deliveryQueueDepth.total,
+        critical: deliveryQueueDepth.critical,
+        high: deliveryQueueDepth.high,
+        medium: deliveryQueueDepth.medium,
+        low: deliveryQueueDepth.low
+      }
+    };
+  }, [assessmentQueueDepth, deliveryQueueDepth]);
+
+  // Time series data (mock data for visualization)
+  const timeSeriesData = useMemo(() => {
+    const hours = timeRange === '24h' ? 24 : timeRange === '7d' ? 7 * 24 : 30 * 24;
+    return Array.from({ length: Math.min(hours, 24) }, (_, i) => ({
+      time: i === 0 ? 'Now' : `-${i}h`,
+      assessments: Math.floor(Math.random() * 20) + 5,
+      deliveries: Math.floor(Math.random() * 15) + 3,
+      verified: Math.floor(Math.random() * 25) + 10
+    })).reverse();
+  }, [timeRange]);
+
+  const refreshData = async () => {
+    setIsLoading(true);
+    try {
+      await Promise.all([
+        refreshAssessments(),
+        refreshDeliveries()
+      ]);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const exportData = () => {
+    const exportData = {
+      timestamp: new Date().toISOString(),
+      timeRange,
+      metrics: performanceMetrics,
+      queueDistribution,
+      verificationRate: metrics.verificationRate
+    };
+
+    const blob = new Blob([JSON.stringify(exportData, null, 2)], { 
+      type: 'application/json' 
+    });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `verification-analytics-${format(new Date(), 'yyyy-MM-dd-HH-mm')}.json`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  };
+
+  return (
+    <div className={cn('space-y-6', className)}>
+      {/* Header */}
+      <div className="flex items-center justify-between">
+        <div>
+          <h2 className="text-2xl font-bold tracking-tight">Verification Analytics</h2>
+          <p className="text-muted-foreground">
+            Performance metrics and trends for verification queues
+          </p>
+        </div>
+        
+        <div className="flex items-center gap-2">
+          <Select value={timeRange} onValueChange={setTimeRange}>
+            <SelectTrigger className="w-40">
+              <SelectValue placeholder="Select time range" />
+            </SelectTrigger>
+            <SelectContent>
+              {timeRanges.map((range) => (
+                <SelectItem key={range.value} value={range.value}>
+                  {range.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          
+          <Button
+            variant="outline"
+            onClick={refreshData}
+            disabled={isLoading}
+          >
+            <RefreshCw className={cn('h-4 w-4 mr-2', isLoading && 'animate-spin')} />
+            Refresh
+          </Button>
+          
+          <Button variant="outline" onClick={exportData}>
+            <Download className="h-4 w-4 mr-2" />
+            Export
+          </Button>
+        </div>
+      </div>
+
+      {/* Key Performance Indicators */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        <KpiCard
+          title="Items Processed"
+          value={performanceMetrics.totalProcessed}
+          icon={CheckCircle}
+          trend={performanceMetrics.backlogTrend}
+          format="number"
+        />
+        
+        <KpiCard
+          title="Avg Processing Time"
+          value={performanceMetrics.averageProcessingTime}
+          icon={Clock}
+          format="duration"
+          unit="minutes"
+        />
+        
+        <KpiCard
+          title="Throughput"
+          value={performanceMetrics.throughput}
+          icon={BarChart3}
+          format="number"
+          unit="items/hr"
+        />
+        
+        <KpiCard
+          title="Verification Rate"
+          value={metrics.verificationRate * 100}
+          icon={TrendingUp}
+          format="percentage"
+          unit="%"
+        />
+      </div>
+
+      {/* Detailed Analytics */}
+      <Tabs defaultValue="overview" className="space-y-4">
+        <TabsList>
+          <TabsTrigger value="overview">Overview</TabsTrigger>
+          <TabsTrigger value="queues">Queue Analysis</TabsTrigger>
+          <TabsTrigger value="trends">Trends</TabsTrigger>
+          <TabsTrigger value="performance">Performance</TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="overview" className="space-y-4">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            {/* Queue Status Overview */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Activity className="h-5 w-5" />
+                  Queue Status
+                </CardTitle>
+                <CardDescription>
+                  Current queue depth and priority distribution
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-4">
+                  <QueueStatusCard
+                    title="Assessments"
+                    data={queueDistribution.assessments}
+                    color="blue"
+                  />
+                  <QueueStatusCard
+                    title="Deliveries"
+                    data={queueDistribution.deliveries}
+                    color="green"
+                  />
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Processing Metrics */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <LineChart className="h-5 w-5" />
+                  Processing Metrics
+                </CardTitle>
+                <CardDescription>
+                  Time-based processing performance
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <ProcessingMetricsChart data={timeSeriesData} />
+              </CardContent>
+            </Card>
+          </div>
+        </TabsContent>
+
+        <TabsContent value="queues" className="space-y-4">
+          <Card>
+            <CardHeader>
+              <CardTitle>Queue Depth Analysis</CardTitle>
+              <CardDescription>
+                Detailed breakdown of verification queue status
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <QueueAnalysis 
+                assessmentData={queueDistribution.assessments}
+                deliveryData={queueDistribution.deliveries}
+              />
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="trends" className="space-y-4">
+          <Card>
+            <CardHeader>
+              <CardTitle>Verification Trends</CardTitle>
+              <CardDescription>
+                Processing trends over the selected time period
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <TrendsChart data={timeSeriesData} />
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="performance" className="space-y-4">
+          <PerformanceAnalysis metrics={performanceMetrics} />
+        </TabsContent>
+      </Tabs>
+    </div>
+  );
+}
+
+// KPI Card Component
+interface KpiCardProps {
+  title: string;
+  value: number;
+  icon: React.ComponentType<{ className?: string }>;
+  trend: { trend: 'up' | 'down' | 'neutral'; value: number };
+  format: 'number' | 'percentage' | 'duration';
+  unit?: string;
+}
+
+function KpiCard({ title, value, icon: Icon, trend, format, unit }: KpiCardProps) {
+  const formatValue = (val: number) => {
+    switch (format) {
+      case 'percentage':
+        return `${val.toFixed(1)}${unit || ''}`;
+      case 'duration':
+        if (val < 60) return `${val}m`;
+        const hours = Math.floor(val / 60);
+        const minutes = val % 60;
+        return `${hours}h ${minutes}m`;
+      default:
+        return `${val.toLocaleString()}${unit ? ` ${unit}` : ''}`;
+    }
+  };
+
+  return (
+    <Card>
+      <CardContent className="p-6">
+        <div className="flex items-center justify-between">
+          <div>
+            <p className="text-sm font-medium text-muted-foreground">{title}</p>
+            <p className="text-2xl font-bold">{formatValue(value)}</p>
+          </div>
+          <Icon className="h-8 w-8 text-muted-foreground" />
+        </div>
+        
+        {trend.trend !== 'neutral' && (
+          <div className="flex items-center gap-1 mt-2">
+            {trend.trend === 'up' ? (
+              <TrendingUp className="h-4 w-4 text-green-500" />
+            ) : (
+              <TrendingDown className="h-4 w-4 text-red-500" />
+            )}
+            <span className={cn(
+              'text-sm',
+              trend.trend === 'up' ? 'text-green-600' : 'text-red-600'
+            )}>
+              {trend.value.toFixed(1)}% from previous period
+            </span>
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
+// Queue Status Card Component
+interface QueueStatusCardProps {
+  title: string;
+  data: {
+    total: number;
+    critical: number;
+    high: number;
+    medium: number;
+    low: number;
+  };
+  color: string;
+}
+
+function QueueStatusCard({ title, data, color }: QueueStatusCardProps) {
+  const total = data.total || 0;
+  const criticalPercent = total > 0 ? (data.critical / total) * 100 : 0;
+  const highPercent = total > 0 ? (data.high / total) * 100 : 0;
+
+  return (
+    <div className="p-4 border rounded-lg">
+      <div className="flex items-center justify-between mb-3">
+        <h3 className="font-medium">{title}</h3>
+        <Badge variant="outline" className={cn(
+          color === 'blue' && 'border-blue-500 text-blue-700',
+          color === 'green' && 'border-green-500 text-green-700'
+        )}>
+          {total} items
+        </Badge>
+      </div>
+      
+      <div className="space-y-2">
+        <div className="flex justify-between text-sm">
+          <span className="flex items-center gap-1">
+            <div className="w-3 h-3 bg-red-500 rounded-full"></div>
+            Critical
+          </span>
+          <span className="font-medium">{data.critical} ({criticalPercent.toFixed(1)}%)</span>
+        </div>
+        
+        <div className="flex justify-between text-sm">
+          <span className="flex items-center gap-1">
+            <div className="w-3 h-3 bg-orange-500 rounded-full"></div>
+            High
+          </span>
+          <span className="font-medium">{data.high} ({highPercent.toFixed(1)}%)</span>
+        </div>
+        
+        <div className="flex justify-between text-sm">
+          <span className="flex items-center gap-1">
+            <div className="w-3 h-3 bg-yellow-500 rounded-full"></div>
+            Medium/Low
+          </span>
+          <span className="font-medium">{data.medium + data.low}</span>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// Processing Metrics Chart Component
+function ProcessingMetricsChart({ data }: { data: any[] }) {
+  return (
+    <div className="space-y-4">
+      {data.slice(-8).map((item, index) => (
+        <div key={index} className="flex items-center gap-4">
+          <div className="w-12 text-sm text-muted-foreground">{item.time}</div>
+          <div className="flex-1 flex gap-2">
+            <div className="flex-1 bg-blue-100 rounded" style={{ 
+              width: `${(item.assessments / Math.max(...data.map(d => d.assessments))) * 100}%` 
+            }}>
+              <div className="h-6 flex items-center justify-center text-xs font-medium text-blue-700">
+                {item.assessments}
+              </div>
+            </div>
+            <div className="flex-1 bg-green-100 rounded" style={{ 
+              width: `${(item.deliveries / Math.max(...data.map(d => d.deliveries))) * 100}%` 
+            }}>
+              <div className="h-6 flex items-center justify-center text-xs font-medium text-green-700">
+                {item.deliveries}
+              </div>
+            </div>
+          </div>
+        </div>
+      ))}
+      
+      <div className="flex items-center gap-4 pt-2 border-t text-xs text-muted-foreground">
+        <div className="w-12"></div>
+        <div className="flex-1 flex gap-2">
+          <div className="flex items-center gap-1">
+            <div className="w-3 h-3 bg-blue-500 rounded"></div>
+            Assessments
+          </div>
+          <div className="flex items-center gap-1">
+            <div className="w-3 h-3 bg-green-500 rounded"></div>
+            Deliveries
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// Queue Analysis Component
+function QueueAnalysis({ 
+  assessmentData, 
+  deliveryData 
+}: { 
+  assessmentData: any;
+  deliveryData: any;
+}) {
+  return (
+    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+      <div>
+        <h3 className="font-medium mb-4">Assessment Queue Breakdown</h3>
+        <div className="space-y-3">
+          <PriorityBreakdown data={assessmentData} />
+        </div>
+      </div>
+      
+      <div>
+        <h3 className="font-medium mb-4">Delivery Queue Breakdown</h3>
+        <div className="space-y-3">
+          <PriorityBreakdown data={deliveryData} />
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// Priority Breakdown Component
+function PriorityBreakdown({ data }: { data: any }) {
+  const total = data.total || 0;
+  
+  return (
+    <div className="space-y-2">
+      {[
+        { priority: 'Critical', value: data.critical, color: 'bg-red-500' },
+        { priority: 'High', value: data.high, color: 'bg-orange-500' },
+        { priority: 'Medium', value: data.medium, color: 'bg-yellow-500' },
+        { priority: 'Low', value: data.low, color: 'bg-green-500' }
+      ].map(({ priority, value, color }) => {
+        const percentage = total > 0 ? (value / total) * 100 : 0;
+        
+        return (
+          <div key={priority} className="space-y-1">
+            <div className="flex justify-between text-sm">
+              <span>{priority}</span>
+              <span>{value} ({percentage.toFixed(1)}%)</span>
+            </div>
+            <div className="w-full bg-gray-200 rounded-full h-2">
+              <div 
+                className={cn('h-2 rounded-full', color)}
+                style={{ width: `${percentage}%` }}
+              ></div>
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+// Trends Chart Component
+function TrendsChart({ data }: { data: any[] }) {
+  return (
+    <div className="space-y-4">
+      <div className="grid grid-cols-3 gap-4 text-sm">
+        <div className="text-center">
+          <div className="text-2xl font-bold text-blue-600">
+            {data.reduce((sum, item) => sum + item.assessments, 0)}
+          </div>
+          <div className="text-muted-foreground">Total Assessments</div>
+        </div>
+        <div className="text-center">
+          <div className="text-2xl font-bold text-green-600">
+            {data.reduce((sum, item) => sum + item.deliveries, 0)}
+          </div>
+          <div className="text-muted-foreground">Total Deliveries</div>
+        </div>
+        <div className="text-center">
+          <div className="text-2xl font-bold text-purple-600">
+            {data.reduce((sum, item) => sum + item.verified, 0)}
+          </div>
+          <div className="text-muted-foreground">Total Verified</div>
+        </div>
+      </div>
+      
+      <ProcessingMetricsChart data={data} />
+    </div>
+  );
+}
+
+// Performance Analysis Component
+function PerformanceAnalysis({ metrics }: { metrics: any }) {
+  return (
+    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <Card>
+        <CardHeader>
+          <CardTitle>Processing Efficiency</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-4">
+            <div className="flex justify-between items-center">
+              <span>Items per Hour</span>
+              <span className="font-bold">{metrics.throughput}</span>
+            </div>
+            <div className="flex justify-between items-center">
+              <span>Average Time</span>
+              <span className="font-bold">{metrics.averageProcessingTime}m</span>
+            </div>
+            <div className="flex justify-between items-center">
+              <span>Total Processed</span>
+              <span className="font-bold">{metrics.totalProcessed}</span>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+      
+      <Card>
+        <CardHeader>
+          <CardTitle>Queue Health</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-4">
+            <div className="flex justify-between items-center">
+              <span>Backlog Trend</span>
+              <Badge className={
+                metrics.backlogTrend.trend === 'down' 
+                  ? 'bg-green-100 text-green-800' 
+                  : metrics.backlogTrend.trend === 'up'
+                  ? 'bg-red-100 text-red-800'
+                  : 'bg-gray-100 text-gray-800'
+              }>
+                {metrics.backlogTrend.trend === 'down' ? 'Improving' : 
+                 metrics.backlogTrend.trend === 'up' ? 'Worsening' : 'Stable'}
+              </Badge>
+            </div>
+            <div className="flex justify-between items-center">
+              <span>System Load</span>
+              <Badge className="bg-yellow-100 text-yellow-800">Moderate</Badge>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+    </div>
+  );
+}

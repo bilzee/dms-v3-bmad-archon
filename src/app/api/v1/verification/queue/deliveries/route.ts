@@ -25,35 +25,64 @@ export const GET = withAuth(
     try {
       const { searchParams } = new URL(request.url)
       
-      // Parse query parameters
+      // Parse query parameters with enhanced filtering
       const page = parseInt(searchParams.get('page') || '1')
       const limit = parseInt(searchParams.get('limit') || '20')
-      const status = searchParams.get('status') // Optional: SUBMITTED, VERIFIED, REJECTED
+      const status = searchParams.get('status')?.split(',') || ['SUBMITTED']
       const entityId = searchParams.get('entityId')
       const responderId = searchParams.get('responderId')
+      const assessmentType = searchParams.get('assessmentType')?.split(',')
+      const priority = searchParams.get('priority')?.split(',')
       const dateFrom = searchParams.get('dateFrom')
       const dateTo = searchParams.get('dateTo')
+      const sortBy = searchParams.get('sortBy') || 'responseDate'
+      const sortOrder = searchParams.get('sortOrder') || 'desc'
+      const search = searchParams.get('search')
       
       console.log('📋 API Debug - Getting delivery verification queue:', {
         userId: context.userId,
         filters: { page, limit, status, entityId, responderId, dateFrom, dateTo }
       })
       
-      // Build where clause for delivered responses submitted for verification
+      // Build where clause for delivered responses submitted for verification with enhanced filtering
       const where: any = {
         status: 'DELIVERED',
-        verificationStatus: 'SUBMITTED'
+        verificationStatus: { in: status }
       }
       
       // Add optional filters
       if (entityId) where.entityId = entityId
       if (responderId) where.responderId = responderId
+      if (assessmentType) {
+        where.assessment = {
+          rapidAssessmentType: { in: assessmentType }
+        }
+      }
+      if (priority) where.priority = { in: priority }
       
       // Date range filter on responseDate
       if (dateFrom || dateTo) {
         where.responseDate = {}
         if (dateFrom) where.responseDate.gte = new Date(dateFrom)
         if (dateTo) where.responseDate.lte = new Date(dateTo)
+      }
+
+      // Search filter
+      if (search) {
+        where.OR = [
+          { responder: { name: { contains: search, mode: 'insensitive' } } },
+          { entity: { name: { contains: search, mode: 'insensitive' } } },
+          { assessment: { location: { contains: search, mode: 'insensitive' } } }
+        ]
+      }
+
+      // Build order by clause
+      const orderBy: any = {};
+      orderBy[sortBy] = sortOrder;
+      
+      // Add secondary sort by priority for stable ordering
+      if (sortBy !== 'priority') {
+        orderBy.priority = 'desc';
       }
       
       // Get total count
@@ -98,14 +127,59 @@ export const GET = withAuth(
             }
           }
         },
-        orderBy: [
-          { priority: 'desc' },
-          { responseDate: 'desc' }
-        ],
+        orderBy: [orderBy],
         skip: (page - 1) * limit,
         take: Math.min(limit, 100) // Max 100 per page
       })
       
+      // Calculate queue depth indicators for deliveries
+      const queueDepth = {
+        total: total,
+        critical: await prisma.rapidResponse.count({
+          where: { 
+            status: 'DELIVERED',
+            verificationStatus: { in: status },
+            priority: 'CRITICAL',
+            ...(entityId && { entityId }),
+            ...(responderId && { responderId })
+          }
+        }),
+        high: await prisma.rapidResponse.count({
+          where: { 
+            status: 'DELIVERED',
+            verificationStatus: { in: status },
+            priority: 'HIGH',
+            ...(entityId && { entityId }),
+            ...(responderId && { responderId })
+          }
+        }),
+        medium: await prisma.rapidResponse.count({
+          where: { 
+            status: 'DELIVERED',
+            verificationStatus: { in: status },
+            priority: 'MEDIUM',
+            ...(entityId && { entityId }),
+            ...(responderId && { responderId })
+          }
+        }),
+        low: await prisma.rapidResponse.count({
+          where: { 
+            status: 'DELIVERED',
+            verificationStatus: { in: status },
+            priority: 'LOW',
+            ...(entityId && { entityId }),
+            ...(responderId && { responderId })
+          }
+        })
+      };
+
+      // Get delivery queue metrics
+      const metrics = {
+        averageWaitTime: await calculateDeliveryAverageWaitTime(where),
+        verificationRate: await calculateDeliveryVerificationRate(),
+        oldestPending: await getOldestPendingDelivery(where)
+      };
+
       // Format delivery data for response
       const formattedDeliveries = deliveries.map((delivery: any) => {
         const timeline = delivery.timeline as any || {}
@@ -154,23 +228,32 @@ export const GET = withAuth(
       const responseData = {
         success: true,
         data: formattedDeliveries,
+        pagination: {
+          page,
+          limit,
+          total,
+          totalPages: Math.ceil(total / limit)
+        },
+        queueDepth,
+        metrics,
         meta: {
-          pagination: {
-            page,
-            limit,
-            total,
-            totalPages: Math.ceil(total / limit)
-          },
+          timestamp: new Date().toISOString(),
+          version: '2.0',
+          requestId: uuidv4(),
+          realTimeUpdate: true,
+          nextUpdateIn: 30000, // 30 seconds
           filters: {
             status,
             entityId,
             responderId,
+            assessmentType,
+            priority,
             dateFrom,
-            dateTo
-          },
-          timestamp: new Date().toISOString(),
-          version: '1.0.0',
-          requestId: uuidv4()
+            dateTo,
+            sortBy,
+            sortOrder,
+            search
+          }
         }
       }
 
@@ -204,3 +287,84 @@ export const GET = withAuth(
     }
   }
 )
+
+// Helper functions for delivery metrics calculation
+async function calculateDeliveryAverageWaitTime(whereClause: any): Promise<number> {
+  try {
+    const pendingDeliveries = await prisma.rapidResponse.findMany({
+      where: {
+        ...whereClause,
+        verificationStatus: { in: ['SUBMITTED', 'DRAFT'] }
+      },
+      select: {
+        responseDate: true,
+        createdAt: true
+      }
+    });
+
+    if (pendingDeliveries.length === 0) return 0;
+
+    const totalWaitTime = pendingDeliveries.reduce((total, delivery) => {
+      const waitMinutes = delivery.responseDate 
+        ? (Date.now() - delivery.responseDate.getTime()) / (1000 * 60)
+        : (Date.now() - delivery.createdAt.getTime()) / (1000 * 60);
+      return total + waitMinutes;
+    }, 0);
+
+    return Math.round(totalWaitTime / pendingDeliveries.length);
+  } catch (error) {
+    console.error('Error calculating delivery average wait time:', error);
+    return 0;
+  }
+}
+
+async function calculateDeliveryVerificationRate(): Promise<number> {
+  try {
+    const last24Hours = new Date(Date.now() - 24 * 60 * 60 * 1000);
+    
+    const [submitted, verified] = await Promise.all([
+      prisma.rapidResponse.count({
+        where: {
+          status: 'DELIVERED',
+          responseDate: { gte: last24Hours }
+        }
+      }),
+      prisma.rapidResponse.count({
+        where: {
+          status: 'DELIVERED',
+          responseDate: { gte: last24Hours },
+          verificationStatus: { in: ['VERIFIED', 'AUTO_VERIFIED'] }
+        }
+      })
+    ]);
+
+    if (submitted === 0) return 0;
+    return verified / submitted;
+  } catch (error) {
+    console.error('Error calculating delivery verification rate:', error);
+    return 0;
+  }
+}
+
+async function getOldestPendingDelivery(whereClause: any): Promise<string | null> {
+  try {
+    const oldest = await prisma.rapidResponse.findFirst({
+      where: {
+        ...whereClause,
+        verificationStatus: { in: ['SUBMITTED', 'DRAFT'] }
+      },
+      orderBy: {
+        responseDate: 'asc'
+      },
+      select: {
+        responseDate: true,
+        createdAt: true
+      }
+    });
+
+    return oldest ? (oldest.responseDate || oldest.createdAt).toISOString() : null;
+  } catch (error) {
+    console.error('Error getting oldest pending delivery:', error);
+    return null;
+  }
+}

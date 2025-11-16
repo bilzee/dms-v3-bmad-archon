@@ -1,6 +1,6 @@
 # Prisma Schema Reference
 
-_Auto-generated on 2025-11-13T17:19:43.652Z_
+_Auto-generated on 2025-11-16T00:00:44.807Z_
 
 ## User
 

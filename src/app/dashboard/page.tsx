@@ -9,6 +9,7 @@ import Link from 'next/link'
 import { LeaderboardDisplay } from '@/components/donor/LeaderboardDisplay'
 import { DonorPerformanceDashboard } from '@/components/donor/DonorPerformanceDashboard'
 import { GameBadgeSystem } from '@/components/donor/GameBadgeSystem'
+import { EntityInsightsCards } from '@/components/donor/EntityInsightsCards'
 import { 
   Users, 
   FileText, 
@@ -642,6 +643,68 @@ export default function DashboardPage() {
             </Card>
           </div>
         </div>
+
+        {/* Entity Insights - Story 5.4 */}
+        {hasPermission('VIEW_DONOR_DASHBOARD') && (
+          <div className="col-span-full">
+            <Card className="border-cyan-200 bg-gradient-to-br from-cyan-50/50 to-teal-50/50">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <MapPin className="h-5 w-5 text-cyan-600" />
+                  Entity Insights Overview
+                </CardTitle>
+                <CardDescription>
+                  Monitor assigned entities with comprehensive assessment analytics, gap analysis, and performance trends
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-4">
+                  <div className="flex items-center gap-2">
+                    <Badge variant="outline" className="text-xs">Story 5.4</Badge>
+                    <Badge variant="secondary" className="text-xs">Donor Role</Badge>
+                    <Badge variant="outline" className="text-xs bg-cyan-50 text-cyan-700 border-cyan-200">New</Badge>
+                    <Badge variant="outline" className="text-xs bg-green-50 text-green-700 border-green-200">Complete</Badge>
+                    <Badge variant="outline" className="text-xs bg-blue-50 text-blue-700 border-blue-200">Live Data</Badge>
+                  </div>
+                  
+                  {/* Entity Insights Cards */}
+                  <div className="min-h-[400px]">
+                    <EntityInsightsCards 
+                      maxCards={6}
+                      compact={true}
+                    />
+                  </div>
+                  
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <Link href="/donor/entities">
+                      <Button className="w-full justify-start bg-cyan-600 hover:bg-cyan-700">
+                        <MapPin className="h-4 w-4 mr-2" />
+                        View All Assigned Entities
+                      </Button>
+                    </Link>
+                    <Link href="/donor/reports">
+                      <Button variant="outline" className="w-full justify-start">
+                        <FileText className="h-4 w-4 mr-2" />
+                        Generate Entity Reports
+                      </Button>
+                    </Link>
+                    <Link href="/donor/analytics">
+                      <Button variant="outline" className="w-full justify-start">
+                        <BarChart3 className="h-4 w-4 mr-2" />
+                        Entity Analytics Dashboard
+                      </Button>
+                    </Link>
+                  </div>
+                  
+                  <div className="text-xs text-muted-foreground">
+                    Features real-time entity monitoring, assessment category analysis, gap severity tracking, historical trend visualization, 
+                    comprehensive reporting with PDF/CSV export, and interactive entity insights dashboard
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        )}
 
         {/* Performance Metrics Overview */}
         {(hasPermission('VIEW_DONOR_DASHBOARD') || hasPermission('MANAGE_USERS')) && (

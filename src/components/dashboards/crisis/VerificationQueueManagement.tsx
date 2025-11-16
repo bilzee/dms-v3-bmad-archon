@@ -1,0 +1,941 @@
+'use client';
+
+import React, { useState, useEffect } from 'react';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
+import { Input } from '@/components/ui/input';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { 
+  Clock, 
+  CheckCircle, 
+  XCircle, 
+  AlertTriangle, 
+  Filter, 
+  RefreshCw,
+  Search,
+  TrendingUp,
+  Activity,
+  Users,
+  Package,
+  Wifi,
+  WifiOff,
+  Settings,
+  BarChart3
+} from 'lucide-react';
+import { cn } from '@/lib/utils';
+import { 
+  useAssessmentQueue, 
+  useDeliveryQueue, 
+  useRealTimeStatus,
+  useVerificationStore 
+} from '@/stores/verification.store';
+import { useRealTimeVerification, useConnectionStatus, useVerificationMetrics } from '@/hooks/useRealTimeVerification';
+import { ConnectionStatusIndicator } from '@/components/verification/ConnectionStatusIndicator';
+import { QueueFilters, FilterSummary } from '@/components/verification/QueueFilters';
+import { VerificationActions } from '@/components/verification/VerificationActions';
+import { VerificationAnalytics } from '@/components/verification/VerificationAnalytics';
+import type { VerificationQueueItem } from '@/stores/verification.store';
+
+interface VerificationQueueManagementProps {
+  className?: string;
+}
+
+export function VerificationQueueManagement({ className }: VerificationQueueManagementProps) {
+  const [activeTab, setActiveTab] = useState('assessments');
+  const [searchTerm, setSearchTerm] = useState('');
+  const [showFilters, setShowFilters] = useState(false);
+  const [selectedItem, setSelectedItem] = useState<VerificationQueueItem | null>(null);
+
+  const {
+    items: assessments,
+    loading: assessmentsLoading,
+    error: assessmentsError,
+    pagination: assessmentsPagination,
+    queueDepth: assessmentsQueueDepth,
+    metrics: assessmentsMetrics,
+    refresh: refreshAssessments,
+    getFiltersCount: getAssessmentFiltersCount
+  } = useAssessmentQueue();
+
+  const {
+    items: deliveries,
+    loading: deliveriesLoading,
+    error: deliveriesError,
+    pagination: deliveriesPagination,
+    queueDepth: deliveriesQueueDepth,
+    metrics: deliveriesMetrics,
+    refresh: refreshDeliveries,
+    getFiltersCount: getDeliveryFiltersCount
+  } = useDeliveryQueue();
+
+  const {
+    combined: combinedMetrics
+  } = useVerificationMetrics();
+
+  // Real-time updates hook
+  const {
+    isConnected,
+    connectionStatus,
+    lastUpdate,
+    manualRefresh,
+    refreshAssessments: refreshAssessmentsRealTime,
+    refreshDeliveries: refreshDeliveriesRealTime,
+    enabled: realTimeEnabled
+  } = useRealTimeVerification({
+    enabled: true,
+    interval: 30000,
+    onConnectionChange: (status) => {
+      console.log('Real-time connection status changed:', status);
+    },
+    onDataUpdate: (type) => {
+      console.log('Real-time data updated:', type);
+    }
+  });
+
+  // Enhanced refresh functions
+  const handleRefreshAssessments = () => {
+    refreshAssessmentsRealTime();
+  };
+
+  const handleRefreshDeliveries = () => {
+    refreshDeliveriesRealTime();
+  };
+
+  const handleRefreshAll = () => {
+    manualRefresh();
+  };
+
+  const handleSearch = (term: string) => {
+    setSearchTerm(term);
+    // Trigger search with debounce
+    const timeoutId = setTimeout(() => {
+      if (activeTab === 'assessments') {
+        // Update assessment filters with search
+      } else {
+        // Update delivery filters with search
+      }
+    }, 500);
+
+    return () => clearTimeout(timeoutId);
+  };
+
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case 'SUBMITTED':
+        return 'bg-amber-100 text-amber-800 border-amber-300';
+      case 'VERIFIED':
+        return 'bg-green-100 text-green-800 border-green-300';
+      case 'REJECTED':
+        return 'bg-red-100 text-red-800 border-red-300';
+      case 'AUTO_VERIFIED':
+        return 'bg-blue-100 text-blue-800 border-blue-300';
+      default:
+        return 'bg-gray-100 text-gray-800 border-gray-300';
+    }
+  };
+
+  const getPriorityColor = (priority: string) => {
+    switch (priority) {
+      case 'CRITICAL':
+        return 'bg-red-500 text-white';
+      case 'HIGH':
+        return 'bg-orange-500 text-white';
+      case 'MEDIUM':
+        return 'bg-yellow-500 text-white';
+      case 'LOW':
+        return 'bg-green-500 text-white';
+      default:
+        return 'bg-gray-500 text-white';
+    }
+  };
+
+  const formatWaitTime = (minutes: number) => {
+    if (minutes < 60) return `${minutes}m`;
+    const hours = Math.floor(minutes / 60);
+    const remainingMinutes = minutes % 60;
+    return `${hours}h ${remainingMinutes}m`;
+  };
+
+  const formatTime = (dateString: string | null) => {
+    if (!dateString) return 'N/A';
+    const date = new Date(dateString);
+    return date.toLocaleDateString() + ' ' + date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  };
+
+  return (
+    <div className={cn('space-y-6', className)}>
+      {/* Header with Real-time Status */}
+      <div className="flex items-center justify-between">
+        <div>
+          <h2 className="text-2xl font-bold tracking-tight">Verification Queue Management</h2>
+          <p className="text-muted-foreground">
+            Review and verify assessments and delivery responses
+          </p>
+        </div>
+        
+        <div className="flex items-center gap-4">
+          {/* Connection Status */}
+          <ConnectionStatusIndicator showDetails />
+
+          <Button
+            variant="outline"
+            onClick={handleRefreshAll}
+            disabled={assessmentsLoading || deliveriesLoading}
+          >
+            <RefreshCw className={cn('h-4 w-4 mr-2', 
+              (assessmentsLoading || deliveriesLoading) && 'animate-spin')} />
+            Refresh
+          </Button>
+        </div>
+      </div>
+
+      {/* Queue Overview Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium flex items-center gap-2">
+              <Clock className="h-4 w-4 text-amber-500" />
+              Pending Assessments
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{assessmentsQueueDepth.total}</div>
+            <div className="text-xs text-muted-foreground">
+              {assessmentsQueueDepth.critical} critical, {assessmentsQueueDepth.high} high
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium flex items-center gap-2">
+              <Package className="h-4 w-4 text-blue-500" />
+              Pending Deliveries
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{deliveriesQueueDepth.total}</div>
+            <div className="text-xs text-muted-foreground">
+              {deliveriesQueueDepth.critical} critical, {deliveriesQueueDepth.high} high
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium flex items-center gap-2">
+              <Activity className="h-4 w-4 text-green-500" />
+              Total Pending
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{combinedMetrics.totalPending}</div>
+            <div className="text-xs text-muted-foreground">
+              {combinedMetrics.critical} critical, {combinedMetrics.high} high priority
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium flex items-center gap-2">
+              <TrendingUp className="h-4 w-4 text-purple-500" />
+              Verification Rate
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">
+              {(combinedMetrics.verificationRate * 100).toFixed(1)}%
+            </div>
+            <div className="text-xs text-muted-foreground">
+              Last 24 hours
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Main Queue Interface */}
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
+        <div className="flex items-center justify-between">
+          <TabsList className="grid w-full grid-cols-3">
+            <TabsTrigger value="assessments" className="flex items-center gap-2">
+              <Activity className="h-4 w-4" />
+              Assessments
+              {assessmentsQueueDepth.total > 0 && (
+                <Badge variant="secondary" className="ml-1">
+                  {assessmentsQueueDepth.total}
+                </Badge>
+              )}
+            </TabsTrigger>
+            <TabsTrigger value="deliveries" className="flex items-center gap-2">
+              <Package className="h-4 w-4" />
+              Deliveries
+              {deliveriesQueueDepth.total > 0 && (
+                <Badge variant="secondary" className="ml-1">
+                  {deliveriesQueueDepth.total}
+                </Badge>
+              )}
+            </TabsTrigger>
+            <TabsTrigger value="analytics" className="flex items-center gap-2">
+              <BarChart3 className="h-4 w-4" />
+              Analytics
+            </TabsTrigger>
+          </TabsList>
+
+          <div className="flex items-center gap-2">
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder="Search..."
+                value={searchTerm}
+                onChange={(e) => handleSearch(e.target.value)}
+                className="pl-10 w-64"
+              />
+            </div>
+            
+            <Button
+              variant="outline"
+              onClick={() => setShowFilters(!showFilters)}
+              className="flex items-center gap-2"
+            >
+              <Filter className="h-4 w-4" />
+              Filters
+              {activeTab === 'assessments' && getAssessmentFiltersCount() > 0 && (
+                <Badge variant="secondary" className="ml-1">
+                  {getAssessmentFiltersCount()}
+                </Badge>
+              )}
+              {activeTab === 'deliveries' && getDeliveryFiltersCount() > 0 && (
+                <Badge variant="secondary" className="ml-1">
+                  {getDeliveryFiltersCount()}
+                </Badge>
+              )}
+            </Button>
+          </div>
+        </div>
+
+        <TabsContent value="assessments" className="space-y-4">
+          <FilterSummary
+            filters={useVerificationStore(state => state.assessmentFilters)}
+            onClear={() => {
+              useVerificationStore.getState().clearAssessmentFilters();
+              refreshAssessmentsRealTime();
+            }}
+            type="assessments"
+          />
+          
+          <QueueFilters
+            type="assessments"
+            filters={useVerificationStore(state => state.assessmentFilters)}
+            onFiltersChange={(filters) => {
+              useVerificationStore.getState().setAssessmentFilters(filters);
+              refreshAssessmentsRealTime();
+            }}
+            onClear={() => {
+              useVerificationStore.getState().clearAssessmentFilters();
+              refreshAssessmentsRealTime();
+            }}
+            visible={showFilters}
+            onClose={() => setShowFilters(false)}
+          />
+          
+          <AssessmentQueueContent
+            assessments={assessments}
+            loading={assessmentsLoading}
+            error={assessmentsError}
+            pagination={assessmentsPagination}
+            queueDepth={assessmentsQueueDepth}
+            metrics={assessmentsMetrics}
+            selectedItem={selectedItem}
+            setSelectedItem={setSelectedItem}
+            showFilters={showFilters}
+          />
+        </TabsContent>
+
+        <TabsContent value="deliveries" className="space-y-4">
+          <FilterSummary
+            filters={useVerificationStore(state => state.deliveryFilters)}
+            onClear={() => {
+              useVerificationStore.getState().clearDeliveryFilters();
+              refreshDeliveriesRealTime();
+            }}
+            type="deliveries"
+          />
+          
+          <QueueFilters
+            type="deliveries"
+            filters={useVerificationStore(state => state.deliveryFilters)}
+            onFiltersChange={(filters) => {
+              useVerificationStore.getState().setDeliveryFilters(filters);
+              refreshDeliveriesRealTime();
+            }}
+            onClear={() => {
+              useVerificationStore.getState().clearDeliveryFilters();
+              refreshDeliveriesRealTime();
+            }}
+            visible={showFilters}
+            onClose={() => setShowFilters(false)}
+          />
+          
+          <DeliveryQueueContent
+            deliveries={deliveries}
+            loading={deliveriesLoading}
+            error={deliveriesError}
+            pagination={deliveriesPagination}
+            queueDepth={deliveriesQueueDepth}
+            metrics={deliveriesMetrics}
+            selectedItem={selectedItem}
+            setSelectedItem={setSelectedItem}
+            showFilters={showFilters}
+          />
+        </TabsContent>
+
+        <TabsContent value="analytics" className="space-y-4">
+          <VerificationAnalytics />
+        </TabsContent>
+      </Tabs>
+    </div>
+  );
+}
+
+// Assessment Queue Content Component
+function AssessmentQueueContent({
+  assessments,
+  loading,
+  error,
+  pagination,
+  queueDepth,
+  metrics,
+  selectedItem,
+  setSelectedItem,
+  showFilters
+}: {
+  assessments: VerificationQueueItem[];
+  loading: boolean;
+  error: string | null;
+  pagination: any;
+  queueDepth: any;
+  metrics: any;
+  selectedItem: VerificationQueueItem | null;
+  setSelectedItem: (item: VerificationQueueItem | null) => void;
+  showFilters: boolean;
+}) {
+  if (error) {
+    return (
+      <Card>
+        <CardContent className="p-6">
+          <div className="text-center text-red-600">
+            <AlertTriangle className="h-8 w-8 mx-auto mb-2" />
+            <h3 className="text-lg font-semibold">Error Loading Queue</h3>
+            <p className="text-sm">{error}</p>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  return (
+    <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <div className="lg:col-span-2">
+        <Card>
+          <CardHeader>
+            <CardTitle>Assessment Verification Queue</CardTitle>
+            <CardDescription>
+              {queueDepth.total} assessments pending verification
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            {loading ? (
+              <div className="space-y-4">
+                {[...Array(5)].map((_, i) => (
+                  <div key={i} className="animate-pulse">
+                    <div className="h-20 bg-gray-200 rounded-lg"></div>
+                  </div>
+                ))}
+              </div>
+            ) : assessments.length === 0 ? (
+              <div className="text-center py-12 text-muted-foreground">
+                <CheckCircle className="h-12 w-12 mx-auto mb-4" />
+                <h3 className="text-lg font-semibold">All Caught Up!</h3>
+                <p>No assessments pending verification.</p>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                {assessments.map((assessment) => (
+                  <AssessmentQueueItem
+                    key={assessment.id}
+                    assessment={assessment}
+                    isSelected={selectedItem?.id === assessment.id}
+                    onSelect={() => setSelectedItem(assessment)}
+                  />
+                ))}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      </div>
+
+      <div className="space-y-4">
+        {selectedItem ? (
+          <AssessmentDetailsPanel
+            assessment={selectedItem}
+            onClose={() => setSelectedItem(null)}
+          />
+        ) : (
+          <Card className="h-96 flex items-center justify-center">
+            <div className="text-center text-muted-foreground">
+              <Activity className="h-8 w-8 mx-auto mb-2" />
+              <p>Select an assessment to view details</p>
+            </div>
+          </Card>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// Delivery Queue Content Component
+function DeliveryQueueContent({
+  deliveries,
+  loading,
+  error,
+  pagination,
+  queueDepth,
+  metrics,
+  selectedItem,
+  setSelectedItem,
+  showFilters
+}: {
+  deliveries: VerificationQueueItem[];
+  loading: boolean;
+  error: string | null;
+  pagination: any;
+  queueDepth: any;
+  metrics: any;
+  selectedItem: VerificationQueueItem | null;
+  setSelectedItem: (item: VerificationQueueItem | null) => void;
+  showFilters: boolean;
+}) {
+  if (error) {
+    return (
+      <Card>
+        <CardContent className="p-6">
+          <div className="text-center text-red-600">
+            <AlertTriangle className="h-8 w-8 mx-auto mb-2" />
+            <h3 className="text-lg font-semibold">Error Loading Queue</h3>
+            <p className="text-sm">{error}</p>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  return (
+    <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <div className="lg:col-span-2">
+        <Card>
+          <CardHeader>
+            <CardTitle>Delivery Verification Queue</CardTitle>
+            <CardDescription>
+              {queueDepth.total} deliveries pending verification
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            {loading ? (
+              <div className="space-y-4">
+                {[...Array(5)].map((_, i) => (
+                  <div key={i} className="animate-pulse">
+                    <div className="h-20 bg-gray-200 rounded-lg"></div>
+                  </div>
+                ))}
+              </div>
+            ) : deliveries.length === 0 ? (
+              <div className="text-center py-12 text-muted-foreground">
+                <CheckCircle className="h-12 w-12 mx-auto mb-4" />
+                <h3 className="text-lg font-semibold">All Caught Up!</h3>
+                <p>No deliveries pending verification.</p>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                {deliveries.map((delivery) => (
+                  <DeliveryQueueItem
+                    key={delivery.id}
+                    delivery={delivery}
+                    isSelected={selectedItem?.id === delivery.id}
+                    onSelect={() => setSelectedItem(delivery)}
+                  />
+                ))}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      </div>
+
+      <div className="space-y-4">
+        {selectedItem ? (
+          <DeliveryDetailsPanel
+            delivery={selectedItem}
+            onClose={() => setSelectedItem(null)}
+          />
+        ) : (
+          <Card className="h-96 flex items-center justify-center">
+            <div className="text-center text-muted-foreground">
+              <Package className="h-8 w-8 mx-auto mb-2" />
+              <p>Select a delivery to view details</p>
+            </div>
+          </Card>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// Assessment Queue Item Component
+function AssessmentQueueItem({
+  assessment,
+  isSelected,
+  onSelect
+}: {
+  assessment: VerificationQueueItem;
+  isSelected: boolean;
+  onSelect: () => void;
+}) {
+  const getPriorityColor = (priority: string) => {
+    switch (priority) {
+      case 'CRITICAL': return 'bg-red-500 text-white';
+      case 'HIGH': return 'bg-orange-500 text-white';
+      case 'MEDIUM': return 'bg-yellow-500 text-white';
+      case 'LOW': return 'bg-green-500 text-white';
+      default: return 'bg-gray-500 text-white';
+    }
+  };
+
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case 'SUBMITTED': return 'bg-amber-100 text-amber-800 border-amber-300';
+      case 'VERIFIED': return 'bg-green-100 text-green-800 border-green-300';
+      case 'REJECTED': return 'bg-red-100 text-red-800 border-red-300';
+      default: return 'bg-gray-100 text-gray-800 border-gray-300';
+    }
+  };
+
+  return (
+    <div
+      className={cn(
+        'p-4 border rounded-lg cursor-pointer transition-colors hover:bg-gray-50',
+        isSelected && 'border-blue-500 bg-blue-50'
+      )}
+      onClick={onSelect}
+    >
+      <div className="flex items-start justify-between">
+        <div className="flex-1">
+          <div className="flex items-center gap-2 mb-2">
+            <Badge className={getPriorityColor(assessment.priority)}>
+              {assessment.priority}
+            </Badge>
+            <Badge className={getStatusColor(assessment.verificationStatus)}>
+              {assessment.verificationStatus}
+            </Badge>
+            <span className="text-sm text-muted-foreground">
+              {assessment.rapidAssessmentType}
+            </span>
+          </div>
+          
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
+            <div>
+              <span className="font-medium">Entity:</span> {assessment.entity.name}
+            </div>
+            <div>
+              <span className="font-medium">Assessor:</span> {assessment.assessor?.name}
+            </div>
+            <div>
+              <span className="font-medium">Date:</span> {
+                assessment.rapidAssessmentDate 
+                  ? new Date(assessment.rapidAssessmentDate).toLocaleDateString()
+                  : 'N/A'
+              }
+            </div>
+          </div>
+          
+          {assessment.location && (
+            <div className="text-sm text-muted-foreground mt-1">
+              <span className="font-medium">Location:</span> {assessment.location}
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// Delivery Queue Item Component
+function DeliveryQueueItem({
+  delivery,
+  isSelected,
+  onSelect
+}: {
+  delivery: VerificationQueueItem;
+  isSelected: boolean;
+  onSelect: () => void;
+}) {
+  const getPriorityColor = (priority: string) => {
+    switch (priority) {
+      case 'CRITICAL': return 'bg-red-500 text-white';
+      case 'HIGH': return 'bg-orange-500 text-white';
+      case 'MEDIUM': return 'bg-yellow-500 text-white';
+      case 'LOW': return 'bg-green-500 text-white';
+      default: return 'bg-gray-500 text-white';
+    }
+  };
+
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case 'SUBMITTED': return 'bg-amber-100 text-amber-800 border-amber-300';
+      case 'VERIFIED': return 'bg-green-100 text-green-800 border-green-300';
+      case 'REJECTED': return 'bg-red-100 text-red-800 border-red-300';
+      default: return 'bg-gray-100 text-gray-800 border-gray-300';
+    }
+  };
+
+  return (
+    <div
+      className={cn(
+        'p-4 border rounded-lg cursor-pointer transition-colors hover:bg-gray-50',
+        isSelected && 'border-blue-500 bg-blue-50'
+      )}
+      onClick={onSelect}
+    >
+      <div className="flex items-start justify-between">
+        <div className="flex-1">
+          <div className="flex items-center gap-2 mb-2">
+            <Badge className={getPriorityColor(delivery.priority)}>
+              {delivery.priority}
+            </Badge>
+            <Badge className={getStatusColor(delivery.verificationStatus)}>
+              {delivery.verificationStatus}
+            </Badge>
+            <span className="text-sm text-muted-foreground">
+              {delivery.rapidAssessmentType}
+            </span>
+          </div>
+          
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
+            <div>
+              <span className="font-medium">Entity:</span> {delivery.entity.name}
+            </div>
+            <div>
+              <span className="font-medium">Responder:</span> {delivery.responder?.name}
+            </div>
+            <div>
+              <span className="font-medium">Delivery Date:</span> {
+                delivery.responseDate 
+                  ? new Date(delivery.responseDate).toLocaleDateString()
+                  : 'N/A'
+              }
+            </div>
+          </div>
+          
+          {delivery.location && (
+            <div className="text-sm text-muted-foreground mt-1">
+              <span className="font-medium">Location:</span> {delivery.location}
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// Assessment Details Panel Component
+function AssessmentDetailsPanel({
+  assessment,
+  onClose
+}: {
+  assessment: VerificationQueueItem;
+  onClose: () => void;
+}) {
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="text-lg">Assessment Details</CardTitle>
+        <CardDescription>
+          {assessment.entity.name} - {assessment.rapidAssessmentType}
+        </CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        <div className="space-y-3">
+          <div>
+            <label className="text-sm font-medium text-gray-600">Status</label>
+            <Badge className={cn(
+              assessment.verificationStatus === 'SUBMITTED' && 'bg-amber-100 text-amber-800',
+              assessment.verificationStatus === 'VERIFIED' && 'bg-green-100 text-green-800',
+              assessment.verificationStatus === 'REJECTED' && 'bg-red-100 text-red-800'
+            )}>
+              {assessment.verificationStatus}
+            </Badge>
+          </div>
+
+          <div>
+            <label className="text-sm font-medium text-gray-600">Priority</label>
+            <div className="mt-1">
+              <Badge className={cn(
+                assessment.priority === 'CRITICAL' && 'bg-red-500 text-white',
+                assessment.priority === 'HIGH' && 'bg-orange-500 text-white',
+                assessment.priority === 'MEDIUM' && 'bg-yellow-500 text-white',
+                assessment.priority === 'LOW' && 'bg-green-500 text-white'
+              )}>
+                {assessment.priority}
+              </Badge>
+            </div>
+          </div>
+
+          <div>
+            <label className="text-sm font-medium text-gray-600">Assessor</label>
+            <p className="text-sm text-gray-900 mt-1">
+              {assessment.assessor?.name}
+            </p>
+            <p className="text-xs text-gray-600">
+              {assessment.assessor?.email}
+            </p>
+          </div>
+
+          <div>
+            <label className="text-sm font-medium text-gray-600">Entity</label>
+            <p className="text-sm text-gray-900 mt-1">
+              {assessment.entity.name}
+            </p>
+            <p className="text-xs text-gray-600">
+              {assessment.entity.type}
+            </p>
+          </div>
+
+          <div>
+            <label className="text-sm font-medium text-gray-600">Assessment Date</label>
+            <p className="text-sm text-gray-900 mt-1">
+              {assessment.rapidAssessmentDate 
+                ? new Date(assessment.rapidAssessmentDate).toLocaleDateString()
+                : 'N/A'
+              }
+            </p>
+          </div>
+
+          {assessment.location && (
+            <div>
+              <label className="text-sm font-medium text-gray-600">Location</label>
+              <p className="text-sm text-gray-900 mt-1">{assessment.location}</p>
+            </div>
+          )}
+        </div>
+
+        <VerificationActions 
+          assessment={assessment}
+          inline={false}
+          onActionComplete={() => {
+            onClose();
+            // Refresh the queue
+            useVerificationStore.getState().refreshAssessments();
+          }}
+        />
+      </CardContent>
+    </Card>
+  );
+}
+
+// Delivery Details Panel Component
+function DeliveryDetailsPanel({
+  delivery,
+  onClose
+}: {
+  delivery: VerificationQueueItem;
+  onClose: () => void;
+}) {
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="text-lg">Delivery Details</CardTitle>
+        <CardDescription>
+          {delivery.entity.name} - {delivery.rapidAssessmentType}
+        </CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        <div className="space-y-3">
+          <div>
+            <label className="text-sm font-medium text-gray-600">Status</label>
+            <Badge className={cn(
+              delivery.verificationStatus === 'SUBMITTED' && 'bg-amber-100 text-amber-800',
+              delivery.verificationStatus === 'VERIFIED' && 'bg-green-100 text-green-800',
+              delivery.verificationStatus === 'REJECTED' && 'bg-red-100 text-red-800'
+            )}>
+              {delivery.verificationStatus}
+            </Badge>
+          </div>
+
+          <div>
+            <label className="text-sm font-medium text-gray-600">Priority</label>
+            <div className="mt-1">
+              <Badge className={cn(
+                delivery.priority === 'CRITICAL' && 'bg-red-500 text-white',
+                delivery.priority === 'HIGH' && 'bg-orange-500 text-white',
+                delivery.priority === 'MEDIUM' && 'bg-yellow-500 text-white',
+                delivery.priority === 'LOW' && 'bg-green-500 text-white'
+              )}>
+                {delivery.priority}
+              </Badge>
+            </div>
+          </div>
+
+          <div>
+            <label className="text-sm font-medium text-gray-600">Responder</label>
+            <p className="text-sm text-gray-900 mt-1">
+              {delivery.responder?.name}
+            </p>
+            <p className="text-xs text-gray-600">
+              {delivery.responder?.email}
+            </p>
+          </div>
+
+          <div>
+            <label className="text-sm font-medium text-gray-600">Entity</label>
+            <p className="text-sm text-gray-900 mt-1">
+              {delivery.entity.name}
+            </p>
+            <p className="text-xs text-gray-600">
+              {delivery.entity.type}
+            </p>
+          </div>
+
+          <div>
+            <label className="text-sm font-medium text-gray-600">Delivery Date</label>
+            <p className="text-sm text-gray-900 mt-1">
+              {delivery.responseDate 
+                ? new Date(delivery.responseDate).toLocaleDateString()
+                : 'N/A'
+              }
+            </p>
+          </div>
+
+          {delivery.location && (
+            <div>
+              <label className="text-sm font-medium text-gray-600">Location</label>
+              <p className="text-sm text-gray-900 mt-1">{delivery.location}</p>
+            </div>
+          )}
+        </div>
+
+        <div className="space-y-2 pt-4 border-t">
+          <Button className="w-full" onClick={onClose}>
+            Verify Delivery
+          </Button>
+          <Button variant="outline" className="w-full" onClick={onClose}>
+            Request More Information
+          </Button>
+          <Button variant="outline" className="w-full text-red-600 hover:text-red-700" onClick={onClose}>
+            Reject Delivery
+          </Button>
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
