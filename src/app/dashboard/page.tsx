@@ -194,6 +194,237 @@ export default function DashboardPage() {
           </CardContent>
         </Card>
 
+        {/* Real-Time Configuration Management - Story 6.2 */}
+        {hasPermission('VERIFY_ASSESSMENTS') && (
+          <Card className="border-orange-200 bg-gradient-to-br from-orange-50/50 to-amber-50/50">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Activity className="h-5 w-5 text-orange-600" />
+                Real-Time Configuration Management
+              </CardTitle>
+              <CardDescription>
+                Live auto-approval configuration with real-time notifications and collaborative management
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-3">
+                <div className="flex items-center gap-2">
+                  <Badge variant="outline" className="text-xs">Story 6.2</Badge>
+                  <Badge variant="secondary" className="text-xs">Coordinator</Badge>
+                  <Badge variant="outline" className="text-xs bg-orange-50 text-orange-700 border-orange-200">Real-Time</Badge>
+                  <Badge variant="outline" className="text-xs bg-green-50 text-green-700 border-green-200">Complete</Badge>
+                </div>
+                
+                {/* Live Status Indicators */}
+                <div className="bg-white/60 rounded-lg p-4 border border-orange-100">
+                  <div className="grid grid-cols-3 gap-4 text-center">
+                    <div className="flex items-center justify-center gap-2">
+                      <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+                      <div className="text-sm">
+                        <div className="font-bold text-green-600">Live</div>
+                        <div className="text-xs text-muted-foreground">Updates</div>
+                      </div>
+                    </div>
+                    <div className="flex items-center justify-center gap-2">
+                      <Settings className="h-4 w-4 text-blue-600" />
+                      <div className="text-sm">
+                        <div className="font-bold text-blue-600">Advanced</div>
+                        <div className="text-xs text-muted-foreground">Configuration</div>
+                      </div>
+                    </div>
+                    <div className="flex items-center justify-center gap-2">
+                      <CheckCircle className="h-4 w-4 text-purple-600" />
+                      <div className="text-sm">
+                        <div className="font-bold text-purple-600">Conflict</div>
+                        <div className="text-xs text-muted-foreground">Detection</div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 gap-2">
+                  <Link href="/coordinator/dashboard">
+                    <Button className="w-full justify-start bg-orange-600 hover:bg-orange-700">
+                      <Activity className="h-4 w-4 mr-2" />
+                      Live Configuration Dashboard
+                    </Button>
+                  </Link>
+                  <Link href="/coordinator/verification/auto-approval">
+                    <Button variant="outline" className="w-full justify-start">
+                      <Settings className="h-4 w-4 mr-2" />
+                      Advanced Settings Panel
+                    </Button>
+                  </Link>
+                </div>
+                <div className="text-xs text-muted-foreground">
+                  Features real-time updates via SSE, live configuration change notifications, collaborative editing, conflict detection, and instant status synchronization across all sessions
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Verification Queue Management - Story 6.1 */}
+        {hasPermission('VERIFY_ASSESSMENTS') && (
+          <Card className="border-emerald-200 bg-emerald-50/30">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <CheckCircle className="h-5 w-5 text-emerald-600" />
+                Verification Queue Management
+              </CardTitle>
+              <CardDescription>
+                Advanced queue management with real-time updates for assessments and deliveries
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-3">
+                <div className="flex items-center gap-2">
+                  <Badge variant="outline" className="text-xs">Story 6.1</Badge>
+                  <Badge variant="secondary" className="text-xs">Coordinator</Badge>
+                  <Badge variant="outline" className="text-xs bg-emerald-50 text-emerald-700 border-emerald-200">New</Badge>
+                  <Badge variant="outline" className="text-xs bg-green-50 text-green-700 border-green-200">Complete</Badge>
+                </div>
+                <div className="grid grid-cols-1 gap-2">
+                  <Link href="/coordinator/dashboard">
+                    <Button className="w-full justify-start bg-emerald-600 hover:bg-emerald-700">
+                      <CheckCircle className="h-4 w-4 mr-2" />
+                      Advanced Queue Management
+                    </Button>
+                  </Link>
+                  <Link href="/coordinator/verification/analytics">
+                    <Button variant="outline" className="w-full justify-start">
+                      <BarChart3 className="h-4 w-4 mr-2" />
+                      Queue Analytics
+                    </Button>
+                  </Link>
+                </div>
+                <div className="text-xs text-muted-foreground">
+                  Features real-time updates, advanced filtering, queue depth indicators, performance metrics, and inline verification actions
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Resource & Donation Management - Story 6.3 */}
+        {hasPermission('VERIFY_ASSESSMENTS') && (
+          <Card className="border-purple-200 bg-gradient-to-br from-purple-50/50 to-pink-50/50">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <HandHeart className="h-5 w-5 text-purple-600" />
+                Resource & Donation Management
+              </CardTitle>
+              <CardDescription>
+                Comprehensive resource tracking, donor assignment management, and gap analysis with real-time coordination
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-3">
+                <div className="flex items-center gap-2">
+                  <Badge variant="outline" className="text-xs">Story 6.3</Badge>
+                  <Badge variant="secondary" className="text-xs">Coordinator</Badge>
+                  <Badge variant="outline" className="text-xs bg-purple-50 text-purple-700 border-purple-200">New</Badge>
+                  <Badge variant="outline" className="text-xs bg-green-50 text-green-700 border-green-200">Complete</Badge>
+                  <Badge variant="outline" className="text-xs bg-blue-50 text-blue-700 border-blue-200">Live Data</Badge>
+                </div>
+                
+                {/* Live Status Indicators */}
+                <div className="bg-white/60 rounded-lg p-4 border border-purple-100">
+                  <div className="grid grid-cols-3 gap-4 text-center">
+                    <div className="flex items-center justify-center gap-2">
+                      <div className="w-2 h-2 bg-purple-500 rounded-full animate-pulse"></div>
+                      <div className="text-sm">
+                        <div className="font-bold text-purple-600">Real-Time</div>
+                        <div className="text-xs text-muted-foreground">Updates</div>
+                      </div>
+                    </div>
+                    <div className="flex items-center justify-center gap-2">
+                      <Users className="h-4 w-4 text-indigo-600" />
+                      <div className="text-sm">
+                        <div className="font-bold text-indigo-600">Multi-Donor</div>
+                        <div className="text-xs text-muted-foreground">Assignments</div>
+                      </div>
+                    </div>
+                    <div className="flex items-center justify-center gap-2">
+                      <BarChart3 className="h-4 w-4 text-pink-600" />
+                      <div className="text-sm">
+                        <div className="font-bold text-pink-600">Gap</div>
+                        <div className="text-xs text-muted-foreground">Analysis</div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 gap-2">
+                  <Link href="/coordinator/dashboard">
+                    <Button className="w-full justify-start bg-purple-600 hover:bg-purple-700">
+                      <HandHeart className="h-4 w-4 mr-2" />
+                      Resource Management Dashboard
+                    </Button>
+                  </Link>
+                  <Link href="/coordinator/dashboard?tab=entity-assignments">
+                    <Button variant="outline" className="w-full justify-start">
+                      <Users className="h-4 w-4 mr-2" />
+                      Entity-Donor Assignments
+                    </Button>
+                  </Link>
+                  <Link href="/coordinator/dashboard?tab=gap-analysis">
+                    <Button variant="outline" className="w-full justify-start">
+                      <BarChart3 className="h-4 w-4 mr-2" />
+                      Resource Gap Analysis
+                    </Button>
+                  </Link>
+                </div>
+                <div className="text-xs text-muted-foreground">
+                  Features donation overview with live statistics, commitment vs delivery tracking with progress bars, entity-donor assignment interface with search/filter, multi-donor per entity support, assignment notifications, resource gap identification with donor recommendations, and comprehensive backend API
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Enhanced Auto-Approval Configuration - Story 6.2 */}
+        {hasPermission('VERIFY_ASSESSMENTS') && (
+          <Card className="border-blue-200 bg-blue-50/30">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Settings className="h-5 w-5 text-blue-600" />
+                Enhanced Auto-Approval Configuration
+              </CardTitle>
+              <CardDescription>
+                Advanced auto-approval management with filtering, real-time updates, and conflict detection
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-3">
+                <div className="flex items-center gap-2">
+                  <Badge variant="outline" className="text-xs">Story 6.2</Badge>
+                  <Badge variant="secondary" className="text-xs">Coordinator</Badge>
+                  <Badge variant="outline" className="text-xs bg-blue-50 text-blue-700 border-blue-200">Enhanced</Badge>
+                  <Badge variant="outline" className="text-xs bg-green-50 text-green-700 border-green-200">Complete</Badge>
+                </div>
+                <div className="grid grid-cols-1 gap-2">
+                  <Link href="/coordinator/dashboard">
+                    <Button className="w-full justify-start bg-blue-600 hover:bg-blue-700">
+                      <Settings className="h-4 w-4 mr-2" />
+                      Enhanced Configuration Panel
+                    </Button>
+                  </Link>
+                  <Link href="/coordinator/verification/auto-approval">
+                    <Button variant="outline" className="w-full justify-start">
+                      <CheckCircle className="h-4 w-4 mr-2" />
+                      Auto-Approval Settings
+                    </Button>
+                  </Link>
+                </div>
+                <div className="text-xs text-muted-foreground">
+                  Features advanced filtering, bulk operations, real-time notifications, configuration validation, conflict detection, and comprehensive audit trail
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
         {/* Assessment Verification - Story 3.3 */}
         <Card>
           <CardHeader>
@@ -229,32 +460,87 @@ export default function DashboardPage() {
           </CardContent>
         </Card>
 
-        {/* Verification Metrics - Story 3.3 */}
-        <Card>
+        {/* Verification Metrics - Story 3.3 & 6.1 Enhanced */}
+        <Card className="border-indigo-200 bg-indigo-50/30">
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
-              <BarChart3 className="h-5 w-5" />
-              Verification Metrics
+              <BarChart3 className="h-5 w-5 text-indigo-600" />
+              Verification Metrics & Analytics
             </CardTitle>
             <CardDescription>
-              Monitor verification performance and queue statistics
+              Monitor verification performance and real-time queue analytics
             </CardDescription>
           </CardHeader>
           <CardContent>
             <div className="space-y-3">
               <div className="flex items-center gap-2">
                 <Badge variant="outline" className="text-xs">Story 3.3</Badge>
+                <Badge variant="outline" className="text-xs">Story 6.1</Badge>
                 <Badge variant="secondary" className="text-xs">All Users</Badge>
+                <Badge variant="outline" className="text-xs bg-indigo-50 text-indigo-700 border-indigo-200">Enhanced</Badge>
               </div>
-              <Link href="/verification/metrics">
-                <Button className="w-full">
-                  <BarChart3 className="h-4 w-4 mr-2" />
-                  View Metrics Dashboard
-                </Button>
-              </Link>
+              <div className="grid grid-cols-1 gap-2">
+                <Link href="/verification/metrics">
+                  <Button className="w-full justify-start bg-indigo-600 hover:bg-indigo-700">
+                    <BarChart3 className="h-4 w-4 mr-2" />
+                    View Metrics Dashboard
+                  </Button>
+                </Link>
+                <Link href="/coordinator/verification/analytics">
+                  <Button variant="outline" className="w-full justify-start">
+                    <Activity className="h-4 w-4 mr-2" />
+                    Real-time Queue Analytics
+                  </Button>
+                </Link>
+              </div>
+              <div className="text-xs text-muted-foreground">
+                Enhanced with real-time queue depth indicators, verification throughput metrics, and performance trend visualization
+              </div>
             </div>
           </CardContent>
         </Card>
+
+        {/* Auto-Approval Analytics & Audit Trail - Story 6.2 */}
+        {hasPermission('VERIFY_ASSESSMENTS') && (
+          <Card className="border-cyan-200 bg-cyan-50/30">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Activity className="h-5 w-5 text-cyan-600" />
+                Auto-Approval Analytics & Audit Trail
+              </CardTitle>
+              <CardDescription>
+                Performance metrics, analytics, and complete audit history for auto-approval configurations
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-3">
+                <div className="flex items-center gap-2">
+                  <Badge variant="outline" className="text-xs">Story 6.2</Badge>
+                  <Badge variant="secondary" className="text-xs">Coordinator</Badge>
+                  <Badge variant="outline" className="text-xs bg-cyan-50 text-cyan-700 border-cyan-200">Analytics</Badge>
+                  <Badge variant="outline" className="text-xs bg-green-50 text-green-700 border-green-200">Complete</Badge>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                  <Link href="/coordinator/dashboard?view=analytics">
+                    <Button className="w-full justify-start bg-cyan-600 hover:bg-cyan-700">
+                      <BarChart3 className="h-4 w-4 mr-2" />
+                      Configuration Analytics
+                    </Button>
+                  </Link>
+                  <Link href="/coordinator/dashboard?view=audit">
+                    <Button variant="outline" className="w-full justify-start">
+                      <Clock className="h-4 w-4 mr-2" />
+                      Audit History
+                    </Button>
+                  </Link>
+                </div>
+                <div className="text-xs text-muted-foreground">
+                  Features auto-approval effectiveness metrics, configuration impact analysis, optimization recommendations, audit trail with rollback capabilities, and performance dashboards
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        )}
 
         {/* Donor Commitment Import - Story 4.3 */}
         <Card className="border-blue-200 bg-blue-50/30">
