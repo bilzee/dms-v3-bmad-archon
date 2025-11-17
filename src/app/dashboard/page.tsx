@@ -10,6 +10,7 @@ import { LeaderboardDisplay } from '@/components/donor/LeaderboardDisplay'
 import { DonorPerformanceDashboard } from '@/components/donor/DonorPerformanceDashboard'
 import { GameBadgeSystem } from '@/components/donor/GameBadgeSystem'
 import { EntityInsightsCards } from '@/components/donor/EntityInsightsCards'
+import { ConflictLog } from '@/components/dashboards/crisis/ConflictLog'
 import { 
   Users, 
   FileText, 
@@ -1362,28 +1363,49 @@ export default function DashboardPage() {
         )}
 
         {/* Crisis Management Dashboard */}
-        <Card>
+        <Card className="border-orange-200 bg-orange-50/30">
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
-              <Activity className="h-5 w-5" />
-              Crisis Management
+              <Activity className="h-5 w-5 text-orange-600" />
+              Crisis Management & Conflict Resolution
             </CardTitle>
             <CardDescription>
-              Coordinate crisis response activities
+              Monitor sync conflicts and coordinate crisis response activities
             </CardDescription>
           </CardHeader>
           <CardContent>
             <div className="space-y-3">
-              <Badge variant="outline" className="text-xs">Coming Soon</Badge>
-              <Link href="/dashboard/crisis">
-                <Button className="w-full" variant="outline">
-                  <AlertTriangle className="h-4 w-4 mr-2" />
-                  View Crisis Dashboard
-                </Button>
-              </Link>
+              <div className="flex items-center gap-2">
+                <Badge variant="outline" className="text-xs">Story 1.3</Badge>
+                <Badge variant="outline" className="text-xs">Story 6.4 (Duplicate)</Badge>
+                <Badge variant="secondary" className="text-xs">All Users</Badge>
+                <Badge variant="outline" className="text-xs bg-green-50 text-green-700 border-green-200">Complete</Badge>
+              </div>
+              <div className="grid grid-cols-1 gap-2">
+                <Link href="/dashboard/crisis">
+                  <Button className="w-full justify-start bg-orange-600 hover:bg-orange-700">
+                    <AlertTriangle className="h-4 w-4 mr-2" />
+                    Full Crisis Dashboard
+                  </Button>
+                </Link>
+                <Link href="/dashboard/crisis#conflicts">
+                  <Button variant="outline" className="w-full justify-start">
+                    <CheckCircle className="h-4 w-4 mr-2" />
+                    View Conflict Resolution
+                  </Button>
+                </Link>
+              </div>
+              <div className="text-xs text-muted-foreground">
+                Features sync conflict monitoring, real-time updates, export capabilities, and comprehensive dashboard integration
+              </div>
             </div>
           </CardContent>
         </Card>
+
+        {/* Conflict Resolution Summary */}
+        <div className="col-span-full">
+          <ConflictLog compact={true} className="border-red-200 bg-red-50/20" />
+        </div>
 
         {/* User Profile with Gamification */}
         <Card className="border-teal-200 bg-gradient-to-br from-teal-50/50 to-cyan-50/50">
