@@ -10,7 +10,7 @@ interface UseRealTimeVerificationOptions {
 
 export function useRealTimeVerification({
   enabled = true,
-  interval = 30000, // 30 seconds
+  interval = 120000, // 120 seconds (increased from 60 to further reduce polling frequency)
   onConnectionChange,
   onDataUpdate
 }: UseRealTimeVerificationOptions = {}) {
@@ -32,8 +32,37 @@ export function useRealTimeVerification({
   const pollUpdates = useCallback(async () => {
     if (!enabled || !isRealTimeEnabled) return;
 
+    // Prevent too frequent polling
+    const now = Date.now();
+    const timeSinceLastUpdate = lastSuccessfulUpdate.current ? 
+      now - new Date(lastSuccessfulUpdate.current).getTime() : 
+      Infinity;
+    
+    // Skip if last update was less than 10 seconds ago (increased from 5)
+    if (timeSinceLastUpdate < 10000) return;
+
+    // Skip if we've had too many recent failures
+    if (retryCountRef.current >= maxRetries) {
+      console.log('Max retries reached, suspending polling to prevent infinite loop');
+      return;
+    }
+
     try {
       setConnectionStatus('connecting');
+      
+      const response = await fetch('/api/v1/verification/queue/assessments?page=1&limit=1', {
+        method: 'HEAD',
+        cache: 'no-store'
+      });
+      
+      // Check authentication status before doing full refresh
+      if (response.status === 401) {
+        console.log('Authentication failed (401), disabling polling to prevent infinite loop');
+        setConnectionStatus('error');
+        onConnectionChange?.('error');
+        retryCountRef.current = maxRetries; // Max out retries to stop further polling
+        return;
+      }
       
       await refreshAll();
       
@@ -50,16 +79,34 @@ export function useRealTimeVerification({
       
       retryCountRef.current++;
       
-      if (retryCountRef.current >= maxRetries) {
+      // Check for authentication errors in various formats
+      const isAuthError = error instanceof Error && (
+        error.message.includes('401') || 
+        error.message.includes('Unauthorized') ||
+        error.message.includes('Invalid or expired token') ||
+        error.message.includes('Authentication failed')
+      );
+      
+      if (isAuthError || retryCountRef.current >= maxRetries) {
         setConnectionStatus('error');
         onConnectionChange?.('error');
         
-        // Exponential backoff for retries
-        const backoffTime = Math.min(1000 * Math.pow(2, retryCountRef.current - maxRetries), 30000);
+        if (isAuthError) {
+          console.log('Authentication error detected, disabling polling to prevent infinite loop');
+          retryCountRef.current = maxRetries; // Max out retries to stop further polling
+          return;
+        }
+        
+        // For other errors after max retries, wait longer before retrying
+        const backoffTime = Math.min(1000 * Math.pow(2, retryCountRef.current - maxRetries), 60000);
+        console.log(`Retrying in ${backoffTime}ms due to error:`, error.message);
         setTimeout(pollUpdates, backoffTime);
       } else {
         setConnectionStatus('disconnected');
         onConnectionChange?.('disconnected');
+        
+        // Quick retry for transient errors (max 5 seconds, increased from 2)
+        setTimeout(pollUpdates, 5000);
       }
     }
   }, [enabled, isRealTimeEnabled, refreshAll, setConnectionStatus, updateLastUpdate, onDataUpdate, onConnectionChange]);
@@ -170,12 +217,12 @@ export function useRealTimeVerification({
         setConnectionStatus('disconnected');
         onConnectionChange?.('disconnected');
         
-        // Fall back to polling
+        // Fall back to polling with delay to prevent rapid reconnection attempts
         setTimeout(() => {
           if (enabled && isRealTimeEnabled) {
             startPolling();
           }
-        }, 1000);
+        }, 5000); // Increased from 1s to 5s
       };
 
       ws.onerror = (error) => {

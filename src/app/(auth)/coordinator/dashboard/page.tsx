@@ -19,9 +19,20 @@ export default function CoordinatorDashboard() {
   const { assessmentQueueDepth, deliveryQueueDepth, refreshAll } = useVerificationStore();
   const [showAutoApprovalConfig, setShowAutoApprovalConfig] = useState(false);
 
-  // Load verification queue data on mount
+  // Load verification queue data on mount (with protection)
   useEffect(() => {
-    refreshAll();
+    const loadData = async () => {
+      try {
+        await refreshAll();
+      } catch (error) {
+        console.error('Failed to load initial dashboard data:', error);
+      }
+    };
+    
+    // Add small delay to prevent immediate API calls on mount
+    const timeoutId = setTimeout(loadData, 100);
+    
+    return () => clearTimeout(timeoutId);
   }, [refreshAll]);
 
   const totalPendingVerifications = (assessmentQueueDepth?.total || 0) + (deliveryQueueDepth?.total || 0);
