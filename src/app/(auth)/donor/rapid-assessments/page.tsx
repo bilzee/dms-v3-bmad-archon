@@ -23,7 +23,7 @@ import { useState, useEffect } from 'react'
 
 export default function DonorAssessmentsPage() {
   const { user } = useAuth()
-  const [assessments, setAssessments] = useState([])
+  const [assessments, setAssessments] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 

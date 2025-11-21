@@ -20,7 +20,8 @@ import {
   Download,
   RefreshCw
 } from 'lucide-react';
-import { useVerificationMetrics, useAssessmentQueue, useDeliveryQueue } from '@/hooks/useRealTimeVerification';
+import { useVerificationMetrics } from '@/hooks/useRealTimeVerification';
+import { useVerificationStore } from '@/stores/verification.store';
 import { cn } from '@/lib/utils';
 import { format, subDays, startOfDay, endOfDay } from 'date-fns';
 
@@ -33,8 +34,12 @@ export function VerificationAnalytics({ className }: VerificationAnalyticsProps)
   const [isLoading, setIsLoading] = useState(false);
   
   const { combined: metrics, assessmentQueueDepth, deliveryQueueDepth } = useVerificationMetrics();
-  const { assessments, refresh: refreshAssessments } = useAssessmentQueue();
-  const { deliveries, refresh: refreshDeliveries } = useDeliveryQueue();
+  const { 
+    assessmentQueue: assessments, 
+    deliveryQueue: deliveries,
+    refreshAssessments,
+    refreshDeliveries 
+  } = useVerificationStore();
 
   // Time range options
   const timeRanges = [

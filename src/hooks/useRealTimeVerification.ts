@@ -109,14 +109,88 @@ export function useRealTimeVerification({
     }
   }, [refreshAssessments, refreshDeliveries, refreshAll, setConnectionStatus, updateLastUpdate, onDataUpdate, onConnectionChange]);
 
-  // WebSocket connection (placeholder for future implementation)
+  // WebSocket connection for real-time configuration updates
   const connectWebSocket = useCallback(() => {
-    // This would establish a WebSocket connection for real-time updates
-    // For now, we'll use polling as implemented above
-    
-    console.log('WebSocket connection not yet implemented - using polling fallback');
-    return null;
-  }, []);
+    // Check if we have authentication and WebSocket support
+    if (typeof WebSocket === 'undefined') {
+      console.log('WebSocket not supported - using polling fallback');
+      return null;
+    }
+
+    try {
+      // Create WebSocket connection
+      const wsUrl = process.env.NODE_ENV === 'development' 
+        ? 'ws://localhost:3000/api/v1/verification/live'
+        : `${window.location.protocol === 'https:' ? 'wss:' : 'ws:'}//${window.location.host}/api/v1/verification/live`;
+
+      const ws = new WebSocket(wsUrl);
+
+      ws.onopen = () => {
+        console.log('WebSocket connected for real-time verification updates');
+        setConnectionStatus('connected');
+        onConnectionChange?.('connected');
+        
+        // Subscribe to configuration changes
+        ws.send(JSON.stringify({
+          type: 'SUBSCRIBE',
+          channels: ['configuration_changes', 'verification_updates'],
+          timestamp: new Date().toISOString()
+        }));
+      };
+
+      ws.onmessage = (event) => {
+        try {
+          const message = JSON.parse(event.data);
+          
+          // Handle different message types
+          switch (message.event) {
+            case 'CONFIGURATION_CHANGED':
+            case 'BULK_CONFIGURATION_UPDATED':
+              // Refresh verification data when configuration changes
+              refreshAll();
+              onDataUpdate?.('all');
+              break;
+              
+            case 'VERIFICATION_QUEUE_UPDATED':
+              refreshAll();
+              onDataUpdate?.('all');
+              break;
+              
+            default:
+              console.log('Unhandled WebSocket message:', message);
+          }
+          
+        } catch (error) {
+          console.error('Failed to parse WebSocket message:', error);
+        }
+      };
+
+      ws.onclose = () => {
+        console.log('WebSocket connection closed');
+        setConnectionStatus('disconnected');
+        onConnectionChange?.('disconnected');
+        
+        // Fall back to polling
+        setTimeout(() => {
+          if (enabled && isRealTimeEnabled) {
+            startPolling();
+          }
+        }, 1000);
+      };
+
+      ws.onerror = (error) => {
+        console.error('WebSocket error:', error);
+        setConnectionStatus('error');
+        onConnectionChange?.('error');
+      };
+
+      return ws;
+      
+    } catch (error) {
+      console.error('Failed to create WebSocket connection:', error);
+      return null;
+    }
+  }, [enabled, isRealTimeEnabled, refreshAll, setConnectionStatus, onConnectionChange, onDataUpdate, startPolling]);
 
   // Check if we should use WebSocket or polling
   const shouldUseWebSocket = useCallback(() => {

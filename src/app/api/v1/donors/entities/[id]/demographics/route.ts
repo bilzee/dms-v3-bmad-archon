@@ -5,11 +5,11 @@ import {
   EntityDemographicsSchema
 } from '@/lib/validation/entity-insights';
 
-export const GET = withAuth(async (request: NextRequest, context) => {
+export const GET = withAuth(async (request: NextRequest, context, nextContext) => {
   try {
     const { userId, roles } = context;
-    const params = await context.params;
-    const entityId = params.id;
+    // Extract params from nextContext in Next.js 14.2.5
+    const entityId = nextContext?.params?.id;
 
     // Check if user has donor role
     if (!roles.includes('DONOR')) {

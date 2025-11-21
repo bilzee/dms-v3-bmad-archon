@@ -70,13 +70,16 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
           id: ur.role.id,
           name: ur.role.name,
           description: ur.role.description,
+          createdAt: ur.role.createdAt,
           // Include permissions with proper nested structure
           permissions: ur.role.permissions.map(rp => ({
             permission: {
               id: rp.permission.id,
               code: rp.permission.code,
               name: rp.permission.name,
-              description: rp.permission.description
+              description: rp.permission.description,
+              category: rp.permission.category,
+              createdAt: rp.permission.createdAt
             }
           }))
         }

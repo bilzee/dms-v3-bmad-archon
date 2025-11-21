@@ -25,7 +25,7 @@ export const GET = withAuth(async (request: NextRequest, context, { params }: Ro
             organization: true,
             contactEmail: true,
             contactPhone: true,
-            userId: true
+            isActive: true
           }
         },
         entity: {
@@ -57,9 +57,8 @@ export const GET = withAuth(async (request: NextRequest, context, { params }: Ro
       );
     }
 
-    // Check authorization
-    const isDonorUser = commitment.donor.userId === user.id;
-    const isAuthorized = isDonorUser || roles.includes('COORDINATOR') || roles.includes('ADMIN') || roles.includes('RESPONDER');
+    // Check authorization - role-based access only
+    const isAuthorized = roles.includes('COORDINATOR') || roles.includes('ADMIN') || roles.includes('RESPONDER');
 
     if (!isAuthorized) {
       return NextResponse.json(
@@ -69,7 +68,7 @@ export const GET = withAuth(async (request: NextRequest, context, { params }: Ro
     }
 
     // For responders, check if they're assigned to the entity
-    if (roles.includes('RESPONDER') && !isDonorUser && !roles.includes('COORDINATOR') && !roles.includes('ADMIN')) {
+    if (roles.includes('RESPONDER') && !roles.includes('COORDINATOR') && !roles.includes('ADMIN')) {
       const entityAssignmentService = new EntityAssignmentServiceImpl();
       const isAssigned = await entityAssignmentService.isUserAssigned(user.id, commitment.entityId);
       if (!isAssigned) {
@@ -104,7 +103,7 @@ export const PATCH = withAuth(async (request: NextRequest, context, { params }: 
       where: { id: commitmentId },
       include: {
         donor: {
-          select: { id: true, name: true, userId: true }
+          select: { id: true, name: true, isActive: true }
         }
       }
     });
@@ -272,7 +271,7 @@ export const DELETE = withAuth(async (request: NextRequest, context, { params }:
       where: { id: commitmentId },
       include: {
         donor: {
-          select: { id: true, name: true, userId: true }
+          select: { id: true, name: true, isActive: true }
         }
       }
     });

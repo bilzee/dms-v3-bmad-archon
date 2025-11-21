@@ -8,12 +8,16 @@ import { Button } from '@/components/ui/button';
 import { Users, AlertTriangle, CheckCircle, Clock, FileText, Activity, PlusCircle, TrendingUp } from 'lucide-react';
 import Link from 'next/link';
 import { VerificationQueueManagement } from '@/components/dashboards/crisis/VerificationQueueManagement';
+import { AutoApprovalConfig } from '@/components/verification/AutoApprovalConfig';
+import { EnhancedAutoApprovalConfig } from '@/components/verification/EnhancedAutoApprovalConfig';
+import { ResourceManagement } from '@/components/dashboards/crisis/ResourceManagement';
 import { useVerificationStore } from '@/stores/verification.store';
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 
 export default function CoordinatorDashboard() {
   const { currentRole, user } = useAuth();
   const { assessmentQueueDepth, deliveryQueueDepth, refreshAll } = useVerificationStore();
+  const [showAutoApprovalConfig, setShowAutoApprovalConfig] = useState(false);
 
   // Load verification queue data on mount
   useEffect(() => {
@@ -96,6 +100,37 @@ export default function CoordinatorDashboard() {
 
         {/* Verification Queue Management */}
         <VerificationQueueManagement />
+
+        {/* Resource Management Section */}
+        <ResourceManagement />
+
+        {/* Auto-Approval Configuration Section */}
+        <Card>
+          <CardHeader>
+            <div className="flex items-center justify-between">
+              <div>
+                <CardTitle className="flex items-center gap-2">
+                  <CheckCircle className="h-5 w-5" />
+                  Auto-Approval Configuration
+                </CardTitle>
+                <CardDescription>
+                  Manage automatic verification settings directly from the dashboard
+                </CardDescription>
+              </div>
+              <Button 
+                variant={showAutoApprovalConfig ? "secondary" : "outline"}
+                onClick={() => setShowAutoApprovalConfig(!showAutoApprovalConfig)}
+              >
+                {showAutoApprovalConfig ? 'Hide Configuration' : 'Show Configuration'}
+              </Button>
+            </div>
+          </CardHeader>
+          {showAutoApprovalConfig && (
+            <CardContent>
+              <EnhancedAutoApprovalConfig compactMode={false} />
+            </CardContent>
+          )}
+        </Card>
 
         {/* Quick Actions */}
         <Card>

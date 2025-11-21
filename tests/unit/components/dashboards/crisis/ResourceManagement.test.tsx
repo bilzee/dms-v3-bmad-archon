@@ -73,6 +73,27 @@ jest.mock('@/hooks/useAuth', () => ({
   })
 }));
 
+jest.mock('lucide-react', () => ({
+  Users: ({ className }: any) => <div className={className} data-testid="users-icon" />,
+  Package: ({ className }: any) => <div className={className} data-testid="package-icon" />,
+  TrendingUp: ({ className }: any) => <div className={className} data-testid="trending-up-icon" />,
+  DollarSign: ({ className }: any) => <div className={className} data-testid="dollar-sign-icon" />,
+  Clock: ({ className }: any) => <div className={className} data-testid="clock-icon" />,
+  CheckCircle2: ({ className }: any) => <div className={className} data-testid="check-circle-icon" />,
+  Truck: ({ className }: any) => <div className={className} data-testid="truck-icon" />,
+  XCircle: ({ className }: any) => <div className={className} data-testid="x-circle-icon" />,
+  AlertTriangle: ({ className }: any) => <div className={className} data-testid="alert-triangle-icon" />,
+  Search: ({ className }: any) => <div className={className} data-testid="search-icon" />,
+  Filter: ({ className }: any) => <div className={className} data-testid="filter-icon" />,
+  RefreshCw: ({ className }: any) => <div className={className} data-testid="refresh-icon" />,
+  BarChart3: ({ className }: any) => <div className={className} data-testid="bar-chart-icon" />,
+  Target: ({ className }: any) => <div className={className} data-testid="target-icon" />,
+  ArrowUpRight: ({ className }: any) => <div className={className} data-testid="arrow-up-right-icon" />,
+  ArrowDownRight: ({ className }: any) => <div className={className} data-testid="arrow-down-right-icon" />,
+  Eye: ({ className }: any) => <div className={className} data-testid="eye-icon" />,
+  Edit: ({ className }: any) => <div className={className} data-testid="edit-icon" />,
+}));
+
 // Import the component after all mocks are set up
 import { ResourceManagement } from '@/components/dashboards/crisis/ResourceManagement';
 
@@ -244,9 +265,9 @@ describe('ResourceManagement', () => {
     renderComponent();
 
     await waitFor(() => {
-      expect(screen.getByText('100 liters of Water')).toBeInTheDocument();
-      expect(screen.getByText('Test Donor')).toBeInTheDocument();
-      expect(screen.getByText('Test Entity')).toBeInTheDocument();
+      expect(screen.getAllByText('100 liters of Water')).toHaveLength(2); // Header and content
+      expect(screen.getByText(/Test Donor/)).toBeInTheDocument();
+      expect(screen.getByText(/Test Entity/)).toBeInTheDocument();
       expect(screen.getByText('PLANNED')).toBeInTheDocument();
     });
   });
@@ -289,13 +310,20 @@ describe('ResourceManagement', () => {
 
     renderComponent();
     
+    // Wait for initial load to complete
+    await waitFor(() => {
+      expect(fetch).toHaveBeenCalledTimes(3); // Initial load (3 calls)
+    });
+    
     const refreshButton = screen.getByText('Refresh');
     expect(refreshButton).toBeInTheDocument();
     
     await user.click(refreshButton);
     
-    // Verify fetch was called again
-    expect(fetch).toHaveBeenCalledTimes(3); // Initial load (3 calls)
+    // Verify fetch was called again for refresh
+    await waitFor(() => {
+      expect(fetch).toHaveBeenCalledTimes(6); // Initial 3 + refresh 3
+    });
   });
 });
 

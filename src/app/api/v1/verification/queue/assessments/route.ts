@@ -68,12 +68,12 @@ export const GET = withAuth(async (request, context) => {
     }
 
     // Build order by clause
-    const orderBy: any = {};
-    orderBy[sortBy] = sortOrder;
+    const orderBy: any[] = [];
+    orderBy.push({ [sortBy]: sortOrder });
     
     // Add secondary sort by priority for stable ordering
     if (sortBy !== 'priority') {
-      orderBy.priority = 'desc';
+      orderBy.push({ priority: 'desc' });
     }
 
     // Get total count for pagination
@@ -102,7 +102,7 @@ export const GET = withAuth(async (request, context) => {
           }
         }
       },
-      orderBy: [orderBy],
+      orderBy: orderBy,
       skip: (page - 1) * limit,
       take: limit
     });
