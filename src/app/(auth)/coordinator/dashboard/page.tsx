@@ -98,20 +98,42 @@ export default function CoordinatorDashboard() {
           </Card>
         </div>
 
-        {/* Verification Queue Management */}
-        <VerificationQueueManagement />
+        {/* Verification Queue Management - Story 6.1 */}
+        <div className="space-y-4">
+          <div className="flex items-center gap-2">
+            <Badge variant="default" className="bg-blue-100 text-blue-800 border-blue-200">
+              Story 6.1
+            </Badge>
+            <span className="text-sm text-gray-600">Verification Queue Management</span>
+          </div>
+          <VerificationQueueManagement />
+        </div>
 
-        {/* Resource Management Section */}
-        <ResourceManagement />
+        {/* Resource Management Section - Story 6.3 */}
+        <div className="space-y-4">
+          <div className="flex items-center gap-2">
+            <Badge variant="default" className="bg-green-100 text-green-800 border-green-200">
+              Story 6.3
+            </Badge>
+            <span className="text-sm text-gray-600">Resource & Donation Management</span>
+          </div>
+          <ResourceManagement />
+        </div>
 
-        {/* Auto-Approval Configuration Section */}
+        {/* Auto-Approval Configuration Section - Story 6.2 */}
         <Card>
           <CardHeader>
             <div className="flex items-center justify-between">
               <div>
+                <div className="flex items-center gap-2 mb-2">
+                  <Badge variant="default" className="bg-purple-100 text-purple-800 border-purple-200">
+                    Story 6.2
+                  </Badge>
+                  <span className="text-sm text-gray-600">Auto-Approval Configuration</span>
+                </div>
                 <CardTitle className="flex items-center gap-2">
                   <CheckCircle className="h-5 w-5" />
-                  Auto-Approval Configuration
+                  Enhanced Auto-Approval Management
                 </CardTitle>
                 <CardDescription>
                   Manage automatic verification settings directly from the dashboard
