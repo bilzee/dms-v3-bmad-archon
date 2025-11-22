@@ -77,9 +77,6 @@ export function VerificationQueueManagement({ className }: VerificationQueueMana
   const assessmentsPagination = assessmentsData?.pagination || { page: 1, limit: 20, total: 0 };
   const deliveriesPagination = deliveriesData?.pagination || { page: 1, limit: 20, total: 0 };
 
-  const handleRefreshAssessments = () => refetchAssessments();
-  const handleRefreshDeliveries = () => refetchDeliveries();
-
   const {
     combined: combinedMetrics
   } = useVerificationMetrics();
