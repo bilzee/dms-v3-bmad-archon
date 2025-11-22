@@ -25,18 +25,13 @@ import {
   BarChart3
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { 
-  useAssessmentQueue, 
-  useDeliveryQueue, 
-  useRealTimeStatus,
-  useVerificationStore 
-} from '@/stores/verification.store';
+import { useVerificationQueue, useVerificationFilters } from '@/hooks/useVerification';
 import { useRealTimeVerification, useConnectionStatus, useVerificationMetrics } from '@/hooks/useRealTimeVerification';
 import { ConnectionStatusIndicator } from '@/components/verification/ConnectionStatusIndicator';
 import { QueueFilters, FilterSummary } from '@/components/verification/QueueFilters';
 import { VerificationActions } from '@/components/verification/VerificationActions';
 import { VerificationAnalytics } from '@/components/verification/VerificationAnalytics';
-import type { VerificationQueueItem } from '@/stores/verification.store';
+import type { VerificationQueueItem } from '@/types/verification';
 
 interface VerificationQueueManagementProps {
   className?: string;
@@ -48,27 +43,42 @@ export function VerificationQueueManagement({ className }: VerificationQueueMana
   const [showFilters, setShowFilters] = useState(false);
   const [selectedItem, setSelectedItem] = useState<VerificationQueueItem | null>(null);
 
+  // Use the working authentication-enabled hooks for assessments
   const {
-    items: assessments,
-    loading: assessmentsLoading,
+    data: assessmentsData,
+    isLoading: assessmentsLoading,
     error: assessmentsError,
-    pagination: assessmentsPagination,
-    queueDepth: assessmentsQueueDepth,
-    metrics: assessmentsMetrics,
-    refresh: refreshAssessments,
-    getFiltersCount: getAssessmentFiltersCount
-  } = useAssessmentQueue();
+    refetch: refetchAssessments
+  } = useVerificationQueue({
+    status: 'SUBMITTED',
+    sortBy: 'rapidAssessmentDate',
+    sortOrder: 'desc',
+    page: 1,
+    limit: 20
+  });
 
+  // Use the working authentication-enabled hooks for deliveries  
   const {
-    items: deliveries,
-    loading: deliveriesLoading,
+    data: deliveriesData,
+    isLoading: deliveriesLoading,
     error: deliveriesError,
-    pagination: deliveriesPagination,
-    queueDepth: deliveriesQueueDepth,
-    metrics: deliveriesMetrics,
-    refresh: refreshDeliveries,
-    getFiltersCount: getDeliveryFiltersCount
-  } = useDeliveryQueue();
+    refetch: refetchDeliveries
+  } = useVerificationQueue({
+    status: 'SUBMITTED',
+    type: 'delivery',
+    sortBy: 'rapidAssessmentDate', 
+    sortOrder: 'desc',
+    page: 1,
+    limit: 20
+  });
+
+  const assessments = assessmentsData?.data || [];
+  const deliveries = deliveriesData?.data || [];
+  const assessmentsPagination = assessmentsData?.pagination || { page: 1, limit: 20, total: 0 };
+  const deliveriesPagination = deliveriesData?.pagination || { page: 1, limit: 20, total: 0 };
+
+  const handleRefreshAssessments = () => refetchAssessments();
+  const handleRefreshDeliveries = () => refetchDeliveries();
 
   const {
     combined: combinedMetrics
