@@ -1,5 +1,6 @@
 import { useEffect, useRef, useCallback } from 'react';
 import { useVerificationStore } from '@/stores/verification.store';
+import { useAuth } from '@/hooks/useAuth';
 
 interface UseRealTimeVerificationOptions {
   enabled?: boolean;
@@ -14,6 +15,7 @@ export function useRealTimeVerification({
   onConnectionChange,
   onDataUpdate
 }: UseRealTimeVerificationOptions = {}) {
+  const { token } = useAuth();
   const {
     refreshAll,
     refreshAssessments,
@@ -30,7 +32,7 @@ export function useRealTimeVerification({
 
   // Polling function
   const pollUpdates = useCallback(async () => {
-    if (!enabled || !isRealTimeEnabled) return;
+    if (!enabled || !isRealTimeEnabled || !token) return;
 
     // Prevent too frequent polling
     const now = Date.now();
@@ -52,7 +54,10 @@ export function useRealTimeVerification({
       
       const response = await fetch('/api/v1/verification/queue/assessments?page=1&limit=1', {
         method: 'HEAD',
-        cache: 'no-store'
+        cache: 'no-store',
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
       });
       
       // Check authentication status before doing full refresh
@@ -109,7 +114,7 @@ export function useRealTimeVerification({
         setTimeout(pollUpdates, 5000);
       }
     }
-  }, [enabled, isRealTimeEnabled, refreshAll, setConnectionStatus, updateLastUpdate, onDataUpdate, onConnectionChange]);
+  }, [enabled, isRealTimeEnabled, token, refreshAll, setConnectionStatus, updateLastUpdate, onDataUpdate, onConnectionChange]);
 
   // Start polling
   const startPolling = useCallback(() => {
@@ -165,7 +170,7 @@ export function useRealTimeVerification({
     }
 
     // Skip WebSocket if we don't have authentication (prevent 401 errors)
-    if (!refreshAll) {
+    if (!token || !refreshAll) {
       console.log('No authentication available - using polling fallback');
       return null;
     }
@@ -243,7 +248,7 @@ export function useRealTimeVerification({
       console.error('Failed to create WebSocket connection:', error);
       return null;
     }
-  }, [enabled, isRealTimeEnabled, refreshAll, setConnectionStatus, onConnectionChange, onDataUpdate, startPolling]);
+  }, [enabled, isRealTimeEnabled, token, refreshAll, setConnectionStatus, onConnectionChange, onDataUpdate, startPolling]);
 
   // Check if we should use WebSocket or polling
   const shouldUseWebSocket = useCallback(() => {
@@ -277,7 +282,7 @@ export function useRealTimeVerification({
     return () => {
       stopPolling();
     };
-  }, [enabled, isRealTimeEnabled, shouldUseWebSocket, connectWebSocket, startPolling, stopPolling]);
+  }, [enabled, isRealTimeEnabled, token, shouldUseWebSocket, connectWebSocket, startPolling, stopPolling]);
 
   // Handle page visibility changes
   useEffect(() => {
@@ -296,7 +301,7 @@ export function useRealTimeVerification({
     return () => {
       document.removeEventListener('visibilitychange', handleVisibilityChange);
     };
-  }, [enabled, isRealTimeEnabled, startPolling, stopPolling]);
+  }, [enabled, isRealTimeEnabled, token, startPolling, stopPolling]);
 
   // Handle network connectivity changes
   useEffect(() => {
@@ -318,7 +323,7 @@ export function useRealTimeVerification({
       window.removeEventListener('online', handleOnline);
       window.removeEventListener('offline', handleOffline);
     };
-  }, [enabled, isRealTimeEnabled, startPolling, stopPolling, setConnectionStatus]);
+  }, [enabled, isRealTimeEnabled, token, startPolling, stopPolling, setConnectionStatus]);
 
   return {
     // Status

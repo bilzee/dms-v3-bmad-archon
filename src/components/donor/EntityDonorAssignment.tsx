@@ -51,7 +51,7 @@ interface CommitmentFormData {
 }
 
 export function EntityDonorAssignment({ className }: EntityDonorAssignmentProps) {
-  const { token } = useAuth();
+  const { token, isAuthenticated } = useAuth();
   const queryClient = useQueryClient();
   
   const [showCreateDialog, setShowCreateDialog] = useState(false);
@@ -75,7 +75,7 @@ export function EntityDonorAssignment({ className }: EntityDonorAssignmentProps)
     pagination: any;
   }>({
     queryKey: ['entity-donor-assignments', filters, searchTerm, token],
-    enabled: !!token,
+    enabled: isAuthenticated && !!token && token.length > 10,
     queryFn: async () => {
       const params = new URLSearchParams();
       Object.entries(filters).forEach(([key, value]) => {
@@ -97,7 +97,7 @@ export function EntityDonorAssignment({ className }: EntityDonorAssignmentProps)
   // Fetch entities for dropdown
   const { data: entities } = useQuery<Entity[]>({
     queryKey: ['entities', token],
-    enabled: !!token,
+    enabled: isAuthenticated && !!token && token.length > 10,
     queryFn: async () => {
       const response = await fetch('/api/v1/entities', {
         headers: {
@@ -106,14 +106,15 @@ export function EntityDonorAssignment({ className }: EntityDonorAssignmentProps)
       });
       if (!response.ok) return [];
       const data = await response.json();
-      return data.success ? data.data : [];
+      const result = data.success ? data.data : [];
+      return Array.isArray(result) ? result : [];
     }
   });
 
   // Fetch donors for dropdown
   const { data: donors } = useQuery<Donor[]>({
     queryKey: ['donors', token],
-    enabled: !!token,
+    enabled: isAuthenticated && !!token && token.length > 10,
     queryFn: async () => {
       const response = await fetch('/api/v1/donors', {
         headers: {
@@ -122,14 +123,15 @@ export function EntityDonorAssignment({ className }: EntityDonorAssignmentProps)
       });
       if (!response.ok) return [];
       const data = await response.json();
-      return data.success ? data.data : [];
+      const result = data.success ? data.data : [];
+      return Array.isArray(result) ? result : [];
     }
   });
 
   // Fetch incidents for dropdown
   const { data: incidents } = useQuery<Incident[]>({
     queryKey: ['incidents', token],
-    enabled: !!token,
+    enabled: isAuthenticated && !!token && token.length > 10,
     queryFn: async () => {
       const response = await fetch('/api/v1/incidents', {
         headers: {
@@ -138,7 +140,8 @@ export function EntityDonorAssignment({ className }: EntityDonorAssignmentProps)
       });
       if (!response.ok) return [];
       const data = await response.json();
-      return data.success ? data.data : [];
+      const result = data.success ? data.data : [];
+      return Array.isArray(result) ? result : [];
     }
   });
 
@@ -325,7 +328,7 @@ export function EntityDonorAssignment({ className }: EntityDonorAssignmentProps)
                           <SelectValue placeholder="Select donor" />
                         </SelectTrigger>
                         <SelectContent>
-                          {donors?.map((donor) => (
+                          {(donors || []).map((donor) => (
                             <SelectItem key={donor.id} value={donor.id}>
                               {donor.name} ({donor.type})
                             </SelectItem>
@@ -341,7 +344,7 @@ export function EntityDonorAssignment({ className }: EntityDonorAssignmentProps)
                           <SelectValue placeholder="Select entity" />
                         </SelectTrigger>
                         <SelectContent>
-                          {entities?.map((entity) => (
+                          {(entities || []).map((entity) => (
                             <SelectItem key={entity.id} value={entity.id}>
                               {entity.name}
                             </SelectItem>
@@ -358,7 +361,7 @@ export function EntityDonorAssignment({ className }: EntityDonorAssignmentProps)
                         <SelectValue placeholder="Select incident" />
                       </SelectTrigger>
                       <SelectContent>
-                        {incidents?.map((incident) => (
+                        {(incidents || []).map((incident) => (
                           <SelectItem key={incident.id} value={incident.id}>
                             {incident.type} - {incident.location}
                           </SelectItem>
@@ -473,7 +476,7 @@ export function EntityDonorAssignment({ className }: EntityDonorAssignmentProps)
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">All Entities</SelectItem>
-                {entities?.map((entity) => (
+                {(entities || []).map((entity) => (
                   <SelectItem key={entity.id} value={entity.id}>
                     {entity.name}
                   </SelectItem>
@@ -487,7 +490,7 @@ export function EntityDonorAssignment({ className }: EntityDonorAssignmentProps)
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">All Donors</SelectItem>
-                {donors?.map((donor) => (
+                {(donors || []).map((donor) => (
                   <SelectItem key={donor.id} value={donor.id}>
                     {donor.name}
                   </SelectItem>

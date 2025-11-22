@@ -1,6 +1,6 @@
 import bcrypt from 'bcryptjs'
 import jwt from 'jsonwebtoken'
-import { prisma } from '@/lib/db/client'
+import { db } from '@/lib/db/client'
 import type { User, Role, Permission } from '@prisma/client'
 
 export interface AuthTokenPayload {
@@ -65,7 +65,7 @@ export class AuthService {
    * Get user with all roles and permissions
    */
   static async getUserWithRoles(userId: string): Promise<UserWithRoles | null> {
-    return prisma.user.findUnique({
+    return db.user.findUnique({
       where: { id: userId },
       include: {
         roles: {
@@ -89,7 +89,7 @@ export class AuthService {
    * Get user by email with roles and permissions
    */
   static async getUserByEmail(email: string): Promise<UserWithRoles | null> {
-    return prisma.user.findUnique({
+    return db.user.findUnique({
       where: { email },
       include: {
         roles: {
@@ -137,7 +137,7 @@ export class AuthService {
     }
 
     // Update last login
-    await prisma.user.update({
+    await db.user.update({
       where: { id: user.id },
       data: { lastLogin: new Date() }
     })
@@ -210,7 +210,7 @@ export class AuthService {
     const passwordHash = await this.hashPassword(data.password)
 
     // Create user and assign roles in a transaction
-    const user = await prisma.$transaction(async (tx) => {
+    const user = await db.$transaction(async (tx) => {
       // Create user
       const newUser = await tx.user.create({
         data: {
@@ -259,7 +259,7 @@ export class AuthService {
    * Assign roles to a user
    */
   static async assignRoles(userId: string, roleIds: string[], assignedBy: string): Promise<void> {
-    await prisma.$transaction(async (tx) => {
+    await db.$transaction(async (tx) => {
       // Remove existing role assignments
       await tx.userRole.deleteMany({
         where: { userId }

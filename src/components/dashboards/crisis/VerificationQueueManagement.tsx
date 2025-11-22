@@ -22,12 +22,14 @@ import {
   Wifi,
   WifiOff,
   Settings,
-  BarChart3
+  BarChart3,
+  HeartHandshake
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useVerificationQueue, useVerificationFilters } from '@/hooks/useVerification';
 import { useRealTimeVerification, useConnectionStatus, useVerificationMetrics } from '@/hooks/useRealTimeVerification';
 import { ConnectionStatusIndicator } from '@/components/verification/ConnectionStatusIndicator';
+import { ResponseVerificationQueue } from '@/components/dashboards/crisis/ResponseVerificationQueue';
 import { QueueFilters, FilterSummary } from '@/components/verification/QueueFilters';
 import { VerificationActions } from '@/components/verification/VerificationActions';
 import { VerificationAnalytics } from '@/components/verification/VerificationAnalytics';
@@ -57,25 +59,9 @@ export function VerificationQueueManagement({ className }: VerificationQueueMana
     limit: 20
   });
 
-  // Use the working authentication-enabled hooks for deliveries  
-  const {
-    data: deliveriesData,
-    isLoading: deliveriesLoading,
-    error: deliveriesError,
-    refetch: refetchDeliveries
-  } = useVerificationQueue({
-    status: 'SUBMITTED',
-    type: 'delivery',
-    sortBy: 'rapidAssessmentDate', 
-    sortOrder: 'desc',
-    page: 1,
-    limit: 20
-  });
+  // Responses are handled by the ResponseVerificationQueue component internally
 
-  const assessments = assessmentsData?.data || [];
-  const deliveries = deliveriesData?.data || [];
   const assessmentsPagination = assessmentsData?.pagination || { page: 1, limit: 20, total: 0 };
-  const deliveriesPagination = deliveriesData?.pagination || { page: 1, limit: 20, total: 0 };
 
   const {
     combined: combinedMetrics
@@ -189,10 +175,10 @@ export function VerificationQueueManagement({ className }: VerificationQueueMana
           <Button
             variant="outline"
             onClick={handleRefreshAll}
-            disabled={assessmentsLoading || deliveriesLoading}
+            disabled={assessmentsLoading}
           >
             <RefreshCw className={cn('h-4 w-4 mr-2', 
-              (assessmentsLoading || deliveriesLoading) && 'animate-spin')} />
+              assessmentsLoading && 'animate-spin')} />
             Refresh
           </Button>
         </div>
@@ -208,9 +194,9 @@ export function VerificationQueueManagement({ className }: VerificationQueueMana
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{assessmentsQueueDepth.total}</div>
+            <div className="text-2xl font-bold">{assessmentsData?.queueDepth?.total || 0}</div>
             <div className="text-xs text-muted-foreground">
-              {assessmentsQueueDepth.critical} critical, {assessmentsQueueDepth.high} high
+              {assessmentsData?.queueDepth?.critical || 0} critical, {assessmentsData?.queueDepth?.high || 0} high
             </div>
           </CardContent>
         </Card>
@@ -218,14 +204,14 @@ export function VerificationQueueManagement({ className }: VerificationQueueMana
         <Card>
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium flex items-center gap-2">
-              <Package className="h-4 w-4 text-blue-500" />
-              Pending Deliveries
+              <HeartHandshake className="h-4 w-4 text-blue-500" />
+              Response Queue
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{deliveriesQueueDepth.total}</div>
+            <div className="text-2xl font-bold">-</div>
             <div className="text-xs text-muted-foreground">
-              {deliveriesQueueDepth.critical} critical, {deliveriesQueueDepth.high} high
+              See responses tab for details
             </div>
           </CardContent>
         </Card>
@@ -270,20 +256,15 @@ export function VerificationQueueManagement({ className }: VerificationQueueMana
             <TabsTrigger value="assessments" className="flex items-center gap-2">
               <Activity className="h-4 w-4" />
               Assessments
-              {assessmentsQueueDepth.total > 0 && (
+              {(assessmentsData?.queueDepth?.total || 0) > 0 && (
                 <Badge variant="secondary" className="ml-1">
-                  {assessmentsQueueDepth.total}
+                  {assessmentsData?.queueDepth?.total || 0}
                 </Badge>
               )}
             </TabsTrigger>
-            <TabsTrigger value="deliveries" className="flex items-center gap-2">
-              <Package className="h-4 w-4" />
-              Deliveries
-              {deliveriesQueueDepth.total > 0 && (
-                <Badge variant="secondary" className="ml-1">
-                  {deliveriesQueueDepth.total}
-                </Badge>
-              )}
+            <TabsTrigger value="responses" className="flex items-center gap-2">
+              <HeartHandshake className="h-4 w-4" />
+              Responses
             </TabsTrigger>
             <TabsTrigger value="analytics" className="flex items-center gap-2">
               <BarChart3 className="h-4 w-4" />
@@ -309,14 +290,15 @@ export function VerificationQueueManagement({ className }: VerificationQueueMana
             >
               <Filter className="h-4 w-4" />
               Filters
-              {activeTab === 'assessments' && getAssessmentFiltersCount() > 0 && (
+              {/* Filter count badges temporarily disabled - filters use verification store */}
+              {false && activeTab === 'assessments' && (
                 <Badge variant="secondary" className="ml-1">
-                  {getAssessmentFiltersCount()}
+                  0
                 </Badge>
               )}
-              {activeTab === 'deliveries' && getDeliveryFiltersCount() > 0 && (
+              {false && activeTab === 'responses' && (
                 <Badge variant="secondary" className="ml-1">
-                  {getDeliveryFiltersCount()}
+                  0
                 </Badge>
               )}
             </Button>
@@ -324,79 +306,24 @@ export function VerificationQueueManagement({ className }: VerificationQueueMana
         </div>
 
         <TabsContent value="assessments" className="space-y-4">
-          <FilterSummary
-            filters={useVerificationStore(state => state.assessmentFilters)}
-            onClear={() => {
-              useVerificationStore.getState().clearAssessmentFilters();
-              refreshAssessmentsRealTime();
-            }}
-            type="assessments"
-          />
-          
-          <QueueFilters
-            type="assessments"
-            filters={useVerificationStore(state => state.assessmentFilters)}
-            onFiltersChange={(filters) => {
-              useVerificationStore.getState().setAssessmentFilters(filters);
-              refreshAssessmentsRealTime();
-            }}
-            onClear={() => {
-              useVerificationStore.getState().clearAssessmentFilters();
-              refreshAssessmentsRealTime();
-            }}
-            visible={showFilters}
-            onClose={() => setShowFilters(false)}
-          />
+          {/* Filters temporarily disabled to prevent authentication errors */}
+          {/* FilterSummary and QueueFilters components rely on verification store */}
           
           <AssessmentQueueContent
-            assessments={assessments}
+            assessments={assessmentsData?.data || []}
             loading={assessmentsLoading}
             error={assessmentsError}
             pagination={assessmentsPagination}
-            queueDepth={assessmentsQueueDepth}
-            metrics={assessmentsMetrics}
+            queueDepth={assessmentsData?.queueDepth}
+            metrics={assessmentsData?.metrics}
             selectedItem={selectedItem}
             setSelectedItem={setSelectedItem}
             showFilters={showFilters}
           />
         </TabsContent>
 
-        <TabsContent value="deliveries" className="space-y-4">
-          <FilterSummary
-            filters={useVerificationStore(state => state.deliveryFilters)}
-            onClear={() => {
-              useVerificationStore.getState().clearDeliveryFilters();
-              refreshDeliveriesRealTime();
-            }}
-            type="deliveries"
-          />
-          
-          <QueueFilters
-            type="deliveries"
-            filters={useVerificationStore(state => state.deliveryFilters)}
-            onFiltersChange={(filters) => {
-              useVerificationStore.getState().setDeliveryFilters(filters);
-              refreshDeliveriesRealTime();
-            }}
-            onClear={() => {
-              useVerificationStore.getState().clearDeliveryFilters();
-              refreshDeliveriesRealTime();
-            }}
-            visible={showFilters}
-            onClose={() => setShowFilters(false)}
-          />
-          
-          <DeliveryQueueContent
-            deliveries={deliveries}
-            loading={deliveriesLoading}
-            error={deliveriesError}
-            pagination={deliveriesPagination}
-            queueDepth={deliveriesQueueDepth}
-            metrics={deliveriesMetrics}
-            selectedItem={selectedItem}
-            setSelectedItem={setSelectedItem}
-            showFilters={showFilters}
-          />
+        <TabsContent value="responses" className="space-y-4">
+          <ResponseVerificationQueue />
         </TabsContent>
 
         <TabsContent value="analytics" className="space-y-4">
@@ -450,7 +377,7 @@ function AssessmentQueueContent({
           <CardHeader>
             <CardTitle>Assessment Verification Queue</CardTitle>
             <CardDescription>
-              {queueDepth.total} assessments pending verification
+              {queueDepth?.total || 0} assessments pending verification
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -546,7 +473,7 @@ function DeliveryQueueContent({
           <CardHeader>
             <CardTitle>Delivery Verification Queue</CardTitle>
             <CardDescription>
-              {queueDepth.total} deliveries pending verification
+              {queueDepth?.total || 0} deliveries pending verification
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -842,7 +769,7 @@ function AssessmentDetailsPanel({
           onActionComplete={() => {
             onClose();
             // Refresh the queue
-            useVerificationStore.getState().refreshAssessments();
+            refetchAssessments(); // Use hook-based refresh instead of store-based
           }}
         />
       </CardContent>

@@ -64,7 +64,7 @@ interface DonorRecommendation {
 }
 
 export function ResourceGapAnalysis({ className }: ResourceGapAnalysisProps) {
-  const { token } = useAuth();
+  const { token, isAuthenticated } = useAuth();
   
   const [activeView, setActiveView] = useState('gaps');
   const [searchTerm, setSearchTerm] = useState('');
@@ -87,7 +87,7 @@ export function ResourceGapAnalysis({ className }: ResourceGapAnalysisProps) {
     };
   }>({
     queryKey: ['resource-gap-analysis', filters, token],
-    enabled: !!token,
+    enabled: isAuthenticated && !!token && token.length > 10,
     queryFn: async () => {
       const params = new URLSearchParams();
       Object.entries(filters).forEach(([key, value]) => {
@@ -111,7 +111,7 @@ export function ResourceGapAnalysis({ className }: ResourceGapAnalysisProps) {
     data: DonorRecommendation[];
   }>({
     queryKey: ['donor-recommendations', selectedEntity, token],
-    enabled: !!selectedEntity && !!token,
+    enabled: !!selectedEntity && isAuthenticated && !!token && token.length > 10,
     queryFn: async () => {
       const response = await fetch(`/api/v1/entities/${selectedEntity}/donor-recommendations`, {
         headers: {
@@ -127,7 +127,7 @@ export function ResourceGapAnalysis({ className }: ResourceGapAnalysisProps) {
   // Fetch entities for filters
   const { data: entities } = useQuery<Entity[]>({
     queryKey: ['entities', token],
-    enabled: !!token,
+    enabled: isAuthenticated && !!token && token.length > 10,
     queryFn: async () => {
       const response = await fetch('/api/v1/entities', {
         headers: {
@@ -143,7 +143,7 @@ export function ResourceGapAnalysis({ className }: ResourceGapAnalysisProps) {
   // Fetch incidents for filters
   const { data: incidents } = useQuery<Incident[]>({
     queryKey: ['incidents', token],
-    enabled: !!token,
+    enabled: isAuthenticated && !!token && token.length > 10,
     queryFn: async () => {
       const response = await fetch('/api/v1/incidents', {
         headers: {

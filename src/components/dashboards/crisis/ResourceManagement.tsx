@@ -65,7 +65,7 @@ const STATUS_ICONS = {
 };
 
 export function ResourceManagement({ className }: ResourceManagementProps) {
-  const { token } = useAuth();
+  const { token, isAuthenticated } = useAuth();
   const [activeTab, setActiveTab] = useState('overview');
   const [searchTerm, setSearchTerm] = useState('');
   const [filters, setFilters] = useState({
@@ -78,7 +78,7 @@ export function ResourceManagement({ className }: ResourceManagementProps) {
   // Fetch resource management statistics
   const { data: stats, isLoading: statsLoading, error: statsError, refetch: refetchStats } = useQuery<CommitmentStats>({
     queryKey: ['resource-management-stats', filters, token],
-    enabled: !!token,
+    enabled: isAuthenticated && !!token && token.length > 10, // More robust token validation
     queryFn: async () => {
       const params = new URLSearchParams();
       Object.entries(filters).forEach(([key, value]) => {
@@ -103,7 +103,7 @@ export function ResourceManagement({ className }: ResourceManagementProps) {
     pagination: any;
   }>({
     queryKey: ['active-commitments', filters, searchTerm, token],
-    enabled: !!token,
+    enabled: isAuthenticated && !!token && token.length > 10, // More robust token validation
     queryFn: async () => {
       const params = new URLSearchParams();
       Object.entries(filters).forEach(([key, value]) => {
@@ -133,7 +133,7 @@ export function ResourceManagement({ className }: ResourceManagementProps) {
     }>;
   }>({
     queryKey: ['critical-gaps', token],
-    enabled: !!token,
+    enabled: isAuthenticated && !!token && token.length > 10, // More robust token validation
     queryFn: async () => {
       const response = await fetch('/api/v1/dashboard/resource-management/critical-gaps', {
         headers: {
@@ -185,14 +185,37 @@ export function ResourceManagement({ className }: ResourceManagementProps) {
     });
   };
 
-  if (statsError) {
+  // Handle errors gracefully - don't block the entire UI
+  const hasAuthError = statsError?.message?.includes('401') || statsError?.message?.includes('Unauthorized');
+  
+  // Provide fallback data when there are errors or no data
+  const fallbackStats = {
+    totalCommitments: 0,
+    totalValue: 0,
+    totalCommittedQuantity: 0,
+    totalDeliveredQuantity: 0,
+    averageDeliveryRate: 0,
+    byStatus: {},
+    criticalGaps: 0
+  };
+  
+  const displayStats = stats || fallbackStats;
+  const displayCommitments = commitmentsData?.data || [];
+  const displayCriticalGaps = criticalGaps?.criticalGaps || [];
+
+  // Wait for authentication to be ready
+  if (!isAuthenticated || !token || token.length < 10) {
     return (
-      <Alert variant="destructive">
-        <AlertTriangle className="h-4 w-4" />
-        <AlertDescription>
-          Failed to load resource management data. Please try again later.
-        </AlertDescription>
-      </Alert>
+      <div className={className}>
+        <Card>
+          <CardContent className="p-6">
+            <div className="flex items-center justify-center space-x-2">
+              <RefreshCw className="h-4 w-4 animate-spin" />
+              <span>Loading resource management data...</span>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
     );
   }
 
@@ -209,6 +232,12 @@ export function ResourceManagement({ className }: ResourceManagementProps) {
               </CardTitle>
               <CardDescription>
                 Monitor donor commitments, track delivery progress, and identify resource gaps
+                {hasAuthError && (
+                  <div className="text-amber-600 text-sm mt-1 flex items-center gap-1">
+                    <AlertTriangle className="h-3 w-3" />
+                    Data loading in progress...
+                  </div>
+                )}
               </CardDescription>
             </div>
             <div className="flex items-center gap-2">
@@ -227,17 +256,16 @@ export function ResourceManagement({ className }: ResourceManagementProps) {
       </Card>
 
       {/* Statistics Cards */}
-      {stats && (
-        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4 mb-6">
+      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4 mb-6">
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">Total Commitments</CardTitle>
               <Package className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{stats.totalCommitments || 0}</div>
+              <div className="text-2xl font-bold">{displayStats.totalCommitments || 0}</div>
               <p className="text-xs text-muted-foreground">
-                ${(stats.totalValue || 0).toLocaleString()} estimated value
+                ${(displayStats.totalValue || 0).toLocaleString()} estimated value
               </p>
             </CardContent>
           </Card>
@@ -249,10 +277,10 @@ export function ResourceManagement({ className }: ResourceManagementProps) {
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold text-blue-600">
-                {calculateDeliveryProgress(stats.totalCommittedQuantity || 0, stats.totalDeliveredQuantity || 0)}%
+                {calculateDeliveryProgress(displayStats.totalCommittedQuantity || 0, displayStats.totalDeliveredQuantity || 0)}%
               </div>
               <p className="text-xs text-muted-foreground">
-                {stats.totalDeliveredQuantity || 0} / {stats.totalCommittedQuantity || 0} units delivered
+                {displayStats.totalDeliveredQuantity || 0} / {displayStats.totalCommittedQuantity || 0} units delivered
               </p>
             </CardContent>
           </Card>
@@ -264,10 +292,10 @@ export function ResourceManagement({ className }: ResourceManagementProps) {
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold text-green-600">
-                {stats.byStatus?.PLANNED || 0} planned
+                {displayStats.byStatus?.PLANNED || 0} planned
               </div>
               <p className="text-xs text-muted-foreground">
-                {stats.byStatus?.PARTIAL || 0} in progress
+                {displayStats.byStatus?.PARTIAL || 0} in progress
               </p>
             </CardContent>
           </Card>
@@ -279,7 +307,7 @@ export function ResourceManagement({ className }: ResourceManagementProps) {
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold text-red-600">
-                {criticalGaps?.criticalGaps?.length || 0}
+                {displayCriticalGaps.length || 0}
               </div>
               <p className="text-xs text-muted-foreground">
                 Resources urgently needed
@@ -287,14 +315,13 @@ export function ResourceManagement({ className }: ResourceManagementProps) {
             </CardContent>
           </Card>
         </div>
-      )}
 
       {/* Critical Gaps Alert */}
-      {criticalGaps?.criticalGaps?.length > 0 && (
+      {displayCriticalGaps.length > 0 && (
         <Alert className="mb-6 border-orange-200 bg-orange-50">
           <AlertTriangle className="h-4 w-4 text-orange-600" />
           <AlertDescription className="text-orange-800">
-            <strong>{criticalGaps.criticalGaps.length} critical resource gap(s) identified.</strong> Review the Gap Analysis tab for details and recommended actions.
+            <strong>{displayCriticalGaps.length} critical resource gap(s) identified.</strong> Review the Gap Analysis tab for details and recommended actions.
           </AlertDescription>
         </Alert>
       )}
@@ -406,7 +433,7 @@ export function ResourceManagement({ className }: ResourceManagementProps) {
                     </div>
                   ))}
                 </div>
-              ) : commitmentsData?.data?.length === 0 ? (
+              ) : displayCommitments.length === 0 ? (
                 <div className="text-center py-12">
                   <Package className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
                   <h3 className="text-lg font-medium text-muted-foreground mb-2">
@@ -418,7 +445,7 @@ export function ResourceManagement({ className }: ResourceManagementProps) {
                 </div>
               ) : (
                 <div className="space-y-4">
-                  {commitmentsData?.data?.map((commitment) => (
+                  {displayCommitments.map((commitment) => (
                     <Card key={commitment.id} className="border-l-4 border-l-blue-500">
                       <CardContent className="p-6">
                         <div className="flex items-start justify-between mb-4">

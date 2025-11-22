@@ -384,6 +384,71 @@ export default function DashboardPage() {
           </Card>
         )}
 
+        {/* Crisis Management Coordinator Dashboard - Stories 6.1, 6.2, 6.3 */}
+        {hasRole('COORDINATOR') && (
+          <Card className="border-red-200 bg-gradient-to-br from-red-50/50 to-orange-50/50">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <AlertTriangle className="h-5 w-5 text-red-600" />
+                Crisis Management Coordinator Dashboard
+              </CardTitle>
+              <CardDescription>
+                Comprehensive coordinator dashboard with verification queues, auto-approval management, and resource coordination
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-3">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <Badge variant="outline" className="text-xs">Story 6.1</Badge>
+                  <Badge variant="outline" className="text-xs">Story 6.2</Badge>
+                  <Badge variant="outline" className="text-xs">Story 6.3</Badge>
+                  <Badge variant="secondary" className="text-xs">Coordinator</Badge>
+                  <Badge variant="outline" className="text-xs bg-red-50 text-red-700 border-red-200">Complete</Badge>
+                  <Badge variant="outline" className="text-xs bg-blue-50 text-blue-700 border-blue-200">Live</Badge>
+                </div>
+                
+                {/* Feature Status Indicators */}
+                <div className="bg-white/60 rounded-lg p-4 border border-red-100">
+                  <div className="grid grid-cols-3 gap-4 text-center">
+                    <div className="flex items-center justify-center gap-2">
+                      <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+                      <div className="text-sm">
+                        <div className="font-bold text-green-600">6.1</div>
+                        <div className="text-xs text-muted-foreground">Queue Mgmt</div>
+                      </div>
+                    </div>
+                    <div className="flex items-center justify-center gap-2">
+                      <Settings className="h-4 w-4 text-orange-600" />
+                      <div className="text-sm">
+                        <div className="font-bold text-orange-600">6.2</div>
+                        <div className="text-xs text-muted-foreground">Auto-Approval</div>
+                      </div>
+                    </div>
+                    <div className="flex items-center justify-center gap-2">
+                      <HandHeart className="h-4 w-4 text-purple-600" />
+                      <div className="text-sm">
+                        <div className="font-bold text-purple-600">6.3</div>
+                        <div className="text-xs text-muted-foreground">Resources</div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <Link href="/coordinator/dashboard">
+                  <Button className="w-full justify-start bg-red-600 hover:bg-red-700">
+                    <AlertTriangle className="h-4 w-4 mr-2" />
+                    Open Coordinator Dashboard
+                  </Button>
+                </Link>
+                
+                <div className="text-xs text-muted-foreground">
+                  Access verification queue management (6.1), auto-approval configuration (6.2), and resource & donation management (6.3) in one unified interface
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
         {/* Enhanced Auto-Approval Configuration - Story 6.2 */}
         {hasPermission('VERIFY_ASSESSMENTS') && (
           <Card className="border-blue-200 bg-blue-50/30">

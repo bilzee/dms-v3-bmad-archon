@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { v4 as uuidv4 } from 'uuid'
 import { withAuth, AuthContext } from '@/lib/auth/middleware'
-import { prisma } from '@/lib/db/client'
+import { db } from '@/lib/db/client'
 
 interface RouteParams {
   params: Promise<{}>
@@ -86,10 +86,10 @@ export const GET = withAuth(
       }
       
       // Get total count
-      const total = await prisma.rapidResponse.count({ where })
+      const total = await db.rapidResponse.count({ where })
       
       // Get paginated delivered responses for verification
-      const deliveries = await prisma.rapidResponse.findMany({
+      const deliveries = await db.rapidResponse.findMany({
         where,
         include: {
           entity: {
@@ -135,7 +135,7 @@ export const GET = withAuth(
       // Calculate queue depth indicators for deliveries
       const queueDepth = {
         total: total,
-        critical: await prisma.rapidResponse.count({
+        critical: await db.rapidResponse.count({
           where: { 
             status: 'DELIVERED',
             verificationStatus: { in: status },
@@ -144,7 +144,7 @@ export const GET = withAuth(
             ...(responderId && { responderId })
           }
         }),
-        high: await prisma.rapidResponse.count({
+        high: await db.rapidResponse.count({
           where: { 
             status: 'DELIVERED',
             verificationStatus: { in: status },
@@ -153,7 +153,7 @@ export const GET = withAuth(
             ...(responderId && { responderId })
           }
         }),
-        medium: await prisma.rapidResponse.count({
+        medium: await db.rapidResponse.count({
           where: { 
             status: 'DELIVERED',
             verificationStatus: { in: status },
@@ -162,7 +162,7 @@ export const GET = withAuth(
             ...(responderId && { responderId })
           }
         }),
-        low: await prisma.rapidResponse.count({
+        low: await db.rapidResponse.count({
           where: { 
             status: 'DELIVERED',
             verificationStatus: { in: status },
@@ -291,7 +291,7 @@ export const GET = withAuth(
 // Helper functions for delivery metrics calculation
 async function calculateDeliveryAverageWaitTime(whereClause: any): Promise<number> {
   try {
-    const pendingDeliveries = await prisma.rapidResponse.findMany({
+    const pendingDeliveries = await db.rapidResponse.findMany({
       where: {
         ...whereClause,
         verificationStatus: { in: ['SUBMITTED', 'DRAFT'] }
@@ -323,13 +323,13 @@ async function calculateDeliveryVerificationRate(): Promise<number> {
     const last24Hours = new Date(Date.now() - 24 * 60 * 60 * 1000);
     
     const [submitted, verified] = await Promise.all([
-      prisma.rapidResponse.count({
+      db.rapidResponse.count({
         where: {
           status: 'DELIVERED',
           responseDate: { gte: last24Hours }
         }
       }),
-      prisma.rapidResponse.count({
+      db.rapidResponse.count({
         where: {
           status: 'DELIVERED',
           responseDate: { gte: last24Hours },
@@ -348,7 +348,7 @@ async function calculateDeliveryVerificationRate(): Promise<number> {
 
 async function getOldestPendingDelivery(whereClause: any): Promise<string | null> {
   try {
-    const oldest = await prisma.rapidResponse.findFirst({
+    const oldest = await db.rapidResponse.findFirst({
       where: {
         ...whereClause,
         verificationStatus: { in: ['SUBMITTED', 'DRAFT'] }
