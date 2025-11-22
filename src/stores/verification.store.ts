@@ -181,7 +181,7 @@ export const useVerificationStore = create<VerificationQueueState>()(
     deliveryQueueDepth: { ...defaultQueueDepth },
     deliveryMetrics: { ...defaultMetrics },
 
-    isRealTimeEnabled: false, // Temporarily disabled to prevent WebSocket upgrade errors
+    isRealTimeEnabled: true,
     lastUpdate: null,
     connectionStatus: 'connected',
 

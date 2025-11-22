@@ -84,8 +84,8 @@ export function VerificationQueueManagement({ className }: VerificationQueueMana
     refreshDeliveries: refreshDeliveriesRealTime,
     enabled: realTimeEnabled
   } = useRealTimeVerification({
-    enabled: false, // Disable real-time verification to prevent WebSocket errors
-    interval: 120000,
+    enabled: true,
+    interval: 120000, // Use 2 minutes to reduce API frequency
     onConnectionChange: (status) => {
       console.log('Real-time connection status changed:', status);
     },

@@ -164,6 +164,12 @@ export function useRealTimeVerification({
       return null;
     }
 
+    // Skip WebSocket if we don't have authentication (prevent 401 errors)
+    if (!refreshAll) {
+      console.log('No authentication available - using polling fallback');
+      return null;
+    }
+
     try {
       // Create WebSocket connection
       const wsUrl = process.env.NODE_ENV === 'development' 
