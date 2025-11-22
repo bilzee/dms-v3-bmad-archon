@@ -15,12 +15,20 @@ import { useVerificationStore } from '@/stores/verification.store';
 import { useEffect, useState } from 'react';
 
 export default function CoordinatorDashboard() {
-  const { currentRole, user } = useAuth();
+  const { currentRole, user, token } = useAuth();
   const { assessmentQueueDepth, deliveryQueueDepth, refreshAll } = useVerificationStore();
   const [showAutoApprovalConfig, setShowAutoApprovalConfig] = useState(false);
+  const [isClient, setIsClient] = useState(false);
+
+  // Prevent hydration mismatch by waiting for client-side mount
+  useEffect(() => {
+    setIsClient(true);
+  }, []);
 
   // Load verification queue data on mount (with protection)
   useEffect(() => {
+    if (!isClient || !token) return; // Only load when client is ready and authenticated
+    
     const loadData = async () => {
       try {
         await refreshAll();
@@ -33,9 +41,21 @@ export default function CoordinatorDashboard() {
     const timeoutId = setTimeout(loadData, 100);
     
     return () => clearTimeout(timeoutId);
-  }, [refreshAll]);
+  }, [refreshAll, isClient, token]);
 
   const totalPendingVerifications = (assessmentQueueDepth?.total || 0) + (deliveryQueueDepth?.total || 0);
+
+  // Prevent hydration mismatch by showing loading state on server
+  if (!isClient) {
+    return (
+      <div className="container mx-auto p-6">
+        <div className="animate-pulse">
+          <div className="h-8 bg-gray-200 rounded w-1/3 mb-4"></div>
+          <div className="h-4 bg-gray-200 rounded w-1/2"></div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <RoleBasedRoute requiredRole="COORDINATOR">
