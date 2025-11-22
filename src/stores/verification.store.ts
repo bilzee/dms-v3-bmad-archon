@@ -181,7 +181,7 @@ export const useVerificationStore = create<VerificationQueueState>()(
     deliveryQueueDepth: { ...defaultQueueDepth },
     deliveryMetrics: { ...defaultMetrics },
 
-    isRealTimeEnabled: true,
+    isRealTimeEnabled: false,
     lastUpdate: null,
     connectionStatus: 'connected',
 

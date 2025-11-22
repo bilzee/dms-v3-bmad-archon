@@ -84,8 +84,8 @@ export function VerificationQueueManagement({ className }: VerificationQueueMana
     refreshDeliveries: refreshDeliveriesRealTime,
     enabled: realTimeEnabled
   } = useRealTimeVerification({
-    enabled: true,
-    interval: 120000, // Use 2 minutes to reduce API frequency
+    enabled: false, // Disabled - prevent infinite polling
+    interval: 0,
     onConnectionChange: (status) => {
       console.log('Real-time connection status changed:', status);
     },
