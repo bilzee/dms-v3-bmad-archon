@@ -181,7 +181,6 @@ async function main() {
   
   // Delete existing entities to avoid conflicts (in order of dependency)
   await prisma.donorCommitment.deleteMany({})
-  await prisma.incidentEntity.deleteMany({})
   await prisma.entityAssignment.deleteMany({})
   await prisma.rapidResponse.deleteMany({})
   await prisma.rapidAssessment.deleteMany({})
@@ -538,6 +537,41 @@ async function main() {
     })
   }
 
+  // Create sample incidents first
+  console.log('🚨 Creating sample incidents...')
+  
+  const floodIncident = await prisma.incident.upsert({
+    where: { id: 'incident-flood-001' },
+    update: {},
+    create: {
+      id: 'incident-flood-001',
+      type: 'FLOOD',
+      subType: 'SEASONAL_FLOODING',
+      severity: 'HIGH',
+      status: 'ACTIVE',
+      description: 'Severe flooding in Maiduguri metropolitan area affecting multiple neighborhoods',
+      location: 'Maiduguri Metropolitan Area, Borno State',
+      coordinates: { latitude: 11.8311, longitude: 13.1566 },
+      createdBy: coordinatorUser.id,
+    },
+  })
+
+  const droughtIncident = await prisma.incident.upsert({
+    where: { id: 'incident-drought-001' },
+    update: {},
+    create: {
+      id: 'incident-drought-001',
+      type: 'DROUGHT',
+      subType: 'AGRICULTURAL_DROUGHT',
+      severity: 'MEDIUM',
+      status: 'ACTIVE', 
+      description: 'Agricultural drought affecting crop production in Gwoza area',
+      location: 'Gwoza Local Government Area, Borno State',
+      coordinates: { latitude: 11.0544, longitude: 13.7839 },
+      createdBy: coordinatorUser.id,
+    },
+  })
+
   // Create sample rapid assessments for verification workflow testing
   console.log('📋 Creating sample rapid assessments for verification testing...')
   
@@ -547,6 +581,7 @@ async function main() {
       rapidAssessmentDate: new Date('2025-10-15'),
       assessorId: assessorUser.id,
       entityId: 'entity-1', // Maiduguri Metropolitan
+      incidentId: 'incident-flood-001',
       assessorName: 'Field Assessor',
       location: 'Maiduguri Metropolitan',
       status: 'PUBLISHED',
@@ -559,6 +594,7 @@ async function main() {
       rapidAssessmentDate: new Date('2025-10-16'),
       assessorId: assessorUser.id,
       entityId: 'entity-2', // Jere Local Government
+      incidentId: 'incident-flood-001',
       assessorName: 'Field Assessor',
       location: 'Jere Local Government',
       status: 'SUBMITTED',
@@ -571,6 +607,7 @@ async function main() {
       rapidAssessmentDate: new Date('2025-10-16'),
       assessorId: multiRoleUser.id,
       entityId: 'entity-5', // IDP Camp Dalori
+      incidentId: 'incident-flood-001',
       assessorName: 'Multi Role Test User',
       location: 'IDP Camp Dalori',
       status: 'SUBMITTED',
@@ -583,6 +620,7 @@ async function main() {
       rapidAssessmentDate: new Date('2025-10-17'),
       assessorId: assessorUser.id,
       entityId: 'entity-3', // Gwoza Local Government
+      incidentId: 'incident-drought-001',
       assessorName: 'Field Assessor',
       location: 'Gwoza Local Government',
       status: 'PUBLISHED',
@@ -595,6 +633,7 @@ async function main() {
       rapidAssessmentDate: new Date('2025-10-17'),
       assessorId: multiRoleUser.id,
       entityId: 'entity-4', // Primary Health Center Maiduguri
+      incidentId: 'incident-flood-001',
       assessorName: 'Multi Role Test User',
       location: 'Primary Health Center Maiduguri',
       status: 'SUBMITTED',
@@ -685,101 +724,6 @@ async function main() {
   
   // Create sample commitments using hardcoded entity IDs to avoid variable conflicts
   console.log('💰 Creating sample commitments using entity-1 and entity-2...')
-    // Create sample incidents first
-    const floodIncident = await prisma.incident.upsert({
-      where: { id: 'incident-flood-001' },
-      update: {},
-      create: {
-        id: 'incident-flood-001',
-        type: 'FLOOD',
-        subType: 'SEASONAL_FLOODING',
-        severity: 'HIGH',
-        status: 'ACTIVE',
-        description: 'Severe flooding in Maiduguri metropolitan area affecting multiple neighborhoods',
-        location: 'Maiduguri Metropolitan Area, Borno State',
-        coordinates: { latitude: 11.8311, longitude: 13.1566 },
-        createdBy: coordinatorUser.id,
-      },
-    })
-
-    const droughtIncident = await prisma.incident.upsert({
-      where: { id: 'incident-drought-001' },
-      update: {},
-      create: {
-        id: 'incident-drought-001',
-        type: 'DROUGHT',
-        subType: 'AGRICULTURAL_DROUGHT',
-        severity: 'MEDIUM',
-        status: 'ACTIVE', 
-        description: 'Agricultural drought affecting crop production in Gwoza area',
-        location: 'Gwoza Local Government Area, Borno State',
-        coordinates: { latitude: 11.0544, longitude: 13.7839 },
-        createdBy: coordinatorUser.id,
-      },
-    })
-
-    // Create IncidentEntity relationships
-    await prisma.incidentEntity.upsert({
-      where: {
-        incidentId_entityId: {
-          incidentId: floodIncident.id,
-          entityId: 'entity-1'
-        }
-      },
-      update: {},
-      create: {
-        incidentId: floodIncident.id,
-        entityId: 'entity-1',
-        severity: 'HIGH'
-      }
-    })
-
-    await prisma.incidentEntity.upsert({
-      where: {
-        incidentId_entityId: {
-          incidentId: droughtIncident.id,
-          entityId: 'entity-3'
-        }
-      },
-      update: {},
-      create: {
-        incidentId: droughtIncident.id,
-        entityId: 'entity-3',
-        severity: 'MEDIUM'
-      }
-    })
-
-    // Add flood incident to Jere Local Government (entity-2)
-    await prisma.incidentEntity.upsert({
-      where: {
-        incidentId_entityId: {
-          incidentId: floodIncident.id,
-          entityId: 'entity-2'
-        }
-      },
-      update: {},
-      create: {
-        incidentId: floodIncident.id,
-        entityId: 'entity-2',
-        severity: 'MEDIUM'
-      }
-    })
-
-    // Add flood incident to Primary Health Center (entity-4) 
-    await prisma.incidentEntity.upsert({
-      where: {
-        incidentId_entityId: {
-          incidentId: floodIncident.id,
-          entityId: 'entity-4'
-        }
-      },
-      update: {},
-      create: {
-        incidentId: floodIncident.id,
-        entityId: 'entity-4',
-        severity: 'HIGH'
-      }
-    })
 
     // Create sample donor
     const unDonor = await prisma.donor.upsert({

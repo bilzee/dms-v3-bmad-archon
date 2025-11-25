@@ -14,7 +14,8 @@ const BaseRapidAssessmentSchema = z.object({
   }).optional(),
   mediaAttachments: z.array(z.string()).optional(),
   priority: z.enum(['CRITICAL', 'HIGH', 'MEDIUM', 'LOW']).default('MEDIUM'),
-  entityId: z.string().min(1, 'Entity is required')
+  entityId: z.string().min(1, 'Entity is required'),
+  incidentId: z.string().min(1, 'Incident is required')
 })
 
 // Health Assessment Schema

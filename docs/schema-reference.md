@@ -1,6 +1,6 @@
 # Prisma Schema Reference
 
-_Auto-generated on 2025-11-25T18:11:49.542Z_
+_Auto-generated on 2025-11-25T22:05:42.239Z_
 
 ## User
 
@@ -80,7 +80,6 @@ _Auto-generated on 2025-11-25T18:11:49.542Z_
 - `assignments`
 - `rapidAssessments`
 - `responses`
-- `incidents`
 - `commitments`
 
 ## EntityAssignment
@@ -109,7 +108,7 @@ _Auto-generated on 2025-11-25T18:11:49.542Z_
 - `createdAt`
 - `updatedAt`
 - `preliminaryAssessments`
-- `entities`
+- `rapidAssessments`
 - `commitments`
 
 ## PreliminaryAssessment
@@ -137,17 +136,6 @@ _Auto-generated on 2025-11-25T18:11:49.542Z_
 - `updatedAt`
 - `incident`
 
-## IncidentEntity
-
-**Fields:**
-- `id`
-- `incidentId`
-- `entityId`
-- `affectedAt`
-- `severity`
-- `incident`
-- `entity`
-
 ## RapidAssessment
 
 **Fields:**
@@ -156,6 +144,7 @@ _Auto-generated on 2025-11-25T18:11:49.542Z_
 - `rapidAssessmentDate`
 - `assessorId`
 - `entityId`
+- `incidentId`
 - `assessorName`
 - `location`
 - `coordinates`
@@ -170,6 +159,7 @@ _Auto-generated on 2025-11-25T18:11:49.542Z_
 - `rejectionReason`
 - `rejectionFeedback`
 - `mediaAttachments`
+- `gapAnalysis`
 - `createdAt`
 - `updatedAt`
 - `foodAssessment`
@@ -177,6 +167,7 @@ _Auto-generated on 2025-11-25T18:11:49.542Z_
 - `populationAssessment`
 - `assessor`
 - `entity`
+- `incident`
 - `responses`
 - `securityAssessment`
 - `shelterAssessment`

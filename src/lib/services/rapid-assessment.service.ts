@@ -62,6 +62,7 @@ export class RapidAssessmentService {
           assessorId: createdBy,
           assessorName: input.assessorName,
           entityId: input.entityId,
+          incidentId: input.incidentId,
           location: input.location,
           coordinates: input.coordinates,
           status: 'SUBMITTED',

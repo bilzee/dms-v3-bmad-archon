@@ -262,7 +262,7 @@ describe('/api/v1/dashboard/situation - Entity Assessments', () => {
           if (queryString.includes('population_assessments pa')) {
             return Promise.resolve([mockPopulationAssessment]);
           }
-          if (queryString.includes('entities e') && queryString.includes('incident_entities ie')) {
+          if (queryString.includes('entities e') && queryString.includes('rapid_assessments ra')) {
             return Promise.resolve([{
               id: 'entity-1',
               name: 'Test Entity',

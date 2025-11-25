@@ -464,14 +464,8 @@ async function getPopulationImpact(incidentId: string): Promise<PopulationImpact
   const populationData = await db.populationAssessment.findMany({
     where: {
       rapidAssessment: {
+        incidentId: incidentId,
         verificationStatus: { in: ['VERIFIED', 'AUTO_VERIFIED'] },
-        entity: {
-          incidents: {
-            some: {
-              incidentId: incidentId,
-            },
-          },
-        },
       },
     },
     include: {
@@ -562,10 +556,10 @@ async function getPopulationImpact(incidentId: string): Promise<PopulationImpact
 }
 
 async function getAggregateMetrics(incidentId: string): Promise<AggregateMetrics> {
-  // Get affected entities count
+  // Get affected entities count via rapid assessments
   const affectedEntitiesCount = await db.entity.count({
     where: {
-      incidents: {
+      rapidAssessments: {
         some: {
           incidentId: incidentId,
         },
@@ -577,25 +571,13 @@ async function getAggregateMetrics(incidentId: string): Promise<AggregateMetrics
   // Get assessment counts
   const totalAssessmentsCount = await db.rapidAssessment.count({
     where: {
-      entity: {
-        incidents: {
-          some: {
-            incidentId: incidentId,
-          },
-        },
-      },
+      incidentId: incidentId,
     },
   });
 
   const verifiedAssessmentsCount = await db.rapidAssessment.count({
     where: {
-      entity: {
-        incidents: {
-          some: {
-            incidentId: incidentId,
-          },
-        },
-      },
+      incidentId: incidentId,
       verificationStatus: { in: ['VERIFIED', 'AUTO_VERIFIED'] },
     },
   });
@@ -603,12 +585,8 @@ async function getAggregateMetrics(incidentId: string): Promise<AggregateMetrics
   // Get response counts
   const responsesCount = await db.rapidResponse.count({
     where: {
-      entity: {
-        incidents: {
-          some: {
-            incidentId: incidentId,
-          },
-        },
+      assessment: {
+        incidentId: incidentId,
       },
     },
   });
@@ -652,19 +630,17 @@ async function getEntityAssessments(incidentId: string, entityId?: string): Prom
           e.type,
           e.location,
           e.coordinates,
-          ie."affectedAt",
-          ie.severity,
+          ra."rapidAssessmentDate" as "affectedAt",
+          'MEDIUM' as severity,
           ra.id as "rapidAssessmentId",
           ra."rapidAssessmentDate",
           ra."verificationStatus",
           ra."assessorName"
         FROM entities e
-        JOIN incident_entities ie ON e.id = ie."entityId"
-        LEFT JOIN rapid_assessments ra ON e.id = ra."entityId" 
-          AND ra."isDeleted" = false
+        JOIN rapid_assessments ra ON e.id = ra."entityId" 
+          AND ra."incidentId" = ${incidentId}
           AND ra."verificationStatus" IN ('VERIFIED', 'AUTO_VERIFIED')
         WHERE e."isActive" = true
-          AND ie."incidentId" = ${incidentId}
           AND e.id = ${entityId}
         ORDER BY ra."rapidAssessmentDate" DESC
       ` as any[]
@@ -675,19 +651,17 @@ async function getEntityAssessments(incidentId: string, entityId?: string): Prom
           e.type,
           e.location,
           e.coordinates,
-          ie."affectedAt",
-          ie.severity,
+          ra."rapidAssessmentDate" as "affectedAt",
+          'MEDIUM' as severity,
           ra.id as "rapidAssessmentId",
           ra."rapidAssessmentDate",
           ra."verificationStatus",
           ra."assessorName"
         FROM entities e
-        JOIN incident_entities ie ON e.id = ie."entityId"
-        LEFT JOIN rapid_assessments ra ON e.id = ra."entityId" 
-          AND ra."isDeleted" = false
+        JOIN rapid_assessments ra ON e.id = ra."entityId" 
+          AND ra."incidentId" = ${incidentId}
           AND ra."verificationStatus" IN ('VERIFIED', 'AUTO_VERIFIED')
         WHERE e."isActive" = true
-          AND ie."incidentId" = ${incidentId}
         ORDER BY e.name, ra."rapidAssessmentDate" DESC
         LIMIT 100
       ` as any[];
@@ -1372,7 +1346,7 @@ async function getGapAnalysisSummary(incidentId: string): Promise<GapAnalysisSum
   // Get real entities data from database
   const entities = await db.entity.findMany({
     where: {
-      incidents: {
+      rapidAssessments: {
         some: {
           incidentId: incidentId,
         },
@@ -1382,6 +1356,7 @@ async function getGapAnalysisSummary(incidentId: string): Promise<GapAnalysisSum
     include: {
       rapidAssessments: {
         where: {
+          incidentId: incidentId,
           verificationStatus: { in: ['VERIFIED', 'AUTO_VERIFIED'] },
         },
         orderBy: {
@@ -1551,19 +1526,17 @@ async function getEntityLocations(
               e.name,
               e.type,
               e.coordinates,
-              ie.severity,
-              COALESCE(ie."affectedAt", e."createdAt") as "affectedAt"
+              'MEDIUM' as severity,
+              ra."rapidAssessmentDate" as "affectedAt"
             FROM entities e
-            INNER JOIN incident_entities ie ON e.id = ie."entityId"
-            LEFT JOIN rapid_assessments ra ON e.id = ra."entityId"
+            INNER JOIN rapid_assessments ra ON e.id = ra."entityId"
+              AND ra."incidentId" = ${incidentId}
               AND ra."verificationStatus" IN ('VERIFIED', 'AUTO_VERIFIED')
-            WHERE ie."incidentId" = ${incidentId}
-              AND ie.severity = ${severityFilter}
-              AND e.type = ${entityTypeFilter}
+            WHERE e.type = ${entityTypeFilter}
               AND e.coordinates IS NOT NULL
               AND e.coordinates->>'latitude' IS NOT NULL
               AND e.coordinates->>'longitude' IS NOT NULL
-            ORDER BY ie.severity DESC, e.name
+            ORDER BY e.name
             LIMIT 500
           ` as Array<{
             id: string;
@@ -1580,18 +1553,16 @@ async function getEntityLocations(
               e.name,
               e.type,
               e.coordinates,
-              ie.severity,
-              COALESCE(ie."affectedAt", e."createdAt") as "affectedAt"
+              'MEDIUM' as severity,
+              ra."rapidAssessmentDate" as "affectedAt"
             FROM entities e
-            INNER JOIN incident_entities ie ON e.id = ie."entityId"
-            LEFT JOIN rapid_assessments ra ON e.id = ra."entityId"
+            INNER JOIN rapid_assessments ra ON e.id = ra."entityId"
+              AND ra."incidentId" = ${incidentId}
               AND ra."verificationStatus" IN ('VERIFIED', 'AUTO_VERIFIED')
-            WHERE ie."incidentId" = ${incidentId}
-              AND ie.severity = ${severityFilter}
-              AND e.coordinates IS NOT NULL
+            WHERE e.coordinates IS NOT NULL
               AND e.coordinates->>'latitude' IS NOT NULL
               AND e.coordinates->>'longitude' IS NOT NULL
-            ORDER BY ie.severity DESC, e.name
+            ORDER BY e.name
             LIMIT 500
           ` as Array<{
             id: string;
@@ -1608,18 +1579,17 @@ async function getEntityLocations(
               e.name,
               e.type,
               e.coordinates,
-              ie.severity,
-              COALESCE(ie."affectedAt", e."createdAt") as "affectedAt"
+              'MEDIUM' as severity,
+              ra."rapidAssessmentDate" as "affectedAt"
             FROM entities e
-            INNER JOIN incident_entities ie ON e.id = ie."entityId"
-            LEFT JOIN rapid_assessments ra ON e.id = ra."entityId"
+            INNER JOIN rapid_assessments ra ON e.id = ra."entityId"
+              AND ra."incidentId" = ${incidentId}
               AND ra."verificationStatus" IN ('VERIFIED', 'AUTO_VERIFIED')
-            WHERE ie."incidentId" = ${incidentId}
-              AND e.type = ${entityTypeFilter}
+            WHERE e.type = ${entityTypeFilter}
               AND e.coordinates IS NOT NULL
               AND e.coordinates->>'latitude' IS NOT NULL
               AND e.coordinates->>'longitude' IS NOT NULL
-            ORDER BY ie.severity DESC, e.name
+            ORDER BY e.name
             LIMIT 500
           ` as Array<{
             id: string;
@@ -1636,17 +1606,16 @@ async function getEntityLocations(
               e.name,
               e.type,
               e.coordinates,
-              ie.severity,
-              COALESCE(ie."affectedAt", e."createdAt") as "affectedAt"
+              'MEDIUM' as severity,
+              ra."rapidAssessmentDate" as "affectedAt"
             FROM entities e
-            INNER JOIN incident_entities ie ON e.id = ie."entityId"
-            LEFT JOIN rapid_assessments ra ON e.id = ra."entityId"
+            INNER JOIN rapid_assessments ra ON e.id = ra."entityId"
+              AND ra."incidentId" = ${incidentId}
               AND ra."verificationStatus" IN ('VERIFIED', 'AUTO_VERIFIED')
-            WHERE ie."incidentId" = ${incidentId}
-              AND e.coordinates IS NOT NULL
+            WHERE e.coordinates IS NOT NULL
               AND e.coordinates->>'latitude' IS NOT NULL
               AND e.coordinates->>'longitude' IS NOT NULL
-            ORDER BY ie.severity DESC, e.name
+            ORDER BY e.name
             LIMIT 500
           ` as Array<{
             id: string;
@@ -1658,23 +1627,22 @@ async function getEntityLocations(
           }>;
         }
       } else {
-        // No incident filter
+        // No incident filter - get all entities with assessments
         return db.$queryRaw`
           SELECT DISTINCT
             e.id,
             e.name,
             e.type,
             e.coordinates,
-            ie.severity,
-            COALESCE(ie."affectedAt", e."createdAt") as "affectedAt"
+            'MEDIUM' as severity,
+            ra."rapidAssessmentDate" as "affectedAt"
           FROM entities e
-          INNER JOIN incident_entities ie ON e.id = ie."entityId"
-          LEFT JOIN rapid_assessments ra ON e.id = ra."entityId"
+          INNER JOIN rapid_assessments ra ON e.id = ra."entityId"
             AND ra."verificationStatus" IN ('VERIFIED', 'AUTO_VERIFIED')
           WHERE e.coordinates IS NOT NULL
             AND e.coordinates->>'latitude' IS NOT NULL
             AND e.coordinates->>'longitude' IS NOT NULL
-          ORDER BY ie.severity DESC, e.name
+          ORDER BY e.name
           LIMIT 500
         ` as Array<{
           id: string;
@@ -1971,7 +1939,7 @@ export const GET = withAuth(async (request: NextRequest, context) => {
 
       const entitiesQuery = await db.entity.findMany({
         where: {
-          incidents: {
+          rapidAssessments: {
             some: {
               incidentId: queryParams.incidentId,
             },
@@ -1979,13 +1947,9 @@ export const GET = withAuth(async (request: NextRequest, context) => {
           isActive: true,
         },
         include: {
-          incidents: {
-            where: {
-              incidentId: queryParams.incidentId,
-            },
-          },
           rapidAssessments: {
             where: {
+              incidentId: queryParams.incidentId,
               verificationStatus: { in: ['VERIFIED', 'AUTO_VERIFIED'] },
             },
             orderBy: {
@@ -2017,7 +1981,7 @@ export const GET = withAuth(async (request: NextRequest, context) => {
           status: assessment.status,
           verified: assessment.verificationStatus === 'VERIFIED' || assessment.verificationStatus === 'AUTO_VERIFIED',
           assessorName: assessment.assessorName || assessment.assessor?.name || 'Unknown',
-          severity: entity.incidents[0]?.severity || 'MEDIUM',
+          severity: 'MEDIUM',
         }))
       );
     })();

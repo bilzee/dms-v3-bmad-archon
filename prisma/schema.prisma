@@ -90,7 +90,6 @@ model Entity {
   assignments        EntityAssignment[]
   rapidAssessments   RapidAssessment[]
   responses          RapidResponse[]    @relation("EntityResponses")
-  incidents          IncidentEntity[]    // NEW: Direct incident relationship
   commitments        DonorCommitment[]   // NEW: Commitment relationship
 
   @@unique([name, type])
@@ -123,7 +122,7 @@ model Incident {
   createdAt              DateTime                @default(now())
   updatedAt              DateTime                @updatedAt
   preliminaryAssessments PreliminaryAssessment[]
-  entities               IncidentEntity[]         // NEW: Direct entity relationship
+  rapidAssessments       RapidAssessment[]
   commitments            DonorCommitment[]        // NEW: Commitment relationship
 
   @@map("incidents")
@@ -155,21 +154,6 @@ model PreliminaryAssessment {
   @@map("preliminary_assessments")
 }
 
-model IncidentEntity {
-  id         String    @id @default(uuid())
-  incidentId String
-  entityId   String
-  affectedAt DateTime  @default(now())
-  severity   Priority  @default(MEDIUM)
-  
-  incident   Incident  @relation(fields: [incidentId], references: [id], onDelete: Cascade)
-  entity     Entity    @relation(fields: [entityId], references: [id], onDelete: Cascade)
-  
-  @@unique([incidentId, entityId])
-  @@index([incidentId])
-  @@index([entityId])
-  @@map("incident_entities")
-}
 
 model RapidAssessment {
   id                   String                @id @default(uuid())
@@ -177,6 +161,7 @@ model RapidAssessment {
   rapidAssessmentDate  DateTime
   assessorId           String
   entityId             String
+  incidentId           String
   assessorName         String
   location             String?
   coordinates          Json?
@@ -199,6 +184,7 @@ model RapidAssessment {
   populationAssessment PopulationAssessment?
   assessor             User                  @relation("AssessorResponses", fields: [assessorId], references: [id])
   entity               Entity                @relation(fields: [entityId], references: [id])
+  incident             Incident              @relation(fields: [incidentId], references: [id])
   responses            RapidResponse[]       @relation("AssessmentResponses")
   securityAssessment   SecurityAssessment?
   shelterAssessment    ShelterAssessment?
@@ -206,6 +192,8 @@ model RapidAssessment {
 
   @@index([rapidAssessmentType, rapidAssessmentDate, entityId])
   @@index([entityId, rapidAssessmentDate])
+  @@index([incidentId, rapidAssessmentDate])
+  @@index([incidentId, entityId])
   @@index([assessorId, createdAt])
   @@index([status, priority])
   @@index([createdAt, rapidAssessmentType])

@@ -120,6 +120,7 @@ function NewAssessmentContent() {
           mediaAttachments: formData.mediaAttachments || [],
           priority: formData.priority || 'MEDIUM',
           entityId: formData.entityId || 'default-entity', // Use the entity from form
+          incidentId: formData.incidentId, // Include the incident ID from form
         }
         
         // Add type-specific data

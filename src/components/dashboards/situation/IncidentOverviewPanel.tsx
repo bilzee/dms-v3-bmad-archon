@@ -57,7 +57,7 @@ const fetchDashboardData = async (incidentId?: string): Promise<DashboardData> =
     throw new Error(response.error || 'Failed to fetch dashboard data');
   }
 
-  return response;
+  return response.data;
 };
 
 /**

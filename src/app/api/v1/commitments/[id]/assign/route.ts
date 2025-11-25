@@ -67,7 +67,7 @@ export const POST = withAuth(async (request: NextRequest, context, { params }: R
       );
     }
 
-    // Note: Entity-incident relationship validation would require checking the IncidentEntity junction table
+    // Note: Entity-incident relationship can be validated through RapidAssessment.incidentId
     // For now, we'll allow reassignment to any valid entity
 
     // Check if user is assigned to the target entity (for coordinators)

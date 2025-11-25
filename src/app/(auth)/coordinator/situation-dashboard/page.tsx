@@ -17,7 +17,7 @@ const fetchIncidentData = async (incidentId: string) => {
   if (!response.success) {
     throw new Error(response.error || 'Failed to fetch incident data');
   }
-  return response;
+  return response.data;
 };
 
 /**
@@ -48,8 +48,8 @@ export default function SituationDashboardPage() {
   });
 
   // Get dynamic incident name
-  const currentIncidentName = incidentData?.data?.selectedIncident?.incident?.description || 
-                            incidentData?.data?.incidents?.find((inc: any) => inc.id === currentIncidentId)?.description || 
+  const currentIncidentName = incidentData?.selectedIncident?.incident?.description || 
+                            incidentData?.incidents?.find((inc: any) => inc.id === currentIncidentId)?.description || 
                             'Selected Incident';
 
   // Set default incident on component mount
