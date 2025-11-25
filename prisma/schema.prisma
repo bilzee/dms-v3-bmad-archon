@@ -191,6 +191,7 @@ model RapidAssessment {
   rejectionReason      String?
   rejectionFeedback    String?
   mediaAttachments     Json?
+  gapAnalysis          Json?
   createdAt            DateTime              @default(now())
   updatedAt            DateTime              @updatedAt
   foodAssessment       FoodAssessment?

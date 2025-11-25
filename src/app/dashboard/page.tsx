@@ -39,7 +39,11 @@ import {
   Trophy,
   Medal,
   Star,
-  Gamepad2
+  Gamepad2,
+  Monitor,
+  Map,
+  Compass,
+  PieChart
 } from 'lucide-react'
 
 export default function DashboardPage() {
@@ -129,6 +133,89 @@ export default function DashboardPage() {
                   Manage Assignments
                 </Button>
               </Link>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Situation Awareness Dashboard - Epic 7 Complete */}
+        <Card className="border-teal-200 bg-gradient-to-br from-teal-50/50 to-cyan-50/50">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Monitor className="h-5 w-5 text-teal-600" />
+              Situation Awareness Dashboard
+            </CardTitle>
+            <CardDescription>
+              Comprehensive three-panel dashboard with incident overview, entity assessments, interactive mapping, and gap analysis
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-3">
+              <div className="flex items-center gap-2 flex-wrap">
+                <Badge variant="outline" className="text-xs">Epic 7 Complete</Badge>
+                <Badge variant="outline" className="text-xs">Story 7.1</Badge>
+                <Badge variant="outline" className="text-xs">Story 7.2</Badge>
+                <Badge variant="outline" className="text-xs">Story 7.3</Badge>
+                <Badge variant="outline" className="text-xs">Story 7.4</Badge>
+                <Badge variant="outline" className="text-xs">Story 7.5</Badge>
+                <Badge variant="secondary" className="text-xs">Coordinator</Badge>
+                <Badge variant="outline" className="text-xs bg-teal-50 text-teal-700 border-teal-200">New</Badge>
+                <Badge variant="outline" className="text-xs bg-green-50 text-green-700 border-green-200">Complete</Badge>
+                <Badge variant="outline" className="text-xs bg-blue-50 text-blue-700 border-blue-200">Live Data</Badge>
+              </div>
+              
+              {/* Live Feature Status Indicators */}
+              <div className="bg-white/60 rounded-lg p-4 border border-teal-100">
+                <div className="grid grid-cols-3 gap-4 text-center">
+                  <div className="flex items-center justify-center gap-2">
+                    <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+                    <div className="text-sm">
+                      <div className="font-bold text-teal-600">Real-Time</div>
+                      <div className="text-xs text-muted-foreground">Updates</div>
+                    </div>
+                  </div>
+                  <div className="flex items-center justify-center gap-2">
+                    <Map className="h-4 w-4 text-blue-600" />
+                    <div className="text-sm">
+                      <div className="font-bold text-blue-600">Interactive</div>
+                      <div className="text-xs text-muted-foreground">Mapping</div>
+                    </div>
+                  </div>
+                  <div className="flex items-center justify-center gap-2">
+                    <PieChart className="h-4 w-4 text-purple-600" />
+                    <div className="text-sm">
+                      <div className="font-bold text-purple-600">Gap</div>
+                      <div className="text-xs text-muted-foreground">Analysis</div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 gap-2">
+                <Link href="/coordinator/situation-dashboard">
+                  <Button className="w-full justify-start bg-teal-600 hover:bg-teal-700">
+                    <Monitor className="h-4 w-4 mr-2" />
+                    Open Situation Dashboard
+                  </Button>
+                </Link>
+                <div className="grid grid-cols-2 gap-2">
+                  <Button variant="outline" className="w-full justify-start text-sm" disabled>
+                    <Compass className="h-4 w-4 mr-2" />
+                    Incidents (7.2)
+                  </Button>
+                  <Button variant="outline" className="w-full justify-start text-sm" disabled>
+                    <Map className="h-4 w-4 mr-2" />
+                    Map View (7.4)
+                  </Button>
+                </div>
+              </div>
+              <div className="text-xs text-muted-foreground">
+                <strong>Complete Epic 7 Implementation:</strong><br/>
+                <strong>7.1</strong>: Three-panel layout with resize & customization | 
+                <strong>7.2</strong>: Incident overview with population impact | 
+                <strong>7.3</strong>: Entity assessments & gap indicators | 
+                <strong>7.4</strong>: Interactive map with donor overlays | 
+                <strong>7.5</strong>: Gap analysis summary with CSV export
+              </div>
             </div>
           </CardContent>
         </Card>

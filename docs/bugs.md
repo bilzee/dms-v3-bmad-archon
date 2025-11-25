@@ -1,6 +1,56 @@
 # Bugs and Solutions
 
-## Current Bug Fixes (2025-11-21)
+## Current Bug Fixes (2025-11-23)
+
+### **Bug 10: SQL Injection Vulnerability in Dashboard API**
+**Problem**: Critical SQL injection vulnerability in situation dashboard API where URL parameters were directly interpolated into SQL queries
+**Root Cause**: The `$queryRaw` template literals were directly embedding `incidentId` parameter without proper sanitization or parameterization
+**Location**: `src/app/api/v1/dashboard/situation/route.ts:148, 175, 321, 368, 394`
+**Risk Level**: **CRITICAL** - Could allow attackers to execute arbitrary SQL commands
+**Error Details**: 
+```
+WHERE ie."incidentId" = ${incidentId}  // Direct interpolation - vulnerable
+AND pa."incidentId" = ${incidentId}    // Direct interpolation - vulnerable
+```
+
+**Solution Implemented**: 
+1. **Enhanced Zod Validation**: Added regex validation for incidentId parameter at schema level:
+   ```typescript
+   // Before (vulnerable to injection)
+   incidentId: z.string().optional()
+   
+   // After (protected)
+   incidentId: z.string().regex(/^[a-zA-Z0-9_-]+$/, 'Invalid incident ID format').optional()
+   ```
+
+2. **Parameterized Query Structure**: Split conditional SQL queries to prevent template string injection:
+   ```typescript
+   // Before (vulnerable)
+   ${queryParams.incidentId ? `AND i.id = ${queryParams.incidentId}` : ''}
+   
+   // After (protected)
+   const incidentsQuery = queryParams.incidentId 
+     ? db.$queryRaw`... AND i.id = ${queryParams.incidentId} ...`
+     : db.$queryRaw`... WHERE 1=1 ...`
+   ```
+
+3. **Function-Level Validation**: Added input validation in `getPopulationImpact` function:
+   ```typescript
+   // Added validation check
+   if (!incidentId || typeof incidentId !== 'string' || !/^[a-zA-Z0-9_-]+$/.test(incidentId)) {
+     throw new Error('Invalid incident ID format');
+   }
+   ```
+
+**Key Changes**:
+1. Replaced direct string interpolation with proper parameterized queries
+2. Added regex validation at Zod schema level for `incidentId` 
+3. Implemented conditional query building to prevent template injection
+4. Added function-level input validation defense-in-depth
+
+**Pattern**: Never directly interpolate user-provided parameters into SQL queries. Always use parameterized queries with proper validation at multiple layers.
+
+## Previous Bug Fixes (2025-11-21)
 
 ### **Bug 9: Prisma orderBy Nested Array Structure Error**
 **Problem**: Assessment Verification API returning PrismaClientValidationError for invalid orderBy structure

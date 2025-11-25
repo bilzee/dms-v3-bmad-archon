@@ -549,9 +549,9 @@ async function main() {
       entityId: 'entity-1', // Maiduguri Metropolitan
       assessorName: 'Field Assessor',
       location: 'Maiduguri Metropolitan',
-      status: 'SUBMITTED',
+      status: 'PUBLISHED',
       priority: 'HIGH',
-      verificationStatus: 'SUBMITTED',
+      verificationStatus: 'VERIFIED',
       coordinates: { latitude: 11.8311, longitude: 13.1511, accuracy: 10, timestamp: new Date().toISOString(), captureMethod: 'GPS' }
     },
     {
@@ -563,7 +563,7 @@ async function main() {
       location: 'Jere Local Government',
       status: 'SUBMITTED',
       priority: 'CRITICAL',
-      verificationStatus: 'SUBMITTED',
+      verificationStatus: 'VERIFIED',
       coordinates: { latitude: 11.8822, longitude: 13.2143, accuracy: 8, timestamp: new Date().toISOString(), captureMethod: 'GPS' }
     },
     {
@@ -575,7 +575,7 @@ async function main() {
       location: 'IDP Camp Dalori',
       status: 'SUBMITTED',
       priority: 'MEDIUM',
-      verificationStatus: 'SUBMITTED',
+      verificationStatus: 'VERIFIED',
       coordinates: { latitude: 11.7833, longitude: 13.2167, accuracy: 12, timestamp: new Date().toISOString(), captureMethod: 'GPS' }
     },
     {
@@ -585,9 +585,9 @@ async function main() {
       entityId: 'entity-3', // Gwoza Local Government
       assessorName: 'Field Assessor',
       location: 'Gwoza Local Government',
-      status: 'SUBMITTED',
+      status: 'PUBLISHED',
       priority: 'HIGH',
-      verificationStatus: 'SUBMITTED',
+      verificationStatus: 'VERIFIED',
       coordinates: { latitude: 11.0417, longitude: 13.6875, accuracy: 15, timestamp: new Date().toISOString(), captureMethod: 'GPS' }
     },
     {
@@ -599,15 +599,85 @@ async function main() {
       location: 'Primary Health Center Maiduguri',
       status: 'SUBMITTED',
       priority: 'LOW',
-      verificationStatus: 'SUBMITTED',
+      verificationStatus: 'VERIFIED',
       coordinates: { latitude: 11.8467, longitude: 13.1569, accuracy: 5, timestamp: new Date().toISOString(), captureMethod: 'GPS' }
     }
   ]
 
   for (const assessment of sampleAssessments) {
-    await prisma.rapidAssessment.create({
+    const createdAssessment = await prisma.rapidAssessment.create({
       data: assessment as any
     })
+
+    // Create corresponding assessment detail records with gap-relevant fields
+    if (assessment.rapidAssessmentType === 'HEALTH') {
+      await prisma.healthAssessment.create({
+        data: {
+          rapidAssessmentId: createdAssessment.id,
+          hasFunctionalClinic: Math.random() > 0.5, // Random gap-indicating values
+          hasEmergencyServices: Math.random() > 0.6,
+          numberHealthFacilities: Math.floor(Math.random() * 5) + 1,
+          healthFacilityType: 'Primary Health Center',
+          qualifiedHealthWorkers: Math.floor(Math.random() * 10) + 1,
+          hasTrainedStaff: Math.random() > 0.4,
+          hasMedicineSupply: Math.random() > 0.3,
+          hasMedicalSupplies: Math.random() > 0.4,
+          hasMaternalChildServices: Math.random() > 0.5,
+          commonHealthIssues: JSON.stringify(['Malaria', 'Diarrhea', 'Respiratory infections'])
+        }
+      })
+    } else if (assessment.rapidAssessmentType === 'FOOD') {
+      await prisma.foodAssessment.create({
+        data: {
+          rapidAssessmentId: createdAssessment.id,
+          isFoodSufficient: Math.random() > 0.6,
+          hasRegularMealAccess: Math.random() > 0.5,
+          hasInfantNutrition: Math.random() > 0.4,
+          foodSource: JSON.stringify(['Market', 'Food aid', 'Local farming']),
+          availableFoodDurationDays: Math.floor(Math.random() * 30) + 1,
+          additionalFoodRequiredPersons: Math.floor(Math.random() * 100) + 10,
+          additionalFoodRequiredHouseholds: Math.floor(Math.random() * 20) + 2
+        }
+      })
+    } else if (assessment.rapidAssessmentType === 'WASH') {
+      await prisma.wASHAssessment.create({
+        data: {
+          rapidAssessmentId: createdAssessment.id,
+          waterSource: JSON.stringify(['Well', 'Borehole', 'River']),
+          isWaterSufficient: Math.random() > 0.5,
+          hasCleanWaterAccess: Math.random() > 0.4,
+          functionalLatrinesAvailable: Math.floor(Math.random() * 10) + 1,
+          areLatrinesSufficient: Math.random() > 0.6,
+          hasHandwashingFacilities: Math.random() > 0.5,
+          hasOpenDefecationConcerns: Math.random() > 0.3
+        }
+      })
+    } else if (assessment.rapidAssessmentType === 'SHELTER') {
+      await prisma.shelterAssessment.create({
+        data: {
+          rapidAssessmentId: createdAssessment.id,
+          areSheltersSufficient: Math.random() > 0.6,
+          hasSafeStructures: Math.random() > 0.5,
+          shelterTypes: JSON.stringify(['Tents', 'Temporary shelters', 'Public buildings']),
+          requiredShelterType: JSON.stringify(['Tents', 'Emergency shelters']),
+          numberSheltersRequired: Math.floor(Math.random() * 50) + 5,
+          areOvercrowded: Math.random() > 0.4,
+          provideWeatherProtection: Math.random() > 0.6
+        }
+      })
+    } else if (assessment.rapidAssessmentType === 'SECURITY') {
+      await prisma.securityAssessment.create({
+        data: {
+          rapidAssessmentId: createdAssessment.id,
+          isSafeFromViolence: Math.random() > 0.7,
+          gbvCasesReported: Math.random() > 0.8,
+          hasSecurityPresence: Math.random() > 0.5,
+          hasProtectionReportingMechanism: Math.random() > 0.6,
+          vulnerableGroupsHaveAccess: Math.random() > 0.4,
+          hasLighting: Math.random() > 0.5
+        }
+      })
+    }
   }
 
   // Create sample donor commitments for testing Story 4.3

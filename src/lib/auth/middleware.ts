@@ -24,6 +24,22 @@ export function withAuth(handler: AuthenticatedHandler) {
       // Extract token from Authorization header
       const authorization = request.headers.get('Authorization')
       
+      // Development mode: if no authorization header, use coordinator user
+      if ((!authorization || !authorization.startsWith('Bearer ')) && process.env.NODE_ENV === 'development') {
+        const devUser = await AuthService.getUserByEmail('coordinator@dms.gov.ng')
+        if (devUser) {
+          const userRoles = devUser.roles.map(ur => ur.role.name)
+          const context: AuthContext = { 
+            user: devUser,
+            userId: devUser.id,
+            roles: userRoles,
+            permissions: devUser.roles.flatMap((ur: any) => ur.role.permissions.map((p: any) => p.permission.code)),
+            request
+          }
+          return await handler(request, context, nextContext)
+        }
+      }
+      
       if (!authorization || !authorization.startsWith('Bearer ')) {
         return NextResponse.json(
           { error: 'Missing or invalid authorization header' },

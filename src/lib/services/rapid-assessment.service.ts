@@ -11,6 +11,13 @@ import {
   ShelterAssessmentInput,
   SecurityAssessmentInput
 } from '@/lib/validation/rapid-assessment'
+import { 
+  analyzeHealthGaps, 
+  analyzeFoodGaps, 
+  analyzeWASHGaps, 
+  analyzeShelterGaps, 
+  analyzeSecurityGaps 
+} from '@/lib/services/gap-analysis.service'
 
 // Type for returned assessments with their specific data
 export type RapidAssessmentWithData = RapidAssessment & {
@@ -391,7 +398,68 @@ export class RapidAssessmentService {
       }
     })
 
+    // Automatically trigger gap analysis calculation after successful submission
+    await this.triggerGapAnalysis(id)
+
     return updatedAssessment
+  }
+
+  /**
+   * Calculate and trigger gap analysis for a submitted assessment
+   * This should be called after successful assessment submission
+   */
+  static async triggerGapAnalysis(assessmentId: string): Promise<void> {
+    try {
+      const assessment = await this.findById(assessmentId)
+      if (!assessment) {
+        console.warn(`Assessment ${assessmentId} not found for gap analysis`)
+        return
+      }
+
+      // Calculate gap analysis based on assessment type and data
+      const gapAnalysisData: any = {}
+
+      switch (assessment.rapidAssessmentType) {
+        case 'HEALTH':
+          if (assessment.healthAssessment) {
+            gapAnalysisData.gapAnalysis = analyzeHealthGaps(assessment.healthAssessment)
+          }
+          break
+        case 'FOOD':
+          if (assessment.foodAssessment) {
+            gapAnalysisData.gapAnalysis = analyzeFoodGaps(assessment.foodAssessment)
+          }
+          break
+        case 'WASH':
+          if (assessment.wASHAssessment) {
+            gapAnalysisData.gapAnalysis = analyzeWASHGaps(assessment.wASHAssessment)
+          }
+          break
+        case 'SHELTER':
+          if (assessment.shelterAssessment) {
+            gapAnalysisData.gapAnalysis = analyzeShelterGaps(assessment.shelterAssessment)
+          }
+          break
+        case 'SECURITY':
+          if (assessment.securityAssessment) {
+            gapAnalysisData.gapAnalysis = analyzeSecurityGaps(assessment.securityAssessment)
+          }
+          break
+      }
+
+      // Update the assessment with gap analysis data
+      if (Object.keys(gapAnalysisData).length > 0) {
+        await prisma.rapidAssessment.update({
+          where: { id: assessmentId },
+          data: gapAnalysisData
+        })
+      }
+
+      console.log(`Gap analysis calculated for assessment ${assessmentId} (${assessment.rapidAssessmentType})`)
+    } catch (error) {
+      console.error('Error calculating gap analysis:', error)
+      // Don't throw error to avoid breaking submission workflow
+    }
   }
 
   private static async validateEntityAssignment(userId: string, entityId: string): Promise<void> {
