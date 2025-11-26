@@ -71,7 +71,8 @@ const fetchEntities = async (incidentId: string): Promise<EntityOption[]> => {
     type: entity.entityType,
     location: entity.location,
     affectedAt: entity.lastUpdated,
-    severity: entity.latestAssessments?.POPULATION?.gapIndicators?.severity || 'LOW'
+    severity: entity.gapSummary?.criticalGaps > 0 ? 'CRITICAL' : 
+             entity.gapSummary?.totalGaps > 0 ? 'HIGH' : 'LOW'
   }));
 };
 

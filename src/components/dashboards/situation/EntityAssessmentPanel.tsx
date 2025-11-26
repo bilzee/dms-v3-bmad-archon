@@ -106,6 +106,15 @@ export function EntityAssessmentPanel({
   const effectiveEntityId = entityId || selectedEntityId;
   const effectiveIncidentId = incidentId || selectedIncidentId;
 
+  
+  // Determine the entity ID to use for API call
+  const entityIdForApi = useMemo(() => {
+    if (includeAllEntities) {
+      return 'all'; // Explicitly request all entities
+    }
+    return effectiveEntityId; // Use selected entity or undefined
+  }, [includeAllEntities, effectiveEntityId]);
+
   // Fetch dashboard data
   const {
     data: dashboardData,
@@ -113,8 +122,10 @@ export function EntityAssessmentPanel({
     error,
     refetch
   } = useQuery({
-    queryKey: ['api-v1-dashboard-situation', effectiveIncidentId, effectiveEntityId],
-    queryFn: () => fetchDashboardData(effectiveIncidentId!, effectiveEntityId),
+    queryKey: ['api-v1-dashboard-situation', effectiveIncidentId, entityIdForApi],
+    queryFn: () => {
+      return fetchDashboardData(effectiveIncidentId!, entityIdForApi);
+    },
     enabled: !!effectiveIncidentId,
     staleTime: 2 * 60 * 1000, // 2 minutes
     gcTime: 5 * 60 * 1000, // 5 minutes
@@ -123,6 +134,7 @@ export function EntityAssessmentPanel({
   // Filter entities based on selection
   const entityAssessments = useMemo(() => {
     const allEntityAssessments = dashboardData?.data?.entities || [];
+    
     if (includeAllEntities || !effectiveEntityId || effectiveEntityId === 'all') {
       return allEntityAssessments;
     }
@@ -274,10 +286,10 @@ export function EntityAssessmentPanel({
                   <div className="text-xs text-gray-600">Critical Gaps</div>
                 </div>
                 <div className="text-center">
-                  <div className="text-2xl font-bold text-gray-600">
-                    {aggregatedAssessments.population.totalPopulation.toLocaleString()}
+                  <div className="text-2xl font-bold text-purple-600">
+                    {aggregatedAssessments.gapSummary.totalGaps}
                   </div>
-                  <div className="text-xs text-gray-600">Total Population</div>
+                  <div className="text-xs text-gray-600">Total Gaps</div>
                 </div>
               </div>
             </CardContent>
@@ -290,7 +302,7 @@ export function EntityAssessmentPanel({
         <div className="space-y-4">
           {includeAllEntities && aggregatedAssessments ? (
             // Aggregated view - show aggregated data for each category
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-2 gap-4">
               {/* Only show aggregated gap-based assessments */}
               {aggregatedAssessments.health && (
                 <AssessmentCategorySummary

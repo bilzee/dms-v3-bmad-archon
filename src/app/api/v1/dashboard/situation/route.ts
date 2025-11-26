@@ -1092,24 +1092,27 @@ async function getLatestPopulationAssessment(entityId: string): Promise<Populati
 
   if (!assessment) return null;
 
-  return {
-    rapidAssessmentId: assessment.rapidAssessmentId,
-    totalHouseholds: assessment.totalHouseholds,
-    totalPopulation: assessment.totalPopulation,
-    populationMale: assessment.populationMale,
-    populationFemale: assessment.populationFemale,
-    populationUnder5: assessment.populationUnder5,
-    pregnantWomen: assessment.pregnantWomen,
-    lactatingMothers: assessment.lactatingMothers,
-    personWithDisability: assessment.personWithDisability,
-    elderlyPersons: assessment.elderlyPersons,
-    separatedChildren: assessment.separatedChildren,
-    numberLivesLost: assessment.numberLivesLost,
-    numberInjured: assessment.numberInjured,
-    additionalPopulationDetails: assessment.additionalPopulationDetails,
+  const data = {
+    hasFunctionalClinic: assessment.hasFunctionalClinic,
+    hasEmergencyServices: assessment.hasEmergencyServices,
+    numberHealthFacilities: assessment.numberHealthFacilities,
+    healthFacilityType: assessment.healthFacilityType,
+    qualifiedHealthWorkers: assessment.qualifiedHealthWorkers,
+    hasTrainedStaff: assessment.hasTrainedStaff,
+    hasMedicineSupply: assessment.hasMedicineSupply,
+    hasMedicalSupplies: assessment.hasMedicalSupplies,
+    hasMaternalChildServices: assessment.hasMaternalChildServices,
+    commonHealthIssues: assessment.commonHealthIssues,
+    additionalHealthDetails: assessment.additionalHealthDetails,
     rapidAssessmentDate: assessment.rapidAssessment.rapidAssessmentDate,
     verificationStatus: assessment.rapidAssessment.verificationStatus,
     assessorName: assessment.rapidAssessment.assessorName || assessment.rapidAssessment.assessor?.name || 'Unknown',
+  };
+
+  const gapAnalysis = analyzeHealthGaps(data);
+  return {
+    ...data,
+    gapAnalysis
   };
 }
 
@@ -2086,11 +2089,62 @@ export const GET = withAuth(async (request: NextRequest, context) => {
     
     if (queryParams.incidentId) {
       if (queryParams.entityId === 'all') {
-        // Mock aggregated data for now
-        aggregatedAssessments = null;
+        // Get all entities for this incident
+        entityAssessments = await getEntityAssessments(queryParams.incidentId);
+        
+        // Calculate aggregated assessments for all entities
+        aggregatedAssessments = {
+          health: aggregateHealthAssessments(entityAssessments),
+          food: aggregateFoodAssessments(entityAssessments),
+          wash: aggregateWASHAssessments(entityAssessments),
+          shelter: aggregateShelterAssessments(entityAssessments),
+          security: aggregateSecurityAssessments(entityAssessments),
+          gapSummary: {
+            totalGaps: 0,
+            totalNoGaps: 0,
+            criticalGaps: 0,
+            entitiesWithGaps: 0,
+            entitiesWithoutGaps: 0
+          }
+        };
+        
+        // Calculate gap summary
+        const allGapBasedAssessments = [
+          ...entityAssessments.map(e => e.latestAssessments.health).filter(Boolean),
+          ...entityAssessments.map(e => e.latestAssessments.food).filter(Boolean),
+          ...entityAssessments.map(e => e.latestAssessments.wash).filter(Boolean),
+          ...entityAssessments.map(e => e.latestAssessments.shelter).filter(Boolean),
+          ...entityAssessments.map(e => e.latestAssessments.security).filter(Boolean)
+        ];
+        
+        aggregatedAssessments.gapSummary = {
+          totalGaps: allGapBasedAssessments.filter(a => a.gapAnalysis.hasGap).length,
+          totalNoGaps: allGapBasedAssessments.filter(a => !a.gapAnalysis.hasGap).length,
+          criticalGaps: allGapBasedAssessments.filter(a => a.gapAnalysis.severity === 'CRITICAL').length,
+          entitiesWithGaps: entityAssessments.filter(e => {
+            const entityGaps = [
+              e.latestAssessments.health?.gapAnalysis.hasGap,
+              e.latestAssessments.food?.gapAnalysis.hasGap,
+              e.latestAssessments.wash?.gapAnalysis.hasGap,
+              e.latestAssessments.shelter?.gapAnalysis.hasGap,
+              e.latestAssessments.security?.gapAnalysis.hasGap
+            ].filter(Boolean);
+            return entityGaps.length > 0;
+          }).length,
+          entitiesWithoutGaps: entityAssessments.filter(e => {
+            const entityGaps = [
+              e.latestAssessments.health?.gapAnalysis.hasGap,
+              e.latestAssessments.food?.gapAnalysis.hasGap,
+              e.latestAssessments.wash?.gapAnalysis.hasGap,
+              e.latestAssessments.shelter?.gapAnalysis.hasGap,
+              e.latestAssessments.security?.gapAnalysis.hasGap
+            ].filter(Boolean);
+            return entityGaps.length === 0;
+          }).length
+        };
       } else {
-        // Mock specific entity assessment data
-        entityAssessments = [];
+        // Get specific entity assessment data
+        entityAssessments = await getEntityAssessments(queryParams.incidentId, queryParams.entityId);
       }
     }
 
