@@ -1,0 +1,71 @@
+# Page snapshot
+
+```yaml
+- generic [active] [ref=e1]:
+  - generic [ref=e2]:
+    - banner [ref=e3]:
+      - generic [ref=e5]:
+        - link "DMS Borno" [ref=e7] [cursor=pointer]:
+          - /url: /dashboard
+        - generic [ref=e8]:
+          - generic [ref=e9]:
+            - img [ref=e10]
+            - generic [ref=e12]: Synced
+          - generic [ref=e14]:
+            - img [ref=e15]
+            - generic [ref=e17]: Online
+    - main [ref=e18]:
+      - generic [ref=e20]:
+        - generic [ref=e21]:
+          - generic [ref=e22]:
+            - heading "Incident Management" [level=2] [ref=e23]
+            - paragraph [ref=e24]: Manage and monitor disaster incidents • Real-time updates enabled
+          - button "New Incident" [ref=e25] [cursor=pointer]:
+            - img
+            - text: New Incident
+        - alert [ref=e26]:
+          - img [ref=e27]
+          - generic [ref=e29]: Failed to fetch incidents
+        - generic [ref=e30]:
+          - generic [ref=e32]:
+            - img [ref=e33]
+            - text: Filters
+          - generic [ref=e36]:
+            - generic [ref=e37]:
+              - text: Search Location
+              - generic [ref=e38]:
+                - img [ref=e39]
+                - textbox "Search by location..." [ref=e42]
+            - generic [ref=e43]:
+              - text: Status
+              - combobox [ref=e44] [cursor=pointer]:
+                - generic: All Statuses
+                - img [ref=e45]
+            - generic [ref=e47]:
+              - text: Severity
+              - combobox [ref=e48] [cursor=pointer]:
+                - generic: All Severities
+                - img [ref=e49]
+            - generic [ref=e51]:
+              - text: Type
+              - combobox [ref=e52] [cursor=pointer]:
+                - generic: All Types
+                - img [ref=e53]
+        - generic [ref=e55]:
+          - generic [ref=e57]:
+            - generic [ref=e58]: Incidents (0)
+            - button "Refresh" [ref=e59] [cursor=pointer]:
+              - img
+              - text: Refresh
+          - generic [ref=e61]:
+            - img [ref=e62]
+            - heading "No incidents found" [level=3] [ref=e64]
+            - paragraph [ref=e65]: Create your first incident to get started.
+    - contentinfo [ref=e66]:
+      - paragraph [ref=e68]: Disaster Management System - Borno State, Nigeria
+  - generic [ref=e69]:
+    - img [ref=e71]
+    - button "Open Tanstack query devtools" [ref=e119] [cursor=pointer]:
+      - img [ref=e120]
+  - alert [ref=e168]
+```

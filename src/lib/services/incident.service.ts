@@ -87,7 +87,7 @@ export class IncidentService {
   static async findAll(
     query: QueryIncidentInput
   ): Promise<{
-    incidents: Incident[]
+    incidents: (Incident & { populationImpact?: any })[]
     total: number
     totalPages: number
   }> {
@@ -121,9 +121,57 @@ export class IncidentService {
     const total = await prisma.incident.count({ where })
     const totalPages = Math.ceil(total / limit)
 
-    // Get incidents with pagination
+    // Get incidents with related assessments for population impact
     const incidents = await prisma.incident.findMany({
       where,
+      include: {
+        preliminaryAssessments: {
+          select: {
+            numberLivesLost: true,
+            numberInjured: true,
+            numberDisplaced: true,
+            numberHousesAffected: true,
+            numberSchoolsAffected: true,
+            numberMedicalFacilitiesAffected: true,
+            estimatedAgriculturalLandsAffected: true,
+            reportingLatitude: true,
+            reportingLongitude: true
+          }
+        },
+        rapidAssessments: {
+          select: {
+            id: true,
+            location: true,
+            coordinates: true,
+            createdAt: true,
+            populationAssessment: {
+              select: {
+                numberLivesLost: true,
+                numberInjured: true,
+                totalPopulation: true,
+                totalHouseholds: true
+              }
+            },
+            healthAssessment: {
+              select: {
+                numberHealthFacilities: true
+              }
+            }
+          }
+        },
+        commitments: {
+          select: {
+            id: true,
+            status: true,
+            items: true,
+            donorId: true,
+            entityId: true,
+            totalCommittedQuantity: true,
+            deliveredQuantity: true,
+            totalValueEstimated: true
+          }
+        }
+      },
       orderBy: {
         createdAt: 'desc'
       },
@@ -131,8 +179,14 @@ export class IncidentService {
       take: limit
     })
 
+    // Calculate population impact for each incident
+    const incidentsWithImpact = incidents.map(incident => ({
+      ...incident,
+      populationImpact: this.calculatePopulationImpactFromData(incident)
+    }))
+
     return {
-      incidents,
+      incidents: incidentsWithImpact,
       total,
       totalPages
     }
@@ -144,7 +198,10 @@ export class IncidentService {
   ): Promise<Incident> {
     return await prisma.incident.update({
       where: { id },
-      data
+      data: {
+        ...data,
+        updatedAt: new Date()
+      }
     })
   }
 
@@ -161,6 +218,17 @@ export class IncidentService {
   static async delete(id: string): Promise<void> {
     await prisma.incident.delete({
       where: { id }
+    })
+  }
+
+  static async softDelete(id: string, deletedBy: string): Promise<Incident> {
+    return await prisma.incident.update({
+      where: { id },
+      data: {
+        status: 'RESOLVED',
+        updatedAt: new Date()
+        // Note: You could add a deletedAt field if needed
+      }
     })
   }
 
@@ -187,5 +255,123 @@ export class IncidentService {
         severity: 'CRITICAL'
       }
     })
+  }
+
+  // Calculate population impact from incident data (preliminary + rapid assessments)
+  static calculatePopulationImpactFromData(incident: any & {
+    preliminaryAssessments?: any[]
+    rapidAssessments?: any[]
+  }): any {
+    const preliminaryAssessments = incident.preliminaryAssessments || []
+    const rapidAssessments = incident.rapidAssessments || []
+
+    if (preliminaryAssessments.length === 0 && rapidAssessments.length === 0) {
+      return {
+        totalPopulation: 0,
+        livesLost: 0,
+        injured: 0,
+        displaced: 0,
+        affectedEntities: 0,
+        housesAffected: 0,
+        schoolsAffected: 0,
+        medicalFacilitiesAffected: 0,
+        agriculturalLandAffected: 0,
+        epicenter: incident.coordinates || null,
+        lastUpdated: new Date().toISOString(),
+        assessmentCount: 0
+      }
+    }
+
+    // Aggregate population data from preliminary assessments
+    const populationData = preliminaryAssessments.reduce((acc, assessment) => {
+      acc.livesLost += assessment.numberLivesLost || 0
+      acc.injured += assessment.numberInjured || 0
+      acc.displaced += assessment.numberDisplaced || 0
+      acc.housesAffected += assessment.numberHousesAffected || 0
+      acc.schoolsAffected += assessment.numberSchoolsAffected || 0
+      acc.medicalFacilitiesAffected += assessment.numberMedicalFacilitiesAffected || 0
+      
+      // Process agricultural land
+      if (assessment.estimatedAgriculturalLandsAffected) {
+        const [hectares] = assessment.estimatedAgriculturalLandsAffected.toString().split(' ').map(Number)
+        acc.agriculturalLandAffected += hectares || 0
+      }
+      
+      // Calculate epicenter (average coordinates)
+      if (assessment.reportingLatitude && assessment.reportingLongitude) {
+        acc.latSum += assessment.reportingLatitude
+        acc.lngSum += assessment.reportingLongitude
+        acc.coordinateCount += 1
+      }
+      
+      return acc
+    }, {
+      livesLost: 0,
+      injured: 0,
+      displaced: 0,
+      housesAffected: 0,
+      schoolsAffected: 0,
+      medicalFacilitiesAffected: 0,
+      agriculturalLandAffected: 0,
+      latSum: 0,
+      lngSum: 0,
+      coordinateCount: 0,
+      totalPopulation: 0
+    })
+
+    // Aggregate population data from rapid assessments (nested structure)
+    rapidAssessments.forEach(assessment => {
+      if (assessment.populationAssessment) {
+        populationData.livesLost += assessment.populationAssessment.numberLivesLost || 0
+        populationData.injured += assessment.populationAssessment.numberInjured || 0
+        populationData.totalPopulation += assessment.populationAssessment.totalPopulation || 0
+        populationData.housesAffected += assessment.populationAssessment.totalHouseholds || 0
+      }
+
+      if (assessment.healthAssessment) {
+        populationData.medicalFacilitiesAffected += assessment.healthAssessment.numberHealthFacilities || 0
+      }
+
+      // Calculate epicenter (average coordinates) from rapid assessment location
+      if (assessment.coordinates?.lat && assessment.coordinates?.lng) {
+        populationData.latSum += assessment.coordinates.lat
+        populationData.lngSum += assessment.coordinates.lng
+        populationData.coordinateCount += 1
+      }
+    })
+
+    // Calculate epicenter
+    const epicenter = populationData.coordinateCount > 0 
+      ? { 
+          lat: populationData.latSum / populationData.coordinateCount,
+          lng: populationData.lngSum / populationData.coordinateCount
+        }
+      : incident.coordinates || null
+
+    return {
+      totalPopulation: populationData.totalPopulation,
+      livesLost: populationData.livesLost,
+      injured: populationData.injured,
+      displaced: populationData.displaced,
+      affectedEntities: preliminaryAssessments.length + rapidAssessments.length,
+      housesAffected: populationData.housesAffected,
+      schoolsAffected: populationData.schoolsAffected,
+      medicalFacilitiesAffected: populationData.medicalFacilitiesAffected,
+      agriculturalLandAffected: populationData.agriculturalLandAffected,
+      epicenter,
+      lastUpdated: new Date().toISOString(),
+      assessmentCount: preliminaryAssessments.length + rapidAssessments.length
+    }
+  }
+
+  // Calculate population impact for specific incident ID
+  static async calculatePopulationImpact(incidentId: string): Promise<any> {
+    const incident = await this.findWithAssessments(incidentId)
+    
+    if (!incident) {
+      throw new Error('Incident not found')
+    }
+
+    return this.calculatePopulationImpactFromData(incident)
   }
 }

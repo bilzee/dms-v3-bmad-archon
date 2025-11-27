@@ -18,6 +18,17 @@ export const CreateIncidentSchema = z.object({
   preliminaryAssessmentId: z.string().optional()
 })
 
+export const UpdateIncidentSchema = z.object({
+  status: z.enum(['ACTIVE', 'CONTAINED', 'RESOLVED']).optional(),
+  severity: z.enum(['CRITICAL', 'HIGH', 'MEDIUM', 'LOW']).optional(),
+  description: z.string().min(1, 'Description is required').optional(),
+  location: z.string().min(1, 'Location is required').optional(),
+  coordinates: z.object({
+    lat: z.number().min(-90).max(90),
+    lng: z.number().min(-180).max(180)
+  }).optional()
+})
+
 export const QueryIncidentSchema = z.object({
   page: z.coerce.number().int().min(1).default(1),
   limit: z.coerce.number().int().min(1).max(100).default(10),

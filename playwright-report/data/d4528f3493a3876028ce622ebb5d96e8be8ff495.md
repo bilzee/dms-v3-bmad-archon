@@ -1,0 +1,156 @@
+# Page snapshot
+
+```yaml
+- generic [active] [ref=e1]:
+  - generic [ref=e2]:
+    - banner [ref=e3]:
+      - generic [ref=e5]:
+        - link "DMS Borno" [ref=e7]:
+          - /url: /dashboard
+        - generic [ref=e8]:
+          - generic [ref=e9]:
+            - img [ref=e10]
+            - generic [ref=e12]: Synced
+          - generic [ref=e14]:
+            - img [ref=e15]
+            - generic [ref=e17]: Online
+    - main [ref=e18]:
+      - generic [ref=e20]:
+        - generic [ref=e21]:
+          - generic [ref=e22]:
+            - heading "Incident Management" [level=2] [ref=e23]
+            - paragraph [ref=e24]: Manage and monitor disaster incidents • Real-time updates enabled
+          - button "New Incident" [ref=e25] [cursor=pointer]:
+            - img
+            - text: New Incident
+        - generic [ref=e26]:
+          - generic [ref=e28]:
+            - img [ref=e29]
+            - text: Filters
+          - generic [ref=e32]:
+            - generic [ref=e33]:
+              - text: Search Location
+              - generic [ref=e34]:
+                - img [ref=e35]
+                - textbox "Search by location..." [ref=e38]
+            - generic [ref=e39]:
+              - text: Status
+              - combobox [ref=e40] [cursor=pointer]:
+                - generic: All Statuses
+                - img [ref=e41]
+            - generic [ref=e43]:
+              - text: Severity
+              - combobox [ref=e44] [cursor=pointer]:
+                - generic: All Severities
+                - img [ref=e45]
+            - generic [ref=e47]:
+              - text: Type
+              - combobox [ref=e48] [cursor=pointer]:
+                - generic: All Types
+                - img [ref=e49]
+        - generic [ref=e51]:
+          - generic [ref=e53]:
+            - generic [ref=e54]: Incidents (2)
+            - button "Refresh" [ref=e55] [cursor=pointer]:
+              - img
+              - text: Refresh
+          - table [ref=e58]:
+            - rowgroup [ref=e59]:
+              - row "Type Location Severity Status Population Impact Linked Assessments Created Actions" [ref=e60]:
+                - cell "Type" [ref=e61]
+                - cell "Location" [ref=e62]
+                - cell "Severity" [ref=e63]
+                - cell "Status" [ref=e64]
+                - cell "Population Impact" [ref=e65]
+                - cell "Linked Assessments" [ref=e66]
+                - cell "Created" [ref=e67]
+                - cell "Actions" [ref=e68]
+            - rowgroup [ref=e69]:
+              - 'row "Flood Flash Flood Lagos Island, Lagos State HIGH ACTIVE Population: 1000 Lives Lost: 2 Injured: 5 Entities: 3 Prelim: 0 Rapid: 0 1/26/2025 11:00:00 AM" [ref=e70] [cursor=pointer]':
+                - cell "Flood Flash Flood" [ref=e71]:
+                  - generic [ref=e72]:
+                    - generic [ref=e73]: Flood
+                    - generic [ref=e74]: Flash Flood
+                - cell "Lagos Island, Lagos State" [ref=e75]:
+                  - generic [ref=e76]:
+                    - img [ref=e77]
+                    - text: Lagos Island, Lagos State
+                - cell "HIGH" [ref=e80]:
+                  - generic [ref=e81]: HIGH
+                - cell "ACTIVE" [ref=e82]:
+                  - generic [ref=e83]: ACTIVE
+                - 'cell "Population: 1000 Lives Lost: 2 Injured: 5 Entities: 3" [ref=e84]':
+                  - generic [ref=e85]:
+                    - generic [ref=e86]:
+                      - img [ref=e87]
+                      - generic [ref=e92]: "Population: 1000"
+                    - generic [ref=e93]:
+                      - generic [ref=e94]: "Lives Lost: 2"
+                      - generic [ref=e95]: "Injured: 5"
+                      - generic [ref=e96]: "Entities: 3"
+                - 'cell "Prelim: 0 Rapid: 0" [ref=e97]':
+                  - generic [ref=e98]:
+                    - generic [ref=e99]:
+                      - img [ref=e100]
+                      - generic [ref=e103]: "Prelim: 0"
+                    - generic [ref=e104]:
+                      - img [ref=e105]
+                      - generic [ref=e107]: "Rapid: 0"
+                - cell "1/26/2025 11:00:00 AM" [ref=e108]:
+                  - generic [ref=e109]:
+                    - text: 1/26/2025
+                    - generic [ref=e110]: 11:00:00 AM
+                - cell [ref=e111]:
+                  - generic [ref=e112]:
+                    - button [ref=e113]:
+                      - img
+                    - combobox [ref=e114]:
+                      - generic: Active
+                      - img [ref=e115]
+              - 'row "Fire Victoria Island, Lagos State CRITICAL CONTAINED Population: 500 Lives Lost: 0 Injured: 3 Entities: 1 Prelim: 0 Rapid: 0 1/26/2025 12:00:00 PM" [ref=e117] [cursor=pointer]':
+                - cell "Fire" [ref=e118]:
+                  - generic [ref=e120]: Fire
+                - cell "Victoria Island, Lagos State" [ref=e121]:
+                  - generic [ref=e122]:
+                    - img [ref=e123]
+                    - text: Victoria Island, Lagos State
+                - cell "CRITICAL" [ref=e126]:
+                  - generic [ref=e127]: CRITICAL
+                - cell "CONTAINED" [ref=e128]:
+                  - generic [ref=e129]: CONTAINED
+                - 'cell "Population: 500 Lives Lost: 0 Injured: 3 Entities: 1" [ref=e130]':
+                  - generic [ref=e131]:
+                    - generic [ref=e132]:
+                      - img [ref=e133]
+                      - generic [ref=e138]: "Population: 500"
+                    - generic [ref=e139]:
+                      - generic [ref=e140]: "Lives Lost: 0"
+                      - generic [ref=e141]: "Injured: 3"
+                      - generic [ref=e142]: "Entities: 1"
+                - 'cell "Prelim: 0 Rapid: 0" [ref=e143]':
+                  - generic [ref=e144]:
+                    - generic [ref=e145]:
+                      - img [ref=e146]
+                      - generic [ref=e149]: "Prelim: 0"
+                    - generic [ref=e150]:
+                      - img [ref=e151]
+                      - generic [ref=e153]: "Rapid: 0"
+                - cell "1/26/2025 12:00:00 PM" [ref=e154]:
+                  - generic [ref=e155]:
+                    - text: 1/26/2025
+                    - generic [ref=e156]: 12:00:00 PM
+                - cell [ref=e157]:
+                  - generic [ref=e158]:
+                    - button [ref=e159]:
+                      - img
+                    - combobox [ref=e160]:
+                      - generic: Contained
+                      - img [ref=e161]
+    - contentinfo [ref=e163]:
+      - paragraph [ref=e165]: Disaster Management System - Borno State, Nigeria
+  - generic [ref=e166]:
+    - img [ref=e168]
+    - button "Open Tanstack query devtools" [ref=e236] [cursor=pointer]:
+      - img [ref=e237]
+  - alert [ref=e305]
+```

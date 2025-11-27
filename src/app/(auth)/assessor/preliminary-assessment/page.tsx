@@ -189,7 +189,9 @@ export default function PreliminaryAssessmentPage() {
       {error && (
         <Alert variant="destructive">
           <AlertTriangle className="h-4 w-4" />
-          <AlertDescription>{error}</AlertDescription>
+          <AlertDescription>
+            {error instanceof Error ? error.message : String(error)}
+          </AlertDescription>
         </Alert>
       )}
 

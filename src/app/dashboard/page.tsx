@@ -220,6 +220,163 @@ export default function DashboardPage() {
           </CardContent>
         </Card>
 
+        {/* Incident Creation & Management - Story 8.1 */}
+        {hasRole('COORDINATOR') && (
+          <Card className="border-red-200 bg-gradient-to-br from-red-50/50 to-pink-50/50">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <AlertTriangle className="h-5 w-5 text-red-600" />
+                Incident Creation & Management
+              </CardTitle>
+              <CardDescription>
+                Create and manage incident records with population impact tracking and status management
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-3">
+                <div className="flex items-center gap-2">
+                  <Badge variant="outline" className="text-xs">Story 8.1</Badge>
+                  <Badge variant="secondary" className="text-xs">Coordinator</Badge>
+                  <Badge variant="outline" className="text-xs bg-red-50 text-red-700 border-red-200">New</Badge>
+                  <Badge variant="outline" className="text-xs bg-green-50 text-green-700 border-green-200">Complete</Badge>
+                </div>
+                
+                {/* Feature Status Indicators */}
+                <div className="bg-white/60 rounded-lg p-4 border border-red-100">
+                  <div className="grid grid-cols-3 gap-4 text-center">
+                    <div className="flex items-center justify-center gap-2">
+                      <PlusCircle className="h-4 w-4 text-red-600" />
+                      <div className="text-sm">
+                        <div className="font-bold text-red-600">Creation</div>
+                        <div className="text-xs text-muted-foreground">Form</div>
+                      </div>
+                    </div>
+                    <div className="flex items-center justify-center gap-2">
+                      <Users className="h-4 w-4 text-orange-600" />
+                      <div className="text-sm">
+                        <div className="font-bold text-orange-600">Population</div>
+                        <div className="text-xs text-muted-foreground">Impact</div>
+                      </div>
+                    </div>
+                    <div className="flex items-center justify-center gap-2">
+                      <Activity className="h-4 w-4 text-pink-600" />
+                      <div className="text-sm">
+                        <div className="font-bold text-pink-600">Status</div>
+                        <div className="text-xs text-muted-foreground">Tracking</div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 gap-2">
+                  <Link href="/coordinator/incidents">
+                    <Button className="w-full justify-start bg-red-600 hover:bg-red-700">
+                      <AlertTriangle className="h-4 w-4 mr-2" />
+                      Incident Management Dashboard
+                    </Button>
+                  </Link>
+                  <div className="grid grid-cols-2 gap-2">
+                    <Link href="/coordinator/incidents?action=create">
+                      <Button variant="outline" className="w-full justify-start text-sm">
+                        <PlusCircle className="h-4 w-4 mr-2" />
+                        Create New Incident
+                      </Button>
+                    </Link>
+                    <Link href="/coordinator/incidents?status=active">
+                      <Button variant="outline" className="w-full justify-start text-sm">
+                        <Activity className="h-4 w-4 mr-2" />
+                        Active Incidents
+                      </Button>
+                    </Link>
+                  </div>
+                </div>
+                <div className="text-xs text-muted-foreground">
+                  Features incident creation form with type/severity selection, status management (Active/Contained/Resolved), preliminary assessment linking, and population impact tracking
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Entity-Incident Relationship Dashboard - Story 8.2 */}
+        {hasRole('COORDINATOR') && (
+          <Card className="border-blue-200 bg-gradient-to-br from-blue-50/50 to-indigo-50/50">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Map className="h-5 w-5 text-blue-600" />
+                Entity-Incident Relationship Dashboard
+              </CardTitle>
+              <CardDescription>
+                Visualize entity-incident relationships through assessment data with interactive mapping and timeline analysis
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-3">
+                <div className="flex items-center gap-2">
+                  <Badge variant="outline" className="text-xs">Story 8.2</Badge>
+                  <Badge variant="secondary" className="text-xs">Coordinator</Badge>
+                  <Badge variant="outline" className="text-xs bg-blue-50 text-blue-700 border-blue-200">New</Badge>
+                  <Badge variant="outline" className="text-xs bg-green-50 text-green-700 border-green-200">Complete</Badge>
+                  <Badge variant="outline" className="text-xs bg-purple-50 text-purple-700 border-purple-200">Interactive</Badge>
+                </div>
+                
+                {/* Feature Status Indicators */}
+                <div className="bg-white/60 rounded-lg p-4 border border-blue-100">
+                  <div className="grid grid-cols-3 gap-4 text-center">
+                    <div className="flex items-center justify-center gap-2">
+                      <MapPin className="h-4 w-4 text-blue-600" />
+                      <div className="text-sm">
+                        <div className="font-bold text-blue-600">Interactive</div>
+                        <div className="text-xs text-muted-foreground">Mapping</div>
+                      </div>
+                    </div>
+                    <div className="flex items-center justify-center gap-2">
+                      <BarChart3 className="h-4 w-4 text-indigo-600" />
+                      <div className="text-sm">
+                        <div className="font-bold text-indigo-600">Assessment</div>
+                        <div className="text-xs text-muted-foreground">Analytics</div>
+                      </div>
+                    </div>
+                    <div className="flex items-center justify-center gap-2">
+                      <Clock className="h-4 w-4 text-purple-600" />
+                      <div className="text-sm">
+                        <div className="font-bold text-purple-600">Timeline</div>
+                        <div className="text-xs text-muted-foreground">Analysis</div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 gap-2">
+                  <Link href="/coordinator/incidents">
+                    <Button className="w-full justify-start bg-blue-600 hover:bg-blue-700">
+                      <Map className="h-4 w-4 mr-2" />
+                      Assessment Relationship Dashboard
+                    </Button>
+                  </Link>
+                  <div className="grid grid-cols-2 gap-2">
+                    <Link href="/coordinator/incidents?view=map">
+                      <Button variant="outline" className="w-full justify-start text-sm">
+                        <MapPin className="h-4 w-4 mr-2" />
+                        Relationship Map
+                      </Button>
+                    </Link>
+                    <Link href="/coordinator/incidents?view=timeline">
+                      <Button variant="outline" className="w-full justify-start text-sm">
+                        <Clock className="h-4 w-4 mr-2" />
+                        Assessment Timeline
+                      </Button>
+                    </Link>
+                  </div>
+                </div>
+                <div className="text-xs text-muted-foreground">
+                  Features assessment-based relationship visualization, priority-based color coding, interactive mapping with filtering, assessment timeline analysis, and comprehensive statistics
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
         {/* Rapid Assessments */}
         <Card>
           <CardHeader>

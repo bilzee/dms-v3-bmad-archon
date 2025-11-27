@@ -61,12 +61,12 @@ export function useMapPerformance(options: MapPerformanceOptions = {}) {
   // Start performance measurement
   const startMeasurement = useCallback(() => {
     performanceRef.current.renderStartTime = performance.now();
-    performanceRef.current.is measuring = true;
+    performanceRef.current.isMeasuring = true;
   }, []);
 
   // End performance measurement
   const endMeasurement = useCallback((entityCount: number, visibleEntityCount: number, clusterCount: number) => {
-    if (!performanceRef.current.is measuring) return;
+    if (!performanceRef.current.isMeasuring) return;
 
     const renderTime = performance.now() - performanceRef.current.renderStartTime;
     const now = performance.now();
@@ -87,7 +87,7 @@ export function useMapPerformance(options: MapPerformanceOptions = {}) {
       fps: performanceRef.current.frameCount > 0 ? 60 : 60 // Default to 60 if not enough data
     });
 
-    performanceRef.current.is measuring = false;
+    performanceRef.current.isMeasuring = false;
   }, []);
 
   // Debounce function for performance optimization
