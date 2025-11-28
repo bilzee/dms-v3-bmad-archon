@@ -1645,27 +1645,43 @@ export default function DashboardPage() {
           </CardContent>
         </Card>
 
-        {/* User Management - Admin only */}
+        {/* User Management & Audit Trail - Stories 9.1 & 9.2 */}
         {hasPermission('MANAGE_USERS') && (
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <UserCog className="h-5 w-5" />
-                User Management
+                User Management & Audit
               </CardTitle>
               <CardDescription>
-                Manage system users and role assignments
+                Manage system users, roles, and monitor comprehensive audit trails with advanced analytics
               </CardDescription>
             </CardHeader>
             <CardContent>
               <div className="space-y-3">
-                <Badge variant="destructive" className="text-xs">Admin</Badge>
-                <Link href="/admin/users">
-                  <Button className="w-full">
-                    <Users className="h-4 w-4 mr-2" />
-                    Manage Users
-                  </Button>
-                </Link>
+                <div className="flex items-center gap-2 flex-wrap">
+                  <Badge variant="destructive" className="text-xs">Admin</Badge>
+                  <Badge variant="outline" className="text-xs">Story 9.1</Badge>
+                  <Badge variant="outline" className="text-xs">Story 9.2</Badge>
+                </div>
+                <div className="grid grid-cols-1 gap-2">
+                  <Link href="/admin/users">
+                    <Button className="w-full">
+                      <Users className="h-4 w-4 mr-2" />
+                      User Management (9.1)
+                    </Button>
+                  </Link>
+                  <Link href="/admin/audit">
+                    <Button variant="outline" className="w-full">
+                      <Shield className="h-4 w-4 mr-2" />
+                      Audit Trail & Monitoring (9.2)
+                    </Button>
+                  </Link>
+                </div>
+                <div className="text-xs text-muted-foreground">
+                  Story 9.1: User creation, editing, role assignments, and login tracking
+                  Story 9.2: Comprehensive audit logging, advanced search, activity reporting, and security monitoring
+                </div>
               </div>
             </CardContent>
           </Card>
