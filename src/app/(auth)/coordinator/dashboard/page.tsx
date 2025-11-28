@@ -5,7 +5,7 @@ import { RoleBasedRoute } from '@/components/shared/RoleBasedRoute';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Users, AlertTriangle, CheckCircle, Clock, FileText, Activity, PlusCircle, TrendingUp } from 'lucide-react';
+import { Users, AlertTriangle, CheckCircle, Clock, FileText, Activity, PlusCircle, TrendingUp, Shield } from 'lucide-react';
 import Link from 'next/link';
 import { VerificationQueueManagement } from '@/components/dashboards/crisis/VerificationQueueManagement';
 import { AutoApprovalConfig } from '@/components/verification/AutoApprovalConfig';
@@ -217,6 +217,32 @@ export default function CoordinatorDashboard() {
                 <PlusCircle className="mr-2 h-4 w-4" />
                 New Response
               </Button>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* User Management Access - Story 9.1 & 9.2 */}
+        <Card>
+          <CardHeader>
+            <CardTitle>User Management</CardTitle>
+            <CardDescription>
+              Manage system users and monitor audit trails
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="grid gap-4 md:grid-cols-2">
+              <Link href="/admin/users">
+                <Button variant="outline" className="w-full justify-start">
+                  <Users className="mr-2 h-4 w-4" />
+                  User Management
+                </Button>
+              </Link>
+              <Link href="/admin/audit">
+                <Button variant="outline" className="w-full justify-start">
+                  <Shield className="mr-2 h-4 w-4" />
+                  Audit Trail & Monitoring
+                </Button>
+              </Link>
             </div>
           </CardContent>
         </Card>
