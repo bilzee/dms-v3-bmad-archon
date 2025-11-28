@@ -22,6 +22,7 @@ import {
   ClipboardList,
   CheckCircle,
   Settings,
+  Shield,
   BarChart3,
   Package,
   PlusCircle,
