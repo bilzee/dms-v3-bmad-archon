@@ -5,7 +5,7 @@ import { RoleBasedRoute } from '@/components/shared/RoleBasedRoute';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Users, AlertTriangle, CheckCircle, Clock, FileText, Activity, PlusCircle, TrendingUp, Shield } from 'lucide-react';
+import { Users, AlertTriangle, CheckCircle, Clock, FileText, Activity, PlusCircle, TrendingUp, Shield, BarChart3, Shield as ReportIcon } from 'lucide-react';
 import Link from 'next/link';
 import { VerificationQueueManagement } from '@/components/dashboards/crisis/VerificationQueueManagement';
 import { AutoApprovalConfig } from '@/components/verification/AutoApprovalConfig';
@@ -129,6 +129,7 @@ export default function CoordinatorDashboard() {
           </Card>
         </div>
 
+  
         {/* Verification Queue Management - Story 6.1 */}
         <div className="space-y-4">
           <div className="flex items-center gap-2">
@@ -195,10 +196,28 @@ export default function CoordinatorDashboard() {
           </CardHeader>
           <CardContent>
             <div className="grid gap-4 md:grid-cols-2">
+              <Link href="/coordinator/situation-dashboard?export=true">
+                <Button variant="secondary" size="sm" className="w-full">
+                  <FileText className="mr-2 h-4 w-4" />
+                  Export Dashboard Data
+                </Button>
+              </Link>
+              <Link href="/coordinator/situation-dashboard?reports=true">
+                <Button variant="secondary" size="sm" className="w-full">
+                  <Activity className="mr-2 h-4 w-4" />
+                  View Export Reports
+                </Button>
+              </Link>
+              <Link href="/coordinator/reports">
+                <Button variant="outline" className="w-full justify-start">
+                  <ReportIcon className="mr-2 h-4 w-4" />
+                  Report Builder ({totalPendingVerifications})
+                </Button>
+              </Link>
               <Link href="/coordinator/verification">
                 <Button variant="outline" className="w-full justify-start">
                   <Activity className="mr-2 h-4 w-4" />
-                  Verification Queue ({totalPendingVerifications})
+                  Verification Queue
                 </Button>
               </Link>
               <Link href="/assessor/rapid-assessments">

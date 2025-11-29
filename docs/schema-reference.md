@@ -1,6 +1,50 @@
 # Prisma Schema Reference
 
-_Auto-generated on 2025-11-27T00:10:09.473Z_
+_Auto-generated on 2025-11-29T10:40:04.812Z_
+
+## ReportTemplate
+
+**Fields:**
+- `id`
+- `name`
+- `description`
+- `type`
+- `layout`
+- `createdById`
+- `isPublic`
+- `createdAt`
+- `updatedAt`
+- `createdBy`
+- `configurations`
+
+## ReportConfiguration
+
+**Fields:**
+- `id`
+- `templateId`
+- `name`
+- `filters`
+- `aggregations`
+- `visualizations`
+- `schedule`
+- `createdBy`
+- `createdAt`
+- `template`
+- `creator`
+- `executions`
+
+## ReportExecution
+
+**Fields:**
+- `id`
+- `configurationId`
+- `status`
+- `format`
+- `filePath`
+- `generatedAt`
+- `error`
+- `createdAt`
+- `configuration`
 
 ## User
 
@@ -22,6 +66,8 @@ _Auto-generated on 2025-11-27T00:10:09.473Z_
 - `assessments`
 - `responses`
 - `roles`
+- `reportTemplates`
+- `reportConfigurations`
 
 ## Role
 

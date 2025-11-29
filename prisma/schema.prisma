@@ -7,24 +7,73 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+model ReportTemplate {
+  id          String        @id @default(uuid())
+  name        String
+  description String?
+  type        ReportType    @default(CUSTOM)
+  layout      Json
+  createdById String
+  isPublic    Boolean       @default(false)
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+  createdBy   User          @relation("ReportTemplates", fields: [createdById], references: [id])
+  configurations ReportConfiguration[]
+
+  @@map("report_templates")
+}
+
+model ReportConfiguration {
+  id             String              @id @default(uuid())
+  templateId     String
+  name           String
+  filters        Json
+  aggregations   Json
+  visualizations Json
+  schedule       Json?
+  createdBy      String
+  createdAt      DateTime            @default(now())
+  template       ReportTemplate     @relation(fields: [templateId], references: [id], onDelete: Cascade)
+  creator        User                @relation("ReportConfigurations", fields: [createdBy], references: [id])
+  executions      ReportExecution[]
+
+  @@map("report_configurations")
+}
+
+model ReportExecution {
+  id              String                @id @default(uuid())
+  configurationId String
+  status          ReportExecutionStatus @default(PENDING)
+  format          ReportFormat
+  filePath        String?
+  generatedAt     DateTime?
+  error           String?
+  createdAt       DateTime              @default(now())
+  configuration    ReportConfiguration  @relation(fields: [configurationId], references: [id], onDelete: Cascade)
+
+  @@map("report_executions")
+}
+
 model User {
-  id                String             @id @default(uuid())
-  email             String             @unique
-  username          String             @unique
-  passwordHash      String
-  name              String
-  phone             String?
-  organization      String?
-  isActive          Boolean            @default(true)
-  isLocked          Boolean            @default(false)
-  lastLogin         DateTime?
-  createdAt         DateTime           @default(now())
-  updatedAt         DateTime           @updatedAt
-  auditLogs         AuditLog[]
-  entityAssignments EntityAssignment[]
-  assessments       RapidAssessment[]  @relation("AssessorResponses")
-  responses         RapidResponse[]    @relation("UserResponses")
-  roles             UserRole[]
+  id                    String               @id @default(uuid())
+  email                 String               @unique
+  username              String               @unique
+  passwordHash          String
+  name                  String
+  phone                 String?
+  organization          String?
+  isActive              Boolean              @default(true)
+  isLocked              Boolean              @default(false)
+  lastLogin             DateTime?
+  createdAt             DateTime             @default(now())
+  updatedAt             DateTime             @updatedAt
+  auditLogs             AuditLog[]
+  entityAssignments     EntityAssignment[]
+  assessments           RapidAssessment[]    @relation("AssessorResponses")
+  responses             RapidResponse[]      @relation("UserResponses")
+  roles                 UserRole[]
+  reportTemplates       ReportTemplate[]     @relation("ReportTemplates")
+  reportConfigurations  ReportConfiguration[]  @relation("ReportConfigurations")
 
   @@map("users")
 }
@@ -524,4 +573,26 @@ enum CommitmentStatus {
   PARTIAL
   COMPLETE
   CANCELLED
+}
+
+enum ReportType {
+  ASSESSMENT
+  RESPONSE
+  ENTITY
+  DONOR
+  CUSTOM
+}
+
+enum ReportExecutionStatus {
+  PENDING
+  RUNNING
+  COMPLETED
+  FAILED
+}
+
+enum ReportFormat {
+  PDF
+  CSV
+  HTML
+  EXCEL
 }

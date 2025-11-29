@@ -1733,6 +1733,171 @@ export default function DashboardPage() {
           <ConflictLog compact={true} className="border-red-200 bg-red-50/20" />
         </div>
 
+        {/* Dashboard Export Functions - Story 10.1 */}
+        <Card className="border-blue-200 bg-gradient-to-br from-blue-50/50 to-indigo-50/50">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <BarChart3 className="h-5 w-5 text-blue-600" />
+              Dashboard Export Functions
+            </CardTitle>
+            <CardDescription>
+              Export dashboard data in multiple formats with comprehensive filtering and scheduling
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-3">
+              <div className="flex items-center gap-2 flex-wrap">
+                <Badge variant="outline" className="text-xs">Story 10.1</Badge>
+                <Badge variant="secondary" className="text-xs">All Users</Badge>
+                <Badge variant="outline" className="text-xs bg-blue-50 text-blue-700 border-blue-200">New</Badge>
+                <Badge variant="outline" className="text-xs bg-green-50 text-green-700 border-green-200">Complete</Badge>
+              </div>
+              
+              {/* Export Status Indicators */}
+              <div className="bg-white/60 rounded-lg p-4 border border-blue-100">
+                <div className="grid grid-cols-3 gap-4 text-center">
+                  <div className="flex items-center justify-center gap-2">
+                    <FileText className="h-4 w-4 text-green-600" />
+                    <div className="text-sm">
+                      <div className="font-bold text-green-600">CSV</div>
+                      <div className="text-xs text-muted-foreground">Export</div>
+                    </div>
+                  </div>
+                  <div className="flex items-center justify-center gap-2">
+                    <PieChart className="h-4 w-4 text-blue-600" />
+                    <div className="text-sm">
+                      <div className="font-bold text-blue-600">Charts</div>
+                      <div className="text-xs text-muted-foreground">PNG/SVG</div>
+                    </div>
+                  </div>
+                  <div className="flex items-center justify-center gap-2">
+                    <Clock className="h-4 w-4 text-purple-600" />
+                    <div className="text-sm">
+                      <div className="font-bold text-purple-600">Schedule</div>
+                      <div className="text-xs text-muted-foreground">Reports</div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 gap-2">
+                <Link href="/coordinator/dashboard">
+                  <Button className="w-full justify-start bg-blue-600 hover:bg-blue-700">
+                    <BarChart3 className="h-4 w-4 mr-2" />
+                    Export Functions Dashboard
+                  </Button>
+                </Link>
+                <div className="grid grid-cols-2 gap-2">
+                  <Button 
+                    variant="outline" 
+                    className="w-full justify-start text-sm"
+                    disabled
+                    title="Export functions integrated into main dashboard"
+                  >
+                    <FileText className="h-4 w-4 mr-2" />
+                    CSV Export (Dashboard)
+                  </Button>
+                  <Button 
+                    variant="outline" 
+                    className="w-full justify-start text-sm"
+                    disabled
+                    title="Export functions integrated into main dashboard"
+                  >
+                    <PieChart className="h-4 w-4 mr-2" />
+                    Chart Export (Dashboard)
+                  </Button>
+                </div>
+              </div>
+              <div className="text-xs text-muted-foreground">
+                Features CSV export for all data tables, chart image export (PNG/SVG), PDF report generation, scheduled report automation, custom date ranges, and comprehensive backend API
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Custom Report Builder - Story 10.2 */}
+        <Card className="border-purple-200 bg-gradient-to-br from-purple-50/50 to-pink-50/50">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Monitor className="h-5 w-5 text-purple-600" />
+              Custom Report Builder
+            </CardTitle>
+            <CardDescription>
+              Create custom reports with drag-and-drop interface, data source configuration, and visualization selection
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-3">
+              <div className="flex items-center gap-2 flex-wrap">
+                <Badge variant="outline" className="text-xs">Story 10.2</Badge>
+                <Badge variant="secondary" className="text-xs">Coordinator</Badge>
+                <Badge variant="outline" className="text-xs bg-purple-50 text-purple-700 border-purple-200">New</Badge>
+                <Badge variant="outline" className="text-xs bg-green-50 text-green-700 border-green-200">Complete</Badge>
+                <Badge variant="outline" className="text-xs bg-blue-50 text-blue-700 border-blue-200">Interactive</Badge>
+              </div>
+              
+              {/* Report Builder Status Indicators */}
+              <div className="bg-white/60 rounded-lg p-4 border border-purple-100">
+                <div className="grid grid-cols-3 gap-4 text-center">
+                  <div className="flex items-center justify-center gap-2">
+                    <Target className="h-4 w-4 text-purple-600" />
+                    <div className="text-sm">
+                      <div className="font-bold text-purple-600">Templates</div>
+                      <div className="text-xs text-muted-foreground">System</div>
+                    </div>
+                  </div>
+                  <div className="flex items-center justify-center gap-2">
+                    <Map className="h-4 w-4 text-blue-600" />
+                    <div className="text-sm">
+                      <div className="font-bold text-blue-600">Builder</div>
+                      <div className="text-xs text-muted-foreground">Interface</div>
+                    </div>
+                  </div>
+                  <div className="flex items-center justify-center gap-2">
+                    <TrendingUp className="h-4 w-4 text-pink-600" />
+                    <div className="text-sm">
+                      <div className="font-bold text-pink-600">Generate</div>
+                      <div className="text-xs text-muted-foreground">Reports</div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 gap-2">
+                <Link href="/coordinator/dashboard">
+                  <Button className="w-full justify-start bg-purple-600 hover:bg-purple-700">
+                    <Monitor className="h-4 w-4 mr-2" />
+                    Report Builder Dashboard
+                  </Button>
+                </Link>
+                <div className="grid grid-cols-2 gap-2">
+                  <Button 
+                    variant="outline" 
+                    className="w-full justify-start text-sm"
+                    disabled
+                    title="Report builder integrated into main dashboard"
+                  >
+                    <Target className="h-4 w-4 mr-2" />
+                    Create Report (Dashboard)
+                  </Button>
+                  <Button 
+                    variant="outline" 
+                    className="w-full justify-start text-sm"
+                    disabled
+                    title="Report templates integrated into main dashboard"
+                  >
+                    <Compass className="h-4 w-4 mr-2" />
+                    Templates (Dashboard)
+                  </Button>
+                </div>
+              </div>
+              <div className="text-xs text-muted-foreground">
+                Features report template selection, data source configuration, drag-and-drop report builder interface, visualization selection, report scheduling, and comprehensive backend API for report generation
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
         {/* User Profile with Gamification */}
         <Card className="border-teal-200 bg-gradient-to-br from-teal-50/50 to-cyan-50/50">
           <CardHeader>
