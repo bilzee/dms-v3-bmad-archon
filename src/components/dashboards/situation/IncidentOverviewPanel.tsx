@@ -247,13 +247,13 @@ export function IncidentOverviewPanel({
 
           {/* Population Impact Statistics */}
           <PopulationImpact
-            data={selectedIncident.populationImpact}
+            incidentId={currentIncidentId}
             className="px-1"
           />
 
           {/* Aggregate Metrics */}
           <AggregateMetrics
-            data={selectedIncident.aggregateMetrics}
+            incidentId={currentIncidentId}
             className="px-1"
           />
         </>

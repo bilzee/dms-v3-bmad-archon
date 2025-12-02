@@ -1,7 +1,9 @@
 'use client';
 
 import React from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { cn } from '@/lib/utils';
+import { apiGet } from '@/lib/api';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
@@ -15,25 +17,29 @@ import {
   Activity,
   CheckCircle,
   Clock,
-  BarChart3
+  BarChart3,
+  Loader2,
+  AlertCircle
 } from 'lucide-react';
 
 // Types for aggregate metrics data
 interface AggregateMetricsProps {
-  data: {
-    affectedEntitiesCount: number;
-    totalAssessmentsCount: number;
-    verifiedAssessmentsCount: number;
-    responsesCount: number;
-    deliveryRate: number;
-    coverageRate: number;
-    trends?: {
-      assessmentsChange: number;
-      responsesChange: number;
-      entitiesChange: number;
-    };
-  };
+  incidentId?: string;
   className?: string;
+}
+
+interface AggregateMetricsData {
+  affectedEntitiesCount: number;
+  totalAssessmentsCount: number;
+  verifiedAssessmentsCount: number;
+  responsesCount: number;
+  deliveryRate: number;
+  coverageRate: number;
+  trends?: {
+    assessmentsChange: number;
+    responsesChange: number;
+    entitiesChange: number;
+  };
 }
 
 interface MetricCard {
@@ -93,6 +99,44 @@ const getCoverageRateStatus = (rate: number) => {
   return { status: 'Low', color: 'text-red-600 bg-red-100' };
 };
 
+// Fetch aggregate metrics from dashboard API
+const fetchAggregateMetrics = async (incidentId?: string): Promise<AggregateMetricsData> => {
+  const params = new URLSearchParams({
+    ...(incidentId && { incidentId }),
+    includeEntityLocations: 'false',
+    includeDonorAssignments: 'false'
+  });
+
+  const response = await apiGet(`/api/v1/dashboard/situation?${params}`);
+  if (!response.success) {
+    throw new Error(response.error || 'Failed to fetch aggregate metrics');
+  }
+
+  const { data } = response;
+  
+  // Extract selected incident data or aggregate from all incidents
+  const selectedIncident = incidentId && data.selectedIncident?.aggregateMetrics
+    ? data.selectedIncident.aggregateMetrics
+    : {
+        affectedEntitiesCount: data.entities?.length || 0,
+        totalAssessmentsCount: data.entities?.length || 0,
+        verifiedAssessmentsCount: 0,
+        responsesCount: 0,
+        deliveryRate: 0,
+        coverageRate: 0
+      };
+
+  return {
+    affectedEntitiesCount: selectedIncident.affectedEntitiesCount || 0,
+    totalAssessmentsCount: selectedIncident.totalAssessmentsCount || 0,
+    verifiedAssessmentsCount: selectedIncident.verifiedAssessmentsCount || 0,
+    responsesCount: selectedIncident.responsesCount || 0,
+    deliveryRate: selectedIncident.deliveryRate || 0,
+    coverageRate: selectedIncident.coverageRate || 0,
+    trends: selectedIncident.trends
+  };
+};
+
 /**
  * AggregateMetrics Component
  * 
@@ -103,55 +147,128 @@ const getCoverageRateStatus = (rate: number) => {
  * - Coverage metrics and progress indicators
  * - Trend analysis with visual indicators
  */
-export function AggregateMetrics({ data, className }: AggregateMetricsProps) {
-  const deliveryStatus = getDeliveryRateStatus(data.deliveryRate);
-  const coverageStatus = getCoverageRateStatus(data.coverageRate);
-  const verificationRate = data.totalAssessmentsCount > 0 
-    ? data.verifiedAssessmentsCount / data.totalAssessmentsCount 
+export function AggregateMetrics({ incidentId, className }: AggregateMetricsProps) {
+  // Fetch aggregate metrics data
+  const {
+    data: metricsData,
+    isLoading,
+    error,
+    refetch
+  } = useQuery({
+    queryKey: ['aggregateMetrics', incidentId],
+    queryFn: () => fetchAggregateMetrics(incidentId),
+    staleTime: 5 * 60 * 1000, // 5 minutes
+    gcTime: 10 * 60 * 1000, // 10 minutes
+  });
+
+  // Handle loading state
+  if (isLoading) {
+    return (
+      <Card className={cn("h-fit", className)}>
+        <CardHeader className="pb-3">
+          <CardTitle className="text-lg font-semibold flex items-center gap-2">
+            <Loader2 className="h-5 w-5 animate-spin" />
+            Loading Metrics...
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="grid grid-cols-1 gap-3">
+            {[1, 2, 3].map((i) => (
+              <div key={i} className="p-3 rounded-lg border border-gray-200 bg-gray-50">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className="p-2 rounded-lg bg-gray-200 h-4 w-4 animate-pulse" />
+                    <div className="space-y-1">
+                      <div className="h-4 bg-gray-300 rounded w-24 animate-pulse" />
+                      <div className="h-3 bg-gray-300 rounded w-16 animate-pulse" />
+                    </div>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  // Handle error state
+  if (error || !metricsData) {
+    return (
+      <Card className={cn("h-fit", className)}>
+        <CardHeader className="pb-3">
+          <CardTitle className="text-lg font-semibold flex items-center gap-2">
+            <AlertCircle className="h-5 w-5 text-red-500" />
+            Metrics Error
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="text-center py-6 text-red-600">
+            <AlertCircle className="h-12 w-12 mx-auto mb-2 opacity-50" />
+            <p className="text-sm">Failed to load aggregate metrics</p>
+            <button
+              onClick={() => refetch()}
+              className="mt-2 px-4 py-2 bg-red-100 text-red-700 rounded hover:bg-red-200 text-sm"
+            >
+              Retry
+            </button>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  const deliveryStatus = getDeliveryRateStatus(metricsData.deliveryRate);
+  const coverageStatus = getCoverageRateStatus(metricsData.coverageRate);
+  const verificationRate = metricsData.totalAssessmentsCount > 0 
+    ? metricsData.verifiedAssessmentsCount / metricsData.totalAssessmentsCount 
     : 0;
+
+  // Alias for easier access in JSX
+  const data = metricsData;
 
   // Prepare metric cards data
   const metrics: MetricCard[] = [
     {
       title: 'Affected Entities',
-      value: data.affectedEntitiesCount,
+      value: metricsData.affectedEntitiesCount,
       subtitle: 'Locations impacted',
       icon: Building,
       color: 'text-blue-700',
       bgColor: 'bg-blue-50',
       borderColor: 'border-blue-200',
-      trend: data.trends?.entitiesChange ? {
-        value: data.trends.entitiesChange,
-        direction: data.trends.entitiesChange > 0 ? 'up' : 
-                   data.trends.entitiesChange < 0 ? 'down' : 'neutral'
+      trend: metricsData.trends?.entitiesChange ? {
+        value: metricsData.trends.entitiesChange,
+        direction: metricsData.trends.entitiesChange > 0 ? 'up' : 
+                   metricsData.trends.entitiesChange < 0 ? 'down' : 'neutral'
       } : undefined
     },
     {
       title: 'Total Assessments',
-      value: data.totalAssessmentsCount,
-      subtitle: `${data.verifiedAssessmentsCount} verified`,
+      value: metricsData.totalAssessmentsCount,
+      subtitle: `${metricsData.verifiedAssessmentsCount} verified`,
       icon: FileCheck,
       color: 'text-purple-700',
       bgColor: 'bg-purple-50',
       borderColor: 'border-purple-200',
-      trend: data.trends?.assessmentsChange ? {
-        value: data.trends.assessmentsChange,
-        direction: data.trends.assessmentsChange > 0 ? 'up' : 
-                   data.trends.assessmentsChange < 0 ? 'down' : 'neutral'
+      trend: metricsData.trends?.assessmentsChange ? {
+        value: metricsData.trends.assessmentsChange,
+        direction: metricsData.trends.assessmentsChange > 0 ? 'up' : 
+                   metricsData.trends.assessmentsChange < 0 ? 'down' : 'neutral'
       } : undefined
     },
     {
       title: 'Responses',
-      value: data.responsesCount,
+      value: metricsData.responsesCount,
       subtitle: 'Resources delivered',
       icon: Truck,
       color: 'text-green-700',
       bgColor: 'bg-green-50',
       borderColor: 'border-green-200',
-      trend: data.trends?.responsesChange ? {
-        value: data.trends.responsesChange,
-        direction: data.trends.responsesChange > 0 ? 'up' : 
-                   data.trends.responsesChange < 0 ? 'down' : 'neutral'
+      trend: metricsData.trends?.responsesChange ? {
+        value: metricsData.trends.responsesChange,
+        direction: metricsData.trends.responsesChange > 0 ? 'up' : 
+                   metricsData.trends.responsesChange < 0 ? 'down' : 'neutral'
       } : undefined
     }
   ];
@@ -238,7 +355,7 @@ export function AggregateMetrics({ data, className }: AggregateMetricsProps) {
               <div className="text-center p-2 bg-yellow-50 rounded border border-yellow-200">
                 <Clock className="h-4 w-4 mx-auto mb-1 text-yellow-600" />
                 <div className="text-lg font-bold text-yellow-700">
-                  {data.totalAssessmentsCount - data.verifiedAssessmentsCount}
+                  {metricsData.totalAssessmentsCount - metricsData.verifiedAssessmentsCount}
                 </div>
                 <div className="text-xs text-yellow-600">Pending</div>
               </div>
@@ -256,12 +373,12 @@ export function AggregateMetrics({ data, className }: AggregateMetricsProps) {
             </Badge>
           </div>
           <Progress 
-            value={data.deliveryRate * 100} 
+            value={metricsData.deliveryRate * 100} 
             className="h-2"
           />
           <div className="flex justify-between text-xs text-gray-500">
-            <span>{formatPercentage(data.deliveryRate)} delivered</span>
-            <span>{data.responsesCount} of {data.totalAssessmentsCount} assessments</span>
+            <span>{formatPercentage(metricsData.deliveryRate)} delivered</span>
+            <span>{metricsData.responsesCount} of {metricsData.totalAssessmentsCount} assessments</span>
           </div>
         </div>
 
@@ -275,12 +392,12 @@ export function AggregateMetrics({ data, className }: AggregateMetricsProps) {
             </Badge>
           </div>
           <Progress 
-            value={Math.min(data.coverageRate * 100, 100)} 
+            value={Math.min(metricsData.coverageRate * 100, 100)} 
             className="h-2"
           />
           <div className="flex justify-between text-xs text-gray-500">
-            <span>{formatPercentage(Math.min(data.coverageRate, 1))} coverage</span>
-            <span>{Math.min(data.affectedEntitiesCount, data.totalAssessmentsCount)} of {data.affectedEntitiesCount} entities</span>
+            <span>{formatPercentage(Math.min(metricsData.coverageRate, 1))} coverage</span>
+            <span>{Math.min(metricsData.affectedEntitiesCount, metricsData.totalAssessmentsCount)} of {metricsData.affectedEntitiesCount} entities</span>
           </div>
         </div>
 
