@@ -3,6 +3,18 @@ import { withAuth } from '@/lib/auth/middleware';
 import { db } from '@/lib/db/client';
 import { z } from 'zod';
 import type { Json, EntityType, DateTime } from '@prisma/client';
+import {
+  analyzeHealthGaps,
+  analyzeFoodGaps,
+  analyzeWASHGaps,
+  analyzeShelterGaps,
+  analyzeSecurityGaps,
+  type HealthGapAnalysis,
+  type FoodGapAnalysis,
+  type WASHGapAnalysis,
+  type ShelterGapAnalysis,
+  type SecurityGapAnalysis
+} from '@/lib/services/gap-analysis.service';
 
 // Rate limiting implementation
 class RateLimiter {
@@ -258,41 +270,7 @@ interface EntityLocationsResponse {
   totalCount: number;
 }
 
-// Gap analysis interfaces
-interface HealthGapAnalysis {
-  hasGap: boolean;
-  gapFields: string[];
-  severity: 'CRITICAL' | 'HIGH' | 'MEDIUM' | 'LOW';
-  recommendations?: string[];
-}
-
-interface FoodGapAnalysis {
-  hasGap: boolean;
-  gapFields: string[];
-  severity: 'CRITICAL' | 'HIGH' | 'MEDIUM' | 'LOW';
-  recommendations?: string[];
-}
-
-interface WASHGapAnalysis {
-  hasGap: boolean;
-  gapFields: string[];
-  severity: 'CRITICAL' | 'HIGH' | 'MEDIUM' | 'LOW';
-  recommendations?: string[];
-}
-
-interface ShelterGapAnalysis {
-  hasGap: boolean;
-  gapFields: string[];
-  severity: 'CRITICAL' | 'HIGH' | 'MEDIUM' | 'LOW';
-  recommendations?: string[];
-}
-
-interface SecurityGapAnalysis {
-  hasGap: boolean;
-  gapFields: string[];
-  severity: 'CRITICAL' | 'HIGH' | 'MEDIUM' | 'LOW';
-  recommendations?: string[];
-}
+// Gap analysis interfaces are now imported from gap-analysis.service
 
 interface AggregatedHealthAssessment {
   totalEntities: number;
@@ -460,22 +438,58 @@ async function getPopulationImpact(incidentId: string): Promise<PopulationImpact
     throw new Error('Invalid incident ID format');
   }
 
-  // Use Prisma query to get population data
-  const populationData = await db.populationAssessment.findMany({
+  // First, get all entities that have population assessments for this incident
+  const entitiesWithPopulationAssessments = await db.entity.findMany({
     where: {
-      rapidAssessment: {
-        incidentId: incidentId,
-        verificationStatus: { in: ['VERIFIED', 'AUTO_VERIFIED'] },
-      },
-    },
-    include: {
-      rapidAssessment: {
-        select: {
-          id: true,
+      rapidAssessments: {
+        some: {
+          incidentId: incidentId,
+          verificationStatus: { in: ['VERIFIED', 'AUTO_VERIFIED'] },
+          populationAssessment: {
+            isNot: null
+          }
         },
       },
+      isActive: true,
+    },
+    select: {
+      id: true,
     },
   });
+
+  // Then fetch only the latest population assessment for each entity
+  const latestPopulationAssessments = await Promise.all(
+    entitiesWithPopulationAssessments.map(async (entity) => {
+      return db.populationAssessment.findFirst({
+        where: {
+          rapidAssessment: {
+            entityId: entity.id,
+            incidentId: incidentId,
+            verificationStatus: { in: ['VERIFIED', 'AUTO_VERIFIED'] },
+          },
+        },
+        include: {
+          rapidAssessment: {
+            select: {
+              id: true,
+              entityId: true,
+            },
+          },
+        },
+        orderBy: {
+          rapidAssessment: {
+            rapidAssessmentDate: 'desc',
+          },
+        },
+      });
+    })
+  );
+
+  // Filter out null results and ensure we have unique assessments per entity
+  const populationData = latestPopulationAssessments.filter(
+    (assessment): assessment is NonNullable<typeof assessment> => 
+      assessment !== null
+  );
 
   const populationAggregation = populationData.reduce(
     (acc, assessment) => ({
@@ -833,7 +847,7 @@ async function getLatestHealthAssessment(entityId: string): Promise<(HealthAsses
     assessorName: assessment.rapidAssessment.assessorName || assessment.rapidAssessment.assessor?.name || 'Unknown',
   };
 
-  const gapAnalysis = analyzeHealthGaps(data);
+  const gapAnalysis = await analyzeHealthGaps(data);
 
   return {
     ...data,
@@ -888,7 +902,7 @@ async function getLatestFoodAssessment(entityId: string): Promise<(FoodAssessmen
     assessorName: assessment.rapidAssessment.assessorName || assessment.rapidAssessment.assessor?.name || 'Unknown',
   };
 
-  const gapAnalysis = analyzeFoodGaps(data);
+  const gapAnalysis = await analyzeFoodGaps(data);
 
   return {
     ...data,
@@ -943,7 +957,7 @@ async function getLatestWASHAssessment(entityId: string): Promise<(WASHAssessmen
     assessorName: assessment.rapidAssessment.assessorName || assessment.rapidAssessment.assessor?.name || 'Unknown',
   };
 
-  const gapAnalysis = analyzeWASHGaps(data);
+  const gapAnalysis = await analyzeWASHGaps(data);
 
   return {
     ...data,
@@ -998,7 +1012,7 @@ async function getLatestShelterAssessment(entityId: string): Promise<(ShelterAss
     assessorName: assessment.rapidAssessment.assessorName || assessment.rapidAssessment.assessor?.name || 'Unknown',
   };
 
-  const gapAnalysis = analyzeShelterGaps(data);
+  const gapAnalysis = await analyzeShelterGaps(data);
 
   return {
     ...data,
@@ -1052,7 +1066,7 @@ async function getLatestSecurityAssessment(entityId: string): Promise<(SecurityA
     assessorName: assessment.rapidAssessment.assessorName || assessment.rapidAssessment.assessor?.name || 'Unknown',
   };
 
-  const gapAnalysis = analyzeSecurityGaps(data);
+  const gapAnalysis = await analyzeSecurityGaps(data);
 
   return {
     ...data,
@@ -1092,194 +1106,38 @@ async function getLatestPopulationAssessment(entityId: string): Promise<Populati
 
   if (!assessment) return null;
 
-  const data = {
-    hasFunctionalClinic: assessment.hasFunctionalClinic,
-    hasEmergencyServices: assessment.hasEmergencyServices,
-    numberHealthFacilities: assessment.numberHealthFacilities,
-    healthFacilityType: assessment.healthFacilityType,
-    qualifiedHealthWorkers: assessment.qualifiedHealthWorkers,
-    hasTrainedStaff: assessment.hasTrainedStaff,
-    hasMedicineSupply: assessment.hasMedicineSupply,
-    hasMedicalSupplies: assessment.hasMedicalSupplies,
-    hasMaternalChildServices: assessment.hasMaternalChildServices,
-    commonHealthIssues: assessment.commonHealthIssues,
-    additionalHealthDetails: assessment.additionalHealthDetails,
+  return {
+    rapidAssessmentId: assessment.rapidAssessmentId,
+    totalHouseholds: assessment.totalHouseholds,
+    totalPopulation: assessment.totalPopulation,
+    populationMale: assessment.populationMale,
+    populationFemale: assessment.populationFemale,
+    populationUnder5: assessment.populationUnder5,
+    pregnantWomen: assessment.pregnantWomen,
+    lactatingMothers: assessment.lactatingMothers,
+    personWithDisability: assessment.personWithDisability,
+    elderlyPersons: assessment.elderlyPersons,
+    separatedChildren: assessment.separatedChildren,
+    numberLivesLost: assessment.numberLivesLost,
+    numberInjured: assessment.numberInjured,
+    additionalPopulationDetails: assessment.additionalPopulationDetails,
     rapidAssessmentDate: assessment.rapidAssessment.rapidAssessmentDate,
     verificationStatus: assessment.rapidAssessment.verificationStatus,
     assessorName: assessment.rapidAssessment.assessorName || assessment.rapidAssessment.assessor?.name || 'Unknown',
   };
-
-  const gapAnalysis = analyzeHealthGaps(data);
-  return {
-    ...data,
-    gapAnalysis
-  };
 }
 
-// Gap analysis functions
-function analyzeHealthGaps(data: any): HealthGapAnalysis {
-  const gapFields: string[] = [];
-  let hasGap = false;
-  let severity: 'CRITICAL' | 'HIGH' | 'MEDIUM' | 'LOW' = 'LOW';
 
-  // Gap-Indicating fields
-  if (!data.hasFunctionalClinic) { gapFields.push('hasFunctionalClinic'); hasGap = true; }
-  if (!data.hasEmergencyServices) { gapFields.push('hasEmergencyServices'); hasGap = true; }
-  if (!data.hasTrainedStaff) { gapFields.push('hasTrainedStaff'); hasGap = true; }
-  if (!data.hasMedicineSupply) { gapFields.push('hasMedicineSupply'); hasGap = true; }
-  if (!data.hasMedicalSupplies) { gapFields.push('hasMedicalSupplies'); hasGap = true; }
-  if (!data.hasMaternalChildServices) { gapFields.push('hasMaternalChildServices'); hasGap = true; }
-
-  // Determine severity based on number of gaps
-  if (gapFields.length >= 4) severity = 'CRITICAL';
-  else if (gapFields.length >= 3) severity = 'HIGH';
-  else if (gapFields.length >= 1) severity = 'MEDIUM';
-
-  const recommendations = generateHealthRecommendations(gapFields);
-
-  return { hasGap, gapFields, severity, recommendations };
-}
-
-function analyzeFoodGaps(data: any): FoodGapAnalysis {
-  const gapFields: string[] = [];
-  let hasGap = false;
-  let severity: 'CRITICAL' | 'HIGH' | 'MEDIUM' | 'LOW' = 'LOW';
-
-  if (!data.isFoodSufficient) { gapFields.push('isFoodSufficient'); hasGap = true; }
-  if (!data.hasRegularMealAccess) { gapFields.push('hasRegularMealAccess'); hasGap = true; }
-  if (!data.hasInfantNutrition) { gapFields.push('hasInfantNutrition'); hasGap = true; }
-
-  if (gapFields.length >= 3) severity = 'CRITICAL';
-  else if (gapFields.length >= 2) severity = 'HIGH';
-  else if (gapFields.length >= 1) severity = 'MEDIUM';
-
-  const recommendations = generateFoodRecommendations(gapFields);
-
-  return { hasGap, gapFields, severity, recommendations };
-}
-
-function analyzeWASHGaps(data: any): WASHGapAnalysis {
-  const gapFields: string[] = [];
-  let hasGap = false;
-  let severity: 'CRITICAL' | 'HIGH' | 'MEDIUM' | 'LOW' = 'LOW';
-
-  if (!data.isWaterSufficient) { gapFields.push('isWaterSufficient'); hasGap = true; }
-  if (!data.hasCleanWaterAccess) { gapFields.push('hasCleanWaterAccess'); hasGap = true; }
-  if (!data.areLatrinesSufficient) { gapFields.push('areLatrinesSufficient'); hasGap = true; }
-  if (!data.hasHandwashingFacilities) { gapFields.push('hasHandwashingFacilities'); hasGap = true; }
-  if (data.hasOpenDefecationConcerns) { gapFields.push('hasOpenDefecationConcerns'); hasGap = true; }
-
-  if (gapFields.length >= 4) severity = 'CRITICAL';
-  else if (gapFields.length >= 3) severity = 'HIGH';
-  else if (gapFields.length >= 1) severity = 'MEDIUM';
-
-  const recommendations = generateWASHRecommendations(gapFields);
-
-  return { hasGap, gapFields, severity, recommendations };
-}
-
-function analyzeShelterGaps(data: any): ShelterGapAnalysis {
-  const gapFields: string[] = [];
-  let hasGap = false;
-  let severity: 'CRITICAL' | 'HIGH' | 'MEDIUM' | 'LOW' = 'LOW';
-
-  if (!data.areSheltersSufficient) { gapFields.push('areSheltersSufficient'); hasGap = true; }
-  if (!data.hasSafeStructures) { gapFields.push('hasSafeStructures'); hasGap = true; }
-  if (data.areOvercrowded) { gapFields.push('areOvercrowded'); hasGap = true; }
-  if (!data.provideWeatherProtection) { gapFields.push('provideWeatherProtection'); hasGap = true; }
-
-  if (gapFields.length >= 3) severity = 'CRITICAL';
-  else if (gapFields.length >= 2) severity = 'HIGH';
-  else if (gapFields.length >= 1) severity = 'MEDIUM';
-
-  const recommendations = generateShelterRecommendations(gapFields);
-
-  return { hasGap, gapFields, severity, recommendations };
-}
-
-function analyzeSecurityGaps(data: any): SecurityGapAnalysis {
-  const gapFields: string[] = [];
-  let hasGap = false;
-  let severity: 'CRITICAL' | 'HIGH' | 'MEDIUM' | 'LOW' = 'LOW';
-
-  if (!data.isSafeFromViolence) { gapFields.push('isSafeFromViolence'); hasGap = true; }
-  if (data.gbvCasesReported) { gapFields.push('gbvCasesReported'); hasGap = true; }
-  if (!data.hasSecurityPresence) { gapFields.push('hasSecurityPresence'); hasGap = true; }
-  if (!data.hasProtectionReportingMechanism) { gapFields.push('hasProtectionReportingMechanism'); hasGap = true; }
-  if (!data.vulnerableGroupsHaveAccess) { gapFields.push('vulnerableGroupsHaveAccess'); hasGap = true; }
-  if (!data.hasLighting) { gapFields.push('hasLighting'); hasGap = true; }
-
-  if (gapFields.length >= 4) severity = 'CRITICAL';
-  else if (gapFields.length >= 2) severity = 'HIGH';
-  else if (gapFields.length >= 1) severity = 'MEDIUM';
-
-  const recommendations = generateSecurityRecommendations(gapFields);
-
-  return { hasGap, gapFields, severity, recommendations };
-}
-
-// Recommendation generators
-function generateHealthRecommendations(gapFields: string[]): string[] {
-  const recommendations: string[] = [];
-  if (gapFields.includes('hasFunctionalClinic')) {
-    recommendations.push('Establish temporary medical clinic or mobile health unit');
-  }
-  if (gapFields.includes('hasEmergencyServices')) {
-    recommendations.push('Deploy emergency medical response team');
-  }
-  if (gapFields.includes('hasMedicineSupply')) {
-    recommendations.push('Arrange emergency medical supply delivery');
-  }
-  return recommendations;
-}
-
-function generateFoodRecommendations(gapFields: string[]): string[] {
-  const recommendations: string[] = [];
-  if (gapFields.includes('isFoodSufficient')) {
-    recommendations.push('Request emergency food aid distribution');
-  }
-  if (gapFields.includes('hasInfantNutrition')) {
-    recommendations.push('Provide specialized infant nutrition supplies');
-  }
-  return recommendations;
-}
-
-function generateWASHRecommendations(gapFields: string[]): string[] {
-  const recommendations: string[] = [];
-  if (gapFields.includes('isWaterSufficient')) {
-    recommendations.push('Deploy water trucks or water purification systems');
-  }
-  if (gapFields.includes('areLatrinesSufficient')) {
-    recommendations.push('Construct emergency sanitation facilities');
-  }
-  return recommendations;
-}
-
-function generateShelterRecommendations(gapFields: string[]): string[] {
-  const recommendations: string[] = [];
-  if (gapFields.includes('areSheltersSufficient')) {
-    recommendations.push('Deploy emergency shelter kits or temporary housing');
-  }
-  if (gapFields.includes('hasSafeStructures')) {
-    recommendations.push('Identify and secure safe building structures');
-  }
-  return recommendations;
-}
-
-function generateSecurityRecommendations(gapFields: string[]): string[] {
-  const recommendations: string[] = [];
-  if (gapFields.includes('hasSecurityPresence')) {
-    recommendations.push('Deploy security personnel to maintain order');
-  }
-  if (gapFields.includes('isSafeFromViolence')) {
-    recommendations.push('Establish safe zones and protection measures');
-  }
-  return recommendations;
-}
 
 // Aggregation functions (simplified for this implementation)
 function aggregateHealthAssessments(entityAssessments: EntityAssessment[]): any {
   const healthAssessments = entityAssessments.map(e => e.latestAssessments.health).filter(Boolean);
+  
+  // Return null if no health assessments exist
+  if (healthAssessments.length === 0) {
+    return null;
+  }
+  
   return {
     totalEntities: healthAssessments.length,
     entitiesWithGaps: healthAssessments.filter(a => a.gapAnalysis.hasGap).length,
@@ -1291,6 +1149,12 @@ function aggregateHealthAssessments(entityAssessments: EntityAssessment[]): any 
 
 function aggregateFoodAssessments(entityAssessments: EntityAssessment[]): any {
   const foodAssessments = entityAssessments.map(e => e.latestAssessments.food).filter(Boolean);
+  
+  // Return null if no food assessments exist
+  if (foodAssessments.length === 0) {
+    return null;
+  }
+  
   return {
     totalEntities: foodAssessments.length,
     entitiesWithGaps: foodAssessments.filter(a => a.gapAnalysis.hasGap).length,
@@ -1302,6 +1166,12 @@ function aggregateFoodAssessments(entityAssessments: EntityAssessment[]): any {
 
 function aggregateWASHAssessments(entityAssessments: EntityAssessment[]): any {
   const washAssessments = entityAssessments.map(e => e.latestAssessments.wash).filter(Boolean);
+  
+  // Return null if no WASH assessments exist
+  if (washAssessments.length === 0) {
+    return null;
+  }
+  
   return {
     totalEntities: washAssessments.length,
     entitiesWithGaps: washAssessments.filter(a => a.gapAnalysis.hasGap).length,
@@ -1312,6 +1182,12 @@ function aggregateWASHAssessments(entityAssessments: EntityAssessment[]): any {
 
 function aggregateShelterAssessments(entityAssessments: EntityAssessment[]): any {
   const shelterAssessments = entityAssessments.map(e => e.latestAssessments.shelter).filter(Boolean);
+  
+  // Return null if no shelter assessments exist
+  if (shelterAssessments.length === 0) {
+    return null;
+  }
+  
   return {
     totalEntities: shelterAssessments.length,
     entitiesWithGaps: shelterAssessments.filter(a => a.gapAnalysis.hasGap).length,
@@ -1322,6 +1198,12 @@ function aggregateShelterAssessments(entityAssessments: EntityAssessment[]): any
 
 function aggregateSecurityAssessments(entityAssessments: EntityAssessment[]): any {
   const securityAssessments = entityAssessments.map(e => e.latestAssessments.security).filter(Boolean);
+  
+  // Return null if no security assessments exist
+  if (securityAssessments.length === 0) {
+    return null;
+  }
+  
   return {
     totalEntities: securityAssessments.length,
     entitiesWithGaps: securityAssessments.filter(a => a.gapAnalysis.hasGap).length,
@@ -1401,14 +1283,14 @@ async function getGapAnalysisSummary(incidentId: string): Promise<GapAnalysisSum
   };
 
   // Analyze each entity's assessments
-  entities.forEach(entity => {
+  for (const entity of entities) {
     let entitySeverity: 'high' | 'medium' | 'low' = 'low';
     
-    entity.rapidAssessments.forEach(assessment => {
+    for (const assessment of entity.rapidAssessments) {
       // Check each assessment type for gaps
       if (assessment.healthAssessment) {
         assessmentTypeCounts.HEALTH.totalEntities++;
-        const healthGaps = analyzeHealthGaps(assessment.healthAssessment);
+        const healthGaps = await analyzeHealthGaps(assessment.healthAssessment);
         if (healthGaps.hasGap) {
           assessmentTypeCounts.HEALTH.entitiesWithGaps++;
           if (healthGaps.severity === 'CRITICAL' || healthGaps.severity === 'HIGH') {
@@ -1421,7 +1303,7 @@ async function getGapAnalysisSummary(incidentId: string): Promise<GapAnalysisSum
 
       if (assessment.foodAssessment) {
         assessmentTypeCounts.FOOD.totalEntities++;
-        const foodGaps = analyzeFoodGaps(assessment.foodAssessment);
+        const foodGaps = await analyzeFoodGaps(assessment.foodAssessment);
         if (foodGaps.hasGap) {
           assessmentTypeCounts.FOOD.entitiesWithGaps++;
           if (foodGaps.severity === 'CRITICAL' || foodGaps.severity === 'HIGH') {
@@ -1434,7 +1316,7 @@ async function getGapAnalysisSummary(incidentId: string): Promise<GapAnalysisSum
 
       if (assessment.washAssessment) {
         assessmentTypeCounts.WASH.totalEntities++;
-        const washGaps = analyzeWASHGaps(assessment.washAssessment);
+        const washGaps = await analyzeWASHGaps(assessment.washAssessment);
         if (washGaps.hasGap) {
           assessmentTypeCounts.WASH.entitiesWithGaps++;
           if (washGaps.severity === 'CRITICAL' || washGaps.severity === 'HIGH') {
@@ -1447,7 +1329,7 @@ async function getGapAnalysisSummary(incidentId: string): Promise<GapAnalysisSum
 
       if (assessment.shelterAssessment) {
         assessmentTypeCounts.SHELTER.totalEntities++;
-        const shelterGaps = analyzeShelterGaps(assessment.shelterAssessment);
+        const shelterGaps = await analyzeShelterGaps(assessment.shelterAssessment);
         if (shelterGaps.hasGap) {
           assessmentTypeCounts.SHELTER.entitiesWithGaps++;
           if (shelterGaps.severity === 'CRITICAL' || shelterGaps.severity === 'HIGH') {
@@ -1460,7 +1342,7 @@ async function getGapAnalysisSummary(incidentId: string): Promise<GapAnalysisSum
 
       if (assessment.securityAssessment) {
         assessmentTypeCounts.SECURITY.totalEntities++;
-        const securityGaps = analyzeSecurityGaps(assessment.securityAssessment);
+        const securityGaps = await analyzeSecurityGaps(assessment.securityAssessment);
         if (securityGaps.hasGap) {
           assessmentTypeCounts.SECURITY.entitiesWithGaps++;
           if (securityGaps.severity === 'CRITICAL' || securityGaps.severity === 'HIGH') {
@@ -1470,11 +1352,11 @@ async function getGapAnalysisSummary(incidentId: string): Promise<GapAnalysisSum
           }
         }
       }
-    });
+    }
 
     // Update severity distribution
     severityDistribution[entitySeverity]++;
-  });
+  }
 
   // Calculate percentages for assessment types
   for (const key in assessmentTypeGaps) {
@@ -1940,88 +1822,170 @@ export const GET = withAuth(async (request: NextRequest, context) => {
         return [];
       }
 
+      // Get entities that have assessments for this incident
       const entitiesQuery = await db.entity.findMany({
         where: {
           rapidAssessments: {
             some: {
               incidentId: queryParams.incidentId,
+              verificationStatus: { in: ['VERIFIED', 'AUTO_VERIFIED'] },
             },
           },
           isActive: true,
         },
-        include: {
-          rapidAssessments: {
-            where: {
-              incidentId: queryParams.incidentId,
-              verificationStatus: { in: ['VERIFIED', 'AUTO_VERIFIED'] },
-            },
-            orderBy: {
-              rapidAssessmentDate: 'desc',
-            },
-            take: 1,
-            include: {
-              assessor: {
-                select: {
-                  name: true,
-                },
-              },
-            },
-          },
+        select: {
+          id: true,
+          name: true,
+          type: true,
+          location: true,
+          coordinates: true,
         },
+        orderBy: { name: 'asc' },
         take: queryParams.limit,
       });
 
-      return entitiesQuery.flatMap(entity => 
-        entity.rapidAssessments.map(assessment => ({
+      return entitiesQuery;
+    })();
+
+    // Transform entities data - fetch latest assessments for each entity
+    const entities = [];
+    for (const entity of rawEntities) {
+      try {
+        // Fetch latest assessments using the proper functions
+        const [
+          healthAssessment,
+          foodAssessment,
+          washAssessment,
+          shelterAssessment,
+          securityAssessment,
+          populationAssessment
+        ] = await Promise.all([
+          getLatestHealthAssessment(entity.id),
+          getLatestFoodAssessment(entity.id),
+          getLatestWASHAssessment(entity.id),
+          getLatestShelterAssessment(entity.id),
+          getLatestSecurityAssessment(entity.id),
+          getLatestPopulationAssessment(entity.id)
+        ]);
+
+        // Build latest assessments object with only existing assessments
+        const latestAssessments: any = {};
+        let lastUpdated = new Date();
+
+        if (healthAssessment) {
+          latestAssessments.HEALTH = {
+            id: healthAssessment.rapidAssessmentId,
+            date: healthAssessment.rapidAssessmentDate,
+            status: 'VERIFIED',
+            verified: healthAssessment.verificationStatus === 'VERIFIED' || healthAssessment.verificationStatus === 'AUTO_VERIFIED',
+            assessorName: healthAssessment.assessorName,
+            gapIndicators: {
+              hasGap: healthAssessment.gapAnalysis.hasGap,
+              severity: healthAssessment.gapAnalysis.severity,
+            }
+          };
+          lastUpdated = new Date(healthAssessment.rapidAssessmentDate) > lastUpdated ? new Date(healthAssessment.rapidAssessmentDate) : lastUpdated;
+        }
+
+        if (foodAssessment) {
+          latestAssessments.FOOD = {
+            id: foodAssessment.rapidAssessmentId,
+            date: foodAssessment.rapidAssessmentDate,
+            status: 'VERIFIED',
+            verified: foodAssessment.verificationStatus === 'VERIFIED' || foodAssessment.verificationStatus === 'AUTO_VERIFIED',
+            assessorName: foodAssessment.assessorName,
+            gapIndicators: {
+              hasGap: foodAssessment.gapAnalysis.hasGap,
+              severity: foodAssessment.gapAnalysis.severity,
+            }
+          };
+          lastUpdated = new Date(foodAssessment.rapidAssessmentDate) > lastUpdated ? new Date(foodAssessment.rapidAssessmentDate) : lastUpdated;
+        }
+
+        if (washAssessment) {
+          latestAssessments.WASH = {
+            id: washAssessment.rapidAssessmentId,
+            date: washAssessment.rapidAssessmentDate,
+            status: 'VERIFIED',
+            verified: washAssessment.verificationStatus === 'VERIFIED' || washAssessment.verificationStatus === 'AUTO_VERIFIED',
+            assessorName: washAssessment.assessorName,
+            gapIndicators: {
+              hasGap: washAssessment.gapAnalysis.hasGap,
+              severity: washAssessment.gapAnalysis.severity,
+            }
+          };
+          lastUpdated = new Date(washAssessment.rapidAssessmentDate) > lastUpdated ? new Date(washAssessment.rapidAssessmentDate) : lastUpdated;
+        }
+
+        if (shelterAssessment) {
+          latestAssessments.SHELTER = {
+            id: shelterAssessment.rapidAssessmentId,
+            date: shelterAssessment.rapidAssessmentDate,
+            status: 'VERIFIED',
+            verified: shelterAssessment.verificationStatus === 'VERIFIED' || shelterAssessment.verificationStatus === 'AUTO_VERIFIED',
+            assessorName: shelterAssessment.assessorName,
+            gapIndicators: {
+              hasGap: shelterAssessment.gapAnalysis.hasGap,
+              severity: shelterAssessment.gapAnalysis.severity,
+            }
+          };
+          lastUpdated = new Date(shelterAssessment.rapidAssessmentDate) > lastUpdated ? new Date(shelterAssessment.rapidAssessmentDate) : lastUpdated;
+        }
+
+        if (securityAssessment) {
+          latestAssessments.SECURITY = {
+            id: securityAssessment.rapidAssessmentId,
+            date: securityAssessment.rapidAssessmentDate,
+            status: 'VERIFIED',
+            verified: securityAssessment.verificationStatus === 'VERIFIED' || securityAssessment.verificationStatus === 'AUTO_VERIFIED',
+            assessorName: securityAssessment.assessorName,
+            gapIndicators: {
+              hasGap: securityAssessment.gapAnalysis.hasGap,
+              severity: securityAssessment.gapAnalysis.severity,
+            }
+          };
+          lastUpdated = new Date(securityAssessment.rapidAssessmentDate) > lastUpdated ? new Date(securityAssessment.rapidAssessmentDate) : lastUpdated;
+        }
+
+        if (populationAssessment) {
+          latestAssessments.POPULATION = {
+            id: populationAssessment.rapidAssessmentId,
+            date: populationAssessment.rapidAssessmentDate,
+            status: 'VERIFIED',
+            verified: populationAssessment.verificationStatus === 'VERIFIED' || populationAssessment.verificationStatus === 'AUTO_VERIFIED',
+            assessorName: populationAssessment.assessorName,
+            gapIndicators: {
+              hasGap: false, // Population assessments don't have gap analysis
+              severity: 'LOW',
+            }
+          };
+          lastUpdated = new Date(populationAssessment.rapidAssessmentDate) > lastUpdated ? new Date(populationAssessment.rapidAssessmentDate) : lastUpdated;
+        }
+
+        entities.push({
           entityId: entity.id,
           entityName: entity.name,
           entityType: entity.type,
           location: entity.location,
           coordinates: entity.coordinates,
-          rapidAssessmentType: assessment.rapidAssessmentType,
-          id: assessment.id,
-          date: assessment.rapidAssessmentDate,
-          status: assessment.status,
-          verified: assessment.verificationStatus === 'VERIFIED' || assessment.verificationStatus === 'AUTO_VERIFIED',
-          assessorName: assessment.assessorName || assessment.assessor?.name || 'Unknown',
-          severity: 'MEDIUM',
-        }))
-      );
-    })();
+          latestAssessments,
+          lastUpdated
+        });
 
-    // Transform entities data
-    const entitiesMap = new Map<string, any>();
-    rawEntities.forEach(entity => {
-      if (!entitiesMap.has(entity.entityId)) {
-        entitiesMap.set(entity.entityId, {
-          entityId: entity.entityId,
-          entityName: entity.entityName,
-          entityType: entity.entityType,
+      } catch (error) {
+        console.error(`Error fetching assessments for entity ${entity.id}:`, error);
+        // Add entity with empty assessments if there's an error
+        entities.push({
+          entityId: entity.id,
+          entityName: entity.name,
+          entityType: entity.type,
           location: entity.location,
           coordinates: entity.coordinates,
           latestAssessments: {},
-          lastUpdated: entity.date || new Date()
+          lastUpdated: new Date()
         });
       }
-
-      const existing = entitiesMap.get(entity.entityId);
-      if (entity.rapidAssessmentType && entity.id) {
-        existing.latestAssessments[entity.rapidAssessmentType] = {
-          id: entity.id,
-          date: entity.date,
-          status: entity.status,
-          verified: entity.verified,
-          assessorName: entity.assessorName,
-          gapIndicators: computeGapIndicators(entity.rapidAssessmentType)
-        };
-
-        if (entity.date && entity.date > existing.lastUpdated) {
-          existing.lastUpdated = entity.date;
-        }
-      }
-    });
-
-    const entities = Array.from(entitiesMap.values());
+    }
 
     // Compute gap analysis
     const gaps = entities.map(entity => {
@@ -2222,19 +2186,7 @@ export const GET = withAuth(async (request: NextRequest, context) => {
   }
 });
 
-// Helper functions
-function computeGapIndicators(assessmentType: string) {
-  // Placeholder gap indicator computation
-  // This would be enhanced with actual business logic in future stories
-  return {
-    hasGap: Math.random() > 0.7, // 30% chance of gap
-    indicators: Array(5).fill(false).map(() => Math.random() > 0.6),
-    severity: Math.random() > 0.8 ? 'CRITICAL' : 
-             Math.random() > 0.6 ? 'HIGH' :
-             Math.random() > 0.4 ? 'MEDIUM' : 'LOW'
-  };
-}
-
+// Helper function
 function getGapIndicatorsByType(assessmentType: string) {
   // Placeholder gap indicators by assessment type
   const indicators = {
