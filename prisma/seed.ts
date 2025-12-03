@@ -901,6 +901,68 @@ async function main() {
   console.log('📋 Created 5 sample assessments for verification workflow testing')
   console.log('💰 Created 4 sample donor commitments for testing Story 4.3')
   console.log('🏢 Created donor organization for testing Story 5.1')
+
+  // Create Gap Field Severities - all start as MEDIUM
+  console.log('🎯 Creating gap field severities...')
+  
+  const gapFieldSeverities = [
+    // Health Assessment Fields
+    { fieldName: 'hasFunctionalClinic', assessmentType: 'HEALTH', displayName: 'Functional Clinic', description: 'Availability of functional medical clinic' },
+    { fieldName: 'hasEmergencyServices', assessmentType: 'HEALTH', displayName: 'Emergency Services', description: 'Emergency medical response capability' },
+    { fieldName: 'hasTrainedStaff', assessmentType: 'HEALTH', displayName: 'Trained Medical Staff', description: 'Availability of trained medical personnel' },
+    { fieldName: 'hasMedicineSupply', assessmentType: 'HEALTH', displayName: 'Medicine Supply', description: 'Adequate supply of essential medicines' },
+    { fieldName: 'hasMedicalSupplies', assessmentType: 'HEALTH', displayName: 'Medical Supplies', description: 'Availability of medical equipment and supplies' },
+    { fieldName: 'hasMaternalChildServices', assessmentType: 'HEALTH', displayName: 'Maternal & Child Services', description: 'Specialized maternal and child health services' },
+
+    // Food Security Assessment Fields  
+    { fieldName: 'isFoodSufficient', assessmentType: 'FOOD', displayName: 'Food Sufficiency', description: 'Adequate food supply for population needs' },
+    { fieldName: 'hasRegularMealAccess', assessmentType: 'FOOD', displayName: 'Regular Meal Access', description: 'Consistent access to regular meals' },
+    { fieldName: 'hasInfantNutrition', assessmentType: 'FOOD', displayName: 'Infant Nutrition', description: 'Specialized nutrition for infants and children' },
+
+    // WASH Assessment Fields
+    { fieldName: 'isWaterSufficient', assessmentType: 'WASH', displayName: 'Water Sufficiency', description: 'Adequate water supply for basic needs' },
+    { fieldName: 'hasCleanWaterAccess', assessmentType: 'WASH', displayName: 'Clean Water Access', description: 'Access to safe, clean drinking water' },
+    { fieldName: 'areLatrinesSufficient', assessmentType: 'WASH', displayName: 'Latrine Sufficiency', description: 'Adequate sanitation facilities' },
+    { fieldName: 'hasHandwashingFacilities', assessmentType: 'WASH', displayName: 'Handwashing Facilities', description: 'Available handwashing stations with soap' },
+    { fieldName: 'hasOpenDefecationConcerns', assessmentType: 'WASH', displayName: 'Open Defecation Concerns', description: 'Issues with open defecation practices' },
+
+    // Shelter Assessment Fields
+    { fieldName: 'areSheltersSufficient', assessmentType: 'SHELTER', displayName: 'Shelter Sufficiency', description: 'Adequate shelter capacity for displaced population' },
+    { fieldName: 'hasSafeStructures', assessmentType: 'SHELTER', displayName: 'Safe Structures', description: 'Structurally safe and secure shelter buildings' },
+    { fieldName: 'areOvercrowded', assessmentType: 'SHELTER', displayName: 'Overcrowding Issues', description: 'Overcrowding in available shelters' },
+    { fieldName: 'provideWeatherProtection', assessmentType: 'SHELTER', displayName: 'Weather Protection', description: 'Adequate protection from weather conditions' },
+
+    // Security Assessment Fields
+    { fieldName: 'isSafeFromViolence', assessmentType: 'SECURITY', displayName: 'Safety from Violence', description: 'Protection from violence and conflict' },
+    { fieldName: 'gbvCasesReported', assessmentType: 'SECURITY', displayName: 'GBV Cases Reported', description: 'Reports of gender-based violence cases' },
+    { fieldName: 'hasSecurityPresence', assessmentType: 'SECURITY', displayName: 'Security Presence', description: 'Adequate security personnel deployment' },
+    { fieldName: 'hasProtectionReportingMechanism', assessmentType: 'SECURITY', displayName: 'Protection Reporting', description: 'Mechanisms for reporting protection concerns' },
+    { fieldName: 'vulnerableGroupsHaveAccess', assessmentType: 'SECURITY', displayName: 'Vulnerable Groups Access', description: 'Priority access for vulnerable populations' },
+    { fieldName: 'hasLighting', assessmentType: 'SECURITY', displayName: 'Adequate Lighting', description: 'Sufficient lighting in high-risk areas' }
+  ] as const
+
+  for (const field of gapFieldSeverities) {
+    await prisma.gapFieldSeverity.upsert({
+      where: {
+        unique_field_assessment: {
+          fieldName: field.fieldName,
+          assessmentType: field.assessmentType
+        }
+      },
+      update: {},
+      create: {
+        fieldName: field.fieldName,
+        assessmentType: field.assessmentType,
+        severity: 'MEDIUM', // All start as MEDIUM per requirements
+        displayName: field.displayName,
+        description: field.description,
+        isActive: true,
+        createdBy: coordinatorUser.id
+      }
+    })
+  }
+
+  console.log('✅ Created gap field severities (all set to MEDIUM)')
 }
 
 main()
