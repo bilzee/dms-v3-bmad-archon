@@ -1228,38 +1228,10 @@ async function getGapAnalysisSummary(incidentId: string): Promise<GapAnalysisSum
     throw new Error('Invalid incident ID format');
   }
 
-  // Get real entities data from database
-  const entities = await db.entity.findMany({
-    where: {
-      rapidAssessments: {
-        some: {
-          incidentId: incidentId,
-        },
-      },
-      isActive: true,
-    },
-    include: {
-      rapidAssessments: {
-        where: {
-          incidentId: incidentId,
-          verificationStatus: { in: ['VERIFIED', 'AUTO_VERIFIED'] },
-        },
-        orderBy: {
-          rapidAssessmentDate: 'desc',
-        },
-        take: 5, // Latest assessment for each type
-        include: {
-          healthAssessment: true,
-          foodAssessment: true,
-          washAssessment: true,
-          shelterAssessment: true,
-          securityAssessment: true,
-        },
-      },
-    },
-  });
+  // Use the same entity assessment data structure as the main API for consistency
+  const entityAssessments = await getEntityAssessments(incidentId);
 
-  const totalEntities = entities.length;
+  const totalEntities = entityAssessments.length;
 
   // Initialize assessment type gaps
   const assessmentTypeGaps: { [key: string]: { severity: 'high' | 'medium' | 'low'; entitiesAffected: number; percentage: number } } = {
@@ -1273,7 +1245,7 @@ async function getGapAnalysisSummary(incidentId: string): Promise<GapAnalysisSum
   // Initialize severity distribution
   const severityDistribution = { high: 0, medium: 0, low: 0 };
 
-  // Analyze real gap data from entities
+  // Analyze real gap data from entities using the correct data structure
   const assessmentTypeCounts = {
     HEALTH: { entitiesWithGaps: 0, totalEntities: 0 },
     FOOD: { entitiesWithGaps: 0, totalEntities: 0 },
@@ -1282,74 +1254,79 @@ async function getGapAnalysisSummary(incidentId: string): Promise<GapAnalysisSum
     SECURITY: { entitiesWithGaps: 0, totalEntities: 0 },
   };
 
-  // Analyze each entity's assessments
-  for (const entity of entities) {
+  // Analyze each entity's assessments using the proper structure
+  for (const entityAssessment of entityAssessments) {
     let entitySeverity: 'high' | 'medium' | 'low' = 'low';
     
-    for (const assessment of entity.rapidAssessments) {
-      // Check each assessment type for gaps
-      if (assessment.healthAssessment) {
-        assessmentTypeCounts.HEALTH.totalEntities++;
-        const healthGaps = await analyzeHealthGaps(assessment.healthAssessment);
-        if (healthGaps.hasGap) {
-          assessmentTypeCounts.HEALTH.entitiesWithGaps++;
-          if (healthGaps.severity === 'CRITICAL' || healthGaps.severity === 'HIGH') {
-            entitySeverity = 'high';
-          } else if (healthGaps.severity === 'MEDIUM' && entitySeverity !== 'high') {
-            entitySeverity = 'medium';
-          }
+    // Check each assessment type for gaps using latestAssessments
+    const latestAssessments = entityAssessment.latestAssessments;
+
+    // Health assessment
+    if (latestAssessments.health) {
+      assessmentTypeCounts.HEALTH.totalEntities++;
+      const healthGapData = latestAssessments.health.gapAnalysis;
+      if (healthGapData && healthGapData.hasGap) {
+        assessmentTypeCounts.HEALTH.entitiesWithGaps++;
+        if (healthGapData.severity === 'CRITICAL' || healthGapData.severity === 'HIGH') {
+          entitySeverity = 'high';
+        } else if (healthGapData.severity === 'MEDIUM' && entitySeverity !== 'high') {
+          entitySeverity = 'medium';
         }
       }
+    }
 
-      if (assessment.foodAssessment) {
-        assessmentTypeCounts.FOOD.totalEntities++;
-        const foodGaps = await analyzeFoodGaps(assessment.foodAssessment);
-        if (foodGaps.hasGap) {
-          assessmentTypeCounts.FOOD.entitiesWithGaps++;
-          if (foodGaps.severity === 'CRITICAL' || foodGaps.severity === 'HIGH') {
-            entitySeverity = 'high';
-          } else if (foodGaps.severity === 'MEDIUM' && entitySeverity !== 'high') {
-            entitySeverity = 'medium';
-          }
+    // Food assessment
+    if (latestAssessments.food) {
+      assessmentTypeCounts.FOOD.totalEntities++;
+      const foodGapData = latestAssessments.food.gapAnalysis;
+      if (foodGapData && foodGapData.hasGap) {
+        assessmentTypeCounts.FOOD.entitiesWithGaps++;
+        if (foodGapData.severity === 'CRITICAL' || foodGapData.severity === 'HIGH') {
+          entitySeverity = 'high';
+        } else if (foodGapData.severity === 'MEDIUM' && entitySeverity !== 'high') {
+          entitySeverity = 'medium';
         }
       }
+    }
 
-      if (assessment.washAssessment) {
-        assessmentTypeCounts.WASH.totalEntities++;
-        const washGaps = await analyzeWASHGaps(assessment.washAssessment);
-        if (washGaps.hasGap) {
-          assessmentTypeCounts.WASH.entitiesWithGaps++;
-          if (washGaps.severity === 'CRITICAL' || washGaps.severity === 'HIGH') {
-            entitySeverity = 'high';
-          } else if (washGaps.severity === 'MEDIUM' && entitySeverity !== 'high') {
-            entitySeverity = 'medium';
-          }
+    // WASH assessment
+    if (latestAssessments.wash) {
+      assessmentTypeCounts.WASH.totalEntities++;
+      const washGapData = latestAssessments.wash.gapAnalysis;
+      if (washGapData && washGapData.hasGap) {
+        assessmentTypeCounts.WASH.entitiesWithGaps++;
+        if (washGapData.severity === 'CRITICAL' || washGapData.severity === 'HIGH') {
+          entitySeverity = 'high';
+        } else if (washGapData.severity === 'MEDIUM' && entitySeverity !== 'high') {
+          entitySeverity = 'medium';
         }
       }
+    }
 
-      if (assessment.shelterAssessment) {
-        assessmentTypeCounts.SHELTER.totalEntities++;
-        const shelterGaps = await analyzeShelterGaps(assessment.shelterAssessment);
-        if (shelterGaps.hasGap) {
-          assessmentTypeCounts.SHELTER.entitiesWithGaps++;
-          if (shelterGaps.severity === 'CRITICAL' || shelterGaps.severity === 'HIGH') {
-            entitySeverity = 'high';
-          } else if (shelterGaps.severity === 'MEDIUM' && entitySeverity !== 'high') {
-            entitySeverity = 'medium';
-          }
+    // Shelter assessment
+    if (latestAssessments.shelter) {
+      assessmentTypeCounts.SHELTER.totalEntities++;
+      const shelterGapData = latestAssessments.shelter.gapAnalysis;
+      if (shelterGapData && shelterGapData.hasGap) {
+        assessmentTypeCounts.SHELTER.entitiesWithGaps++;
+        if (shelterGapData.severity === 'CRITICAL' || shelterGapData.severity === 'HIGH') {
+          entitySeverity = 'high';
+        } else if (shelterGapData.severity === 'MEDIUM' && entitySeverity !== 'high') {
+          entitySeverity = 'medium';
         }
       }
+    }
 
-      if (assessment.securityAssessment) {
-        assessmentTypeCounts.SECURITY.totalEntities++;
-        const securityGaps = await analyzeSecurityGaps(assessment.securityAssessment);
-        if (securityGaps.hasGap) {
-          assessmentTypeCounts.SECURITY.entitiesWithGaps++;
-          if (securityGaps.severity === 'CRITICAL' || securityGaps.severity === 'HIGH') {
-            entitySeverity = 'high';
-          } else if (securityGaps.severity === 'MEDIUM' && entitySeverity !== 'high') {
-            entitySeverity = 'medium';
-          }
+    // Security assessment
+    if (latestAssessments.security) {
+      assessmentTypeCounts.SECURITY.totalEntities++;
+      const securityGapData = latestAssessments.security.gapAnalysis;
+      if (securityGapData && securityGapData.hasGap) {
+        assessmentTypeCounts.SECURITY.entitiesWithGaps++;
+        if (securityGapData.severity === 'CRITICAL' || securityGapData.severity === 'HIGH') {
+          entitySeverity = 'high';
+        } else if (securityGapData.severity === 'MEDIUM' && entitySeverity !== 'high') {
+          entitySeverity = 'medium';
         }
       }
     }
@@ -1363,15 +1340,17 @@ async function getGapAnalysisSummary(incidentId: string): Promise<GapAnalysisSum
     const counts = assessmentTypeCounts[key as keyof typeof assessmentTypeCounts];
     const entitiesAffected = counts.entitiesWithGaps;
     const total = counts.totalEntities;
-    const percentage = total > 0 ? (entitiesAffected / total) * 100 : 0;
+    const percentage = total > 0 ? Math.round((entitiesAffected / total) * 100) : 0;
     
     assessmentTypeGaps[key].entitiesAffected = entitiesAffected;
     assessmentTypeGaps[key].percentage = percentage;
     
-    // Determine severity based on percentage
-    if (percentage >= 60) assessmentTypeGaps[key].severity = 'high';
-    else if (percentage >= 30) assessmentTypeGaps[key].severity = 'medium';
-    else assessmentTypeGaps[key].severity = 'low';
+    // Determine severity based on gap analysis severity instead of percentage
+    // Use high severity if any entity has critical/high gap in this assessment type
+    assessmentTypeGaps[key].severity = 'medium'; // Default to medium
+    if (percentage === 100 && entitiesAffected > 0) {
+      assessmentTypeGaps[key].severity = 'high'; // All entities with this assessment have gaps
+    }
   }
 
   return {
