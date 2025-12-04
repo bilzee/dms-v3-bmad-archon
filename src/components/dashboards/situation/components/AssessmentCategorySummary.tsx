@@ -1,12 +1,13 @@
 'use client';
 
-import React from 'react';
+import React, { useMemo } from 'react';
 import { cn } from '@/lib/utils';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { Calendar, User, AlertTriangle, CheckCircle, Info } from 'lucide-react';
 import { GapIndicator } from './GapIndicator';
+import { gapFieldSeverityService } from '@/lib/services/gap-field-severity.service';
 import type { 
   HealthAssessmentData, 
   FoodAssessmentData, 
@@ -22,6 +23,7 @@ interface AssessmentCategorySummaryProps {
   gapAnalysis?: any;
   layout: 'split' | 'full';
   className?: string;
+  showRecommendations?: boolean;
 }
 
 // Category configuration
@@ -171,10 +173,60 @@ export function AssessmentCategorySummary({
   assessment,
   gapAnalysis,
   layout = 'split',
-  className
+  className,
+  showRecommendations = false
 }: AssessmentCategorySummaryProps) {
   const config = categoryConfig[category];
   const fieldConfig = fieldDefinitions[category];
+
+  // Use the gap fields and severity mapping from gapAnalysis if available
+  const gapFields = gapAnalysis?.gapFields || [];
+  const fieldSeverityMap = gapAnalysis?.fieldSeverityMap || {};
+
+  // Function to get field severity based on aggregated data or individual entity analysis
+  const getFieldSeverity = (fieldName: string): 'CRITICAL' | 'HIGH' | 'MEDIUM' | 'LOW' => {
+    // If we have field severity mapping from aggregated analysis, use it
+    if (fieldSeverityMap[fieldName]) {
+      return fieldSeverityMap[fieldName];
+    }
+
+    // If this field is not in the gap fields, no gap
+    if (!gapFields.includes(fieldName)) {
+      return 'LOW'; // No gap
+    }
+
+    // For individual entities, use the overall assessment severity
+    if (gapAnalysis?.severity && gapFields.includes(fieldName)) {
+      return gapAnalysis.severity;
+    }
+
+    // Fallback: Assign severity based on field importance and typical impact
+    const criticalFields = [
+      'hasEmergencyServices', 'hasFunctionalClinic', 'isWaterSufficient', 
+      'areSheltersSufficient', 'hasSafetyConcerns', 'hasImmediateThreats'
+    ];
+    
+    const highFields = [
+      'hasCleanWaterAccess', 'hasTrainedStaff', 'hasMedicineSupply',
+      'isFoodSufficient', 'hasRegularMealAccess', 'hasSafeStructures'
+    ];
+    
+    const mediumFields = [
+      'hasHandwashingFacilities', 'areLatrinesSufficient', 'hasMedicalSupplies',
+      'hasInfantNutrition', 'areOvercrowded', 'provideWeatherProtection'
+    ];
+
+    if (criticalFields.includes(fieldName)) {
+      return 'CRITICAL';
+    } else if (highFields.includes(fieldName)) {
+      return 'HIGH';
+    } else if (mediumFields.includes(fieldName)) {
+      return 'MEDIUM';
+    }
+    
+    // Default to HIGH for any other gap fields not explicitly categorized
+    return 'HIGH';
+  };
 
   if (!assessment) {
     return (
@@ -200,10 +252,11 @@ export function AssessmentCategorySummary({
     
     if (boolean) {
       const hasGap = invert ? value : !value;
+      const severity = hasGap ? getFieldSeverity(key) : 'LOW';
       return (
         <div key={key} className="flex items-center justify-between">
           <span className="text-sm text-gray-600">{label}</span>
-          <GapIndicator hasGap={hasGap} size="sm" />
+          <GapIndicator hasGap={hasGap} severity={severity} size="sm" />
         </div>
       );
     }
@@ -224,11 +277,11 @@ export function AssessmentCategorySummary({
     );
   };
 
-  const gapFields = fieldConfig.gapIndicators.map(field => 
+  const gapFieldElements = fieldConfig.gapIndicators.map(field => 
     renderField(field.key, field.label, field.boolean, field.invert)
   );
   
-  const nonGapFields = fieldConfig.nonGapIndicators.map(field => 
+  const nonGapFieldElements = fieldConfig.nonGapIndicators.map(field => 
     renderField(field.key, field.label, field.boolean)
   );
 
@@ -286,14 +339,14 @@ export function AssessmentCategorySummary({
       </CardHeader>
 
       <CardContent className="pt-0">
-        {layout === 'split' && gapFields.length > 0 ? (
+        {layout === 'split' && gapFieldElements.length > 0 ? (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {/* Non-gap indicators (left side) */}
             <div className="space-y-2">
-              {nonGapFields.length > 0 ? (
+              {nonGapFieldElements.length > 0 ? (
                 <>
                   <h4 className="text-sm font-medium text-gray-700 mb-2">Overview</h4>
-                  {nonGapFields}
+                  {nonGapFieldElements}
                 </>
               ) : (
                 <div className="text-center py-4 text-gray-500">
@@ -307,10 +360,10 @@ export function AssessmentCategorySummary({
 
             {/* Gap indicators (right side) */}
             <div className="space-y-2">
-              {gapFields.length > 0 ? (
+              {gapFieldElements.length > 0 ? (
                 <>
                   <h4 className="text-sm font-medium text-gray-700 mb-2">Gap Analysis</h4>
-                  {gapFields}
+                  {gapFieldElements}
                 </>
               ) : (
                 <div className="text-center py-4 text-gray-500">
@@ -324,12 +377,12 @@ export function AssessmentCategorySummary({
           // Full layout - all fields together
           <div className="space-y-2">
             <h4 className="text-sm font-medium text-gray-700 mb-2">Assessment Details</h4>
-            {[...nonGapFields, ...gapFields]}
+            {[...nonGapFieldElements, ...gapFieldElements]}
           </div>
         )}
 
-        {/* Recommendations */}
-        {gapAnalysis?.recommendations && gapAnalysis.recommendations.length > 0 && (
+        {/* Recommendations - only show if enabled */}
+        {showRecommendations && gapAnalysis?.recommendations && gapAnalysis.recommendations.length > 0 && (
           <div className="mt-4 pt-4 border-t">
             <h4 className="text-sm font-medium text-gray-700 mb-2">Recommendations</h4>
             <ul className="space-y-1">

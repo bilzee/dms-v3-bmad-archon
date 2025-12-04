@@ -636,7 +636,7 @@ async function getEntityAssessments(incidentId: string, entityId?: string): Prom
     throw new Error('Invalid incident ID format');
   }
 
-  const entitiesQuery = entityId
+  const entitiesQuery = entityId && entityId !== 'all'
     ? db.$queryRaw`
         SELECT 
           e.id,
@@ -1129,6 +1129,112 @@ async function getLatestPopulationAssessment(entityId: string): Promise<Populati
 
 
 
+/**
+ * Calculate field-level gap analysis based on count-based severity
+ * @param assessments Array of assessments for a specific category
+ * @param gapIndicators Array of field indicators that represent gaps
+ * @returns Field-level gap analysis with severity and recommendations
+ */
+function calculateFieldLevelGaps(assessments: any[], gapIndicators: Array<{key: string, label: string}>): {
+  gapFields: string[];
+  fieldSeverityMap: Record<string, 'CRITICAL' | 'HIGH' | 'MEDIUM' | 'LOW'>;
+  overallSeverity: 'CRITICAL' | 'HIGH' | 'MEDIUM' | 'LOW';
+  recommendations: string[];
+} {
+  const gapFields: string[] = [];
+  const fieldSeverityMap: Record<string, 'CRITICAL' | 'HIGH' | 'MEDIUM' | 'LOW'> = {};
+  const totalAssessments = assessments.length;
+  
+  if (totalAssessments === 0) {
+    return {
+      gapFields: [],
+      fieldSeverityMap: {},
+      overallSeverity: 'LOW',
+      recommendations: []
+    };
+  }
+
+  // Define inverted fields (where true indicates a gap)
+  const invertedFields = ['hasOpenDefecationConcerns', 'areOvercrowded', 'gbvCasesReported'];
+
+  // Calculate gaps for each field
+  gapIndicators.forEach(({ key }) => {
+    const gapCount = assessments.filter(assessment => {
+      // Gap exists if field is false (or inverted)
+      const value = assessment[key];
+      const isInverted = invertedFields.includes(key);
+      
+      if (isInverted) {
+        return value === true;
+      } else {
+        return value === false || value === 0 || value === null;
+      }
+    }).length;
+
+    if (gapCount > 0) {
+      gapFields.push(key);
+      
+      // Determine severity based on percentage of entities affected
+      const gapPercentage = (gapCount / totalAssessments) * 100;
+      let severity: 'CRITICAL' | 'HIGH' | 'MEDIUM' | 'LOW';
+      
+      if (gapPercentage >= 67) {
+        severity = 'CRITICAL';  // 2/3 or more affected
+      } else if (gapPercentage >= 34) {
+        severity = 'HIGH';      // 1/3 or more affected
+      } else if (gapPercentage >= 1) {
+        severity = 'MEDIUM';     // Any entities affected
+      } else {
+        severity = 'LOW';        // Should not happen since gapCount > 0
+      }
+      
+      fieldSeverityMap[key] = severity;
+    }
+  });
+
+  // Calculate overall severity (highest among field severities)
+  const severities = Object.values(fieldSeverityMap);
+  let overallSeverity: 'CRITICAL' | 'HIGH' | 'MEDIUM' | 'LOW' = 'LOW';
+  
+  if (severities.includes('CRITICAL')) {
+    overallSeverity = 'CRITICAL';
+  } else if (severities.includes('HIGH')) {
+    overallSeverity = 'HIGH';
+  } else if (severities.includes('MEDIUM')) {
+    overallSeverity = 'MEDIUM';
+  }
+
+  // Generate recommendations based on gap patterns
+  const recommendations: string[] = [];
+  if (gapFields.length > 0) {
+    recommendations.push(`Address ${gapFields.length} critical gap field(s) affecting ${Math.round((gapFields.length / gapIndicators.length) * 100)}% of assessed areas`);
+    
+    // Specific recommendations based on field types
+    if (gapFields.includes('hasFunctionalClinic')) {
+      recommendations.push('Establish functional healthcare facilities');
+    }
+    if (gapFields.includes('isFoodSufficient')) {
+      recommendations.push('Implement emergency food distribution programs');
+    }
+    if (gapFields.includes('isWaterSufficient')) {
+      recommendations.push('Provide clean water access and storage');
+    }
+    if (gapFields.includes('areSheltersSufficient')) {
+      recommendations.push('Deploy emergency shelter solutions');
+    }
+    if (gapFields.includes('isSafeFromViolence')) {
+      recommendations.push('Establish security measures and safe zones');
+    }
+  }
+
+  return {
+    gapFields,
+    fieldSeverityMap,
+    overallSeverity,
+    recommendations
+  };
+}
+
 // Aggregation functions (simplified for this implementation)
 function aggregateHealthAssessments(entityAssessments: EntityAssessment[]): any {
   const healthAssessments = entityAssessments.map(e => e.latestAssessments.health).filter(Boolean);
@@ -1137,13 +1243,26 @@ function aggregateHealthAssessments(entityAssessments: EntityAssessment[]): any 
   if (healthAssessments.length === 0) {
     return null;
   }
+
+  // Calculate field-level gap analysis
+  const healthGapIndicators = [
+    { key: 'hasFunctionalClinic', label: 'Functional Clinic' },
+    { key: 'hasEmergencyServices', label: 'Emergency Services' },
+    { key: 'hasTrainedStaff', label: 'Trained Staff' },
+    { key: 'hasMedicineSupply', label: 'Medicine Supply' },
+    { key: 'hasMedicalSupplies', label: 'Medical Supplies' },
+    { key: 'hasMaternalChildServices', label: 'Maternal/Child Services' }
+  ];
+
+  const fieldGapAnalysis = calculateFieldLevelGaps(healthAssessments, healthGapIndicators);
   
   return {
     totalEntities: healthAssessments.length,
     entitiesWithGaps: healthAssessments.filter(a => a.gapAnalysis.hasGap).length,
     entitiesWithoutGaps: healthAssessments.filter(a => !a.gapAnalysis.hasGap).length,
     totalHealthFacilities: healthAssessments.reduce((sum, a) => sum + (a.numberHealthFacilities || 0), 0),
-    totalQualifiedWorkers: healthAssessments.reduce((sum, a) => sum + (a.qualifiedHealthWorkers || 0), 0)
+    totalQualifiedWorkers: healthAssessments.reduce((sum, a) => sum + (a.qualifiedHealthWorkers || 0), 0),
+    fieldGapAnalysis
   };
 }
 
@@ -1154,13 +1273,23 @@ function aggregateFoodAssessments(entityAssessments: EntityAssessment[]): any {
   if (foodAssessments.length === 0) {
     return null;
   }
+
+  // Calculate field-level gap analysis
+  const foodGapIndicators = [
+    { key: 'isFoodSufficient', label: 'Food Sufficiency' },
+    { key: 'hasRegularMealAccess', label: 'Regular Meal Access' },
+    { key: 'hasInfantNutrition', label: 'Infant Nutrition' }
+  ];
+
+  const fieldGapAnalysis = calculateFieldLevelGaps(foodAssessments, foodGapIndicators);
   
   return {
     totalEntities: foodAssessments.length,
     entitiesWithGaps: foodAssessments.filter(a => a.gapAnalysis.hasGap).length,
     entitiesWithoutGaps: foodAssessments.filter(a => !a.gapAnalysis.hasGap).length,
     averageFoodDuration: foodAssessments.reduce((sum, a) => sum + (a.availableFoodDurationDays || 0), 0) / foodAssessments.length,
-    totalAdditionalPersonsRequired: foodAssessments.reduce((sum, a) => sum + (a.additionalFoodRequiredPersons || 0), 0)
+    totalAdditionalPersonsRequired: foodAssessments.reduce((sum, a) => sum + (a.additionalFoodRequiredPersons || 0), 0),
+    fieldGapAnalysis
   };
 }
 
@@ -1171,12 +1300,24 @@ function aggregateWASHAssessments(entityAssessments: EntityAssessment[]): any {
   if (washAssessments.length === 0) {
     return null;
   }
+
+  // Calculate field-level gap analysis
+  const washGapIndicators = [
+    { key: 'isWaterSufficient', label: 'Water Sufficiency' },
+    { key: 'hasCleanWaterAccess', label: 'Clean Water Access' },
+    { key: 'areLatrinesSufficient', label: 'Sufficient Latrines' },
+    { key: 'hasHandwashingFacilities', label: 'Handwashing Facilities' },
+    { key: 'hasOpenDefecationConcerns', label: 'Open Defecation Concerns' }
+  ];
+
+  const fieldGapAnalysis = calculateFieldLevelGaps(washAssessments, washGapIndicators);
   
   return {
     totalEntities: washAssessments.length,
     entitiesWithGaps: washAssessments.filter(a => a.gapAnalysis.hasGap).length,
     entitiesWithoutGaps: washAssessments.filter(a => !a.gapAnalysis.hasGap).length,
-    totalFunctionalLatrines: washAssessments.reduce((sum, a) => sum + (a.functionalLatrinesAvailable || 0), 0)
+    totalFunctionalLatrines: washAssessments.reduce((sum, a) => sum + (a.functionalLatrinesAvailable || 0), 0),
+    fieldGapAnalysis
   };
 }
 
@@ -1187,12 +1328,23 @@ function aggregateShelterAssessments(entityAssessments: EntityAssessment[]): any
   if (shelterAssessments.length === 0) {
     return null;
   }
+
+  // Calculate field-level gap analysis
+  const shelterGapIndicators = [
+    { key: 'areSheltersSufficient', label: 'Sufficient Shelters' },
+    { key: 'hasSafeStructures', label: 'Safe Structures' },
+    { key: 'areOvercrowded', label: 'Overcrowding' },
+    { key: 'provideWeatherProtection', label: 'Weather Protection' }
+  ];
+
+  const fieldGapAnalysis = calculateFieldLevelGaps(shelterAssessments, shelterGapIndicators);
   
   return {
     totalEntities: shelterAssessments.length,
     entitiesWithGaps: shelterAssessments.filter(a => a.gapAnalysis.hasGap).length,
     entitiesWithoutGaps: shelterAssessments.filter(a => !a.gapAnalysis.hasGap).length,
-    totalSheltersRequired: shelterAssessments.reduce((sum, a) => sum + (a.numberSheltersRequired || 0), 0)
+    totalSheltersRequired: shelterAssessments.reduce((sum, a) => sum + (a.numberSheltersRequired || 0), 0),
+    fieldGapAnalysis
   };
 }
 
@@ -1203,11 +1355,24 @@ function aggregateSecurityAssessments(entityAssessments: EntityAssessment[]): an
   if (securityAssessments.length === 0) {
     return null;
   }
+
+  // Calculate field-level gap analysis
+  const securityGapIndicators = [
+    { key: 'isSafeFromViolence', label: 'Safe from Violence' },
+    { key: 'gbvCasesReported', label: 'GBV Cases Reported' },
+    { key: 'hasSecurityPresence', label: 'Security Presence' },
+    { key: 'hasProtectionReportingMechanism', label: 'Protection Reporting' },
+    { key: 'vulnerableGroupsHaveAccess', label: 'Vulnerable Groups Access' },
+    { key: 'hasLighting', label: 'Lighting' }
+  ];
+
+  const fieldGapAnalysis = calculateFieldLevelGaps(securityAssessments, securityGapIndicators);
   
   return {
     totalEntities: securityAssessments.length,
     entitiesWithGaps: securityAssessments.filter(a => a.gapAnalysis.hasGap).length,
-    entitiesWithoutGaps: securityAssessments.filter(a => !a.gapAnalysis.hasGap).length
+    entitiesWithoutGaps: securityAssessments.filter(a => !a.gapAnalysis.hasGap).length,
+    fieldGapAnalysis
   };
 }
 

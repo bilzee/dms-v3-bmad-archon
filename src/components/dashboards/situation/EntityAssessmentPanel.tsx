@@ -8,9 +8,11 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
 import { Skeleton } from '@/components/ui/skeleton';
-import { AlertTriangle, RefreshCw, TrendingUp, MapPin, Users } from 'lucide-react';
+import { AlertTriangle, RefreshCw, TrendingUp, MapPin, Users, Info } from 'lucide-react';
 import { EntitySelector } from './components/EntitySelector';
 import { AssessmentCategorySummary } from './components/AssessmentCategorySummary';
+import { AggregationInfoPopup } from './components/AggregationInfoPopup';
+import { IndividualEntityGapInfoPopup } from './components/IndividualEntityGapInfoPopup';
 import { useIncidentSelection, useEntitySelection } from '@/stores/dashboardLayout.store';
 
 interface EntityAssessmentPanelProps {
@@ -103,6 +105,10 @@ export function EntityAssessmentPanel({
   const { selectedIncidentId } = useIncidentSelection();
   const { selectedEntityId, includeAllEntities } = useEntitySelection();
   
+  // State for info popups
+  const [showAggregationInfo, setShowAggregationInfo] = useState(false);
+  const [showIndividualEntityInfo, setShowIndividualEntityInfo] = useState(false);
+  
   const effectiveEntityId = entityId || selectedEntityId;
   const effectiveIncidentId = incidentId || selectedIncidentId;
 
@@ -133,13 +139,13 @@ export function EntityAssessmentPanel({
 
   // Filter entities based on selection
   const entityAssessments = useMemo(() => {
-    const allEntityAssessments = dashboardData?.data?.entities || [];
+    const allEntityAssessments = dashboardData?.data?.entityAssessments || [];
     
     if (includeAllEntities || !effectiveEntityId || effectiveEntityId === 'all') {
       return allEntityAssessments;
     }
-    return allEntityAssessments.filter(entity => entity.entityId === effectiveEntityId);
-  }, [dashboardData?.data?.entities, includeAllEntities, effectiveEntityId]);
+    return allEntityAssessments.filter(entity => entity.id === effectiveEntityId);
+  }, [dashboardData?.data?.entityAssessments, includeAllEntities, effectiveEntityId]);
 
   const aggregatedAssessments = dashboardData?.data?.aggregatedAssessments;
 
@@ -224,16 +230,48 @@ export function EntityAssessmentPanel({
   }
 
   return (
-    <Card className={cn("w-full", className)}>
-      <CardHeader>
+    <Card className={cn("w-full h-full flex flex-col", className)}>
+      <CardHeader className="pb-3 flex-shrink-0"> {/* Reduced padding + prevent shrinking */}
         <div className="flex items-center justify-between">
           <div>
-            <CardTitle className="flex items-center gap-2">
+            <CardTitle className="flex items-center gap-2 text-lg">
               <TrendingUp className="h-5 w-5" />
               Entity Assessment Panel
+              {includeAllEntities && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setShowAggregationInfo(true)}
+                  className="h-6 w-6 p-0 ml-2 text-blue-600 hover:text-blue-800 hover:bg-blue-50"
+                  title="Learn about All Entities aggregation"
+                >
+                  <Info className="h-4 w-4" />
+                </Button>
+              )}
+              {!includeAllEntities && effectiveEntityId && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setShowIndividualEntityInfo(true)}
+                  className="h-6 w-6 p-0 ml-2 text-green-600 hover:text-green-800 hover:bg-green-50"
+                  title="Learn about individual entity gap assessment"
+                >
+                  <Info className="h-4 w-4" />
+                </Button>
+              )}
             </CardTitle>
             <p className="text-sm text-gray-600 mt-1">
               Detailed assessment analysis with gap indicators
+              {includeAllEntities && (
+                <span className="ml-1 text-blue-600">
+                  (All Entities View)
+                </span>
+              )}
+              {!includeAllEntities && effectiveEntityId && (
+                <span className="ml-1 text-green-600">
+                  (Individual Entity View)
+                </span>
+              )}
             </p>
           </div>
           <Button 
@@ -247,7 +285,7 @@ export function EntityAssessmentPanel({
         </div>
       </CardHeader>
 
-      <CardContent className="space-y-6">
+      <CardContent className="flex-1 overflow-y-auto space-y-3"> {/* Proper scrolling + tighter spacing */}
         {/* Entity Selector */}
         <EntitySelector
           incidentId={effectiveIncidentId}
@@ -259,14 +297,14 @@ export function EntityAssessmentPanel({
         {/* Gap Summary for "All Entities" view */}
         {includeAllEntities && aggregatedAssessments && (
           <Card className="border-blue-200 bg-blue-50">
-            <CardHeader className="pb-3">
+            <CardHeader className="pb-2"> {/* Reduced padding */}
               <CardTitle className="text-base flex items-center gap-2">
                 <Users className="h-5 w-5" />
                 Aggregated Assessment Summary
               </CardTitle>
             </CardHeader>
-            <CardContent>
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <CardContent className="pt-0"> {/* Removed top padding */}
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-3"> {/* Tighter gap */}
                 <div className="text-center">
                   <div className="text-2xl font-bold text-blue-600">
                     {aggregatedAssessments.gapSummary.entitiesWithGaps}
@@ -299,58 +337,93 @@ export function EntityAssessmentPanel({
         <Separator />
 
         {/* Assessment Categories */}
-        <div className="space-y-4">
+        <div className="space-y-3 flex-1 overflow-hidden"> {/* Reduced spacing and made scrollable */}
           {includeAllEntities && aggregatedAssessments ? (
             // Aggregated view - show aggregated data for each category
-            <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-2 gap-4">
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-4 gap-3"> {/* 4 columns for better space utilization */}
               {/* Only show aggregated gap-based assessments */}
               {aggregatedAssessments.health && (
                 <AssessmentCategorySummary
                   category="health"
                   assessment={aggregatedAssessments.health}
+                  gapAnalysis={{
+                    hasGap: aggregatedAssessments.health.entitiesWithGaps > 0,
+                    gapFields: aggregatedAssessments.health.fieldGapAnalysis?.gapFields || [],
+                    severity: aggregatedAssessments.health.fieldGapAnalysis?.overallSeverity || 'MEDIUM',
+                    recommendations: aggregatedAssessments.health.fieldGapAnalysis?.recommendations || []
+                  }}
                   layout="full"
+                  showRecommendations={false}
                 />
               )}
               {aggregatedAssessments.food && (
                 <AssessmentCategorySummary
                   category="food"
                   assessment={aggregatedAssessments.food}
+                  gapAnalysis={{
+                    hasGap: aggregatedAssessments.food.entitiesWithGaps > 0,
+                    gapFields: aggregatedAssessments.food.fieldGapAnalysis?.gapFields || [],
+                    severity: aggregatedAssessments.food.fieldGapAnalysis?.overallSeverity || 'MEDIUM',
+                    recommendations: aggregatedAssessments.food.fieldGapAnalysis?.recommendations || []
+                  }}
                   layout="full"
+                  showRecommendations={false}
                 />
               )}
               {aggregatedAssessments.wash && (
                 <AssessmentCategorySummary
                   category="wash"
                   assessment={aggregatedAssessments.wash}
+                  gapAnalysis={{
+                    hasGap: aggregatedAssessments.wash.entitiesWithGaps > 0,
+                    gapFields: aggregatedAssessments.wash.fieldGapAnalysis?.gapFields || [],
+                    severity: aggregatedAssessments.wash.fieldGapAnalysis?.overallSeverity || 'MEDIUM',
+                    recommendations: aggregatedAssessments.wash.fieldGapAnalysis?.recommendations || []
+                  }}
                   layout="full"
+                  showRecommendations={false}
                 />
               )}
               {aggregatedAssessments.shelter && (
                 <AssessmentCategorySummary
                   category="shelter"
                   assessment={aggregatedAssessments.shelter}
+                  gapAnalysis={{
+                    hasGap: aggregatedAssessments.shelter.entitiesWithGaps > 0,
+                    gapFields: aggregatedAssessments.shelter.fieldGapAnalysis?.gapFields || [],
+                    severity: aggregatedAssessments.shelter.fieldGapAnalysis?.overallSeverity || 'MEDIUM',
+                    recommendations: aggregatedAssessments.shelter.fieldGapAnalysis?.recommendations || []
+                  }}
                   layout="full"
+                  showRecommendations={false}
                 />
               )}
               {aggregatedAssessments.security && (
                 <AssessmentCategorySummary
                   category="security"
                   assessment={aggregatedAssessments.security}
+                  gapAnalysis={{
+                    hasGap: aggregatedAssessments.security.entitiesWithGaps > 0,
+                    gapFields: aggregatedAssessments.security.fieldGapAnalysis?.gapFields || [],
+                    severity: aggregatedAssessments.security.fieldGapAnalysis?.overallSeverity || 'MEDIUM',
+                    recommendations: aggregatedAssessments.security.fieldGapAnalysis?.recommendations || []
+                  }}
                   layout="full"
+                  showRecommendations={false}
                 />
               )}
             </div>
           ) : entityAssessments.length > 0 ? (
             // Individual entity view - show detailed assessments for selected entity
-            <div className="space-y-6">
+            <div className="space-y-4 overflow-hidden"> {/* Reduced spacing */}
               {entityAssessments.map((entity: any, index: number) => (
-                <div key={entity.entityId || index} className="space-y-4">
+                <div key={entity.id || index} className="space-y-3"> {/* Reduced spacing */}
                   <div className="flex items-center gap-2">
                     <h3 className="text-lg font-semibold text-gray-900">
-                      {entity.entityName}
+                      {entity.name}
                     </h3>
                     <span className="text-sm text-gray-500">
-                      ({entity.entityType})
+                      ({entity.type})
                     </span>
                     {entity.location && (
                       <span className="text-sm text-gray-500">
@@ -360,56 +433,56 @@ export function EntityAssessmentPanel({
                   </div>
 
                   {/* Gap-based Assessments Grid */}
-                  <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-2 gap-4">
+                  <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-4 gap-3"> {/* 4 columns for better space utilization */}
                     {/* Only render gap-based assessment categories that have data */}
-                    {entity.latestAssessments?.HEALTH && (
+                    {entity.latestAssessments?.health && (
                       <AssessmentCategorySummary
                         category="health"
-                        assessment={entity.latestAssessments?.HEALTH}
-                        gapAnalysis={entity.latestAssessments?.HEALTH?.gapAnalysis}
+                        assessment={entity.latestAssessments?.health}
+                        gapAnalysis={entity.latestAssessments?.health?.gapAnalysis}
                         layout="split"
                       />
                     )}
-                    {entity.latestAssessments?.FOOD && (
+                    {entity.latestAssessments?.food && (
                       <AssessmentCategorySummary
                         category="food"
-                        assessment={entity.latestAssessments?.FOOD}
-                        gapAnalysis={entity.latestAssessments?.FOOD?.gapAnalysis}
+                        assessment={entity.latestAssessments?.food}
+                        gapAnalysis={entity.latestAssessments?.food?.gapAnalysis}
                         layout="split"
                       />
                     )}
-                    {entity.latestAssessments?.WASH && (
+                    {entity.latestAssessments?.wash && (
                       <AssessmentCategorySummary
                         category="wash"
-                        assessment={entity.latestAssessments?.WASH}
-                        gapAnalysis={entity.latestAssessments?.WASH?.gapAnalysis}
+                        assessment={entity.latestAssessments?.wash}
+                        gapAnalysis={entity.latestAssessments?.wash?.gapAnalysis}
                         layout="split"
                       />
                     )}
-                    {entity.latestAssessments?.SHELTER && (
+                    {entity.latestAssessments?.shelter && (
                       <AssessmentCategorySummary
                         category="shelter"
-                        assessment={entity.latestAssessments?.SHELTER}
-                        gapAnalysis={entity.latestAssessments?.SHELTER?.gapAnalysis}
+                        assessment={entity.latestAssessments?.shelter}
+                        gapAnalysis={entity.latestAssessments?.shelter?.gapAnalysis}
                         layout="split"
                       />
                     )}
-                    {entity.latestAssessments?.SECURITY && (
+                    {entity.latestAssessments?.security && (
                       <AssessmentCategorySummary
                         category="security"
-                        assessment={entity.latestAssessments?.SECURITY}
-                        gapAnalysis={entity.latestAssessments?.SECURITY?.gapAnalysis}
+                        assessment={entity.latestAssessments?.security}
+                        gapAnalysis={entity.latestAssessments?.security?.gapAnalysis}
                         layout="split"
                       />
                     )}
                   </div>
 
                   {/* No gap-based assessments available */}
-                  {!entity.latestAssessments?.HEALTH && 
-                   !entity.latestAssessments?.FOOD && 
-                   !entity.latestAssessments?.WASH && 
-                   !entity.latestAssessments?.SHELTER && 
-                   !entity.latestAssessments?.SECURITY && (
+                  {!entity.latestAssessments?.health && 
+                   !entity.latestAssessments?.food && 
+                   !entity.latestAssessments?.wash && 
+                   !entity.latestAssessments?.shelter && 
+                   !entity.latestAssessments?.security && (
                     <div className="text-center py-12 bg-gray-50 rounded-lg">
                       <div className="text-6xl mb-4">📊</div>
                       <h3 className="text-lg font-semibold text-gray-900 mb-2">
@@ -459,6 +532,18 @@ export function EntityAssessmentPanel({
           )}
         </div>
       </CardContent>
+      
+      {/* Aggregation Info Popup */}
+      <AggregationInfoPopup
+        isOpen={showAggregationInfo}
+        onClose={() => setShowAggregationInfo(false)}
+      />
+      
+      {/* Individual Entity Gap Info Popup */}
+      <IndividualEntityGapInfoPopup
+        isOpen={showIndividualEntityInfo}
+        onClose={() => setShowIndividualEntityInfo(false)}
+      />
     </Card>
   );
 }
