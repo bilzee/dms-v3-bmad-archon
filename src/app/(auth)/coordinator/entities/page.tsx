@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useCallback } from 'react';
 import { useAuth } from '@/hooks/useAuth';
+import { RoleBasedRoute } from '@/components/shared/RoleBasedRoute';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -11,7 +12,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Checkbox } from '@/components/ui/checkbox';
-import { Search, Users, MapPin, UserPlus, Trash2, Loader2, CheckCircle, UserCheck } from 'lucide-react';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Search, Users, MapPin, UserPlus, Trash2, Loader2, CheckCircle, UserCheck, AlertTriangle, Shield, User } from 'lucide-react';
 
 interface Entity {
   id: string;
@@ -52,8 +54,8 @@ interface Assignment {
   };
 }
 
-export default function CoordinatorEntitiesPage() {
-  const { currentRole, user, token, hasRole } = useAuth();
+function CoordinatorEntitiesPageContent() {
+  const { currentRole, user, token } = useAuth();
   const [entities, setEntities] = useState<Entity[]>([]);
   const [users, setUsers] = useState<User[]>([]);
   const [assignments, setAssignments] = useState<Assignment[]>([]);
@@ -162,20 +164,6 @@ export default function CoordinatorEntitiesPage() {
   useEffect(() => {
     fetchData();
   }, [fetchData]);
-
-  if (!hasRole('COORDINATOR') && !hasRole('ADMIN')) {
-    return (
-      <div className="container mx-auto py-6">
-        <Card>
-          <CardContent className="p-6">
-            <div className="text-center text-muted-foreground">
-              Access denied. Only coordinators can manage entity assignments.
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-    );
-  }
 
   const filteredUsers = users.filter(user => {
     const matchesSearch = searchQuery === '' || 
@@ -534,7 +522,7 @@ export default function CoordinatorEntitiesPage() {
                     </div>
                   ) : assignments.length === 0 ? (
                     <div className="text-center p-8 text-muted-foreground">
-                      No assignments found. Use the &quot;Assign Users&quot; tab to create assignments.
+                      No assignments found. Use the "Assign Users" tab to create assignments.
                     </div>
                   ) : (
                     <Table>
@@ -586,5 +574,82 @@ export default function CoordinatorEntitiesPage() {
         </Card>
       </div>
     </div>
+  );
+}
+
+export default function CoordinatorEntitiesPage() {
+  const { availableRoles } = useAuth();
+
+  // Custom error message for multi-role users who haven't selected COORDINATOR role
+  const RoleAccessError = () => {
+    const hasCoordinatorRole = availableRoles.includes('COORDINATOR');
+    
+    if (!hasCoordinatorRole) {
+      return (
+        <div className="container mx-auto py-6">
+          <Card>
+            <CardContent className="p-6">
+              <Alert variant="destructive" className="mb-4">
+                <AlertTriangle className="h-4 w-4" />
+                <AlertDescription className="flex items-center gap-2">
+                  <Shield className="h-4 w-4" />
+                  You do not have permission to access this page. Coordinator role is required to manage entity assignments.
+                </AlertDescription>
+              </Alert>
+              <div className="text-center text-muted-foreground">
+                Only coordinators can assign entities to users for role-based access control.
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      );
+    }
+
+    return (
+      <div className="container mx-auto py-6">
+        <div className="max-w-2xl mx-auto space-y-6">
+          <Alert variant="destructive">
+            <AlertTriangle className="h-4 w-4" />
+            <AlertDescription className="flex items-center gap-2">
+              <User className="h-4 w-4" />
+              You need to select the <strong>Coordinator</strong> role to access this page.
+            </AlertDescription>
+          </Alert>
+          
+          <div className="bg-blue-50 border border-blue-200 rounded-lg p-6 text-center">
+            <div className="mb-4">
+              <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                <User className="h-8 w-8 text-blue-600" />
+              </div>
+              <h3 className="text-lg font-semibold text-blue-900 mb-2">
+                Role Selection Required
+              </h3>
+              <p className="text-blue-700 mb-4">
+                You have the Coordinator role assigned, but you need to actively select it to manage entity assignments.
+              </p>
+              <p className="text-sm text-blue-600 mb-6">
+                Switch to the Coordinator role using the role selector in the top-right corner of the page.
+              </p>
+              <Button 
+                onClick={() => window.location.reload()}
+                className="bg-blue-600 hover:bg-blue-700"
+              >
+                Refresh Page After Selecting Role
+              </Button>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
+  return (
+    <RoleBasedRoute 
+      requiredRole="COORDINATOR" 
+      fallbackPath="/dashboard"
+      errorComponent={<RoleAccessError />}
+    >
+      <CoordinatorEntitiesPageContent />
+    </RoleBasedRoute>
   );
 }
