@@ -50,6 +50,11 @@ const getNavigationItems = (role: string | null): NavItem[] => {
 
   const roleItems: Record<string, NavItem[]> = {
     ASSESSOR: [
+      { 
+        name: 'Dashboard', 
+        href: '/assessor/dashboard', 
+        icon: LayoutDashboard 
+      },
       {
         name: 'Assessments',
         href: '/assessments',
@@ -70,8 +75,14 @@ const getNavigationItems = (role: string | null): NavItem[] => {
     COORDINATOR: [
       { 
         name: 'Dashboard', 
-        href: '/dashboard', 
+        href: '/coordinator/dashboard', 
         icon: LayoutDashboard 
+      },
+      { 
+        name: 'Crisis Dashboard', 
+        href: '/coordinator/dashboard?view=crisis', 
+        icon: AlertTriangle,
+        badge: 'NEW'
       },
       { 
         name: 'Situation Awareness', 
@@ -83,8 +94,8 @@ const getNavigationItems = (role: string | null): NavItem[] => {
         href: '/coordination',
         icon: Users,
         children: [
-          { name: 'Active Responses', href: '/responses', icon: AlertTriangle },
-          { name: 'Verification Queue', href: '/verification', icon: FileText },
+          { name: 'Active Responses', href: '/coordinator/responses', icon: AlertTriangle },
+          { name: 'Verification Queue', href: '/coordinator/verification', icon: FileText },
           { name: 'Resource Allocation', href: '/resources', icon: Package }
         ]
       },
@@ -117,7 +128,7 @@ const getNavigationItems = (role: string | null): NavItem[] => {
     RESPONDER: [
       { 
         name: 'Dashboard', 
-        href: '/dashboard', 
+        href: '/responder/dashboard', 
         icon: LayoutDashboard 
       },
       {
@@ -154,7 +165,7 @@ const getNavigationItems = (role: string | null): NavItem[] => {
     DONOR: [
       { 
         name: 'Dashboard', 
-        href: '/dashboard', 
+        href: '/donor/dashboard', 
         icon: LayoutDashboard 
       },
       {
@@ -191,7 +202,7 @@ const getNavigationItems = (role: string | null): NavItem[] => {
     ADMIN: [
       { 
         name: 'Dashboard', 
-        href: '/dashboard', 
+        href: '/admin/dashboard', 
         icon: LayoutDashboard 
       },
       {
