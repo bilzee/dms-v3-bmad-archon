@@ -1,7 +1,7 @@
 'use client'
 
 import React, { useState, useEffect, useCallback } from 'react'
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -10,6 +10,13 @@ import { Checkbox } from '@/components/ui/checkbox'
 import { Loader2, Save, RotateCcw, Users, AlertCircle } from 'lucide-react'
 import { toast } from 'sonner'
 import { apiGet, apiPut } from '@/lib/api'
+
+// New error handling components
+import { SafeDataLoader } from '@/components/shared/SafeDataLoader'
+import { EmptyState } from '@/components/shared/EmptyState'
+
+// Token utilities
+import { getAuthToken } from '@/lib/auth/token-utils'
 
 interface GapField {
   id: string
@@ -59,17 +66,13 @@ export function GapFieldTable({ assessmentType }: GapFieldTableProps) {
   const queryClient = useQueryClient()
 
   // Fetch gap fields for this assessment type
-  const { data: gapFields, isLoading, error } = useQuery({
-    queryKey: ['gapFields', assessmentType],
-    queryFn: async () => {
-      const response = await apiGet(`/api/v1/gap-field-severities?assessmentType=${assessmentType}`)
-      if (!response.success) {
-        throw new Error(response.error || 'Failed to fetch gap fields')
-      }
-      return response.data as GapField[]
-    },
-    staleTime: 30 * 1000, // 30 seconds
-  })
+  const fetchGapFields = async () => {
+    const response = await apiGet(`/api/v1/gap-field-severities?assessmentType=${assessmentType}`)
+    if (!response.success) {
+      throw new Error(response.error || 'Failed to fetch gap fields')
+    }
+    return response.data as GapField[]
+  }
 
   // Update gap field severity mutation
   const updateSeverityMutation = useMutation({
@@ -144,15 +147,6 @@ export function GapFieldTable({ assessmentType }: GapFieldTableProps) {
     setPendingChanges({})
   }, [])
 
-  // Handle bulk selection
-  const handleSelectAll = useCallback((checked: boolean) => {
-    if (checked && gapFields) {
-      setSelectedFields(gapFields.map(field => field.id))
-    } else {
-      setSelectedFields([])
-    }
-  }, [gapFields])
-
   const handleSelectField = useCallback((fieldId: string, checked: boolean) => {
     setSelectedFields(prev => 
       checked 
@@ -161,59 +155,52 @@ export function GapFieldTable({ assessmentType }: GapFieldTableProps) {
     )
   }, [])
 
-  // Apply bulk severity change
-  const applyBulkChange = useCallback(() => {
-    if (selectedFields.length === 0 || !bulkSeverity) {
-      toast({
-        title: "Selection Required",
-        description: "Please select fields and choose a severity level",
-        variant: "destructive"
-      })
-      return
-    }
-
-    const newChanges = { ...pendingChanges }
-    selectedFields.forEach(fieldId => {
-      newChanges[fieldId] = bulkSeverity
-    })
-    setPendingChanges(newChanges)
-    
-    toast({
-      title: "Bulk Changes Applied",
-      description: `${selectedFields.length} fields updated. Click Save to confirm.`,
-    })
-  }, [selectedFields, bulkSeverity, pendingChanges])
-
-  // Loading state
-  if (isLoading) {
-    return (
-      <Card>
-        <CardContent className="flex items-center justify-center py-12">
-          <Loader2 className="h-6 w-6 animate-spin mr-2" />
-          Loading gap fields...
-        </CardContent>
-      </Card>
-    )
-  }
-
-  // Error state
-  if (error) {
-    return (
-      <Card className="border-red-200 bg-red-50">
-        <CardContent className="flex items-center justify-center py-12">
-          <AlertCircle className="h-6 w-6 text-red-600 mr-2" />
-          <span className="text-red-800">Failed to load gap fields: {error.message}</span>
-        </CardContent>
-      </Card>
-    )
-  }
-
-  const hasChanges = Object.keys(pendingChanges).length > 0
-  const allSelected = gapFields?.length > 0 && selectedFields.length === gapFields.length
-  const someSelected = selectedFields.length > 0 && selectedFields.length < (gapFields?.length || 0)
-
   return (
-    <div className="space-y-4">
+    <SafeDataLoader
+      queryFn={fetchGapFields}
+      enabled={true}
+      fallbackData={[]}
+      loadingMessage="Loading gap fields..."
+      errorTitle="Failed to load gap fields"
+    >
+      {(gapFields, isLoading, error, retry) => {
+        // Handle bulk selection - now has access to gapFields
+        const handleSelectAll = useCallback((checked: boolean) => {
+          if (checked && gapFields) {
+            setSelectedFields(gapFields.map(field => field.id))
+          } else {
+            setSelectedFields([])
+          }
+        }, [gapFields])
+
+        // Apply bulk severity change
+        const applyBulkChange = useCallback(() => {
+          if (selectedFields.length === 0 || !bulkSeverity) {
+            toast({
+              title: "Selection Required",
+              description: "Please select fields and choose a severity level",
+              variant: "destructive"
+            })
+            return
+          }
+
+          const newChanges = { ...pendingChanges }
+          selectedFields.forEach(fieldId => {
+            newChanges[fieldId] = bulkSeverity
+          })
+          setPendingChanges(newChanges)
+          
+          toast({
+            title: "Bulk Changes Applied",
+            description: `${selectedFields.length} fields updated. Click Save to confirm.`,
+          })
+        }, [selectedFields, bulkSeverity, pendingChanges])
+        const hasChanges = Object.keys(pendingChanges).length > 0
+        const allSelected = gapFields?.length > 0 && selectedFields.length === gapFields.length
+        const someSelected = selectedFields.length > 0 && selectedFields.length < (gapFields?.length || 0)
+
+        return (
+          <div className="space-y-4">
       {/* Bulk Operations Panel */}
       <Card className="border-gray-200">
         <CardHeader className="pb-3">
@@ -394,13 +381,23 @@ export function GapFieldTable({ assessmentType }: GapFieldTableProps) {
           </div>
           
           {!gapFields?.length && (
-            <div className="text-center py-12 text-gray-500">
-              <Users className="h-12 w-12 mx-auto mb-4 opacity-50" />
-              <p>No gap fields found for {assessmentType} assessment type</p>
-            </div>
+            <EmptyState
+              type="empty"
+              title="No gap fields configured"
+              description={`No gap fields found for ${assessmentType} assessment type`}
+              action={{
+                label: "Refresh",
+                onClick: retry,
+                variant: "outline"
+              }}
+              icon={Users}
+            />
           )}
         </CardContent>
-      </Card>
-    </div>
+          </Card>
+          </div>
+        )
+      }}
+    </SafeDataLoader>
   )
 }

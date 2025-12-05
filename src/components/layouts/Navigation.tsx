@@ -106,7 +106,6 @@ const getNavigationItems = (role: string | null): NavItem[] => {
         href: '/coordination',
         icon: Users,
         children: [
-          { name: 'Active Responses', href: '/coordinator/responses', icon: AlertTriangle },
           { name: 'Verification Queue', href: '/coordinator/verification', icon: FileText },
           { name: 'Resource Allocation', href: '/resources', icon: Package }
         ]
@@ -119,14 +118,16 @@ const getNavigationItems = (role: string | null): NavItem[] => {
       { 
         name: 'Incidents', 
         href: '/coordinator/incidents', 
-        icon: AlertTriangle 
+        icon: AlertTriangle,
+        description: 'Manage disaster incidents'
       },
       { 
-        name: 'Analytics', 
-        href: '/coordinator/analytics', 
-        icon: TrendingUp 
+        name: 'Entity-Incident Map', 
+        href: '/coordinator/entity-incident-map', 
+        icon: MapPin,
+        description: 'Interactive entity-incident relationship map with incident selector'
       },
-      {
+        {
         name: 'Settings',
         href: '/coordinator/settings',
         icon: Settings,
@@ -152,16 +153,6 @@ const getNavigationItems = (role: string | null): NavItem[] => {
           { name: 'My Responses', href: '/responder/responses', icon: Package },
           { name: 'Commitment Import', href: '/responder/planning?tab=commitments', icon: HandHeart }
         ]
-      },
-      { 
-        name: 'Resources', 
-        href: '/responder/resources', 
-        icon: Package 
-      },
-      { 
-        name: 'Active Incidents', 
-        href: '/incidents', 
-        icon: AlertTriangle 
       },
       { 
         name: 'My Tasks', 
@@ -312,19 +303,19 @@ export const Navigation = () => {
             className={cn(
               "w-full justify-between font-normal transition-colors",
               depth > 0 && "ml-4",
-              isItemActive && "bg-teal-600 hover:bg-teal-700 text-white",
-              !isItemActive && "hover:bg-accent hover:text-accent-foreground"
+              isExpanded && "bg-accent text-accent-foreground",
+              !isExpanded && "hover:bg-accent hover:text-accent-foreground"
             )}
-            onClick={() => toggleExpanded(item.href)}
+            onClick={(e) => {
+              e.preventDefault();
+              toggleExpanded(item.href);
+            }}
           >
             <div className="flex items-center gap-3">
-              <item.icon className={cn(
-                "h-4 w-4 transition-colors",
-                isItemActive && "text-white"
-              )} />
+              <item.icon className="h-4 w-4 transition-colors" />
               <span>{item.name}</span>
               {item.badge && (
-                <Badge variant={isItemActive ? "default" : "secondary"} className="ml-auto">
+                <Badge variant="secondary" className="ml-auto">
                   {item.badge}
                 </Badge>
               )}

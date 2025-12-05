@@ -19,6 +19,7 @@ import { Slider } from '@/components/ui/slider';
 import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { CalendarIcon, Filter, MapPin, TrendingUp, AlertTriangle } from 'lucide-react';
+import { PriorityInfoPopup } from './PriorityInfoPopup';
 import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
 import type { 
@@ -403,6 +404,81 @@ export function AssessmentRelationshipMap({
           </div>
         </div>
       </CardHeader>
+
+      <CardContent className="p-4">
+        {/* Priority Tiles */}
+        <div className="mb-4">
+          <div className="flex items-center justify-between mb-3">
+            <h3 className="text-sm font-medium">Assessment Priority Distribution</h3>
+            <PriorityInfoPopup />
+          </div>
+          <div className="grid grid-cols-4 gap-3">
+            <Card className="border-l-4 border-l-red-500">
+              <CardContent className="p-3">
+                <div className="text-center">
+                  <Badge variant="outline" className="mb-1 text-red-600 border-red-200">
+                    🚨 CRITICAL
+                  </Badge>
+                  <div className="text-lg font-bold text-red-600">
+                    {detailedRelationships?.reduce((count, r) => 
+                      count + (r.priorityDistribution?.CRITICAL || 0), 0
+                    ) || 0}
+                  </div>
+                  <div className="text-xs text-muted-foreground">assessments</div>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card className="border-l-4 border-l-orange-500">
+              <CardContent className="p-3">
+                <div className="text-center">
+                  <Badge variant="outline" className="mb-1 text-orange-600 border-orange-200">
+                    ⚠️ HIGH
+                  </Badge>
+                  <div className="text-lg font-bold text-orange-600">
+                    {detailedRelationships?.reduce((count, r) => 
+                      count + (r.priorityDistribution?.HIGH || 0), 0
+                    ) || 0}
+                  </div>
+                  <div className="text-xs text-muted-foreground">assessments</div>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card className="border-l-4 border-l-yellow-500">
+              <CardContent className="p-3">
+                <div className="text-center">
+                  <Badge variant="outline" className="mb-1 text-yellow-600 border-yellow-200">
+                    📍 MEDIUM
+                  </Badge>
+                  <div className="text-lg font-bold text-yellow-600">
+                    {detailedRelationships?.reduce((count, r) => 
+                      count + (r.priorityDistribution?.MEDIUM || 0), 0
+                    ) || 0}
+                  </div>
+                  <div className="text-xs text-muted-foreground">assessments</div>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card className="border-l-4 border-l-green-500">
+              <CardContent className="p-3">
+                <div className="text-center">
+                  <Badge variant="outline" className="mb-1 text-green-600 border-green-200">
+                    📋 LOW
+                  </Badge>
+                  <div className="text-lg font-bold text-green-600">
+                    {detailedRelationships?.reduce((count, r) => 
+                      count + (r.priorityDistribution?.LOW || 0), 0
+                    ) || 0}
+                  </div>
+                  <div className="text-xs text-muted-foreground">assessments</div>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        </div>
+      </CardContent>
 
       <CardContent className="p-0">
         <div className="h-96 w-full relative">

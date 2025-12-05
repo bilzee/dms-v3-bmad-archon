@@ -24,12 +24,26 @@ export function withAuth(handler: AuthenticatedHandler) {
       // Extract token from Authorization header
       const authorization = request.headers.get('Authorization')
       
-      // Development mode: if no authorization header, use coordinator user
+      // Development mode: if no authorization header, use appropriate user based on route
       if ((!authorization || !authorization.startsWith('Bearer ')) && process.env.NODE_ENV === 'development') {
-        console.log('🔍 Development mode: No auth header, trying coordinator user lookup')
+        console.log('🔍 Development mode: No auth header, detecting route and user')
         try {
-          const devUser = await AuthService.getUserByEmail('coordinator@dms.gov.ng')
+          const url = request.url
+          let userEmail = 'coordinator@dms.gov.ng' // default fallback
+          
+          // Route-based user selection for development
+          if (url.includes('/donor') && !url.includes('/donor-')) {
+            userEmail = 'donor@test.com'
+          } else if (url.includes('/assessor')) {
+            userEmail = 'assessor@test.com'
+          } else if (url.includes('/responder')) {
+            userEmail = 'responder@test.com'
+          }
+          
+          console.log(`🔍 Development mode: Using ${userEmail} for route: ${url}`)
+          const devUser = await AuthService.getUserByEmail(userEmail)
           console.log('🔍 Dev user lookup result:', !!devUser, devUser ? devUser.email : 'null')
+          
           if (devUser) {
             const userRoles = devUser.roles.map(ur => ur.role.name)
             console.log('🔍 Dev user roles:', userRoles)
@@ -40,10 +54,10 @@ export function withAuth(handler: AuthenticatedHandler) {
               permissions: devUser.roles.flatMap((ur: any) => ur.role.permissions.map((p: any) => p.permission.code)),
               request
             }
-            console.log('✅ Development auth successful, calling handler with coordinator context')
+            console.log('✅ Development auth successful, calling handler with appropriate user context')
             return await handler(request, context, nextContext)
           } else {
-            console.log('❌ No coordinator user found in database')
+            console.log(`❌ No user found for email: ${userEmail}`)
           }
         } catch (error) {
           console.log('❌ Dev auth fallback failed:', error)

@@ -5,8 +5,10 @@ export const usePreliminaryAssessment = () => {
   const store = usePreliminaryAssessmentStore()
   const { token } = useAuth()
 
-  // Update localStorage token for store methods
+  // Update localStorage token for store methods - use consistent key
   if (token && typeof window !== 'undefined') {
+    // Set both keys for backward compatibility during transition
+    localStorage.setItem('auth_token', token)
     localStorage.setItem('token', token)
   }
 

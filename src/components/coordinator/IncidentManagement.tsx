@@ -3,12 +3,16 @@
 import React from 'react'
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
-import { useQuery, useMutation } from '@tanstack/react-query'
+import { useMutation } from '@tanstack/react-query'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Badge } from '@/components/ui/badge'
+
+// New error handling components
+import { SafeDataLoader } from '@/components/shared/SafeDataLoader'
+import { EmptyState, EmptySearchResults } from '@/components/shared/EmptyState'
 import { 
   Select,
   SelectContent,
@@ -34,6 +38,9 @@ import {
   TableRow 
 } from '@/components/ui/table'
 import { IncidentCreationForm } from '@/components/forms/incident/IncidentCreationForm'
+
+// Token utilities
+import { getAuthToken } from '@/lib/auth/token-utils'
 import { 
   AlertTriangle, 
   MapPin, 
@@ -117,110 +124,87 @@ export function IncidentManagement({
   onIncidentSelect,
   onIncidentUpdate
 }: IncidentManagementProps) {
-  const { user, token } = useAuth()
+  const { user } = useAuth()
   const router = useRouter()
 
-  // Use TanStack Query for incidents
-  const {
-    data: incidentsResponse,
-    isLoading,
-    error,
-    refetch
-  } = useQuery({
-    queryKey: ['incidents', initialFilters],
-    queryFn: async () => {
-      const params = new URLSearchParams()
-      
-      if (initialFilters.page) params.set('page', initialFilters.page.toString())
-      if (initialFilters.limit) params.set('limit', initialFilters.limit.toString())
-      if (initialFilters.status?.length) params.set('status', initialFilters.status[0])
-      if (initialFilters.severity?.length) params.set('severity', initialFilters.severity[0])
-      if (initialFilters.type?.length) params.set('type', initialFilters.type[0])
-      if (initialFilters.location) params.set('location', initialFilters.location)
-      
-      const headers: Record<string, string> = {}
-      if (token) {
-        headers.Authorization = `Bearer ${token}`
+  // Fetch incidents
+  const fetchIncidents = async () => {
+    if (!user) throw new Error('User not authenticated')
+    
+    const token = getAuthToken()
+    if (!token) throw new Error('No authentication token available')
+    
+    const params = new URLSearchParams()
+    
+    if (initialFilters.page) params.set('page', initialFilters.page.toString())
+    if (initialFilters.limit) params.set('limit', initialFilters.limit.toString())
+    if (initialFilters.status?.length) params.set('status', initialFilters.status[0])
+    if (initialFilters.severity?.length) params.set('severity', initialFilters.severity[0])
+    if (initialFilters.type?.length) params.set('type', initialFilters.type[0])
+    if (initialFilters.location) params.set('location', initialFilters.location)
+    
+    const response = await fetch(`/api/v1/incidents?${params.toString()}`, {
+      headers: {
+        'Authorization': `Bearer ${token}`
       }
-      
-      const response = await fetch(`/api/v1/incidents?${params.toString()}`, {
-        headers
-      })
-      
-      if (!response.ok) {
-        throw new Error('Failed to fetch incidents')
-      }
-      
-      const result = await response.json()
-      return {
-        incidents: result.data,
-        pagination: result.pagination
-      }
-    },
-    staleTime: 30000, // 30 seconds
-    refetchInterval: enableRealTimeUpdates ? 30000 : false // 30 second real-time updates
-  })
-
-  const incidents = incidentsResponse?.incidents || []
-  const pagination = incidentsResponse?.pagination || {
-    page: 1,
-    limit: 10,
-    total: 0,
-    totalPages: 0
+    })
+    
+    if (!response.ok) {
+      throw new Error('Failed to fetch incidents')
+    }
+    
+    const result = await response.json()
+    return {
+      incidents: result.data,
+      pagination: result.pagination
+    }
   }
 
-  // Use TanStack Query for incident types
-  const { data: incidentTypes = [] } = useQuery({
-    queryKey: ['incident-types'],
-    queryFn: async () => {
-      try {
-        const headers: Record<string, string> = {}
-        if (token) {
-          headers.Authorization = `Bearer ${token}`
+  // Fetch incident types
+  const fetchIncidentTypes = async () => {
+    try {
+      const token = getAuthToken()
+      if (!token) throw new Error('No authentication token available')
+      
+      const response = await fetch('/api/v1/incidents/types', {
+        headers: {
+          'Authorization': `Bearer ${token}`
         }
-        
-        const response = await fetch('/api/v1/incidents/types', {
-          headers
-        })
-        if (!response.ok) {
-          throw new Error('Failed to fetch incident types')
-        }
-        const result = await response.json()
-        return result.data
-      } catch (error) {
-        // Fallback to default types on error
-        return [
-          'Flood',
-          'Fire', 
-          'Earthquake',
-          'Landslide',
-          'Drought',
-          'Storm',
-          'Epidemic',
-          'Conflict',
-          'Industrial Accident',
-          'Other'
-        ]
+      })
+      if (!response.ok) {
+        throw new Error('Failed to fetch incident types')
       }
-    },
-    staleTime: 60000 // 1 minute
-  })
+      const result = await response.json()
+      return result.data
+    } catch (error) {
+      // Fallback to default types on error
+      return [
+        'Flood',
+        'Fire', 
+        'Earthquake',
+        'Landslide',
+        'Drought',
+        'Storm',
+        'Epidemic',
+        'Conflict',
+        'Industrial Accident',
+        'Other'
+      ]
+    }
+  }
 
   // Use mutation for status updates
   const statusMutation = useMutation({
     mutationFn: async ({ incidentId, newStatus }: { incidentId: string; newStatus: string }) => {
-      const headers: Record<string, string> = {
-        'Content-Type': 'application/json'
-      }
-      
-      // Add authorization header if token exists
-      if (token) {
-        headers.Authorization = `Bearer ${token}`
-      }
+      const token = getAuthToken()
+      if (!token) throw new Error('No authentication token available')
       
       const response = await fetch(`/api/v1/incidents/${incidentId}`, {
         method: 'PUT',
-        headers,
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
         body: JSON.stringify({ status: newStatus })
       })
       
@@ -234,7 +218,7 @@ export function IncidentManagement({
       return result.data
     },
     onSuccess: (updatedIncident) => {
-      refetch()
+      // The refetch will be handled by the parent component
       onIncidentUpdate?.(updatedIncident)
     }
   })
@@ -275,8 +259,12 @@ export function IncidentManagement({
     router.push(`/coordinator/incidents/${incident.id}`)
   }
 
-  const handleStatusChange = async (incidentId: string, newStatus: string) => {
-    statusMutation.mutate({ incidentId, newStatus })
+  const handleStatusChange = async (incidentId: string, newStatus: string, retry: () => void) => {
+    statusMutation.mutate({ incidentId, newStatus }, {
+      onSuccess: () => {
+        retry() // Refresh the incidents list
+      }
+    })
   }
 
   const toggleRowExpansion = (incidentId: string) => {
@@ -291,9 +279,9 @@ export function IncidentManagement({
     })
   }
 
-  const handleIncidentCreated = async (incidentData?: any) => {
+  const handleIncidentCreated = async (incidentData?: any, retry?: () => void) => {
     setState(prev => ({ ...prev, showCreateModal: false }))
-    refetch() // Refresh incidents list
+    retry?.() // Refresh incidents list
   }
 
   const formatPopulationImpact = (impact: PopulationImpact) => {
@@ -305,43 +293,58 @@ export function IncidentManagement({
     }
   }
 
-  const filteredIncidents = incidents.filter(incident => {
-    if (!state.filters) return true
-    
-    if (state.filters.status && !state.filters.status.includes(incident.status)) {
-      return false
-    }
-    
-    if (state.filters.severity && !state.filters.severity.includes(incident.severity)) {
-      return false
-    }
-    
-    if (state.filters.type && !state.filters.type.includes(incident.type)) {
-      return false
-    }
-    
-    if (state.filters.location && !incident.location.toLowerCase().includes(state.filters.location.toLowerCase())) {
-      return false
-    }
-    
-    return true
-  })
-
-  if (state.loading && !state.incidents.length) {
-    return (
-      <Card className={className}>
-        <CardContent className="flex items-center justify-center h-64">
-          <div className="flex items-center gap-2">
-            <RefreshCw className="h-4 w-4 animate-spin" />
-            <span>Loading incidents...</span>
-          </div>
-        </CardContent>
-      </Card>
-    )
-  }
-
   return (
     <div className={className}>
+      <SafeDataLoader
+        queryFn={fetchIncidents}
+        enabled={!!user}
+        fallbackData={{ incidents: [], pagination: { page: 1, limit: 10, total: 0, totalPages: 0 } }}
+        loadingMessage="Loading incidents..."
+        errorTitle="Failed to load incidents"
+      >
+        {(incidentsResponse, isLoadingIncidents, incidentsError, retryIncidents) => {
+          const incidents = incidentsResponse?.incidents || []
+          const pagination = incidentsResponse?.pagination || {
+            page: 1,
+            limit: 10,
+            total: 0,
+            totalPages: 0
+          }
+
+          return (
+            <SafeDataLoader
+              queryFn={fetchIncidentTypes}
+              enabled={!!user}
+              fallbackData={['Flood', 'Fire', 'Earthquake', 'Landslide', 'Drought', 'Storm', 'Epidemic', 'Conflict', 'Industrial Accident', 'Other']}
+              loadingMessage="Loading incident types..."
+              errorTitle="Failed to load incident types"
+            >
+              {(incidentTypes, isLoadingTypes, typesError, retryTypes) => {
+                // Filter incidents based on state filters
+                const filteredIncidents = incidents.filter(incident => {
+                  if (!state.filters) return true
+                  
+                  if (state.filters.status && !state.filters.status.includes(incident.status)) {
+                    return false
+                  }
+                  
+                  if (state.filters.severity && !state.filters.severity.includes(incident.severity)) {
+                    return false
+                  }
+                  
+                  if (state.filters.type && !state.filters.type.includes(incident.type)) {
+                    return false
+                  }
+                  
+                  if (state.filters.location && !incident.location.toLowerCase().includes(state.filters.location.toLowerCase())) {
+                    return false
+                  }
+                  
+                  return true
+                })
+
+                return (
+                  <>
       {/* Header */}
       <div className="flex items-center justify-between mb-6">
         <div>
@@ -378,7 +381,7 @@ export function IncidentManagement({
                 </DialogDescription>
               </DialogHeader>
               <IncidentCreationForm
-                onSubmit={handleIncidentCreated}
+                onSubmit={(data) => handleIncidentCreated(data, retryIncidents)}
                 onCancel={() => setState(prev => ({ ...prev, showCreateModal: false }))}
                 autoSave={true}
                 gpsEnabled={true}
@@ -388,15 +391,6 @@ export function IncidentManagement({
         )}
       </div>
 
-      {/* Error Display */}
-      {error && (
-        <Alert variant="destructive" className="mb-4">
-          <AlertTriangle className="h-4 w-4" />
-          <AlertDescription>
-            {error instanceof Error ? error.message : String(error)}
-          </AlertDescription>
-        </Alert>
-      )}
 
       {/* Filters */}
       <Card className="mb-6">
@@ -493,28 +487,36 @@ export function IncidentManagement({
             <Button
               variant="outline"
               size="sm"
-              onClick={() => refetch()}
-              disabled={isLoading}
+              onClick={retryIncidents}
+              disabled={isLoadingIncidents}
             >
-              <RefreshCw className={`h-4 w-4 ${isLoading ? 'animate-spin' : ''}`} />
+              <RefreshCw className={`h-4 w-4 ${isLoadingIncidents ? 'animate-spin' : ''}`} />
               Refresh
             </Button>
           </CardTitle>
         </CardHeader>
         <CardContent>
           {filteredIncidents.length === 0 ? (
-            <div className="text-center py-8">
-              <AlertTriangle className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-              <h3 className="text-lg font-semibold text-gray-600 mb-2">
-                No incidents found
-              </h3>
-              <p className="text-gray-500">
-                {state.filters.location || state.filters.status || state.filters.severity || state.filters.type
-                  ? "Try adjusting your filters or create a new incident."
-                  : "Create your first incident to get started."
-                }
-              </p>
-            </div>
+            state.filters.location || state.filters.status || state.filters.severity || state.filters.type ? (
+              <EmptySearchResults onClearFilters={() => {
+                setState(prev => ({
+                  ...prev,
+                  filters: {}
+                }))
+              }} />
+            ) : (
+              <EmptyState
+                type="empty"
+                title="No incidents created yet"
+                description="Create your first incident to get started with crisis management."
+                action={{
+                  label: "Create Incident",
+                  onClick: () => setState(prev => ({ ...prev, showCreateModal: true })),
+                  variant: "default"
+                }}
+                icon={AlertTriangle}
+              />
+            )
           ) : (
             <Table>
               <TableHeader>
@@ -637,7 +639,7 @@ export function IncidentManagement({
                           {/* Status Change Actions */}
                           <Select
                             value={incident.status}
-                            onValueChange={(value) => handleStatusChange(incident.id, value)}
+                            onValueChange={(value) => handleStatusChange(incident.id, value, retryIncidents)}
                             disabled={state.isUpdating}
                           >
                             <SelectTrigger className="w-24">
@@ -731,9 +733,16 @@ export function IncidentManagement({
                 })}
               </TableBody>
             </Table>
-          )}
-        </CardContent>
-      </Card>
+                  )}
+                </CardContent>
+              </Card>
+                  </>
+                )
+              }}
+            </SafeDataLoader>
+          )
+        }}
+      </SafeDataLoader>
     </div>
   )
 }

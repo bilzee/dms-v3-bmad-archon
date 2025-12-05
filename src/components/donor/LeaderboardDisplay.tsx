@@ -1,7 +1,6 @@
 'use client';
 
 import React, { useState, useMemo } from 'react';
-import { useQuery } from '@tanstack/react-query';
 import { useAuth } from '@/hooks/useAuth';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -10,6 +9,10 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Alert, AlertDescription } from '@/components/ui/alert';
+
+// New error handling components
+import { SafeDataLoader } from '@/components/shared/SafeDataLoader';
+import { EmptyState, EmptySearchResults } from '@/components/shared/EmptyState';
 import { 
   Trophy, 
   Medal, 
@@ -30,6 +33,9 @@ import type {
   BadgeType 
 } from '@/types/gamification';
 
+// Token utilities
+import { getAuthToken } from '@/lib/auth/token-utils';
+
 interface LeaderboardDisplayProps {
   timeframe?: '7d' | '30d' | '90d' | '1y' | 'all';
   region?: string;
@@ -49,7 +55,7 @@ export function LeaderboardDisplay({
   interactive = true,
   className
 }: LeaderboardDisplayProps) {
-  const { token } = useAuth();
+  const { user } = useAuth();
   
   // State for filters and search
   const [searchTerm, setSearchTerm] = useState('');
@@ -67,54 +73,30 @@ export function LeaderboardDisplay({
   };
 
   // Fetch leaderboard data
-  const {
-    data: leaderboardData,
-    isLoading,
-    error,
-    refetch,
-    isFetching
-  } = useQuery<LeaderboardResponse>({
-    queryKey: ['leaderboard', queryParams],
-    queryFn: async () => {
-      const params = new URLSearchParams();
-      Object.entries(queryParams).forEach(([key, value]) => {
-        if (value !== undefined) {
-          params.append(key, value.toString());
-        }
-      });
-      
-      const response = await fetch(`/api/v1/leaderboard?${params}`, {
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
-      });
-      if (!response.ok) {
-        throw new Error('Failed to fetch leaderboard data');
+  const fetchLeaderboardData = async () => {
+    if (!user) throw new Error('User not authenticated')
+    
+    const token = getAuthToken()
+    if (!token) throw new Error('No authentication token available')
+    
+    const params = new URLSearchParams();
+    Object.entries(queryParams).forEach(([key, value]) => {
+      if (value !== undefined) {
+        params.append(key, value.toString());
       }
-      return response.json();
-    },
-    enabled: !!token,
-    staleTime: 15 * 60 * 1000, // 15 minutes cache
-    refetchInterval: 15 * 60 * 1000, // Auto-refresh every 15 minutes
-    retry: 2
-  });
-
-  // Filter rankings based on search term
-  const filteredRankings = useMemo(() => {
-    if (!leaderboardData?.data?.rankings) return [];
+    });
     
-    let filtered = leaderboardData.data.rankings;
-    
-    if (searchTerm) {
-      const search = searchTerm.toLowerCase();
-      filtered = filtered.filter(entry => 
-        entry.donor.organizationName.toLowerCase().includes(search) ||
-        entry.donor.region?.toLowerCase().includes(search)
-      );
+    const response = await fetch(`/api/v1/leaderboard?${params}`, {
+      headers: {
+        'Authorization': `Bearer ${token}`
+      }
+    });
+    if (!response.ok) {
+      throw new Error('Failed to fetch leaderboard data');
     }
-    
-    return filtered;
-  }, [leaderboardData, searchTerm]);
+    return response.json();
+  };
+
 
   // Render rank icon based on position
   const getRankIcon = (rank: number) => {
@@ -150,57 +132,36 @@ export function LeaderboardDisplay({
     }
   };
 
-  // Render loading skeleton
-  if (isLoading) {
-    return (
-      <Card className={cn("w-full", className)}>
-        <CardHeader>
-          <Skeleton className="h-6 w-48" />
-          <Skeleton className="h-4 w-64" />
-        </CardHeader>
-        <CardContent className="space-y-4">
-          {Array.from({ length: 10 }).map((_, i) => (
-            <div key={i} className="flex items-center space-x-4 p-4 border rounded-lg">
-              <Skeleton className="w-8 h-8 rounded-full" />
-              <div className="flex-1 space-y-2">
-                <Skeleton className="h-4 w-48" />
-                <Skeleton className="h-3 w-32" />
-              </div>
-              <Skeleton className="h-6 w-16" />
-            </div>
-          ))}
-        </CardContent>
-      </Card>
-    );
-  }
-
-  // Render error state
-  if (error) {
-    return (
-      <Card className={cn("w-full", className)}>
-        <CardContent className="p-6">
-          <Alert variant="destructive">
-            <AlertDescription>
-              Failed to load leaderboard data. 
-              <Button 
-                variant="ghost" 
-                size="sm" 
-                onClick={() => refetch()}
-                className="ml-2"
-              >
-                Try again
-              </Button>
-            </AlertDescription>
-          </Alert>
-        </CardContent>
-      </Card>
-    );
-  }
-
-  const metadata = leaderboardData?.data?.metadata;
-
   return (
-    <Card className={cn("w-full", className)}>
+    <SafeDataLoader
+      queryFn={fetchLeaderboardData}
+      enabled={!!user}
+      fallbackData={{ data: { rankings: [], metadata: { totalParticipants: 0, lastUpdated: null } } }}
+      loadingMessage="Loading leaderboard data..."
+      errorTitle="Failed to load leaderboard"
+    >
+      {(leaderboardData, isLoading, error, retry) => {
+        // Filter rankings based on search term
+        const filteredRankings = useMemo(() => {
+          if (!leaderboardData?.data?.rankings) return [];
+          
+          let filtered = leaderboardData.data.rankings;
+          
+          if (searchTerm) {
+            const search = searchTerm.toLowerCase();
+            filtered = filtered.filter((entry: LeaderboardEntry) => 
+              entry.donor.organizationName.toLowerCase().includes(search) ||
+              entry.donor.region?.toLowerCase().includes(search)
+            );
+          }
+          
+          return filtered;
+        }, [leaderboardData, searchTerm]);
+
+        const metadata = leaderboardData?.data?.metadata;
+
+        return (
+          <Card className={cn("w-full", className)}>
       <CardHeader>
         <div className="flex items-center justify-between">
           <div>
@@ -216,11 +177,11 @@ export function LeaderboardDisplay({
           <Button
             variant="outline"
             size="sm"
-            onClick={() => refetch()}
-            disabled={isFetching}
+            onClick={retry}
+            disabled={isLoading}
             className="gap-2"
           >
-            <RefreshCw className={cn("w-4 h-4", isFetching && "animate-spin")} />
+            <RefreshCw className={cn("w-4 h-4", isLoading && "animate-spin")} />
             Refresh
           </Button>
         </div>
@@ -283,14 +244,27 @@ export function LeaderboardDisplay({
         )}
       </CardHeader>
 
-      <CardContent className="space-y-2">
-        {filteredRankings.length === 0 ? (
-          <div className="text-center py-8">
-            <Filter className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-            <h3 className="text-lg font-semibold text-gray-600">No donors found</h3>
-            <p className="text-sm text-gray-500">Try adjusting your search or filter criteria</p>
-          </div>
-        ) : (
+        <CardContent className="space-y-2">
+          {filteredRankings.length === 0 ? (
+            searchTerm || selectedRegion ? (
+              <EmptySearchResults onClearFilters={() => {
+                setSearchTerm('')
+                setSelectedRegion('')
+              }} />
+            ) : (
+              <EmptyState
+                type="empty"
+                title="No leaderboard data"
+                description="No donors have been ranked yet."
+                action={{
+                  label: "Refresh",
+                  onClick: retry,
+                  variant: "outline"
+                }}
+                icon={Trophy}
+              />
+            )
+          ) : (
           filteredRankings.map((entry) => (
             <div
               key={entry.donor.id}
@@ -370,20 +344,23 @@ export function LeaderboardDisplay({
               </div>
             </div>
           ))
-        )}
+          )}
 
-        {/* Load more button for large datasets */}
-        {filteredRankings.length >= selectedLimit && (
-          <div className="text-center pt-4">
-            <Button
-              variant="outline"
-              onClick={() => setSelectedLimit(prev => prev + 25)}
-            >
-              Load More
-            </Button>
-          </div>
-        )}
-      </CardContent>
-    </Card>
+          {/* Load more button for large datasets */}
+          {filteredRankings.length >= selectedLimit && (
+            <div className="text-center pt-4">
+              <Button
+                variant="outline"
+                onClick={() => setSelectedLimit(prev => prev + 25)}
+              >
+                Load More
+              </Button>
+            </div>
+          )}
+        </CardContent>
+          </Card>
+        )
+      }}
+    </SafeDataLoader>
   );
 }

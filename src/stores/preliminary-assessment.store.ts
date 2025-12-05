@@ -72,17 +72,28 @@ export const usePreliminaryAssessmentStore = create<PreliminaryAssessmentState>(
         set({ isLoading: true, error: null })
         
         try {
+          // Get token from consistent storage
+          const getToken = () => {
+            if (typeof window === 'undefined') return null
+            return localStorage.getItem('auth_token') || localStorage.getItem('token')
+          }
+
           // Check if we're online
           const isOnline = typeof navigator !== 'undefined' ? navigator.onLine : false
           
           if (isOnline) {
             // Try to submit online first
             try {
+              const token = getToken()
+              if (!token) {
+                throw new Error('No authentication token available')
+              }
+
               const response = await fetch('/api/v1/preliminary-assessments', {
                 method: 'POST',
                 headers: {
                   'Content-Type': 'application/json',
-                  'Authorization': `Bearer ${localStorage.getItem('token')}`
+                  'Authorization': `Bearer ${token}`
                 },
                 body: JSON.stringify(data)
               })
@@ -191,11 +202,22 @@ export const usePreliminaryAssessmentStore = create<PreliminaryAssessmentState>(
         set({ isLoading: true, error: null })
         
         try {
+          // Get token from consistent storage
+          const getToken = () => {
+            if (typeof window === 'undefined') return null
+            return localStorage.getItem('auth_token') || localStorage.getItem('token')
+          }
+
+          const token = getToken()
+          if (!token) {
+            throw new Error('No authentication token available')
+          }
+
           const response = await fetch(`/api/v1/preliminary-assessments/${id}`, {
             method: 'PUT',
             headers: {
               'Content-Type': 'application/json',
-              'Authorization': `Bearer ${localStorage.getItem('token')}`
+              'Authorization': `Bearer ${token}`
             },
             body: JSON.stringify({ data })
           })
@@ -231,9 +253,20 @@ export const usePreliminaryAssessmentStore = create<PreliminaryAssessmentState>(
         set({ isLoading: true, error: null })
         
         try {
+          // Get token from consistent storage
+          const getToken = () => {
+            if (typeof window === 'undefined') return null
+            return localStorage.getItem('auth_token') || localStorage.getItem('token')
+          }
+
+          const token = getToken()
+          if (!token) {
+            throw new Error('No authentication token available')
+          }
+
           const response = await fetch('/api/v1/preliminary-assessments?limit=10', {
             headers: {
-              'Authorization': `Bearer ${localStorage.getItem('token')}`
+              'Authorization': `Bearer ${token}`
             }
           })
 
@@ -443,11 +476,22 @@ export const usePreliminaryAssessmentStore = create<PreliminaryAssessmentState>(
             try {
               const decryptedData = await offlineDB.decryptData(assessment.data, assessment.keyVersion)
               
+              // Get token from consistent storage
+              const getToken = () => {
+                if (typeof window === 'undefined') return null
+                return localStorage.getItem('auth_token') || localStorage.getItem('token')
+              }
+
+              const token = getToken()
+              if (!token) {
+                throw new Error('No authentication token available')
+              }
+
               const response = await fetch('/api/v1/preliminary-assessments', {
                 method: 'POST',
                 headers: {
                   'Content-Type': 'application/json',
-                  'Authorization': `Bearer ${localStorage.getItem('token')}`
+                  'Authorization': `Bearer ${token}`
                 },
                 body: JSON.stringify(decryptedData)
               })

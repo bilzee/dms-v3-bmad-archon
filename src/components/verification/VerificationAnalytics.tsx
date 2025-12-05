@@ -342,7 +342,7 @@ function KpiCard({ title, value, icon: Icon, trend, format, unit }: KpiCardProps
           <Icon className="h-8 w-8 text-muted-foreground" />
         </div>
         
-        {trend.trend !== 'neutral' && (
+        {trend && trend.trend !== 'neutral' && (
           <div className="flex items-center gap-1 mt-2">
             {trend.trend === 'up' ? (
               <TrendingUp className="h-4 w-4 text-green-500" />
