@@ -19,6 +19,7 @@ export default function CoordinatorDashboard() {
   const { assessmentQueueDepth, deliveryQueueDepth, refreshAll } = useVerificationStore();
   const [showAutoApprovalConfig, setShowAutoApprovalConfig] = useState(false);
   const [isClient, setIsClient] = useState(false);
+  const [dashboardError, setDashboardError] = useState<string | null>(null);
 
   // Prevent hydration mismatch by waiting for client-side mount
   useEffect(() => {
@@ -31,9 +32,11 @@ export default function CoordinatorDashboard() {
     
     const loadData = async () => {
       try {
+        setDashboardError(null);
         await refreshAll();
       } catch (error) {
         console.error('Failed to load initial dashboard data:', error);
+        setDashboardError(error instanceof Error ? error.message : 'Failed to load dashboard data');
       }
     };
     
@@ -43,7 +46,16 @@ export default function CoordinatorDashboard() {
     return () => clearTimeout(timeoutId);
   }, [refreshAll, isClient, token]);
 
-  const totalPendingVerifications = (assessmentQueueDepth?.total || 0) + (deliveryQueueDepth?.total || 0);
+  // Safely extract queue depth data with fallbacks
+  const safeAssessmentQueueDepth = assessmentQueueDepth && typeof assessmentQueueDepth === 'object' && !Array.isArray(assessmentQueueDepth) 
+    ? assessmentQueueDepth 
+    : { total: 0, critical: 0, high: 0, medium: 0, low: 0 };
+  
+  const safeDeliveryQueueDepth = deliveryQueueDepth && typeof deliveryQueueDepth === 'object' && !Array.isArray(deliveryQueueDepth) 
+    ? deliveryQueueDepth 
+    : { total: 0, critical: 0, high: 0, medium: 0, low: 0 };
+
+  const totalPendingVerifications = safeAssessmentQueueDepth.total + safeDeliveryQueueDepth.total;
 
   // Prevent hydration mismatch by showing loading state on server
   if (!isClient) {
@@ -60,12 +72,29 @@ export default function CoordinatorDashboard() {
   return (
     <RoleBasedRoute requiredRole="COORDINATOR">
       <div className="space-y-6">
+        {/* Error Display */}
+        {dashboardError && (
+          <div className="bg-red-50 border border-red-200 rounded-md p-4">
+            <div className="flex">
+              <div className="flex-shrink-0">
+                <AlertTriangle className="h-5 w-5 text-red-400" />
+              </div>
+              <div className="ml-3">
+                <h3 className="text-sm font-medium text-red-800">Dashboard Error</h3>
+                <div className="mt-2 text-sm text-red-700">
+                  {dashboardError}
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Header */}
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-3xl font-bold text-gray-900">Coordinator Dashboard</h1>
             <p className="text-gray-600 mt-2">
-              Welcome back, {(user as any)?.name}. Your current role is: <Badge variant="outline">{currentRole}</Badge>
+              Welcome back, {typeof user === 'object' && user ? (user as any).name : 'User'}. Your current role is: <Badge variant="outline">{currentRole}</Badge>
             </p>
           </div>
           <Button>
@@ -110,7 +139,7 @@ export default function CoordinatorDashboard() {
             <CardContent>
               <div className="text-2xl font-bold">{totalPendingVerifications}</div>
               <p className="text-xs text-muted-foreground">
-                {(assessmentQueueDepth?.critical || 0) + (deliveryQueueDepth?.critical || 0)} critical priority
+                {safeAssessmentQueueDepth.critical + safeDeliveryQueueDepth.critical} critical priority
               </p>
             </CardContent>
           </Card>

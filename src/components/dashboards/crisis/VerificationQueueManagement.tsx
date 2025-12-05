@@ -363,7 +363,7 @@ function AssessmentQueueContent({
           <div className="text-center text-red-600">
             <AlertTriangle className="h-8 w-8 mx-auto mb-2" />
             <h3 className="text-lg font-semibold">Error Loading Queue</h3>
-            <p className="text-sm">{error}</p>
+            <p className="text-sm">{error instanceof Error ? error.message : String(error)}</p>
           </div>
         </CardContent>
       </Card>
@@ -459,7 +459,7 @@ function DeliveryQueueContent({
           <div className="text-center text-red-600">
             <AlertTriangle className="h-8 w-8 mx-auto mb-2" />
             <h3 className="text-lg font-semibold">Error Loading Queue</h3>
-            <p className="text-sm">{error}</p>
+            <p className="text-sm">{error instanceof Error ? error.message : String(error)}</p>
           </div>
         </CardContent>
       </Card>
