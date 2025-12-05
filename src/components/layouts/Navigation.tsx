@@ -45,6 +45,24 @@ const getNavigationItems = (role: string | null): NavItem[] => {
       href: '/dashboard',
       icon: LayoutDashboard,
       description: 'Overview and statistics'
+    },
+    {
+      name: 'Profile',
+      href: '/profile',
+      icon: User,
+      description: 'Your user profile and settings'
+    },
+    {
+      name: 'Help & Support',
+      href: '/help',
+      icon: Settings,
+      description: 'Get help and support'
+    },
+    {
+      name: 'Logout',
+      href: '/logout',
+      icon: Settings,
+      description: 'Sign out of your account'
     }
   ];
 
@@ -61,15 +79,9 @@ const getNavigationItems = (role: string | null): NavItem[] => {
         icon: FileText,
         children: [
           { name: 'Preliminary', href: '/assessor/preliminary-assessment', icon: FileText },
-          { name: 'Rapid', href: '/rapid-assessments', icon: FileText },
-          { name: 'My Assessments', href: '/assessments/my', icon: FileText },
-          { name: 'Surveys', href: '/surveys', icon: FileText }
+          { name: 'Rapid', href: '/assessor/rapid-assessments', icon: FileText },
+          { name: 'My Assessments', href: '/assessor/rapid-assessments', icon: FileText }
         ]
-      },
-      { 
-        name: 'Reports', 
-        href: '/assessor/reports', 
-        icon: BarChart3 
       }
     ],
     COORDINATOR: [
@@ -239,11 +251,7 @@ const getNavigationItems = (role: string | null): NavItem[] => {
   };
 
   const roleSpecificItems = roleItems[role as keyof typeof roleItems] || [];
-  return [...baseItems, ...roleSpecificItems, { 
-    name: 'Profile', 
-    href: '/profile', 
-    icon: User 
-  }];
+  return [...baseItems, ...roleSpecificItems];
 };
 
 export const Navigation = () => {
