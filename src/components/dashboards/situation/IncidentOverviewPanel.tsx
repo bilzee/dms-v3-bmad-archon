@@ -65,48 +65,48 @@ const fetchDashboardData = async (incidentId?: string): Promise<DashboardData> =
  */
 function IncidentOverviewSkeleton() {
   return (
-    <div className="space-y-4">
+    <div className="space-y-3"> {/* Reduced spacing */}
       {/* Incident Selector Skeleton */}
       <Card>
-        <CardContent className="p-4">
+        <CardContent className="p-3"> {/* Reduced padding */}
           <Skeleton className="h-4 w-32 mb-2" />
-          <Skeleton className="h-10 w-full" />
+          <Skeleton className="h-9 w-full" /> {/* Reduced height */}
         </CardContent>
       </Card>
 
       {/* Incident Summary Skeleton */}
       <Card>
-        <CardContent className="p-4">
-          <Skeleton className="h-5 w-40 mb-4" />
-          <div className="space-y-3">
+        <CardContent className="p-3"> {/* Reduced padding */}
+          <Skeleton className="h-5 w-40 mb-3" /> {/* Reduced margin */}
+          <div className="space-y-2"> {/* Reduced spacing */}
             <Skeleton className="h-4 w-24" />
             <Skeleton className="h-4 w-48" />
             <Skeleton className="h-4 w-32" />
-            <Skeleton className="h-20 w-full" />
+            <Skeleton className="h-16 w-full" /> {/* Reduced height */}
           </div>
         </CardContent>
       </Card>
 
       {/* Population Impact Skeleton */}
       <Card>
-        <CardContent className="p-4">
-          <Skeleton className="h-5 w-32 mb-4" />
-          <div className="grid grid-cols-2 gap-4 mb-4">
-            <Skeleton className="h-16 w-full" />
-            <Skeleton className="h-16 w-full" />
+        <CardContent className="p-3"> {/* Reduced padding */}
+          <Skeleton className="h-5 w-32 mb-3" /> {/* Reduced margin */}
+          <div className="grid grid-cols-1 gap-2 mb-3"> {/* Single column for narrow width */}
+            <Skeleton className="h-12 w-full" />
+            <Skeleton className="h-12 w-full" />
           </div>
-          <Skeleton className="h-12 w-full" />
+          <Skeleton className="h-10 w-full" /> {/* Reduced height */}
         </CardContent>
       </Card>
 
       {/* Aggregate Metrics Skeleton */}
       <Card>
-        <CardContent className="p-4">
-          <Skeleton className="h-5 w-36 mb-4" />
-          <div className="space-y-3">
-            <Skeleton className="h-12 w-full" />
-            <Skeleton className="h-12 w-full" />
-            <Skeleton className="h-12 w-full" />
+        <CardContent className="p-3"> {/* Reduced padding */}
+          <Skeleton className="h-5 w-36 mb-3" /> {/* Reduced margin */}
+          <div className="space-y-2"> {/* Reduced spacing */}
+            <Skeleton className="h-10 w-full" /> {/* Reduced height */}
+            <Skeleton className="h-10 w-full" />
+            <Skeleton className="h-10 w-full" />
           </div>
         </CardContent>
       </Card>
@@ -120,23 +120,23 @@ function IncidentOverviewSkeleton() {
 function IncidentOverviewError({ error, onRetry }: { error: Error; onRetry: () => void }) {
   return (
     <Card className="border-red-200 bg-red-50">
-      <CardContent className="p-6">
-        <div className="flex items-center gap-3 text-red-700">
-          <AlertCircle className="h-5 w-5" />
-          <div>
-            <div className="font-medium">Failed to load incident data</div>
-            <div className="text-sm text-red-600 mt-1">
-              {error.message}
-            </div>
+      <CardContent className="p-4"> {/* Reduced padding */}
+        <div className="flex flex-col gap-2 text-red-700"> {/* Vertical stacking for narrow width */}
+          <div className="flex items-center gap-2">
+            <AlertCircle className="h-4 w-4 flex-shrink-0" /> {/* Smaller icon */}
+            <div className="font-medium text-sm">Failed to load incident data</div>
+          </div>
+          <div className="text-xs text-red-600 pl-6"> {/* Indented text */}
+            {error.message}
           </div>
         </div>
         <Button
           variant="outline"
           size="sm"
           onClick={onRetry}
-          className="mt-3 border-red-300 text-red-700 hover:bg-red-100"
+          className="mt-2 border-red-300 text-red-700 hover:bg-red-100 text-xs h-8 w-full"
         >
-          <RefreshCw className="h-4 w-4 mr-2" />
+          <RefreshCw className="h-3 w-3 mr-1" />
           Try Again
         </Button>
       </CardContent>
@@ -214,7 +214,7 @@ export function IncidentOverviewPanel({
   const incidents = dashboardData?.incidents || [];
 
   return (
-    <div className={cn("space-y-4 h-full overflow-y-auto", className)}>
+    <div className={cn("space-y-3 h-full overflow-y-auto", className)}> {/* Reduced spacing */}
       {/* Incident Selector */}
       <IncidentSelector
         selectedIncidentId={currentIncidentId}
@@ -223,15 +223,15 @@ export function IncidentOverviewPanel({
         className="px-1"
       />
 
-      {/* Historical Incident Toggle */}
+      {/* Historical Incident Toggle - more compact */}
       <div className="px-1">
         <Button
           variant="outline"
           size="sm"
           onClick={() => setIncludeHistorical(!includeHistorical)}
-          className="w-full justify-start"
+          className="w-full justify-start text-xs h-8" // Smaller height and text
         >
-          {includeHistorical ? 'Hide' : 'Show'} Historical Incidents
+          {includeHistorical ? 'Hide' : 'Show'} Historical
         </Button>
       </div>
 

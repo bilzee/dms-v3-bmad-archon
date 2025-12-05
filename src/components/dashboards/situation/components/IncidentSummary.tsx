@@ -260,37 +260,8 @@ export function IncidentSummary({
           </div>
         </div>
 
-        {/* Location */}
-        <div className="space-y-1">
-          <div className="text-sm text-gray-600">Location:</div>
-          <div className="ml-6 text-sm font-medium">
-            {incident.location}
-          </div>
-        </div>
-
-        {/* Description (if available) */}
-        {incident.description && (
-          <div className="space-y-1">
-            <div className="text-sm text-gray-600">Description:</div>
-            <div className="ml-6 text-sm text-gray-700 line-clamp-3">
-              {incident.description}
-            </div>
-          </div>
-        )}
-
-        {/* Last Updated */}
-        <div className="pt-2 border-t border-gray-100">
-          <div className="flex items-center justify-between text-xs text-gray-400">
-            <span>Last updated:</span>
-            <span>{new Date(incident.updatedAt).toLocaleString()}</span>
-          </div>
-          {realTime && (
-            <div className="flex items-center justify-between text-xs text-gray-400 mt-1">
-              <span>Current time:</span>
-              <span>{currentTime.toLocaleString()}</span>
-            </div>
-          )}
-        </div>
+              {/* Removed duplicated Location, Description, and timestamp information to prevent scrolling */}
+        {/* This information is already displayed elsewhere in the dashboard */}
       </CardContent>
     </Card>
   );

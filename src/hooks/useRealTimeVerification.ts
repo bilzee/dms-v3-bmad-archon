@@ -177,9 +177,7 @@ export function useRealTimeVerification({
 
     try {
       // Create WebSocket connection
-      const wsUrl = process.env.NODE_ENV === 'development' 
-        ? 'ws://localhost:3000/api/v1/verification/live'
-        : `${window.location.protocol === 'https:' ? 'wss:' : 'ws:'}//${window.location.host}/api/v1/verification/live`;
+      const wsUrl = `${window.location.protocol === 'https:' ? 'wss:' : 'ws:'}//${window.location.host}/api/v1/verification/live`;
 
       const ws = new WebSocket(wsUrl);
 

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { usePathname } from 'next/navigation';
 import Link from 'next/link';
 import { useAuth } from '@/hooks/useAuth';
@@ -17,7 +17,16 @@ import {
   HandHeart,
   Building2,
   ChevronDown,
-  ChevronRight
+  ChevronRight,
+  Monitor,
+  Package,
+  TrendingUp,
+  User,
+  BarChart3,
+  Award,
+  Trophy,
+  MapPin,
+  Menu
 } from 'lucide-react';
 
 interface NavItem {
@@ -36,12 +45,6 @@ const getNavigationItems = (role: string | null): NavItem[] => {
       href: '/dashboard',
       icon: LayoutDashboard,
       description: 'Overview and statistics'
-    },
-    {
-      name: 'Profile',
-      href: '/profile',
-      icon: Users,
-      description: 'User profile and settings'
     }
   ];
 
@@ -51,118 +54,185 @@ const getNavigationItems = (role: string | null): NavItem[] => {
         name: 'Assessments',
         href: '/assessments',
         icon: FileText,
-        description: 'Create and manage assessments',
         children: [
-          { name: 'New Assessment', href: '/assessments/new', icon: FileText },
+          { name: 'Preliminary', href: '/assessor/preliminary-assessment', icon: FileText },
+          { name: 'Rapid', href: '/rapid-assessments', icon: FileText },
           { name: 'My Assessments', href: '/assessments/my', icon: FileText },
-          { name: 'Surveys', href: '/surveys', icon: FileText },
+          { name: 'Surveys', href: '/surveys', icon: FileText }
         ]
       },
-      {
-        name: 'Reports',
-        href: '/assessor/reports',
-        icon: FileText,
-        description: 'View assessment reports'
+      { 
+        name: 'Reports', 
+        href: '/assessor/reports', 
+        icon: BarChart3 
       }
     ],
     COORDINATOR: [
+      { 
+        name: 'Dashboard', 
+        href: '/dashboard', 
+        icon: LayoutDashboard 
+      },
+      { 
+        name: 'Situation Awareness', 
+        href: '/coordinator/situation-dashboard', 
+        icon: Monitor 
+      },
       {
         name: 'Coordination',
         href: '/coordination',
         icon: Users,
-        description: 'Coordinate response efforts',
         children: [
           { name: 'Active Responses', href: '/responses', icon: AlertTriangle },
           { name: 'Verification Queue', href: '/verification', icon: FileText },
-          { name: 'Resource Allocation', href: '/resources', icon: Building2 },
+          { name: 'Resource Allocation', href: '/resources', icon: Package }
         ]
       },
+      { 
+        name: 'Entity Management', 
+        href: '/coordinator/entities', 
+        icon: Building2 
+      },
+      { 
+        name: 'Incidents', 
+        href: '/coordinator/incidents', 
+        icon: AlertTriangle 
+      },
+      { 
+        name: 'Analytics', 
+        href: '/coordinator/analytics', 
+        icon: TrendingUp 
+      },
       {
-        name: 'Analytics',
-        href: '/coordinator/analytics',
-        icon: LayoutDashboard,
-        description: 'Response analytics and insights'
+        name: 'Settings',
+        href: '/coordinator/settings',
+        icon: Settings,
+        children: [
+          { name: 'Gap Field Management', href: '/coordinator/settings/gap-field-management', icon: Settings },
+          { name: 'Export Functions', href: '/coordinator/dashboard?tab=exports', icon: FileText },
+          { name: 'Report Builder', href: '/coordinator/dashboard?tab=reports', icon: FileText }
+        ]
       }
     ],
     RESPONDER: [
+      { 
+        name: 'Dashboard', 
+        href: '/dashboard', 
+        icon: LayoutDashboard 
+      },
       {
         name: 'Response Planning',
         href: '/responder/planning',
-        icon: HandHeart,
-        description: 'Plan and manage response resources',
-        badge: 'NEW'
-      },
-      {
-        name: 'Response',
-        href: '/response',
-        icon: HandHeart,
-        description: 'Manage response activities',
+        icon: Package,
         children: [
-          { name: 'Active Incidents', href: '/incidents', icon: AlertTriangle },
-          { name: 'My Tasks', href: '/tasks', icon: FileText },
-          { name: 'Team Status', href: '/team', icon: Users },
+          { name: 'Create Response', href: '/responder/planning/new', icon: Package },
+          { name: 'My Responses', href: '/responder/responses', icon: Package },
+          { name: 'Commitment Import', href: '/responder/planning?tab=commitments', icon: HandHeart }
         ]
       },
-      {
-        name: 'Resources',
-        href: '/responder/resources',
-        icon: Building2,
-        description: 'Available resources and supplies'
+      { 
+        name: 'Resources', 
+        href: '/responder/resources', 
+        icon: Package 
+      },
+      { 
+        name: 'Active Incidents', 
+        href: '/incidents', 
+        icon: AlertTriangle 
+      },
+      { 
+        name: 'My Tasks', 
+        href: '/tasks', 
+        icon: FileText 
+      },
+      { 
+        name: 'Team Status', 
+        href: '/team', 
+        icon: Users 
       }
     ],
     DONOR: [
-      {
-        name: 'Donations',
-        href: '/donations',
-        icon: HandHeart,
-        description: 'Manage donations and contributions',
-        children: [
-          { name: 'New Donation', href: '/donations/new', icon: HandHeart },
-          { name: 'Donation History', href: '/donations/history', icon: FileText },
-          { name: 'Impact Reports', href: '/impact', icon: FileText },
-        ]
+      { 
+        name: 'Dashboard', 
+        href: '/dashboard', 
+        icon: LayoutDashboard 
       },
       {
-        name: 'Resources',
-        href: '/donor/resources',
-        icon: Building2,
-        description: 'Resource allocation tracking'
+        name: 'Commitments',
+        href: '/donor/dashboard',
+        icon: HandHeart,
+        children: [
+          { name: 'Manage Commitments', href: '/donor/dashboard?tab=commitments', icon: HandHeart },
+          { name: 'New Commitment', href: '/donor/dashboard?action=new-commitment', icon: HandHeart },
+          { name: 'Commitment Status', href: '/donor/responses', icon: FileText }
+        ]
+      },
+      { 
+        name: 'Assigned Entities', 
+        href: '/donor/entities', 
+        icon: MapPin 
+      },
+      { 
+        name: 'Performance', 
+        href: '/donor/performance', 
+        icon: TrendingUp 
+      },
+      { 
+        name: 'Achievements', 
+        href: '/donor/performance?tab=achievements', 
+        icon: Award 
+      },
+      { 
+        name: 'Leaderboard', 
+        href: '/donor/leaderboard', 
+        icon: Trophy 
       }
     ],
     ADMIN: [
+      { 
+        name: 'Dashboard', 
+        href: '/dashboard', 
+        icon: LayoutDashboard 
+      },
       {
         name: 'User Management',
         href: '/users',
         icon: Users,
-        description: 'Manage system users',
         children: [
           { name: 'All Users', href: '/users', icon: Users },
           { name: 'Add User', href: '/users/new', icon: Users },
-          { name: 'Role Management', href: '/roles', icon: Settings },
+          { name: 'Role Management', href: '/roles', icon: Settings }
         ]
       },
       {
         name: 'System',
         href: '/system',
         icon: Settings,
-        description: 'System administration',
         children: [
           { name: 'Settings', href: '/system/settings', icon: Settings },
           { name: 'Audit Logs', href: '/system/audit', icon: FileText },
-          { name: 'Database', href: '/system/database', icon: FileText },
+          { name: 'Database', href: '/system/database', icon: FileText }
         ]
       },
-      {
-        name: 'Reports',
-        href: '/admin/reports',
-        icon: FileText,
-        description: 'System-wide reports and analytics'
+      { 
+        name: 'Donor Management', 
+        href: '/admin/donors', 
+        icon: Building2 
+      },
+      { 
+        name: 'Donor Metrics', 
+        href: '/admin/donors/metrics', 
+        icon: BarChart3 
       }
     ]
   };
 
   const roleSpecificItems = roleItems[role as keyof typeof roleItems] || [];
-  return [...baseItems, ...roleSpecificItems];
+  return [...baseItems, ...roleSpecificItems, { 
+    name: 'Profile', 
+    href: '/profile', 
+    icon: User 
+  }];
 };
 
 export const Navigation = () => {
@@ -183,7 +253,20 @@ export const Navigation = () => {
   };
 
   const isActive = (href: string) => {
-    return pathname === href || pathname.startsWith(href + '/');
+    // Handle query parameters and sub-paths
+    const normalizePath = (path: string) => {
+      if (path.includes('?')) {
+        return path.split('?')[0];
+      }
+      return path;
+    };
+    
+    const normalizedHref = normalizePath(href);
+    const normalizedPathname = normalizePath(pathname);
+    
+    return normalizedPathname === normalizedHref || 
+           normalizedPathname.startsWith(normalizedHref + '/') ||
+           (href.includes('?') && normalizedPathname === normalizePath(href));
   };
 
   const isAccessible = (href: string) => {
@@ -200,23 +283,29 @@ export const Navigation = () => {
       return null;
     }
 
+    // Auto-expand logic handled at parent level through expanded state
+
     if (hasChildren) {
       return (
         <div className="space-y-1">
           <Button
             variant="ghost"
             className={cn(
-              "w-full justify-between font-normal",
+              "w-full justify-between font-normal transition-colors",
               depth > 0 && "ml-4",
-              isItemActive && "bg-accent text-accent-foreground"
+              isItemActive && "bg-teal-600 hover:bg-teal-700 text-white",
+              !isItemActive && "hover:bg-accent hover:text-accent-foreground"
             )}
             onClick={() => toggleExpanded(item.href)}
           >
             <div className="flex items-center gap-3">
-              <item.icon className="h-4 w-4" />
+              <item.icon className={cn(
+                "h-4 w-4 transition-colors",
+                isItemActive && "text-white"
+              )} />
               <span>{item.name}</span>
               {item.badge && (
-                <Badge variant="secondary" className="ml-auto">
+                <Badge variant={isItemActive ? "default" : "secondary"} className="ml-auto">
                   {item.badge}
                 </Badge>
               )}
@@ -244,16 +333,20 @@ export const Navigation = () => {
         <Button
           variant="ghost"
           className={cn(
-            "w-full justify-start font-normal",
+            "w-full justify-start font-normal transition-colors",
             depth > 0 && "ml-4",
-            isItemActive && "bg-accent text-accent-foreground"
+            isItemActive && "bg-teal-600 hover:bg-teal-700 text-white",
+            !isItemActive && "hover:bg-accent hover:text-accent-foreground"
           )}
         >
           <div className="flex items-center gap-3">
-            <item.icon className="h-4 w-4" />
+            <item.icon className={cn(
+              "h-4 w-4 transition-colors",
+              isItemActive && "text-white"
+            )} />
             <span>{item.name}</span>
             {item.badge && (
-              <Badge variant="secondary" className="ml-auto">
+              <Badge variant={isItemActive ? "default" : "secondary"} className="ml-auto">
                 {item.badge}
               </Badge>
             )}

@@ -82,8 +82,7 @@ export function useGapAnalysisRealtime({
         throw new Error('Incident ID is required for gap analysis summary');
       }
 
-      const baseUrl = process.env.NEXT_PUBLIC_API_URL || '/api';
-      const url = `${baseUrl}/v1/dashboard/situation?incidentId=${encodeURIComponent(incidentId)}&includeGapSummary=true`;
+      const url = `/api/v1/dashboard/situation?incidentId=${encodeURIComponent(incidentId)}&includeGapSummary=true`;
 
       const response = await fetch(url, {
         method: 'GET',

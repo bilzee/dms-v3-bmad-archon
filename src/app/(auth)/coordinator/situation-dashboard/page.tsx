@@ -77,12 +77,13 @@ export default function SituationDashboardPage() {
   });
 
   return (
-    <AppShell>
-      <div className="w-full h-full">
-        <div className="mb-6">
-          <h1 className="text-2xl font-bold text-gray-900">Situation Dashboard</h1>
-          <p className="text-gray-600 mt-1">
-            Comprehensive view of disaster situation, entity assessments, and gap analysis
+    <AppShell isDashboard={true}>
+      <div className="w-full h-full"> {/* Minimal padding now handled by AppShell */}
+        {/* Compact header - minimal spacing */}
+        <div className="mb-3">
+          <h1 className="text-xl font-bold text-gray-900">Situation Dashboard</h1>
+          <p className="text-sm text-gray-600">
+            Real-time disaster situation monitoring and analysis
           </p>
         </div>
         

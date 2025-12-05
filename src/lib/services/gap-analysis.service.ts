@@ -3,49 +3,53 @@
  * 
  * Provides gap analysis calculation functions that can be used across
  * the application for real-time form indicators and submission workflow.
+ * 
+ * Updated to use dynamic severity calculation from database instead of hardcoded logic.
  */
+
+import { AssessmentType, Priority } from '@prisma/client'
+import { gapFieldSeverityService } from './gap-field-severity.service'
 
 // Types for gap analysis results
 export interface HealthGapAnalysis {
   hasGap: boolean;
   gapFields: string[];
-  severity: 'CRITICAL' | 'HIGH' | 'MEDIUM' | 'LOW';
+  severity: Priority;
   recommendations: string[];
 }
 
 export interface FoodGapAnalysis {
   hasGap: boolean;
   gapFields: string[];
-  severity: 'CRITICAL' | 'HIGH' | 'MEDIUM' | 'LOW';
+  severity: Priority;
   recommendations: string[];
 }
 
 export interface WASHGapAnalysis {
   hasGap: boolean;
   gapFields: string[];
-  severity: 'CRITICAL' | 'HIGH' | 'MEDIUM' | 'LOW';
+  severity: Priority;
   recommendations: string[];
 }
 
 export interface ShelterGapAnalysis {
   hasGap: boolean;
   gapFields: string[];
-  severity: 'CRITICAL' | 'HIGH' | 'MEDIUM' | 'LOW';
+  severity: Priority;
   recommendations: string[];
 }
 
 export interface SecurityGapAnalysis {
   hasGap: boolean;
   gapFields: string[];
-  severity: 'CRITICAL' | 'HIGH' | 'MEDIUM' | 'LOW';
+  severity: Priority;
   recommendations: string[];
 }
 
 // Gap analysis calculation functions
-export function analyzeHealthGaps(data: any): HealthGapAnalysis {
+export async function analyzeHealthGaps(data: any): Promise<HealthGapAnalysis> {
   const gapFields: string[] = [];
   let hasGap = false;
-  let severity: 'CRITICAL' | 'HIGH' | 'MEDIUM' | 'LOW' = 'LOW';
 
   // Gap-Indicating fields (when false, indicates a gap)
   if (!data.hasFunctionalClinic) { gapFields.push('hasFunctionalClinic'); hasGap = true; }
@@ -55,38 +59,39 @@ export function analyzeHealthGaps(data: any): HealthGapAnalysis {
   if (!data.hasMedicalSupplies) { gapFields.push('hasMedicalSupplies'); hasGap = true; }
   if (!data.hasMaternalChildServices) { gapFields.push('hasMaternalChildServices'); hasGap = true; }
 
-  // Determine severity based on number of gaps
-  if (gapFields.length >= 4) severity = 'CRITICAL';
-  else if (gapFields.length >= 3) severity = 'HIGH';
-  else if (gapFields.length >= 1) severity = 'MEDIUM';
+  // NEW: Use dynamic severity calculation from database
+  const severity = await gapFieldSeverityService.calculateAssessmentSeverity(
+    AssessmentType.HEALTH, 
+    gapFields
+  );
 
   const recommendations = generateHealthRecommendations(gapFields);
 
   return { hasGap, gapFields, severity, recommendations };
 }
 
-export function analyzeFoodGaps(data: any): FoodGapAnalysis {
+export async function analyzeFoodGaps(data: any): Promise<FoodGapAnalysis> {
   const gapFields: string[] = [];
   let hasGap = false;
-  let severity: 'CRITICAL' | 'HIGH' | 'MEDIUM' | 'LOW' = 'LOW';
 
   if (!data.isFoodSufficient) { gapFields.push('isFoodSufficient'); hasGap = true; }
   if (!data.hasRegularMealAccess) { gapFields.push('hasRegularMealAccess'); hasGap = true; }
   if (!data.hasInfantNutrition) { gapFields.push('hasInfantNutrition'); hasGap = true; }
 
-  if (gapFields.length >= 3) severity = 'CRITICAL';
-  else if (gapFields.length >= 2) severity = 'HIGH';
-  else if (gapFields.length >= 1) severity = 'MEDIUM';
+  // NEW: Use dynamic severity calculation from database
+  const severity = await gapFieldSeverityService.calculateAssessmentSeverity(
+    AssessmentType.FOOD, 
+    gapFields
+  );
 
   const recommendations = generateFoodRecommendations(gapFields);
 
   return { hasGap, gapFields, severity, recommendations };
 }
 
-export function analyzeWASHGaps(data: any): WASHGapAnalysis {
+export async function analyzeWASHGaps(data: any): Promise<WASHGapAnalysis> {
   const gapFields: string[] = [];
   let hasGap = false;
-  let severity: 'CRITICAL' | 'HIGH' | 'MEDIUM' | 'LOW' = 'LOW';
 
   if (!data.isWaterSufficient) { gapFields.push('isWaterSufficient'); hasGap = true; }
   if (!data.hasCleanWaterAccess) { gapFields.push('hasCleanWaterAccess'); hasGap = true; }
@@ -94,38 +99,40 @@ export function analyzeWASHGaps(data: any): WASHGapAnalysis {
   if (!data.hasHandwashingFacilities) { gapFields.push('hasHandwashingFacilities'); hasGap = true; }
   if (data.hasOpenDefecationConcerns) { gapFields.push('hasOpenDefecationConcerns'); hasGap = true; }
 
-  if (gapFields.length >= 4) severity = 'CRITICAL';
-  else if (gapFields.length >= 3) severity = 'HIGH';
-  else if (gapFields.length >= 1) severity = 'MEDIUM';
+  // NEW: Use dynamic severity calculation from database
+  const severity = await gapFieldSeverityService.calculateAssessmentSeverity(
+    AssessmentType.WASH, 
+    gapFields
+  );
 
   const recommendations = generateWASHRecommendations(gapFields);
 
   return { hasGap, gapFields, severity, recommendations };
 }
 
-export function analyzeShelterGaps(data: any): ShelterGapAnalysis {
+export async function analyzeShelterGaps(data: any): Promise<ShelterGapAnalysis> {
   const gapFields: string[] = [];
   let hasGap = false;
-  let severity: 'CRITICAL' | 'HIGH' | 'MEDIUM' | 'LOW' = 'LOW';
 
   if (!data.areSheltersSufficient) { gapFields.push('areSheltersSufficient'); hasGap = true; }
   if (!data.hasSafeStructures) { gapFields.push('hasSafeStructures'); hasGap = true; }
   if (data.areOvercrowded) { gapFields.push('areOvercrowded'); hasGap = true; }
   if (!data.provideWeatherProtection) { gapFields.push('provideWeatherProtection'); hasGap = true; }
 
-  if (gapFields.length >= 3) severity = 'CRITICAL';
-  else if (gapFields.length >= 2) severity = 'HIGH';
-  else if (gapFields.length >= 1) severity = 'MEDIUM';
+  // NEW: Use dynamic severity calculation from database
+  const severity = await gapFieldSeverityService.calculateAssessmentSeverity(
+    AssessmentType.SHELTER, 
+    gapFields
+  );
 
   const recommendations = generateShelterRecommendations(gapFields);
 
   return { hasGap, gapFields, severity, recommendations };
 }
 
-export function analyzeSecurityGaps(data: any): SecurityGapAnalysis {
+export async function analyzeSecurityGaps(data: any): Promise<SecurityGapAnalysis> {
   const gapFields: string[] = [];
   let hasGap = false;
-  let severity: 'CRITICAL' | 'HIGH' | 'MEDIUM' | 'LOW' = 'LOW';
 
   if (!data.isSafeFromViolence) { gapFields.push('isSafeFromViolence'); hasGap = true; }
   if (data.gbvCasesReported) { gapFields.push('gbvCasesReported'); hasGap = true; }
@@ -134,9 +141,11 @@ export function analyzeSecurityGaps(data: any): SecurityGapAnalysis {
   if (!data.vulnerableGroupsHaveAccess) { gapFields.push('vulnerableGroupsHaveAccess'); hasGap = true; }
   if (!data.hasLighting) { gapFields.push('hasLighting'); hasGap = true; }
 
-  if (gapFields.length >= 4) severity = 'CRITICAL';
-  else if (gapFields.length >= 2) severity = 'HIGH';
-  else if (gapFields.length >= 1) severity = 'MEDIUM';
+  // NEW: Use dynamic severity calculation from database
+  const severity = await gapFieldSeverityService.calculateAssessmentSeverity(
+    AssessmentType.SECURITY, 
+    gapFields
+  );
 
   const recommendations = generateSecurityRecommendations(gapFields);
 

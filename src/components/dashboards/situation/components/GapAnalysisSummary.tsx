@@ -167,7 +167,7 @@ export function GapAnalysisSummary({
   if (isLoading) {
     return (
       <Card className={cn("h-full", className)}>
-        <CardHeader className="pb-3">
+        <CardHeader className="pb-2"> {/* Reduced from pb-3 */}
           <div className="flex items-center justify-between">
             <CardTitle className="flex items-center gap-2 text-lg">
               <BarChart3 className="h-5 w-5" />
@@ -190,7 +190,7 @@ export function GapAnalysisSummary({
   if (!metrics) {
     return (
       <Card className={cn("h-full opacity-60", className)}>
-        <CardHeader className="pb-3">
+        <CardHeader className="pb-2"> {/* Reduced from pb-3 */}
           <CardTitle className="flex items-center gap-2 text-lg">
             <BarChart3 className="h-5 w-5" />
             Gap Analysis Summary
@@ -210,8 +210,8 @@ export function GapAnalysisSummary({
   }
 
   return (
-    <Card className={cn("h-full", className)}>
-      <CardHeader className="pb-4">
+    <Card className={cn("h-full flex flex-col", className)}>
+      <CardHeader className="pb-2"> {/* Reduced from pb-4 */}
         <div className="flex items-center justify-between">
           <CardTitle className="flex items-center gap-2 text-lg">
             <BarChart3 className="h-5 w-5" />
@@ -258,9 +258,9 @@ export function GapAnalysisSummary({
         </div>
       </CardHeader>
 
-      <CardContent className="pt-0">
+      <CardContent className="pt-0 overflow-y-auto flex-1">
         {/* Severity Distribution */}
-        <div className="mb-6">
+        <div className="mb-4"> {/* Reduced from mb-6 */}
           <h3 className="text-sm font-medium text-gray-700 mb-3 flex items-center gap-2">
             <PieChart className="h-4 w-4" />
             Severity Distribution
@@ -278,8 +278,8 @@ export function GapAnalysisSummary({
             </div>
             <Progress 
               value={metrics.severityPercentages.high} 
-              className="h-2"
-              indicatorClassName="bg-orange-500"
+              className="h-1.5"  // Reduced from h-2
+              indicatorclassname="bg-orange-500"
             />
 
             {/* Medium severity */}
@@ -294,8 +294,8 @@ export function GapAnalysisSummary({
             </div>
             <Progress 
               value={metrics.severityPercentages.medium} 
-              className="h-2"
-              indicatorClassName="bg-yellow-500"
+              className="h-1.5"  // Reduced from h-2
+              indicatorclassname="bg-yellow-500"
             />
 
             {/* Low severity */}
@@ -310,8 +310,8 @@ export function GapAnalysisSummary({
             </div>
             <Progress 
               value={metrics.severityPercentages.low} 
-              className="h-2"
-              indicatorClassName="bg-green-500"
+              className="h-1.5"  // Reduced from h-2
+              indicatorclassname="bg-green-500"
             />
           </div>
         </div>
@@ -322,7 +322,7 @@ export function GapAnalysisSummary({
             <AlertTriangle className="h-4 w-4" />
             Assessment Type Gaps
           </h3>
-          <div className="grid grid-cols-1 gap-3">
+          <div className="grid grid-cols-1 gap-2"> {/* Single column to prevent text overflow - wider tiles */}
             {Object.entries(data.assessmentTypeGaps).map(([type, gapData]) => {
               const config = assessmentTypeConfig[type as keyof typeof assessmentTypeConfig];
               if (!config) return null;
@@ -331,7 +331,7 @@ export function GapAnalysisSummary({
                 <div 
                   key={type}
                   className={cn(
-                    "p-3 rounded-lg border",
+                    "p-2 rounded-lg border", // Reduced padding from p-3 to p-2
                     config.bgColor,
                     config.borderColor
                   )}

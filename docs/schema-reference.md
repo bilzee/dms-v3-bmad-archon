@@ -1,6 +1,6 @@
 # Prisma Schema Reference
 
-_Auto-generated on 2025-11-29T10:40:04.812Z_
+_Auto-generated on 2025-12-04T11:34:39.443Z_
 
 ## ReportTemplate
 
@@ -68,6 +68,8 @@ _Auto-generated on 2025-11-29T10:40:04.812Z_
 - `roles`
 - `reportTemplates`
 - `reportConfigurations`
+- `gapFieldSeveritiesCreated`
+- `gapFieldSeveritiesUpdated`
 
 ## Role
 
@@ -420,4 +422,21 @@ _Auto-generated on 2025-11-29T10:40:04.812Z_
 - `ipAddress`
 - `userAgent`
 - `user`
+
+## GapFieldSeverity
+
+**Fields:**
+- `id`
+- `fieldName`
+- `assessmentType`
+- `severity`
+- `displayName`
+- `description`
+- `isActive`
+- `createdAt`
+- `updatedAt`
+- `createdBy`
+- `updatedBy`
+- `createdByUser`
+- `updatedByUser`
 

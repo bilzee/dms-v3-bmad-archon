@@ -7,15 +7,24 @@ import { Navigation } from '@/components/layouts/Navigation';
 import { RoleSwitcher } from '@/components/layouts/RoleSwitcher';
 import { SyncIndicator } from '@/components/shared/SyncIndicator';
 import { OfflineIndicator } from '@/components/shared/OfflineIndicator';
+import { Breadcrumbs } from '@/components/shared/Breadcrumbs';
 import { Button } from '@/components/ui/button';
 import { Menu, X } from 'lucide-react';
+import { cn } from '@/lib/utils';
 
 interface AppShellProps {
   children: React.ReactNode;
   showNavigation?: boolean;
+  isDashboard?: boolean;
+  showBreadcrumbs?: boolean;
 }
 
-export const AppShell = ({ children, showNavigation = true }: AppShellProps) => {
+export const AppShell = ({ 
+  children, 
+  showNavigation = true, 
+  isDashboard = false, 
+  showBreadcrumbs = true 
+}: AppShellProps) => {
   const { isAuthenticated } = useAuth();
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
@@ -110,8 +119,23 @@ export const AppShell = ({ children, showNavigation = true }: AppShellProps) => 
         </div>
 
         {/* Main content */}
-        <main className="py-6">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <main className={cn(
+          // Minimal padding for dashboard pages to maximize viewport usage
+          isDashboard ? 'py-1' : 'py-6'
+        )}>
+          {/* Breadcrumbs - shown on all pages except dashboard root */}
+          {!isDashboard && showBreadcrumbs && (
+            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mb-4">
+              <Breadcrumbs />
+            </div>
+          )}
+          
+          <div className={cn(
+            // No max-width constraint for dashboard pages
+            isDashboard 
+              ? 'px-2 w-full' 
+              : 'max-w-7xl mx-auto px-4 sm:px-6 lg:px-8'
+          )}>
             {children}
           </div>
         </main>

@@ -8,6 +8,23 @@ export interface PanelConfiguration {
   layoutVersion: string;
 }
 
+// Enhanced responsive breakpoints
+export const RESPONSIVE_BREAKPOINTS = {
+  mobile: 768,      // < 768px: Single column stacked
+  tablet: 1024,     // 768-1023px: 2-column layout
+  smallDesktop: 1366, // 1024-1365px: Optimized 3-column
+  largeDesktop: 1920, // 1366-1919px: Full-featured layout
+  ultraWide: 2560   // >= 1920px: Ultra-wide/4K optimized layout
+} as const;
+
+// Optimized panel distributions per breakpoint
+export const OPTIMIZED_PANEL_DISTRIBUTION = {
+  tablet: { leftPanelWidth: 40, centerPanelWidth: 0, rightPanelWidth: 60 },    // Left + (Center+Right stacked)
+  smallDesktop: { leftPanelWidth: 25, centerPanelWidth: 50, rightPanelWidth: 25 }, // Better space allocation
+  largeDesktop: { leftPanelWidth: 30, centerPanelWidth: 45, rightPanelWidth: 25 },  // More breathing room
+  ultraWide: { leftPanelWidth: 20, centerPanelWidth: 60, rightPanelWidth: 20 }      // Ultra-wide: Center focus
+} as const;
+
 interface DashboardLayoutState {
   // Panel configuration
   panelSizes: PanelConfiguration;
@@ -16,9 +33,22 @@ interface DashboardLayoutState {
   isResizing: boolean;
   activePanel: 'left' | 'center' | 'right' | null;
   
-  // Responsive behavior
+  // Enhanced responsive tracking
+  screenSize: 'mobile' | 'tablet' | 'smallDesktop' | 'largeDesktop' | 'ultraWide';
   isMobile: boolean;
   isTablet: boolean;
+  isSmallDesktop: boolean;
+  isLargeDesktop: boolean;
+  isUltraWide: boolean;
+  
+  // Optimized panel sizes per breakpoint
+  optimizedPanelSizes: {
+    mobile: PanelConfiguration;
+    tablet: PanelConfiguration;
+    smallDesktop: PanelConfiguration;
+    largeDesktop: PanelConfiguration;
+    ultraWide: PanelConfiguration;
+  };
   
   // Incident management
   selectedIncidentId: string | null;
@@ -49,6 +79,11 @@ interface DashboardLayoutState {
   setIsResizing: (resizing: boolean) => void;
   setActivePanel: (panel: 'left' | 'center' | 'right' | null) => void;
   setResponsiveState: (isMobile: boolean, isTablet: boolean) => void;
+  
+  // Enhanced responsive actions
+  setScreenSize: (screenSize: 'mobile' | 'tablet' | 'smallDesktop' | 'largeDesktop' | 'ultraWide') => void;
+  getOptimalPanelSizes: (screenSize: 'mobile' | 'tablet' | 'smallDesktop' | 'largeDesktop' | 'ultraWide') => PanelConfiguration;
+  updateResponsiveState: () => void;
   
   // Incident actions
   setSelectedIncident: (incidentId: string | null) => void;
@@ -86,6 +121,15 @@ const DEFAULT_PANEL_SIZES: PanelConfiguration = {
   layoutVersion: '1.0.0'
 };
 
+// Default optimized panel configurations for each breakpoint
+const DEFAULT_OPTIMIZED_PANEL_SIZES = {
+  mobile: { leftPanelWidth: 100, centerPanelWidth: 0, rightPanelWidth: 0, layoutVersion: '1.0.0' },
+  tablet: { ...OPTIMIZED_PANEL_DISTRIBUTION.tablet, layoutVersion: '1.0.0' },
+  smallDesktop: { ...OPTIMIZED_PANEL_DISTRIBUTION.smallDesktop, layoutVersion: '1.0.0' },
+  largeDesktop: { ...OPTIMIZED_PANEL_DISTRIBUTION.largeDesktop, layoutVersion: '1.0.0' },
+  ultraWide: { ...OPTIMIZED_PANEL_DISTRIBUTION.ultraWide, layoutVersion: '1.0.0' }
+} as const;
+
 // Panel size constraints
 const PANEL_CONSTRAINTS = {
   left: { min: 20, max: 50 },
@@ -110,8 +154,17 @@ export const useDashboardLayoutStore = create<DashboardLayoutState>()(
       panelSizes: DEFAULT_PANEL_SIZES,
       isResizing: false,
       activePanel: null,
+      
+      // Enhanced responsive state
+      screenSize: 'largeDesktop', // Default to large desktop
       isMobile: false,
       isTablet: false,
+      isSmallDesktop: false,
+      isLargeDesktop: true,
+      isUltraWide: false,
+      
+      // Optimized panel sizes per breakpoint
+      optimizedPanelSizes: DEFAULT_OPTIMIZED_PANEL_SIZES,
       
       // Incident management initial state
       selectedIncidentId: null,
@@ -170,6 +223,49 @@ export const useDashboardLayoutStore = create<DashboardLayoutState>()(
       // Responsive state setters
       setResponsiveState: (isMobile, isTablet) => 
         set({ isMobile, isTablet }),
+
+      // Enhanced responsive actions
+      setScreenSize: (screenSize) => {
+        const state = get();
+        const optimalSizes = state.getOptimalPanelSizes(screenSize);
+        
+        set({
+          screenSize,
+          isMobile: screenSize === 'mobile',
+          isTablet: screenSize === 'tablet',
+          isSmallDesktop: screenSize === 'smallDesktop',
+          isLargeDesktop: screenSize === 'largeDesktop',
+          isUltraWide: screenSize === 'ultraWide',
+          panelSizes: optimalSizes
+        });
+      },
+
+      getOptimalPanelSizes: (screenSize) => {
+        const state = get();
+        return state.optimizedPanelSizes[screenSize];
+      },
+
+      updateResponsiveState: () => {
+        const width = window.innerWidth;
+        let newScreenSize: 'mobile' | 'tablet' | 'smallDesktop' | 'largeDesktop' | 'ultraWide';
+        
+        if (width < RESPONSIVE_BREAKPOINTS.mobile) {
+          newScreenSize = 'mobile';
+        } else if (width < RESPONSIVE_BREAKPOINTS.tablet) {
+          newScreenSize = 'tablet';
+        } else if (width < RESPONSIVE_BREAKPOINTS.smallDesktop) {
+          newScreenSize = 'smallDesktop';
+        } else if (width < RESPONSIVE_BREAKPOINTS.largeDesktop) {
+          newScreenSize = 'largeDesktop';
+        } else {
+          newScreenSize = 'ultraWide';
+        }
+        
+        const state = get();
+        if (state.screenSize !== newScreenSize) {
+          state.setScreenSize(newScreenSize);
+        }
+      },
 
       // Incident management actions
       setSelectedIncident: (incidentId) => {
@@ -348,8 +444,16 @@ export const useResizeState = () => useDashboardLayoutStore((state) => ({
 }));
 export const useResponsiveState = () => useDashboardLayoutStore((state) => ({
   isMobile: state.isMobile,
-  isTablet: state.isTablet
+  isTablet: state.isTablet,
+  isSmallDesktop: state.isSmallDesktop,
+  isLargeDesktop: state.isLargeDesktop,
+  isUltraWide: state.isUltraWide,
+  screenSize: state.screenSize
 }));
+
+// Enhanced responsive selectors
+export const useScreenSize = () => useDashboardLayoutStore((state) => state.screenSize);
+export const useOptimizedPanelSizes = () => useDashboardLayoutStore((state) => state.optimizedPanelSizes);
 
 // Incident management selectors
 export const useIncidentSelection = () => useDashboardLayoutStore((state) => ({

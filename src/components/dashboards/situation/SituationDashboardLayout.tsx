@@ -46,48 +46,68 @@ export const SituationDashboardLayout: React.FC<SituationDashboardLayoutProps> =
     setPanelSizes, 
     setIsResizing, 
     setActivePanel,
-    isMobile
+    screenSize,
+    updateResponsiveState,
+    getOptimalPanelSizes
   } = useDashboardLayoutStore();
   
   const containerRef = useRef<HTMLDivElement>(null);
 
-  // Handle responsive breakpoints
+  // Handle enhanced responsive breakpoints
   useEffect(() => {
+    // Initialize responsive state on mount
+    updateResponsiveState();
+
     const handleResize = () => {
-      const width = window.innerWidth;
-      const isMobileView = width < 1024; // lg breakpoint
-      
-      // Update store with responsive state
+      // Update responsive state using enhanced logic
+      updateResponsiveState();
+      // Reset active panel and resizing state on breakpoint change
       setActivePanel(null);
       setIsResizing(false);
     };
 
-    handleResize();
     window.addEventListener('resize', handleResize);
     return () => window.removeEventListener('resize', handleResize);
-  }, [setActivePanel, setIsResizing]);
+  }, [updateResponsiveState, setActivePanel, setIsResizing]);
 
   // Handle panel resize from PanelResizer component
   const handlePanelResize = (leftWidth: number, centerWidth: number, rightWidth: number) => {
     setPanelSizes({ left: leftWidth, center: centerWidth, right: rightWidth });
   };
 
-  // Calculate grid template columns based on panel sizes
-  const gridTemplateColumns = isMobile 
-    ? '1fr' // Single column on mobile
-    : `${panelSizes.leftPanelWidth}% ${panelSizes.centerPanelWidth}% ${panelSizes.rightPanelWidth}%`;
+  // Calculate grid template columns based on screen size and panel sizes
+  const getGridLayout = () => {
+    switch (screenSize) {
+      case 'mobile':
+        return '1fr'; // Single column stacked
+      case 'tablet':
+        // 2-column layout: Left + (Center+Right stacked)
+        return `${panelSizes.leftPanelWidth}% ${panelSizes.rightPanelWidth}%`;
+      case 'smallDesktop':
+      case 'largeDesktop':
+      case 'ultraWide':
+        // 3-column layout with optimized proportions
+        return `${panelSizes.leftPanelWidth}% ${panelSizes.centerPanelWidth}% ${panelSizes.rightPanelWidth}%`;
+      default:
+        return `${panelSizes.leftPanelWidth}% ${panelSizes.centerPanelWidth}% ${panelSizes.rightPanelWidth}%`;
+    }
+  };
 
-  if (isMobile) {
-    // Mobile layout: stacked panels
+  // Optimized height calculations - maximize viewport usage
+  // We have: mobile header (64px) + minimal py-1 padding + compact title ~ 2rem total
+  const containerHeight = 'h-[calc(100vh-2rem)]';
+
+  if (screenSize === 'mobile') {
+    // Mobile layout: stacked panels with better spacing
     return (
       <div 
         ref={containerRef}
         className={cn(
-          'h-[calc(100vh-8rem)]',
+          containerHeight,
           'min-h-[600px]',
           'w-full',
           'flex flex-col',
-          'space-y-4',
+          'gap-3', // Reduced from space-y-4 for better density
           className
         )}
       >
@@ -115,15 +135,16 @@ export const SituationDashboardLayout: React.FC<SituationDashboardLayoutProps> =
     );
   }
 
-  // Desktop layout: resizable panels
+  // Enhanced desktop layout with optimized space utilization
   return (
     <div 
       ref={containerRef}
       className={cn(
-        'h-[calc(100vh-8rem)]',
+        containerHeight, // Using optimized height calculation
         'min-h-[600px]',
         'w-full',
         'relative',
+        // Remove width constraints - use full viewport width
         className
       )}
     >
@@ -134,13 +155,44 @@ export const SituationDashboardLayout: React.FC<SituationDashboardLayoutProps> =
           'transition-all duration-200 ease-in-out'
         )}
         style={{
-          gridTemplateColumns,
+          gridTemplateColumns: getGridLayout(),
         }}
       >
         {React.Children.map(children, (child, index) => {
           if (!child) return null;
           
           const position = index === 0 ? 'left' : index === 1 ? 'center' : 'right';
+          
+          // Special handling for tablet layout (2-column)
+          if (screenSize === 'tablet' && position === 'center') {
+            // Center panel is stacked with right panel on tablet
+            return null;
+          }
+          
+          // For tablet, combine center and right panels
+          if (screenSize === 'tablet' && position === 'right') {
+            return (
+              <Panel 
+                key="combined-center-right"
+                position="right"
+                className={cn(
+                  'bg-white border border-gray-200',
+                  'overflow-hidden',
+                  'border-r',
+                  'last:border-r-0',
+                  'h-full',
+                  'flex flex-col'
+                )}
+              >
+                <div className="flex-1 overflow-hidden">
+                  {React.Children.toArray(children)[1]} {/* Center panel */}
+                </div>
+                <div className="flex-1 overflow-hidden border-t">
+                  {React.Children.toArray(children)[2]} {/* Right panel */}
+                </div>
+              </Panel>
+            );
+          }
           
           return (
             <Panel 
@@ -161,16 +213,18 @@ export const SituationDashboardLayout: React.FC<SituationDashboardLayoutProps> =
         })}
       </div>
       
-      {/* Panel resizer overlay */}
-      <PanelResizer
-        onResize={handlePanelResize}
-        disabled={isResizing}
-        initialSizes={{
-          left: panelSizes.leftPanelWidth,
-          center: panelSizes.centerPanelWidth,
-          right: panelSizes.rightPanelWidth
-        }}
-      />
+      {/* Panel resizer overlay - only for desktop layouts */}
+      {screenSize !== 'mobile' && screenSize !== 'tablet' && (
+        <PanelResizer
+          onResize={handlePanelResize}
+          disabled={isResizing}
+          initialSizes={{
+            left: panelSizes.leftPanelWidth,
+            center: panelSizes.centerPanelWidth,
+            right: panelSizes.rightPanelWidth
+          }}
+        />
+      )}
     </div>
   );
 };
