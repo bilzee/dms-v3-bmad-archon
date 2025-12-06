@@ -247,7 +247,7 @@ export const RoleSwitcher = ({ className }: RoleSwitcherProps) => {
       {/* Unsaved Changes Warning Dialog */}
       {showUnsavedWarning && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg p-6 max-w-md mx-4 shadow-lg">
+          <div className="bg-white/90 backdrop-blur-sm rounded-lg p-6 max-w-md mx-4 shadow-lg border border-gray-200">
             <div className="flex items-center gap-3 mb-4">
               <TriangleAlert className="h-5 w-5 text-orange-500" />
               <h3 className="text-lg font-semibold">Unsaved Changes</h3>

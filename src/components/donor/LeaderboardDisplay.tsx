@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useMemo } from 'react';
+import React, { useState } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -142,7 +142,7 @@ export function LeaderboardDisplay({
     >
       {(leaderboardData, isLoading, error, retry) => {
         // Filter rankings based on search term
-        const filteredRankings = useMemo(() => {
+        const getFilteredRankings = () => {
           if (!leaderboardData?.data?.rankings) return [];
           
           let filtered = leaderboardData.data.rankings;
@@ -156,8 +156,9 @@ export function LeaderboardDisplay({
           }
           
           return filtered;
-        }, [leaderboardData, searchTerm]);
+        };
 
+        const filteredRankings = getFilteredRankings();
         const metadata = leaderboardData?.data?.metadata;
 
         return (

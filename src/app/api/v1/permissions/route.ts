@@ -3,7 +3,7 @@ import { v4 as uuidv4 } from 'uuid'
 import { withAuth } from '@/lib/auth/middleware'
 import { prisma } from '@/lib/db/client'
 
-// Get all roles - requires MANAGE_USERS or ASSIGN_ROLES permission
+// Get all permissions - requires MANAGE_USERS or ASSIGN_ROLES permission
 export const GET = withAuth(async (request: NextRequest, context) => {
   const { permissions } = context;
   if (!permissions.includes('MANAGE_USERS') && !permissions.includes('ASSIGN_ROLES')) {
@@ -14,26 +14,21 @@ export const GET = withAuth(async (request: NextRequest, context) => {
   }
 
   try {
-    const roles = await prisma.role.findMany({
+    const permissions = await prisma.permission.findMany({
       include: {
-        permissions: {
+        roles: {
           include: {
-            permission: true
-          }
-        },
-        userRoles: {
-          select: {
-            userId: true
+            role: true
           }
         }
       },
-      orderBy: { name: 'asc' }
+      orderBy: { category: 'asc' }
     })
 
     return NextResponse.json(
       {
         data: {
-          roles
+          permissions
         },
         meta: {
           timestamp: new Date().toISOString(),
@@ -44,7 +39,7 @@ export const GET = withAuth(async (request: NextRequest, context) => {
       { status: 200 }
     )
   } catch (error) {
-    console.error('Get roles error:', error)
+    console.error('Get permissions error:', error)
     
     return NextResponse.json(
       {

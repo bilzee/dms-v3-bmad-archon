@@ -127,7 +127,17 @@ const getNavigationItems = (role: string | null): NavItem[] => {
         icon: MapPin,
         description: 'Interactive entity-incident relationship map with incident selector'
       },
-        {
+      {
+        name: 'Donor Management',
+        href: '/coordinator/donors',
+        icon: Building2
+      },
+      {
+        name: 'Donor Metrics',
+        href: '/coordinator/donors/metrics',
+        icon: BarChart3
+      },
+      {
         name: 'Settings',
         href: '/coordinator/settings',
         icon: Settings,
@@ -151,6 +161,7 @@ const getNavigationItems = (role: string | null): NavItem[] => {
         children: [
           { name: 'Create Response', href: '/responder/planning/new', icon: Package },
           { name: 'My Responses', href: '/responder/responses', icon: Package },
+          { name: 'My Response Planning', href: '/responder/planning/', icon: Package },
           { name: 'Commitment Import', href: '/responder/planning?tab=commitments', icon: HandHeart }
         ]
       },
@@ -210,11 +221,11 @@ const getNavigationItems = (role: string | null): NavItem[] => {
       },
       {
         name: 'User Management',
-        href: '/users',
+        href: '/admin/users',
         icon: Users,
         children: [
-          { name: 'All Users', href: '/users', icon: Users },
-          { name: 'Add User', href: '/users/new', icon: Users },
+          { name: 'All Users', href: '/admin/users', icon: Users },
+          { name: 'Add User', href: '/admin/users/new', icon: Users },
           { name: 'Role Management', href: '/roles', icon: Settings }
         ]
       },
@@ -227,16 +238,6 @@ const getNavigationItems = (role: string | null): NavItem[] => {
           { name: 'Audit Logs', href: '/system/audit', icon: FileText },
           { name: 'Database', href: '/system/database', icon: FileText }
         ]
-      },
-      { 
-        name: 'Donor Management', 
-        href: '/admin/donors', 
-        icon: Building2 
-      },
-      { 
-        name: 'Donor Metrics', 
-        href: '/admin/donors/metrics', 
-        icon: BarChart3 
       }
     ]
   };
@@ -250,6 +251,7 @@ export const Navigation = () => {
   const { currentRole } = useAuth();
   const { canAccessPath } = useRoleNavigation();
   const [expandedItems, setExpandedItems] = useState<Set<string>>(new Set());
+  
   const navigationItems = getNavigationItems(currentRole);
 
   const toggleExpanded = (href: string) => {

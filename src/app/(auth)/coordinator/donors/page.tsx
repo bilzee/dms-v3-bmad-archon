@@ -95,7 +95,7 @@ export default function DonorManagementPage() {
   }
 
   return (
-    <RoleBasedRoute requiredRoles={['ADMIN', 'COORDINATOR']} fallbackPath="/dashboard">
+    <RoleBasedRoute requiredRole="COORDINATOR" fallbackPath="/dashboard">
       <div className="container mx-auto py-8 space-y-6">
       {/* Header */}
       <div className="flex items-center justify-between">

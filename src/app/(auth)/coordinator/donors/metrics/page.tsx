@@ -5,7 +5,7 @@ import { DonorMetricsDashboard } from '@/components/dashboards/crisis/DonorMetri
 
 export default function DonorMetricsPage() {
   return (
-    <RoleBasedRoute requiredRoles={['ADMIN', 'COORDINATOR']} fallbackPath="/dashboard">
+    <RoleBasedRoute requiredRole="COORDINATOR" fallbackPath="/dashboard">
       <DonorMetricsDashboard />
     </RoleBasedRoute>
   )

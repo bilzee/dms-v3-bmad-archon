@@ -8,23 +8,23 @@ datasource db {
 }
 
 model ReportTemplate {
-  id          String        @id @default(uuid())
-  name        String
-  description String?
-  type        ReportType    @default(CUSTOM)
-  layout      Json
-  createdById String
-  isPublic    Boolean       @default(false)
-  createdAt   DateTime      @default(now())
-  updatedAt   DateTime      @updatedAt
-  createdBy   User          @relation("ReportTemplates", fields: [createdById], references: [id])
+  id             String                @id @default(uuid())
+  name           String
+  description    String?
+  type           ReportType            @default(CUSTOM)
+  layout         Json
+  createdById    String
+  isPublic       Boolean               @default(false)
+  createdAt      DateTime              @default(now())
+  updatedAt      DateTime              @updatedAt
   configurations ReportConfiguration[]
+  createdBy      User                  @relation("ReportTemplates", fields: [createdById], references: [id])
 
   @@map("report_templates")
 }
 
 model ReportConfiguration {
-  id             String              @id @default(uuid())
+  id             String            @id @default(uuid())
   templateId     String
   name           String
   filters        Json
@@ -32,10 +32,10 @@ model ReportConfiguration {
   visualizations Json
   schedule       Json?
   createdBy      String
-  createdAt      DateTime            @default(now())
-  template       ReportTemplate     @relation(fields: [templateId], references: [id], onDelete: Cascade)
-  creator        User                @relation("ReportConfigurations", fields: [createdBy], references: [id])
-  executions      ReportExecution[]
+  createdAt      DateTime          @default(now())
+  creator        User              @relation("ReportConfigurations", fields: [createdBy], references: [id])
+  template       ReportTemplate    @relation(fields: [templateId], references: [id], onDelete: Cascade)
+  executions     ReportExecution[]
 
   @@map("report_configurations")
 }
@@ -49,33 +49,33 @@ model ReportExecution {
   generatedAt     DateTime?
   error           String?
   createdAt       DateTime              @default(now())
-  configuration    ReportConfiguration  @relation(fields: [configurationId], references: [id], onDelete: Cascade)
+  configuration   ReportConfiguration   @relation(fields: [configurationId], references: [id], onDelete: Cascade)
 
   @@map("report_executions")
 }
 
 model User {
-  id                    String               @id @default(uuid())
-  email                 String               @unique
-  username              String               @unique
-  passwordHash          String
-  name                  String
-  phone                 String?
-  organization          String?
-  isActive              Boolean              @default(true)
-  isLocked              Boolean              @default(false)
-  lastLogin             DateTime?
-  createdAt             DateTime             @default(now())
-  updatedAt             DateTime             @updatedAt
-  auditLogs             AuditLog[]
-  entityAssignments     EntityAssignment[]
-  assessments           RapidAssessment[]    @relation("AssessorResponses")
-  responses             RapidResponse[]      @relation("UserResponses")
-  roles                 UserRole[]
-  reportTemplates       ReportTemplate[]     @relation("ReportTemplates")
-  reportConfigurations  ReportConfiguration[]  @relation("ReportConfigurations")
-  gapFieldSeveritiesCreated GapFieldSeverity[] @relation("GapFieldSeverityCreatedBy")
-  gapFieldSeveritiesUpdated GapFieldSeverity[] @relation("GapFieldSeverityUpdatedBy")
+  id                        String                @id @default(uuid())
+  email                     String                @unique
+  username                  String                @unique
+  passwordHash              String
+  name                      String
+  phone                     String?
+  organization              String?
+  isActive                  Boolean               @default(true)
+  isLocked                  Boolean               @default(false)
+  lastLogin                 DateTime?
+  createdAt                 DateTime              @default(now())
+  updatedAt                 DateTime              @updatedAt
+  auditLogs                 AuditLog[]
+  entityAssignments         EntityAssignment[]
+  gapFieldSeveritiesCreated GapFieldSeverity[]    @relation("GapFieldSeverityCreatedBy")
+  gapFieldSeveritiesUpdated GapFieldSeverity[]    @relation("GapFieldSeverityUpdatedBy")
+  assessments               RapidAssessment[]     @relation("AssessorResponses")
+  responses                 RapidResponse[]       @relation("UserResponses")
+  reportConfigurations      ReportConfiguration[] @relation("ReportConfigurations")
+  reportTemplates           ReportTemplate[]      @relation("ReportTemplates")
+  roles                     UserRole[]
 
   @@map("users")
 }
@@ -138,10 +138,10 @@ model Entity {
   autoApproveEnabled Boolean            @default(false)
   createdAt          DateTime           @default(now())
   updatedAt          DateTime           @updatedAt
+  commitments        DonorCommitment[]
   assignments        EntityAssignment[]
   rapidAssessments   RapidAssessment[]
   responses          RapidResponse[]    @relation("EntityResponses")
-  commitments        DonorCommitment[]   // NEW: Commitment relationship
 
   @@unique([name, type])
   @@map("entities")
@@ -172,9 +172,9 @@ model Incident {
   createdBy              String
   createdAt              DateTime                @default(now())
   updatedAt              DateTime                @updatedAt
+  commitments            DonorCommitment[]
   preliminaryAssessments PreliminaryAssessment[]
   rapidAssessments       RapidAssessment[]
-  commitments            DonorCommitment[]        // NEW: Commitment relationship
 
   @@map("incidents")
 }
@@ -205,14 +205,12 @@ model PreliminaryAssessment {
   @@map("preliminary_assessments")
 }
 
-
 model RapidAssessment {
   id                   String                @id @default(uuid())
   rapidAssessmentType  AssessmentType
   rapidAssessmentDate  DateTime
   assessorId           String
   entityId             String
-  incidentId           String
   assessorName         String
   location             String?
   coordinates          Json?
@@ -227,9 +225,10 @@ model RapidAssessment {
   rejectionReason      String?
   rejectionFeedback    String?
   mediaAttachments     Json?
-  gapAnalysis          Json?
   createdAt            DateTime              @default(now())
   updatedAt            DateTime              @updatedAt
+  gapAnalysis          Json?
+  incidentId           String
   foodAssessment       FoodAssessment?
   healthAssessment     HealthAssessment?
   populationAssessment PopulationAssessment?
@@ -369,7 +368,7 @@ model RapidResponse {
   createdAt          DateTime           @default(now())
   updatedAt          DateTime           @updatedAt
   donorId            String?
-  commitmentId       String?            // NEW: Track commitment import source
+  commitmentId       String?
   items              Json
   offlineId          String?            @unique
   plannedDate        DateTime           @default(now())
@@ -379,55 +378,54 @@ model RapidResponse {
   syncStatus         SyncStatus         @default(LOCAL)
   mediaAttachments   MediaAttachment[]
   assessment         RapidAssessment    @relation("AssessmentResponses", fields: [assessmentId], references: [id])
+  commitment         DonorCommitment?   @relation("CommitmentResponses", fields: [commitmentId], references: [id])
   donor              Donor?             @relation("DonorResponses", fields: [donorId], references: [id])
-  commitment         DonorCommitment?   @relation("CommitmentResponses", fields: [commitmentId], references: [id]) // NEW
   entity             Entity             @relation("EntityResponses", fields: [entityId], references: [id])
   responder          User               @relation("UserResponses", fields: [responderId], references: [id])
   conflicts          SyncConflict[]     @relation("ResponseConflicts")
 
-  @@index([commitmentId]) // NEW: Index for commitment-based queries
+  @@index([commitmentId])
   @@map("rapid_responses")
 }
 
 model Donor {
-  id                       String          @id @default(uuid())
+  id                       String            @id @default(uuid())
   name                     String
-  type                     DonorType       @default(ORGANIZATION)
+  type                     DonorType         @default(ORGANIZATION)
   contactEmail             String?
   contactPhone             String?
   organization             String?
-  isActive                 Boolean         @default(true)
-  selfReportedDeliveryRate Float?          @default(0) // Gamification: Self-reported delivery percentage (0-100)
-  verifiedDeliveryRate     Float?          @default(0) // Gamification: Verified delivery percentage (0-100)
-  leaderboardRank          Int?            @default(0) // Gamification: Current ranking position
-  createdAt                DateTime        @default(now())
-  updatedAt                DateTime        @updatedAt
-  responses                RapidResponse[] @relation("DonorResponses")
-  commitments              DonorCommitment[] // NEW: Add this relation
+  isActive                 Boolean           @default(true)
+  createdAt                DateTime          @default(now())
+  updatedAt                DateTime          @updatedAt
+  leaderboardRank          Int?              @default(0)
+  selfReportedDeliveryRate Float?            @default(0)
+  verifiedDeliveryRate     Float?            @default(0)
+  commitments              DonorCommitment[]
+  responses                RapidResponse[]   @relation("DonorResponses")
 
   @@map("donors")
 }
 
 model DonorCommitment {
-  id                        String             @id @default(uuid())
+  id                        String           @id @default(uuid())
   donorId                   String
   entityId                  String
   incidentId                String
-  status                    CommitmentStatus   @default(PLANNED)
-  items                     Json               // [{ name: string, unit: string, quantity: number }]
-  totalCommittedQuantity    Int                @default(0)
-  deliveredQuantity         Int                @default(0)
-  verifiedDeliveredQuantity Int                @default(0)
-  totalValueEstimated       Float?             @default(0) // Gamification: Estimated total value of commitment
-  commitmentDate            DateTime           @default(now())
-  lastUpdated               DateTime           @updatedAt
+  status                    CommitmentStatus @default(PLANNED)
+  items                     Json
+  totalCommittedQuantity    Int              @default(0)
+  deliveredQuantity         Int              @default(0)
+  verifiedDeliveredQuantity Int              @default(0)
+  commitmentDate            DateTime         @default(now())
+  lastUpdated               DateTime         @updatedAt
   notes                     String?
-  
-  donor                   Donor              @relation(fields: [donorId], references: [id])
-  entity                  Entity             @relation(fields: [entityId], references: [id])
-  incident                Incident           @relation(fields: [incidentId], references: [id])
-  responses               RapidResponse[]    @relation("CommitmentResponses")
-  
+  totalValueEstimated       Float?           @default(0)
+  donor                     Donor            @relation(fields: [donorId], references: [id])
+  entity                    Entity           @relation(fields: [entityId], references: [id])
+  incident                  Incident         @relation(fields: [incidentId], references: [id])
+  responses                 RapidResponse[]  @relation("CommitmentResponses")
+
   @@index([donorId, entityId])
   @@index([donorId, incidentId])
   @@index([status])
@@ -496,14 +494,13 @@ model GapFieldSeverity {
   updatedAt      DateTime       @updatedAt @map("updated_at")
   createdBy      String?        @map("created_by")
   updatedBy      String?        @map("updated_by")
-  
   createdByUser  User?          @relation("GapFieldSeverityCreatedBy", fields: [createdBy], references: [id])
   updatedByUser  User?          @relation("GapFieldSeverityUpdatedBy", fields: [updatedBy], references: [id])
 
   @@unique([fieldName, assessmentType], name: "unique_field_assessment")
-  @@index([assessmentType], name: "idx_assessment_type")
-  @@index([severity], name: "idx_severity")
-  @@index([isActive], name: "idx_active")
+  @@index([assessmentType], map: "idx_assessment_type")
+  @@index([severity], map: "idx_severity")
+  @@index([isActive], map: "idx_active")
   @@map("gap_field_severities")
 }
 

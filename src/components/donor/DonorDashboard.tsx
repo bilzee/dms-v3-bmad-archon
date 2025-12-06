@@ -140,10 +140,12 @@ export function DonorDashboard() {
       loadingMessage="Loading donor dashboard..."
       errorTitle="Failed to load dashboard data"
       showError={true}
+      showEmptyState={false}
     >
-      {(donorData, isLoading, error, retry) => {
+            {(donorData, isLoading, error, retry) => {
         const donor = donorData?.donor
 
+        
         // Fetch other data sources using nested SafeDataLoaders
         return (
           <SafeDataLoader
