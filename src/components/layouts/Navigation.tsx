@@ -71,17 +71,20 @@ const getNavigationItems = (role: string | null): NavItem[] => {
       { 
         name: 'Dashboard', 
         href: '/assessor/dashboard', 
-        icon: LayoutDashboard 
+        icon: LayoutDashboard,
+        description: 'View and manage rapid assessments'
       },
       {
-        name: 'Assessments',
-        href: '/assessments',
+        name: 'Create New Assessment',
+        href: '/assessor/rapid-assessments/new',
+        icon: AlertTriangle,
+        description: 'Create a new rapid assessment'
+      },
+      {
+        name: 'Preliminary Assessment',
+        href: '/assessor/preliminary-assessment',
         icon: FileText,
-        children: [
-          { name: 'Preliminary', href: '/assessor/preliminary-assessment', icon: FileText },
-          { name: 'Rapid', href: '/assessor/rapid-assessments', icon: FileText },
-          { name: 'My Assessments', href: '/assessor/rapid-assessments', icon: FileText }
-        ]
+        description: 'Preliminary assessment tools'
       }
     ],
     COORDINATOR: [
