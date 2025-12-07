@@ -9,6 +9,7 @@ import { Button } from '@/components/ui/button'
 import { Progress } from '@/components/ui/progress'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
+import { Alert, AlertDescription } from '@/components/ui/alert'
 
 // New error handling components
 import { SafeDataLoader } from '@/components/shared/SafeDataLoader'
@@ -213,24 +214,24 @@ export function DonorDashboard() {
                         showError={false}
                       >
                         {(leaderboardData) => {
-                          // Check for empty donor profile data and show empty state
-                          if (!donor) {
-                            return (
-                              <EmptyState
-                                type="data"
-                                title="No Donor Profile"
-                                description="Your donor profile could not be loaded. Please contact support to set up your donor account."
-                                action={{
-                                  label: "Retry",
-                                  onClick: retry,
-                                  variant: "default"
-                                }}
-                              />
-                            )
-                          }
-
                           return (
                             <div className="space-y-6">
+                              {/* Donor Profile Warning */}
+                              {!donor && (
+                                <Alert className="border-orange-200 bg-orange-50">
+                                  <AlertTriangle className="h-4 w-4 text-orange-600" />
+                                  <div className="ml-2">
+                                    <h3 className="text-sm font-medium text-orange-800">Donor Profile Not Found</h3>
+                                    <p className="text-sm text-orange-700 mt-1">
+                                      Your donor profile could not be loaded. Some features may be limited until your donor account is set up.
+                                      <Button variant="link" onClick={retry} className="p-0 h-auto text-orange-700 underline ml-1">
+                                        Try again
+                                      </Button>
+                                    </p>
+                                  </div>
+                                </Alert>
+                              )}
+
                               {/* Header */}
                               <div className="flex items-center justify-between" data-testid="dashboard-header">
                                 <div className="flex items-center space-x-4">
