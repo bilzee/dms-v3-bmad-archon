@@ -39,8 +39,26 @@ function DonorResponsesPageContent() {
     const token = getAuthToken()
     if (!token) throw new Error('No authentication token available')
     
-    // Use commitments endpoint to get responses related to donor's commitments
-    const response = await fetch(`/api/v1/donors/${user.id}/commitments?includeResponses=true`, {
+    // First get the donor profile to find the donor ID
+    const profileResponse = await fetch('/api/v1/donors/profile', {
+      headers: {
+        'Authorization': `Bearer ${token}`
+      }
+    })
+    
+    if (!profileResponse.ok) {
+      throw new Error('Failed to fetch donor profile')
+    }
+    
+    const profileResult = await profileResponse.json()
+    const donor = profileResult.data?.donor
+    
+    if (!donor) {
+      throw new Error('Donor profile not found')
+    }
+    
+    // Now use the donor ID to get commitments with responses
+    const response = await fetch(`/api/v1/donors/${donor.id}/commitments?includeResponses=true`, {
       headers: {
         'Authorization': `Bearer ${token}`
       }

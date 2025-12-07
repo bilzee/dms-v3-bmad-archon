@@ -123,13 +123,47 @@ export function DonorDashboard() {
   }
 
   const fetchLeaderboardPosition = async () => {
+    // First get the donor profile to find the donor ID
+    const token = getAuthToken()
+    if (!token) return null
+    
+    const profileResponse = await fetch('/api/v1/donors/profile', {
+      headers: {
+        'Authorization': `Bearer ${token}`
+      }
+    })
+    
+    if (!profileResponse.ok) return null
+    
+    const profileResult = await profileResponse.json()
+    const donorId = profileResult.data?.donor?.id
+    
+    if (!donorId) return null
+    
     const response = await fetch('/api/v1/leaderboard?limit=100&sortBy=overall')
     if (!response.ok) {
       throw new Error('Failed to fetch leaderboard')
     }
     const result = await response.json()
-    const userPosition = result.data.rankings.find((r: any) => r.donor.id === user?.id)
-    return userPosition
+    
+    // Find position by donor ID, not user ID
+    const rankings = result.data?.rankings || []
+    const userPosition = rankings.find((r: any) => r.donor.id === donorId)
+    
+    if (userPosition) {
+      const rank = rankings.indexOf(userPosition) + 1
+      return {
+        ...userPosition,
+        rank,
+        trend: userPosition.previousRank ? (
+          userPosition.previousRank > rank ? 'up' :
+          userPosition.previousRank < rank ? 'down' : 'stable'
+        ) : null,
+        previousRank: userPosition.previousRank
+      }
+    }
+    
+    return null
   }
 
   return (
