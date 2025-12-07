@@ -45,21 +45,8 @@ export default function DashboardPage() {
       <div className="mb-8">
         <div className="flex items-center justify-between mb-4">
           <div>
-            <h1 className="text-3xl font-bold">Dashboard</h1>
+            <h1 className="text-3xl font-bold">Home</h1>
             <p className="text-gray-600">Welcome back, {(user as any).name}</p>
-          </div>
-          
-          {/* Role Switching Shortcut */}
-          <div className="flex items-center gap-3">
-            <span className="text-sm text-gray-500">Active Role:</span>
-            <Badge variant="outline" className="text-sm font-medium">
-              {user.roles?.[0]?.role.name || 'No Role'}
-            </Badge>
-            <Link href="/profile">
-              <Button variant="outline" size="sm">
-                Switch Role
-              </Button>
-            </Link>
           </div>
         </div>
         
