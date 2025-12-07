@@ -11,13 +11,14 @@ import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { Alert, AlertDescription } from '@/components/ui/alert'
 
 // New error handling components
 import { SafeDataLoader } from '@/components/shared/SafeDataLoader'
 import { EmptyResponses, EmptySearchResults } from '@/components/shared/EmptyState'
 
 // Icons
-import { Package, Truck, Search, Filter, Clock, CheckCircle, ArrowLeft, Plus } from 'lucide-react'
+import { Package, Truck, Search, Filter, Clock, CheckCircle, ArrowLeft, Plus, AlertTriangle, User } from 'lucide-react'
 
 // Token utilities
 import { getAuthToken } from '@/lib/auth/token-utils'

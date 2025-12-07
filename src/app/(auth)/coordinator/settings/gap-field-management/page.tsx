@@ -124,12 +124,12 @@ export default function GapFieldManagementPage() {
         </CardHeader>
         <CardContent>
           <Tabs defaultValue="HEALTH" className="w-full">
-            <TabsList className="grid w-full grid-cols-5 mb-6">
+            <TabsList className="grid w-full grid-cols-5 mb-6 bg-gray-100 border-2 border-gray-300">
               {assessmentTypes.map((type) => (
                 <TabsTrigger 
                   key={type.key} 
                   value={type.key}
-                  className="flex items-center gap-2 text-xs"
+                  className="flex items-center gap-2 text-xs data-[state=active]:bg-blue-600 data-[state=active]:text-white data-[state=active]:border-blue-700 data-[state=active]:shadow-lg border-2 border-transparent hover:bg-gray-50 transition-all duration-200"
                 >
                   <span>{type.icon}</span>
                   <span className="hidden sm:inline">{type.label}</span>

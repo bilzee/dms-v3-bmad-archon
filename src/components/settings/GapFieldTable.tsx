@@ -147,6 +147,15 @@ export function GapFieldTable({ assessmentType }: GapFieldTableProps) {
     setPendingChanges({})
   }, [])
 
+  // Define functions that need access to gapFields as regular functions, not hooks
+  const handleSelectAll = (gapFields: GapField[] | undefined, checked: boolean) => {
+    if (checked && gapFields) {
+      setSelectedFields(gapFields.map(field => field.id))
+    } else {
+      setSelectedFields([])
+    }
+  }
+
   const handleSelectField = useCallback((fieldId: string, checked: boolean) => {
     setSelectedFields(prev => 
       checked 
@@ -154,6 +163,28 @@ export function GapFieldTable({ assessmentType }: GapFieldTableProps) {
         : prev.filter(id => id !== fieldId)
     )
   }, [])
+
+  const applyBulkChange = useCallback(() => {
+    if (selectedFields.length === 0 || !bulkSeverity) {
+      toast({
+        title: "Selection Required",
+        description: "Please select fields and choose a severity level",
+        variant: "destructive"
+      })
+      return
+    }
+
+    const newChanges = { ...pendingChanges }
+    selectedFields.forEach(fieldId => {
+      newChanges[fieldId] = bulkSeverity
+    })
+    setPendingChanges(newChanges)
+    
+    toast({
+      title: "Bulk Changes Applied",
+      description: `${selectedFields.length} fields updated. Click Save to confirm.`,
+    })
+  }, [selectedFields, bulkSeverity, pendingChanges])
 
   return (
     <SafeDataLoader
@@ -164,37 +195,6 @@ export function GapFieldTable({ assessmentType }: GapFieldTableProps) {
       errorTitle="Failed to load gap fields"
     >
       {(gapFields, isLoading, error, retry) => {
-        // Handle bulk selection - now has access to gapFields
-        const handleSelectAll = useCallback((checked: boolean) => {
-          if (checked && gapFields) {
-            setSelectedFields(gapFields.map(field => field.id))
-          } else {
-            setSelectedFields([])
-          }
-        }, [gapFields])
-
-        // Apply bulk severity change
-        const applyBulkChange = useCallback(() => {
-          if (selectedFields.length === 0 || !bulkSeverity) {
-            toast({
-              title: "Selection Required",
-              description: "Please select fields and choose a severity level",
-              variant: "destructive"
-            })
-            return
-          }
-
-          const newChanges = { ...pendingChanges }
-          selectedFields.forEach(fieldId => {
-            newChanges[fieldId] = bulkSeverity
-          })
-          setPendingChanges(newChanges)
-          
-          toast({
-            title: "Bulk Changes Applied",
-            description: `${selectedFields.length} fields updated. Click Save to confirm.`,
-          })
-        }, [selectedFields, bulkSeverity, pendingChanges])
         const hasChanges = Object.keys(pendingChanges).length > 0
         const allSelected = gapFields?.length > 0 && selectedFields.length === gapFields.length
         const someSelected = selectedFields.length > 0 && selectedFields.length < (gapFields?.length || 0)
@@ -218,7 +218,7 @@ export function GapFieldTable({ assessmentType }: GapFieldTableProps) {
                 ref={(element) => {
                   if (element) element.indeterminate = someSelected
                 }}
-                onCheckedChange={handleSelectAll}
+                onCheckedChange={(checked) => handleSelectAll(gapFields, checked)}
               />
               <label htmlFor="select-all" className="text-sm font-medium">
                 Select All ({selectedFields.length} of {gapFields?.length || 0})
@@ -292,7 +292,7 @@ export function GapFieldTable({ assessmentType }: GapFieldTableProps) {
                       ref={(element) => {
                         if (element) element.indeterminate = someSelected
                       }}
-                      onCheckedChange={handleSelectAll}
+                      onCheckedChange={(checked) => handleSelectAll(gapFields, checked)}
                     />
                   </th>
                   <th className="text-left p-4 font-medium text-sm text-gray-700">Field Name</th>

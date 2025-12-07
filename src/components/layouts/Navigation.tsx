@@ -75,6 +75,12 @@ const getNavigationItems = (role: string | null): NavItem[] => {
         description: 'View and manage rapid assessments'
       },
       {
+        name: 'Rapid Assessments',
+        href: '/assessor/rapid-assessments',
+        icon: FileText,
+        description: 'Rapid assessments management page'
+      },
+      {
         name: 'Create New Assessment',
         href: '/assessor/rapid-assessments/new',
         icon: AlertTriangle,
@@ -139,6 +145,18 @@ const getNavigationItems = (role: string | null): NavItem[] => {
         name: 'Donor Metrics',
         href: '/coordinator/donors/metrics',
         icon: BarChart3
+      },
+      {
+        name: 'Auto-Approval Management',
+        href: '/coordinator/auto-approval',
+        icon: Settings,
+        description: 'Manage automatic verification settings'
+      },
+      {
+        name: 'Resource & Donation Management',
+        href: '/coordinator/resource-management',
+        icon: Package,
+        description: 'Coordinate resource allocation and donations'
       },
       {
         name: 'Settings',

@@ -455,7 +455,7 @@ export function EnhancedAutoApprovalConfig({
         <div>
           {!compactMode && (
             <>
-              <h2 className="text-2xl font-bold tracking-tight">Enhanced Auto-Approval Configuration</h2>
+              <h2 className="text-2xl font-bold tracking-tight">Auto-Approval Configuration</h2>
               <p className="text-muted-foreground">
                 Advanced management with filtering, validation, and conflict detection
               </p>
@@ -819,6 +819,7 @@ function EntityConfigCard({
             <Checkbox
               checked={isSelected}
               onCheckedChange={onToggleSelection}
+              className="border-2 border-gray-400 data-[state=checked]:bg-blue-600 data-[state=checked]:border-blue-600 data-[state=checked]:text-white"
             />
             <div>
               <h3 className="font-semibold text-gray-900">{entity.entityName}</h3>
@@ -847,7 +848,7 @@ function EntityConfigCard({
             )}
             
             <div className="flex items-center gap-2">
-              <Label htmlFor={`auto-approval-${entity.entityId}`} className="text-sm">
+              <Label htmlFor={`auto-approval-${entity.entityId}`} className="text-sm font-medium text-gray-800">
                 Auto-Approval
               </Label>
               <Switch
@@ -855,6 +856,7 @@ function EntityConfigCard({
                 checked={entity.enabled}
                 onCheckedChange={onQuickToggle}
                 disabled={isUpdating}
+                className="data-[state=checked]:bg-green-600 data-[state=unchecked]:bg-gray-300 border-2 border-gray-400 data-[state=checked]:border-green-600 [&>span]:bg-white [&>span]:shadow-md [&>span]:border [&>span]:border-gray-200"
               />
             </div>
           </div>
@@ -972,7 +974,7 @@ function EnhancedBulkConfigDialog({
       <DialogContent className="sm:max-w-lg bg-white dark:bg-gray-900 border-2 border-gray-300 dark:border-gray-600 shadow-xl backdrop-blur-sm bg-opacity-95 dark:bg-opacity-95">
         <DialogHeader>
           <DialogTitle className="text-gray-900 dark:text-gray-100">
-            Enhanced Bulk Configuration
+            Bulk Configuration
           </DialogTitle>
           <DialogDescription className="text-gray-600 dark:text-gray-300">
             Configure auto-approval settings for {selectedCount} selected entities with conflict detection.
@@ -1002,8 +1004,9 @@ function EnhancedBulkConfigDialog({
               onCheckedChange={(enabled) => 
                 onConfigChange({ ...config, enabled })
               }
+              className="data-[state=checked]:bg-green-600 data-[state=unchecked]:bg-gray-400 border-2 border-gray-500 data-[state=checked]:border-green-600 [&>span]:bg-white [&>span]:shadow-md [&>span]:border [&>span]:border-gray-200"
             />
-            <Label htmlFor="bulk-enabled" className="text-gray-800 dark:text-gray-200">Enable auto-approval</Label>
+            <Label htmlFor="bulk-enabled" className="text-gray-800 dark:text-gray-200 font-medium">Enable auto-approval</Label>
           </div>
 
           {config.enabled && (
@@ -1063,8 +1066,9 @@ function EnhancedBulkConfigDialog({
                       conditions: { ...config.conditions, requiresDocumentation: checked }
                     })
                   }
+                  className="border-2 border-gray-500 data-[state=checked]:bg-blue-600 data-[state=checked]:border-blue-600 data-[state=checked]:text-white"
                 />
-                <Label htmlFor="bulk-documentation" className="text-gray-700 dark:text-gray-300">Require documentation</Label>
+                <Label htmlFor="bulk-documentation" className="text-gray-700 dark:text-gray-300 font-medium">Require documentation</Label>
               </div>
 
               {/* Configuration Preview */}

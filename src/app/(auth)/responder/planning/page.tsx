@@ -7,13 +7,14 @@ import { useRouter } from 'next/navigation'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
+import { Alert, AlertDescription } from '@/components/ui/alert'
 
 // New error handling components
 import { SafeDataLoader } from '@/components/shared/SafeDataLoader'
 import { EmptyState } from '@/components/shared/EmptyState'
 
 // Icons
-import { Plus, Edit, Package, CheckCircle, User, Shield, RefreshCw } from 'lucide-react'
+import { Plus, Edit, Package, CheckCircle, User, Shield, RefreshCw, AlertTriangle } from 'lucide-react'
 
 // Forms and components
 import { RoleBasedRoute } from '@/components/shared/RoleBasedRoute'
