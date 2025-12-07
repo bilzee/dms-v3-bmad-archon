@@ -5,7 +5,7 @@ import { RoleBasedRoute } from '@/components/shared/RoleBasedRoute';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Users, AlertTriangle, CheckCircle, Clock, FileText, Activity, PlusCircle, TrendingUp, Shield, BarChart3, Shield as ReportIcon } from 'lucide-react';
+import { Users, AlertTriangle, CheckCircle, Clock, FileText, Activity, PlusCircle, TrendingUp, Shield, BarChart3, Shield as ReportIcon, RefreshCw } from 'lucide-react';
 import Link from 'next/link';
 import { VerificationQueueManagement } from '@/components/dashboards/crisis/VerificationQueueManagement';
 import { AutoApprovalConfig } from '@/components/verification/AutoApprovalConfig';
@@ -13,6 +13,9 @@ import { EnhancedAutoApprovalConfig } from '@/components/verification/EnhancedAu
 import { ResourceManagement } from '@/components/dashboards/crisis/ResourceManagement';
 import { useVerificationStore } from '@/stores/verification.store';
 import { useEffect, useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
+import { getAuthToken } from '@/lib/auth/token-utils';
+import { Skeleton } from '@/components/ui/skeleton';
 
 export default function CoordinatorDashboard() {
   const { currentRole, user, token } = useAuth();
@@ -20,6 +23,36 @@ export default function CoordinatorDashboard() {
   const [showAutoApprovalConfig, setShowAutoApprovalConfig] = useState(false);
   const [isClient, setIsClient] = useState(false);
   const [dashboardError, setDashboardError] = useState<string | null>(null);
+
+  // Fetch coordinator dashboard stats from backend
+  const { 
+    data: dashboardStats, 
+    isLoading: statsLoading, 
+    error: statsError,
+    refetch: refetchStats
+  } = useQuery({
+    queryKey: ['coordinator-dashboard-stats'],
+    queryFn: async () => {
+      const token = getAuthToken();
+      if (!token) throw new Error('No authentication token available');
+      
+      const response = await fetch('/api/v1/coordinator/dashboard/stats', {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+      
+      if (!response.ok) {
+        throw new Error('Failed to fetch dashboard statistics');
+      }
+      
+      const data = await response.json();
+      return data.success ? data.data : null;
+    },
+    enabled: !!token && isClient,
+    staleTime: 30000, // Cache for 30 seconds
+    refetchInterval: 60000 // Auto-refresh every minute
+  });
 
   // Prevent hydration mismatch by waiting for client-side mount
   useEffect(() => {
@@ -97,65 +130,103 @@ export default function CoordinatorDashboard() {
               Welcome back, {typeof user === 'object' && user ? (user as any).name : 'User'}. Your current role is: <Badge variant="outline">{currentRole}</Badge>
             </p>
           </div>
-          <Button>
-            <AlertTriangle className="h-4 w-4 mr-2" />
+          <div className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => refetchStats()}
+              disabled={statsLoading}
+            >
+              <RefreshCw className={`h-4 w-4 mr-2 ${statsLoading ? 'animate-spin' : ''}`} />
+              Refresh
+            </Button>
+            <Button>
+              <AlertTriangle className="h-4 w-4 mr-2" />
               New Response
-          </Button>
+            </Button>
+          </div>
         </div>
 
         {/* Stats Cards */}
         <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Active Responses</CardTitle>
-              <AlertTriangle className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">7</div>
-              <p className="text-xs text-muted-foreground">
-                2 critical priority
-              </p>
-            </CardContent>
-          </Card>
-          
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Responders Deployed</CardTitle>
-              <Users className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">24</div>
-              <p className="text-xs text-muted-foreground">
-                18 in field, 6 on standby
-              </p>
-            </CardContent>
-          </Card>
-          
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Pending Verification</CardTitle>
-              <Clock className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{totalPendingVerifications}</div>
-              <p className="text-xs text-muted-foreground">
-                {safeAssessmentQueueDepth.critical + safeDeliveryQueueDepth.critical} critical priority
-              </p>
-            </CardContent>
-          </Card>
-          
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Completed Today</CardTitle>
-              <CheckCircle className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">12</div>
-              <p className="text-xs text-muted-foreground">
-                95% target achieved
-              </p>
-            </CardContent>
-          </Card>
+          {statsLoading ? (
+            // Loading skeletons
+            Array.from({ length: 4 }).map((_, i) => (
+              <Card key={i}>
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                  <Skeleton className="h-4 w-24" />
+                  <Skeleton className="h-4 w-4 rounded" />
+                </CardHeader>
+                <CardContent>
+                  <Skeleton className="h-8 w-16 mb-2" />
+                  <Skeleton className="h-3 w-20" />
+                </CardContent>
+              </Card>
+            ))
+          ) : (
+            <>
+              <Card>
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                  <CardTitle className="text-sm font-medium">Active Responses</CardTitle>
+                  <AlertTriangle className="h-4 w-4 text-muted-foreground" />
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold">
+                    {dashboardStats?.activeResponses?.total ?? 0}
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    {dashboardStats?.activeResponses?.description ?? "Loading..."}
+                  </p>
+                </CardContent>
+              </Card>
+              
+              <Card>
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                  <CardTitle className="text-sm font-medium">Responders Deployed</CardTitle>
+                  <Users className="h-4 w-4 text-muted-foreground" />
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold">
+                    {dashboardStats?.responders?.total ?? 0}
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    {dashboardStats?.responders?.description ?? "Loading..."}
+                  </p>
+                </CardContent>
+              </Card>
+              
+              <Card>
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                  <CardTitle className="text-sm font-medium">Pending Verification</CardTitle>
+                  <Clock className="h-4 w-4 text-muted-foreground" />
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold">
+                    {dashboardStats?.pendingVerification?.total ?? totalPendingVerifications}
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    {dashboardStats?.pendingVerification?.description ?? 
+                     `${safeAssessmentQueueDepth.critical + safeDeliveryQueueDepth.critical} critical priority`}
+                  </p>
+                </CardContent>
+              </Card>
+              
+              <Card>
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                  <CardTitle className="text-sm font-medium">Completed Today</CardTitle>
+                  <CheckCircle className="h-4 w-4 text-muted-foreground" />
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold">
+                    {dashboardStats?.completedToday?.total ?? 0}
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    {dashboardStats?.completedToday?.description ?? "Loading..."}
+                  </p>
+                </CardContent>
+              </Card>
+            </>
+          )}
         </div>
 
   
