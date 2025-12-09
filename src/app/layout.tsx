@@ -3,6 +3,7 @@ import './globals.css';
 import { Header } from '@/components/shared/Header';
 import { QueryProvider } from '@/components/providers/QueryProvider';
 import { BackgroundSyncProvider } from '@/providers/BackgroundSyncProvider';
+import { AuthInitializer } from '@/components/providers/AuthInitializer';
 
 export const metadata: Metadata = {
   title: 'Disaster Management System - Borno State',
@@ -37,13 +38,14 @@ export default function RootLayout({
       <body className="bg-gray-50 min-h-screen">
         <QueryProvider>
           <BackgroundSyncProvider>
-            <div className="min-h-screen flex flex-col">
-              <Header />
+            <AuthInitializer>
+              <div className="min-h-screen flex flex-col">
+                <Header />
 
-              {/* Main content */}
-              <main className="flex-1">
-                {children}
-              </main>
+                {/* Main content */}
+                <main className="flex-1">
+                  {children}
+                </main>
 
             {/* Footer */}
             <footer className="bg-white border-t border-gray-200">
@@ -54,6 +56,7 @@ export default function RootLayout({
               </div>
               </footer>
             </div>
+            </AuthInitializer>
           </BackgroundSyncProvider>
         </QueryProvider>
       </body>

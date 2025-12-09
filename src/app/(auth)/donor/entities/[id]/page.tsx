@@ -103,7 +103,7 @@ export default function EntityInsightsPage() {
         throw new Error('Failed to fetch latest assessments')
       }
       const result = await response.json()
-      return result as LatestAssessmentsResponse
+      return result.data as LatestAssessmentsResponse
     },
     enabled: !!id
   })
@@ -228,7 +228,7 @@ export default function EntityInsightsPage() {
                   </CardDescription>
                 </CardHeader>
                 <CardContent>
-                  {latestAssessments && latestAssessments.latestAssessments.length > 0 ? (
+                  {latestAssessments && latestAssessments.latestAssessments && latestAssessments.latestAssessments.length > 0 ? (
                     <div className="space-y-4">
                       {latestAssessments.latestAssessments.map((latest, index) => (
                         <div key={index} className="flex items-center justify-between p-3 border rounded-lg">
@@ -313,7 +313,7 @@ export default function EntityInsightsPage() {
             </div>
 
             {/* Critical Gaps Alert */}
-            {latestAssessments?.latestAssessments.some(latest => latest.assessment.summary.criticalGaps.length > 0) && (
+            {latestAssessments?.latestAssessments?.some(latest => latest.assessment.summary.criticalGaps.length > 0) && (
               <Card className="border-red-200 bg-red-50">
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2 text-red-700">
@@ -323,8 +323,8 @@ export default function EntityInsightsPage() {
                 </CardHeader>
                 <CardContent>
                   <div className="space-y-2">
-                    {latestAssessments.latestAssessments
-                      .filter(latest => latest.assessment.summary.criticalGaps.length > 0)
+                    {latestAssessments?.latestAssessments
+                      ?.filter(latest => latest.assessment.summary.criticalGaps.length > 0)
                       .map((latest, index) => (
                         <div key={index} className="flex items-start gap-2">
                           <div className="w-2 h-2 bg-red-500 rounded-full mt-2"></div>

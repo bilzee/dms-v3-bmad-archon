@@ -48,6 +48,41 @@ interface AuthState {
   getCurrentRolePermissions: () => string[];
 }
 
+// Initialize authentication state from localStorage
+const initializeAuthFromStorage = async () => {
+  if (typeof window !== 'undefined') {
+    // Check both token keys (consistent with token-utils.ts)
+    const token = localStorage.getItem('auth_token') || localStorage.getItem('token')
+    if (token) {
+      try {
+        // Validate token with backend using the /me endpoint
+        const response = await fetch('/api/v1/auth/me', {
+          method: 'GET',
+          headers: { 
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          }
+        })
+        
+        if (response.ok) {
+          const data = await response.json()
+          useAuthStore.getState().setUser(data.data.user, token)
+        } else {
+          // Token is invalid, clear both keys
+          localStorage.removeItem('auth_token')
+          localStorage.removeItem('token')
+          useAuthStore.getState().logout()
+        }
+      } catch (error) {
+        // Network error or invalid response, clear both keys
+        localStorage.removeItem('auth_token')
+        localStorage.removeItem('token')
+        useAuthStore.getState().logout()
+      }
+    }
+  }
+}
+
 export const useAuthStore = create<AuthState>()(
   persist(
     (set, get) => ({
@@ -273,3 +308,6 @@ export const useAuthStore = create<AuthState>()(
     }
   )
 );
+
+// Export the initialization function
+export { initializeAuthFromStorage };

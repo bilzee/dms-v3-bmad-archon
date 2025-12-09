@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { usePathname } from 'next/navigation';
 import Link from 'next/link';
 import { useAuth } from '@/hooks/useAuth';
@@ -411,7 +411,8 @@ export const Navigation = () => {
   const { currentRole } = useAuth();
   const { canAccessPath } = useRoleNavigation();
   
-  const navigationItems = getNavigationItems(currentRole);
+  // Memoize navigationItems to prevent infinite re-renders
+  const navigationItems = useMemo(() => getNavigationItems(currentRole), [currentRole]);
   
   // Get all parent items (items with children) for default expansion
   const getParentItems = (items: NavItem[]): string[] => {
@@ -424,13 +425,15 @@ export const Navigation = () => {
     return parentHrefs;
   };
   
-  const [expandedItems, setExpandedItems] = useState<Set<string>>(new Set(getParentItems(navigationItems)));
+  // Memoize parent items calculation
+  const parentItems = useMemo(() => getParentItems(navigationItems), [navigationItems]);
+  
+  const [expandedItems, setExpandedItems] = useState<Set<string>>(new Set(parentItems));
 
   // Ensure expanded items stay expanded when navigation changes
   useEffect(() => {
-    const newParentItems = getParentItems(navigationItems);
-    setExpandedItems(new Set(newParentItems));
-  }, [navigationItems]);
+    setExpandedItems(new Set(parentItems));
+  }, [parentItems]);
 
   const toggleExpanded = (href: string) => {
     const newExpanded = new Set(expandedItems);
