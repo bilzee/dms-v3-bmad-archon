@@ -20,6 +20,7 @@ import { AssessmentType, Priority } from '@prisma/client'
 // Validation schemas
 const getGapFieldsSchema = z.object({
   assessmentType: z.nativeEnum(AssessmentType).optional(),
+  fieldName: z.string().nullable().optional(),
   isActive: z.string().nullable().optional().transform((val) => val ? val === 'true' : undefined)
 })
 
@@ -103,8 +104,42 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url)
     const filters = getGapFieldsSchema.parse({
       assessmentType: searchParams.get('assessmentType'),
+      fieldName: searchParams.get('fieldName'),
       isActive: searchParams.get('isActive')
     })
+
+    // If specific field name is provided, do field-specific lookup
+    if (filters.fieldName && filters.assessmentType) {
+      try {
+        // Import the service for field name mapping and severity calculation
+        const { gapFieldSeverityService } = await import('@/lib/services/gap-field-severity.service')
+        
+        const severity = await gapFieldSeverityService.calculateFieldSeverity(
+          filters.assessmentType,
+          filters.fieldName
+        )
+        
+        return NextResponse.json({
+          success: true,
+          data: {
+            fieldName: filters.fieldName,
+            assessmentType: filters.assessmentType,
+            severity
+          }
+        })
+      } catch (error) {
+        console.error(`Error calculating field severity for ${filters.fieldName} in ${filters.assessmentType}:`, error)
+        return NextResponse.json({
+          success: false,
+          error: 'Failed to calculate field severity',
+          data: {
+            fieldName: filters.fieldName,
+            assessmentType: filters.assessmentType,
+            severity: 'MEDIUM' // fallback
+          }
+        }, { status: 500 })
+      }
+    }
 
     const gapFields = await prisma.gapFieldSeverity.findMany({
       where: {

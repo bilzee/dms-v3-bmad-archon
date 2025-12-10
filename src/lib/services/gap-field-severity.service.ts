@@ -193,6 +193,35 @@ class GapFieldSeverityService {
   }
 
   /**
+   * Calculate severity for a specific field
+   * Returns the configured severity for the field or default fallback
+   */
+  async calculateFieldSeverity(
+    assessmentType: AssessmentType, 
+    fieldName: string
+  ): Promise<Priority> {
+    try {
+      const gapFields = await this.getSeveritiesByAssessmentType(assessmentType)
+      
+      // Find field directly since field names now match assessment fields
+      const fieldConfig = gapFields.find(field => field.fieldName === fieldName)
+      
+      if (fieldConfig) {
+        return fieldConfig.severity
+      } else {
+        // Return MEDIUM as fallback if field not found
+        console.warn(`Field ${fieldName} not found in gap fields for ${assessmentType}`)
+        return Priority.MEDIUM
+      }
+    } catch (error) {
+      console.error(`Error calculating field severity for ${fieldName} in ${assessmentType}:`, error)
+      // Fallback severity
+      return Priority.MEDIUM
+    }
+  }
+
+  
+  /**
    * Clear the severity cache (useful when severities are updated)
    */
   clearCache(): void {

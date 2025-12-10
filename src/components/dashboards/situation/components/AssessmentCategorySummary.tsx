@@ -1,13 +1,12 @@
 'use client';
 
-import React, { useMemo } from 'react';
+import React, { useMemo, useState, useEffect } from 'react';
 import { cn } from '@/lib/utils';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { Calendar, User, AlertTriangle, CheckCircle, Info } from 'lucide-react';
 import { GapIndicator } from './GapIndicator';
-import { gapFieldSeverityService } from '@/lib/services/gap-field-severity.service';
 import type { 
   HealthAssessmentData, 
   FoodAssessmentData, 
@@ -178,13 +177,42 @@ export function AssessmentCategorySummary({
 }: AssessmentCategorySummaryProps) {
   const config = categoryConfig[category];
   const fieldConfig = fieldDefinitions[category];
+  
+  // State for dynamic field severities
+  const [fieldSeverities, setFieldSeverities] = useState<Record<string, 'CRITICAL' | 'HIGH' | 'MEDIUM' | 'LOW'>>({});
 
   // Use the gap fields and severity mapping from gapAnalysis if available
   const gapFields = gapAnalysis?.gapFields || [];
   const fieldSeverityMap = gapAnalysis?.fieldSeverityMap || {};
+  
+  // Fetch individual field severities when component mounts
+  useEffect(() => {
+    const fetchFieldSeverities = async () => {
+      const severities: Record<string, 'CRITICAL' | 'HIGH' | 'MEDIUM' | 'LOW'> = {};
+      
+      // Only fetch severities for fields that are actually in the gap analysis
+      for (const field of fieldConfig.gapIndicators) {
+        if (gapFields.includes(field.key)) {
+          try {
+            const severity = await getFieldSeverity(field.key);
+            severities[field.key] = severity;
+          } catch (error) {
+            console.warn(`Failed to fetch severity for ${field.key}:`, error);
+            severities[field.key] = getFieldSeveritySync(field.key);
+          }
+        }
+      }
+      
+      setFieldSeverities(severities);
+    };
+    
+    if (gapFields.length > 0) {
+      fetchFieldSeverities();
+    }
+  }, [gapFields, category]);
 
-  // Function to get field severity based on aggregated data or individual entity analysis
-  const getFieldSeverity = (fieldName: string): 'CRITICAL' | 'HIGH' | 'MEDIUM' | 'LOW' => {
+  // Function to get field severity using the API
+  const getFieldSeverity = async (fieldName: string): Promise<'CRITICAL' | 'HIGH' | 'MEDIUM' | 'LOW'> => {
     // If we have field severity mapping from aggregated analysis, use it
     if (fieldSeverityMap[fieldName]) {
       return fieldSeverityMap[fieldName];
@@ -195,12 +223,81 @@ export function AssessmentCategorySummary({
       return 'LOW'; // No gap
     }
 
-    // For individual entities, use the overall assessment severity
-    if (gapAnalysis?.severity && gapFields.includes(fieldName)) {
-      return gapAnalysis.severity;
+    // Get assessment type for this category
+    const assessmentTypeMap = {
+      health: 'HEALTH',
+      food: 'FOOD',
+      wash: 'WASH',
+      shelter: 'SHELTER',
+      security: 'SECURITY',
+      population: 'POPULATION'
+    };
+
+    const assessmentType = assessmentTypeMap[category];
+    
+    try {
+      // Call the API to get field severity
+      const response = await fetch(
+        `/api/v1/gap-field-severities?assessmentType=${assessmentType}&fieldName=${fieldName}`
+      );
+      
+      if (!response.ok) {
+        throw new Error(`API request failed: ${response.status}`);
+      }
+      
+      const result = await response.json();
+      
+      if (result.success && result.data?.severity) {
+        return result.data.severity;
+      } else {
+        console.warn('API returned error for field severity:', result.error);
+        throw new Error(result.error || 'API error');
+      }
+    } catch (error) {
+      console.warn('Failed to fetch field severity from API, using fallback logic:', error);
     }
 
-    // Fallback: Assign severity based on field importance and typical impact
+    // Fallback: Use hardcoded field importance logic
+    const criticalFields = [
+      'hasEmergencyServices', 'hasFunctionalClinic', 'isWaterSufficient', 
+      'areSheltersSufficient', 'hasSafetyConcerns', 'hasImmediateThreats'
+    ];
+    
+    const highFields = [
+      'hasCleanWaterAccess', 'hasTrainedStaff', 'hasMedicineSupply',
+      'isFoodSufficient', 'hasRegularMealAccess', 'hasSafeStructures'
+    ];
+    
+    const mediumFields = [
+      'hasHandwashingFacilities', 'areLatrinesSufficient', 'hasMedicalSupplies',
+      'hasInfantNutrition', 'areOvercrowded', 'provideWeatherProtection'
+    ];
+
+    if (criticalFields.includes(fieldName)) {
+      return 'CRITICAL';
+    } else if (highFields.includes(fieldName)) {
+      return 'HIGH';
+    } else if (mediumFields.includes(fieldName)) {
+      return 'MEDIUM';
+    }
+    
+    // Default to HIGH for any other gap fields not explicitly categorized
+    return 'HIGH';
+  };
+
+  // Synchronous version using cached/fallback data for immediate rendering
+  const getFieldSeveritySync = (fieldName: string): 'CRITICAL' | 'HIGH' | 'MEDIUM' | 'LOW' => {
+    // If we have field severity mapping from aggregated analysis, use it
+    if (fieldSeverityMap[fieldName]) {
+      return fieldSeverityMap[fieldName];
+    }
+
+    // If this field is not in the gap fields, no gap
+    if (!gapFields.includes(fieldName)) {
+      return 'LOW'; // No gap
+    }
+
+    // Fallback logic for immediate rendering
     const criticalFields = [
       'hasEmergencyServices', 'hasFunctionalClinic', 'isWaterSufficient', 
       'areSheltersSufficient', 'hasSafetyConcerns', 'hasImmediateThreats'
@@ -252,7 +349,8 @@ export function AssessmentCategorySummary({
     
     if (boolean) {
       const hasGap = invert ? value : !value;
-      const severity = hasGap ? getFieldSeverity(key) : 'LOW';
+      // Use fetched field severity if available, otherwise use sync fallback
+      const severity = hasGap ? (fieldSeverities[key] || getFieldSeveritySync(key)) : 'LOW';
       return (
         <div key={key} className="flex items-center justify-between">
           <span className="text-sm text-gray-600">{label}</span>
