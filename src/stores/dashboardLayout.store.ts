@@ -17,12 +17,12 @@ export const RESPONSIVE_BREAKPOINTS = {
   ultraWide: 2560   // >= 1920px: Ultra-wide/4K optimized layout
 } as const;
 
-// Optimized panel distributions per breakpoint
+// Optimized panel distributions per breakpoint - 15%-70%-15% ratio
 export const OPTIMIZED_PANEL_DISTRIBUTION = {
   tablet: { leftPanelWidth: 40, centerPanelWidth: 0, rightPanelWidth: 60 },    // Left + (Center+Right stacked)
-  smallDesktop: { leftPanelWidth: 25, centerPanelWidth: 50, rightPanelWidth: 25 }, // Better space allocation
-  largeDesktop: { leftPanelWidth: 30, centerPanelWidth: 45, rightPanelWidth: 25 },  // More breathing room
-  ultraWide: { leftPanelWidth: 20, centerPanelWidth: 60, rightPanelWidth: 20 }      // Ultra-wide: Center focus
+  smallDesktop: { leftPanelWidth: 15, centerPanelWidth: 70, rightPanelWidth: 15 }, // Center-focused layout
+  largeDesktop: { leftPanelWidth: 15, centerPanelWidth: 70, rightPanelWidth: 15 },  // Consistent center focus
+  ultraWide: { leftPanelWidth: 15, centerPanelWidth: 70, rightPanelWidth: 20 }      // Slightly wider right for ultra-wide
 } as const;
 
 interface DashboardLayoutState {
@@ -113,11 +113,11 @@ interface DashboardLayoutState {
   constrainPanelSize: (panel: 'left' | 'center' | 'right', size: number) => number;
 }
 
-// Default panel configuration
+// Default panel configuration - 15%-70%-15% ratio
 const DEFAULT_PANEL_SIZES: PanelConfiguration = {
-  leftPanelWidth: 30,
-  centerPanelWidth: 40,
-  rightPanelWidth: 30,
+  leftPanelWidth: 15,
+  centerPanelWidth: 70,
+  rightPanelWidth: 15,
   layoutVersion: '1.0.0'
 };
 
@@ -132,9 +132,9 @@ const DEFAULT_OPTIMIZED_PANEL_SIZES = {
 
 // Panel size constraints
 const PANEL_CONSTRAINTS = {
-  left: { min: 20, max: 50 },
-  center: { min: 20, max: 60 },
-  right: { min: 20, max: 50 }
+  left: { min: 10, max: 25 },
+  center: { min: 50, max: 80 },
+  right: { min: 10, max: 25 }
 };
 
 /**

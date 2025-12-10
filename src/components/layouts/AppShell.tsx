@@ -31,7 +31,7 @@ export const AppShell = ({
   if (!isAuthenticated) {
     return (
       <div className="min-h-screen bg-gray-50">
-        <Header />
+        <Header fullWidth={isDashboard} />
         <main className="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
           {children}
         </main>
@@ -120,8 +120,8 @@ export const AppShell = ({
 
         {/* Main content */}
         <main className={cn(
-          // Minimal padding for dashboard pages to maximize viewport usage
-          isDashboard ? 'py-1' : 'py-6'
+          // Remove all padding for dashboard pages to maximize viewport usage
+          isDashboard ? 'py-0' : 'py-6'
         )}>
           {/* Breadcrumbs - shown on all pages except dashboard root */}
           {!isDashboard && showBreadcrumbs && (
@@ -131,9 +131,9 @@ export const AppShell = ({
           )}
           
           <div className={cn(
-            // No max-width constraint for dashboard pages
+            // Small left padding for visual separation on dashboard pages
             isDashboard 
-              ? 'px-2 w-full' 
+              ? 'pl-4 pr-0 w-full' 
               : 'max-w-7xl mx-auto px-4 sm:px-6 lg:px-8'
           )}>
             {children}

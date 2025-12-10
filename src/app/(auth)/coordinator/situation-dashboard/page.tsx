@@ -2,7 +2,6 @@
 
 import React, { useState, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { AppShell } from '@/components/layouts/AppShell';
 import { SituationDashboardLayout } from '@/components/dashboards/situation/SituationDashboardLayout';
 import { IncidentOverviewPanel } from '@/components/dashboards/situation/IncidentOverviewPanel';
 import { EntityAssessmentPanel } from '@/components/dashboards/situation/EntityAssessmentPanel';
@@ -77,12 +76,11 @@ export default function SituationDashboardPage() {
   });
 
   return (
-    <AppShell isDashboard={true}>
-      <div className="w-full h-full"> {/* Minimal padding now handled by AppShell */}
-        {/* Compact header - minimal spacing */}
-        <div className="mb-3">
-          <h1 className="text-xl font-bold text-gray-900">Situation Dashboard</h1>
-          <p className="text-sm text-gray-600">
+    <div className="w-full h-screen overflow-hidden pl-4"> {/* Use full screen height with left padding */}
+        {/* Ultra-compact header - minimal spacing optimized for monitors/tablets */}
+        <div className="mb-0 px-1 py-0.5 bg-white border-b border-gray-100">
+          <h1 className="text-base font-semibold text-gray-900">Situation Dashboard</h1>
+          <p className="text-xs text-gray-500">
             Real-time disaster situation monitoring and analysis
           </p>
         </div>
@@ -145,6 +143,5 @@ export default function SituationDashboardPage() {
           </div>
         </SituationDashboardLayout>
       </div>
-    </AppShell>
   );
 }
