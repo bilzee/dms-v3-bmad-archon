@@ -47,41 +47,60 @@ export function AggregationInfoPopup({ isOpen, onClose }: AggregationInfoPopupPr
             </p>
           </div>
 
-          {/* How Aggregation Works */}
+          {/* Severity Hierarchy */}
           <div className="space-y-3">
             <h3 className="font-semibold text-gray-900 flex items-center gap-2">
               <Users className="h-4 w-4 text-green-600" />
-              How We Calculate Severity
+              Severity Calculation Method
             </h3>
-            <div className="bg-gray-50 rounded-lg p-4 space-y-3">
+            <div className="bg-gradient-to-r from-blue-50 to-purple-50 border border-purple-200 rounded-lg p-4 space-y-4">
               <p className="text-sm text-gray-700">
-                We analyze each gap indicator across all entities and calculate severity based on 
-                <span className="font-medium"> how many entities are affected</span>:
+                Aggregated severity now uses the <span className="font-medium">same Gap Field Severity Management system</span> 
+                as individual entity assessments, ensuring consistency across all views:
               </p>
               
-              <div className="space-y-2 text-sm">
-                <div className="flex items-center gap-3">
-                  <div className="w-4 h-4 bg-red-600 rounded"></div>
-                  <div>
-                    <span className="font-semibold">CRITICAL (67%+)</span> - Most entities affected (2/3 or more)
+              <div className="space-y-3">
+                {/* Field Level */}
+                <div className="bg-white rounded-lg border border-gray-200 p-3">
+                  <div className="flex items-center gap-2 mb-2">
+                    <div className="w-6 h-6 bg-blue-600 text-white rounded-full flex items-center justify-center text-xs font-bold">1</div>
+                    <span className="font-semibold text-blue-700">Field-Level Severity</span>
+                  </div>
+                  <p className="text-sm text-gray-600">
+                    Each gap field gets its severity from <strong>Gap Field Severity Management</strong> (not percentage-based):
+                  </p>
+                  <div className="flex items-center gap-2 mt-2 text-xs">
+                    <div className="w-3 h-3 bg-red-600 rounded-full"></div>
+                    <span>"Functional Clinic" = CRITICAL (Critical infrastructure)</span>
                   </div>
                 </div>
-                <div className="flex items-center gap-3">
-                  <div className="w-4 h-4 bg-orange-500 rounded"></div>
-                  <div>
-                    <span className="font-semibold">HIGH (34-66%)</span> - Many entities affected (1/3 or more)
+
+                {/* Display Count */}
+                <div className="bg-white rounded-lg border border-gray-200 p-3">
+                  <div className="flex items-center gap-2 mb-2">
+                    <div className="w-6 h-6 bg-purple-600 text-white rounded-full flex items-center justify-center text-xs font-bold">2</div>
+                    <span className="font-semibold text-purple-700">Entity Count Display</span>
+                  </div>
+                  <p className="text-sm text-gray-600">
+                    Each field shows how many entities have gaps: <strong>[Severity] "X of Y"</strong>
+                  </p>
+                  <div className="flex items-center gap-2 mt-2 text-xs">
+                    <div className="bg-red-600 text-white px-2 py-1 rounded text-xs">CRITICAL</div>
+                    <span>2 of 4 entities have "Functional Clinic" gaps</span>
                   </div>
                 </div>
-                <div className="flex items-center gap-3">
-                  <div className="w-4 h-4 bg-yellow-500 rounded"></div>
-                  <div>
-                    <span className="font-semibold">MEDIUM (1-33%)</span> - Some entities affected
+
+                {/* Assessment Level */}
+                <div className="bg-white rounded-lg border border-gray-200 p-3">
+                  <div className="flex items-center gap-2 mb-2">
+                    <div className="w-6 h-6 bg-green-600 text-white rounded-full flex items-center justify-center text-xs font-bold">3</div>
+                    <span className="font-semibold text-green-700">Assessment Severity</span>
                   </div>
-                </div>
-                <div className="flex items-center gap-3">
-                  <div className="w-4 h-4 bg-green-600 rounded"></div>
-                  <div>
-                    <span className="font-semibold">LOW (0%)</span> - No entities affected
+                  <p className="text-sm text-gray-600">
+                    Each assessment type gets severity from the <strong>highest severity among its fields</strong>
+                  </p>
+                  <div className="flex items-center gap-2 mt-2 text-xs">
+                    <span>If Health has fields [CRITICAL, HIGH, MEDIUM] → Health Assessment = CRITICAL</span>
                   </div>
                 </div>
               </div>
@@ -96,24 +115,38 @@ export function AggregationInfoPopup({ isOpen, onClose }: AggregationInfoPopupPr
             </h3>
             <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
               <p className="text-sm text-gray-700 mb-3">
-                <span className="font-semibold">Scenario:</span> 5 entities have Food assessments
+                <span className="font-semibold">Scenario:</span> 4 entities have Health assessments
               </p>
               
               <div className="space-y-2 text-sm">
-                <div className="flex justify-between items-center">
-                  <span>"Food Sufficiency" gap in 4 entities</span>
+                <div className="flex items-center justify-between">
+                  <span>"Functional Clinic" field</span>
+                  <div className="flex items-center gap-2">
+                    <span className="px-2 py-1 bg-red-100 text-red-700 rounded text-xs font-semibold">CRITICAL</span>
+                    <span className="text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded">2 of 4</span>
+                  </div>
+                </div>
+                <div className="text-gray-600 text-xs pl-2">
+                  Severity from Gap Field Management • 2 entities have gaps
+                </div>
+                
+                <div className="flex items-center justify-between mt-2">
+                  <span>"Clean Water Access" field</span>
+                  <div className="flex items-center gap-2">
+                    <span className="px-2 py-1 bg-orange-100 text-orange-700 rounded text-xs font-semibold">HIGH</span>
+                    <span className="text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded">1 of 4</span>
+                  </div>
+                </div>
+                <div className="text-gray-600 text-xs pl-2">
+                  Severity from Gap Field Management • 1 entity has gaps
+                </div>
+
+                <div className="flex items-center justify-between mt-3 pt-2 border-t">
+                  <span className="font-semibold">Health Assessment Severity</span>
                   <span className="px-2 py-1 bg-red-100 text-red-700 rounded text-xs font-semibold">CRITICAL</span>
                 </div>
                 <div className="text-gray-600 text-xs pl-2">
-                  4 out of 5 entities = 80% affected → CRITICAL severity
-                </div>
-                
-                <div className="flex justify-between items-center mt-2">
-                  <span>"Regular Meal Access" gap in 2 entities</span>
-                  <span className="px-2 py-1 bg-orange-100 text-orange-700 rounded text-xs font-semibold">HIGH</span>
-                </div>
-                <div className="text-gray-600 text-xs pl-2">
-                  2 out of 5 entities = 40% affected → HIGH severity
+                  Highest field severity = CRITICAL
                 </div>
               </div>
             </div>

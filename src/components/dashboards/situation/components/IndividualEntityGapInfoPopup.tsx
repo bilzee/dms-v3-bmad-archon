@@ -217,6 +217,97 @@ export function IndividualEntityGapInfoPopup({
             </p>
           </div>
 
+          {/* Severity Hierarchy */}
+          <div className="space-y-3">
+            <h3 className="font-semibold text-gray-900 flex items-center gap-2">
+              <BarChart3 className="h-4 w-4 text-purple-600" />
+              Understanding Severity Hierarchy
+            </h3>
+            <div className="bg-gradient-to-r from-blue-50 to-purple-50 border border-purple-200 rounded-lg p-4 space-y-4">
+              <p className="text-sm text-gray-700">
+                Severity is calculated through a clear three-level hierarchy that connects individual field conditions to overall entity priority:
+              </p>
+              
+              <div className="space-y-3">
+                {/* Level 1 */}
+                <div className="bg-white rounded-lg border border-gray-200 p-3">
+                  <div className="flex items-center gap-2 mb-2">
+                    <div className="w-6 h-6 bg-blue-600 text-white rounded-full flex items-center justify-center text-xs font-bold">1</div>
+                    <span className="font-semibold text-blue-700">Individual Field Severity</span>
+                  </div>
+                  <p className="text-sm text-gray-600 mb-2">
+                    Each gap field (e.g., "Functional Clinic", "Clean Water Access") is assigned a severity level in <strong>Gap Field Severity Management</strong>:
+                  </p>
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-2 text-xs">
+                    <div className="flex items-center gap-1">
+                      <div className="w-3 h-3 bg-red-600 rounded-full"></div>
+                      <span>CRITICAL</span>
+                    </div>
+                    <div className="flex items-center gap-1">
+                      <div className="w-3 h-3 bg-orange-600 rounded-full"></div>
+                      <span>HIGH</span>
+                    </div>
+                    <div className="flex items-center gap-1">
+                      <div className="w-3 h-3 bg-yellow-600 rounded-full"></div>
+                      <span>MEDIUM</span>
+                    </div>
+                    <div className="flex items-center gap-1">
+                      <div className="w-3 h-3 bg-blue-600 rounded-full"></div>
+                      <span>LOW</span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Level 2 */}
+                <div className="bg-white rounded-lg border border-gray-200 p-3">
+                  <div className="flex items-center gap-2 mb-2">
+                    <div className="w-6 h-6 bg-purple-600 text-white rounded-full flex items-center justify-center text-xs font-bold">2</div>
+                    <span className="font-semibold text-purple-700">Assessment Severity</span>
+                  </div>
+                  <p className="text-sm text-gray-600 mb-2">
+                    Each assessment type (Health, Food, WASH, etc.) gets its severity from the <strong>highest severity among its gap fields that have gaps</strong>:
+                  </p>
+                  <div className="bg-purple-50 rounded p-2 text-xs text-purple-800">
+                    Example: If Health assessment has fields with severities [HIGH, MEDIUM, LOW], the Assessment Severity = HIGH
+                  </div>
+                  <p className="text-xs text-gray-500 mt-2">
+                    The assessment badge shows this severity level with appropriate color and icon.
+                  </p>
+                </div>
+
+                {/* Level 3 */}
+                <div className="bg-white rounded-lg border border-gray-200 p-3">
+                  <div className="flex items-center gap-2 mb-2">
+                    <div className="w-6 h-6 bg-green-600 text-white rounded-full flex items-center justify-center text-xs font-bold">3</div>
+                    <span className="font-semibold text-green-700">Entity Severity</span>
+                  </div>
+                  <p className="text-sm text-gray-600 mb-2">
+                    Entity severity is the <strong>highest assessment severity across all assessment types</strong> for that entity:
+                  </p>
+                  <div className="bg-green-50 rounded p-2 text-xs text-green-800">
+                    Example: If assessments show [HEALTH: HIGH, FOOD: MEDIUM, WASH: LOW], the Entity Severity = HIGH (with count = 1)
+                  </div>
+                  <p className="text-xs text-gray-500 mt-2">
+                    The entity badge shows this severity with the count of assessments that have this highest severity.
+                  </p>
+                </div>
+              </div>
+
+              <div className="mt-4 p-3 bg-gray-100 rounded-lg">
+                <p className="text-xs font-semibold text-gray-700 mb-1">Priority Order:</p>
+                <div className="flex items-center gap-2 text-xs text-gray-600">
+                  <span>CRITICAL</span>
+                  <span>&gt;</span>
+                  <span>HIGH</span>
+                  <span>&gt;</span>
+                  <span>MEDIUM</span>
+                  <span>&gt;</span>
+                  <span>LOW</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
           {/* How Gap Detection Works */}
           <div className="space-y-3">
             <h3 className="font-semibold text-gray-900 flex items-center gap-2">

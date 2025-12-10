@@ -5,7 +5,7 @@ import { cn } from '@/lib/utils';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
-import { Calendar, User, AlertTriangle, CheckCircle, Info } from 'lucide-react';
+import { Calendar, User, AlertTriangle, CheckCircle, Info, AlertCircle } from 'lucide-react';
 import { GapIndicator } from './GapIndicator';
 import type { 
   HealthAssessmentData, 
@@ -23,6 +23,7 @@ interface AssessmentCategorySummaryProps {
   layout: 'split' | 'full';
   className?: string;
   showRecommendations?: boolean;
+  isAggregated?: boolean; // New prop to indicate this is aggregated data
 }
 
 // Category configuration
@@ -167,13 +168,50 @@ const fieldDefinitions = {
  * - Assessment metadata (date, assessor)
  * - No data state when assessment is missing
  */
+
+// Severity configuration for assessment-level badges (matches GapIndicator component)
+const getSeverityConfig = (severity: string) => {
+  switch (severity) {
+    case 'CRITICAL':
+      return {
+        badgeClass: 'bg-red-600 text-white border-2 border-red-300 animate-pulse',
+        icon: AlertTriangle,
+        iconClass: 'text-white'
+      };
+    case 'HIGH':
+      return {
+        badgeClass: 'bg-orange-600 text-white border-2 border-orange-300 animate-pulse',
+        icon: AlertCircle,
+        iconClass: 'text-white'
+      };
+    case 'MEDIUM':
+      return {
+        badgeClass: 'bg-yellow-600 text-white border-2 border-yellow-300',
+        icon: Info,
+        iconClass: 'text-white'
+      };
+    case 'LOW':
+      return {
+        badgeClass: 'bg-blue-600 text-white border-2 border-blue-300',
+        icon: Info,
+        iconClass: 'text-white'
+      };
+    default:
+      return {
+        badgeClass: 'bg-gray-600 text-white border-2 border-gray-300',
+        icon: Info,
+        iconClass: 'text-white'
+      };
+  }
+};
 export function AssessmentCategorySummary({
   category,
   assessment,
   gapAnalysis,
   layout = 'split',
   className,
-  showRecommendations = false
+  showRecommendations = false,
+  isAggregated = false
 }: AssessmentCategorySummaryProps) {
   const config = categoryConfig[category];
   const fieldConfig = fieldDefinitions[category];
@@ -348,15 +386,45 @@ export function AssessmentCategorySummary({
     const value = assessment[key];
     
     if (boolean) {
-      const hasGap = invert ? value : !value;
-      // Use fetched field severity if available, otherwise use sync fallback
-      const severity = hasGap ? (fieldSeverities[key] || getFieldSeveritySync(key)) : 'LOW';
-      return (
-        <div key={key} className="flex items-center justify-between">
-          <span className="text-sm text-gray-600">{label}</span>
-          <GapIndicator hasGap={hasGap} severity={severity} size="sm" />
-        </div>
-      );
+      if (isAggregated && gapAnalysis?.fieldCounts?.[key]) {
+        // For aggregated data, show count of entities with gaps
+        const fieldCount = gapAnalysis.fieldCounts[key];
+        const severity = fieldCount.gaps > 0 ? (gapAnalysis.fieldSeverityMap[key] || 'HIGH') : 'LOW';
+        const hasGap = fieldCount.gaps > 0;
+        
+        return (
+          <div key={key} className="flex items-center justify-between">
+            <span className="text-sm text-gray-600">{label}</span>
+            <div className="flex items-center gap-2">
+              {hasGap ? (
+                <>
+                  <GapIndicator hasGap={true} severity={severity} size="sm" />
+                  <span className="text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded">
+                    {fieldCount.gaps} of {fieldCount.total}
+                  </span>
+                </>
+              ) : (
+                <>
+                  <GapIndicator hasGap={false} severity="LOW" size="sm" />
+                  <span className="text-xs text-green-600 bg-green-100 px-2 py-1 rounded">
+                    No gaps
+                  </span>
+                </>
+              )}
+            </div>
+          </div>
+        );
+      } else {
+        // Individual entity data (original logic)
+        const hasGap = invert ? value : !value;
+        const severity = hasGap ? (fieldSeverities[key] || getFieldSeveritySync(key)) : 'LOW';
+        return (
+          <div key={key} className="flex items-center justify-between">
+            <span className="text-sm text-gray-600">{label}</span>
+            <GapIndicator hasGap={hasGap} severity={severity} size="sm" />
+          </div>
+        );
+      }
     }
 
     // Format non-boolean values
@@ -394,13 +462,19 @@ export function AssessmentCategorySummary({
           {gapAnalysis && (
             <div className="flex items-center gap-2">
               {gapAnalysis.hasGap ? (
-                <Badge 
-                  variant="destructive" 
-                  className="text-xs font-bold border-2 border-red-300 bg-red-600"
-                >
-                  <AlertTriangle className="h-3 w-3 mr-1" />
-                  {gapAnalysis.severity}
-                </Badge>
+                (() => {
+                  const severityConfig = getSeverityConfig(gapAnalysis.severity);
+                  const IconComponent = severityConfig.icon;
+                  return (
+                    <Badge 
+                      variant="default" 
+                      className={cn("text-xs font-bold", severityConfig.badgeClass)}
+                    >
+                      <IconComponent className={cn("h-3 w-3 mr-1", severityConfig.iconClass)} />
+                      {gapAnalysis.severity}
+                    </Badge>
+                  );
+                })()
               ) : (
                 <Badge 
                   variant="default" 
@@ -437,7 +511,25 @@ export function AssessmentCategorySummary({
       </CardHeader>
 
       <CardContent className="pt-0">
-        {layout === 'split' && gapFieldElements.length > 0 ? (
+        {isAggregated ? (
+          // Aggregated view - show only gap indicators
+          <div className="space-y-2">
+            {gapFieldElements.length > 0 ? (
+              <>
+                <div className="flex items-center justify-between mb-2">
+                  <h4 className="text-sm font-medium text-gray-700">Gap Analysis (All Entities)</h4>
+                  <span className="text-xs text-gray-500">Select entity for details</span>
+                </div>
+                {gapFieldElements}
+              </>
+            ) : (
+              <div className="text-center py-4 text-gray-500">
+                <CheckCircle className="h-6 w-6 mx-auto mb-2 text-green-500" />
+                <p className="text-xs">No gap indicators across all entities</p>
+              </div>
+            )}
+          </div>
+        ) : layout === 'split' && gapFieldElements.length > 0 ? (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {/* Non-gap indicators (left side) */}
             <div className="space-y-2">

@@ -13,7 +13,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Loader2, AlertCircle, MapPin, Building2 } from 'lucide-react';
+import { Loader2, AlertCircle, MapPin, Building2, CheckCircle, AlertTriangle, Info } from 'lucide-react';
 import { useEntitySelection, useEntityActions } from '@/stores/dashboardLayout.store';
 import { useIncidentSelection } from '@/stores/dashboardLayout.store';
 
@@ -26,6 +26,7 @@ interface EntityOption {
   location?: string;
   affectedAt: string;
   severity: 'CRITICAL' | 'HIGH' | 'MEDIUM' | 'LOW';
+  severityCount: number;
 }
 
 interface EntitySelectorProps {
@@ -46,34 +47,98 @@ const entityTypeConfig = {
   CAMP: { label: 'Camp', icon: Building2 }
 } as const;
 
-// Severity badge variants
-const severityVariants = {
-  CRITICAL: 'destructive',
-  HIGH: 'secondary',
-  MEDIUM: 'outline',
-  LOW: 'outline'
-} as const;
+// Severity configuration for entity badges
+const getSeverityConfig = (severity: string) => {
+  switch (severity) {
+    case 'CRITICAL':
+      return {
+        badgeClass: 'bg-red-600 text-white border-2 border-red-300 animate-pulse',
+        icon: AlertTriangle,
+        iconClass: 'text-white'
+      };
+    case 'HIGH':
+      return {
+        badgeClass: 'bg-orange-600 text-white border-2 border-orange-300 animate-pulse',
+        icon: AlertCircle,
+        iconClass: 'text-white'
+      };
+    case 'MEDIUM':
+      return {
+        badgeClass: 'bg-yellow-600 text-white border-2 border-yellow-300',
+        icon: Info,
+        iconClass: 'text-white'
+      };
+    case 'LOW':
+      return {
+        badgeClass: 'bg-blue-600 text-white border-2 border-blue-300',
+        icon: CheckCircle,
+        iconClass: 'text-white'
+      };
+    default:
+      return {
+        badgeClass: 'bg-gray-600 text-white border-2 border-gray-300',
+        icon: Info,
+        iconClass: 'text-white'
+      };
+  }
+};
 
-// Fetch entities from dashboard API
+// Entity severity badge component
+const EntitySeverityBadge = ({ severity, count }: { severity: string; count: number }) => {
+  const config = getSeverityConfig(severity);
+  const IconComponent = config.icon;
+  
+  return (
+    <Badge 
+      variant="default" 
+      className={cn("text-xs font-bold flex items-center gap-1", config.badgeClass)}
+    >
+      <IconComponent className={cn("h-3 w-3", config.iconClass)} />
+      {severity}
+      {count > 0 && (
+        <span className="ml-1 text-xs bg-white/20 px-1 rounded">
+          {count}
+        </span>
+      )}
+    </Badge>
+  );
+};
+
+// Fetch entities from dashboard API with entity assessments
 const fetchEntities = async (incidentId: string): Promise<EntityOption[]> => {
   if (!incidentId) {
     return [];
   }
 
-  const response = await apiGet(`/api/v1/dashboard/situation?incidentId=${incidentId}`);
+  const response = await apiGet(`/api/v1/dashboard/situation?incidentId=${incidentId}&includeEntityAssessments=true`);
   if (!response.success) {
     throw new Error(response.error || 'Failed to fetch entities');
   }
 
-  return response.data.entities.map((entity: any) => ({
-    id: entity.entityId,
-    name: entity.entityName,
-    type: entity.entityType,
-    location: entity.location,
-    affectedAt: entity.lastUpdated,
-    severity: entity.gapSummary?.criticalGaps > 0 ? 'CRITICAL' : 
-             entity.gapSummary?.totalGaps > 0 ? 'HIGH' : 'LOW'
-  }));
+  // Use entityAssessments if available, otherwise fall back to entities
+  if (response.data.entityAssessments) {
+    return response.data.entityAssessments.map((entity: any) => ({
+      id: entity.id,
+      name: entity.name,
+      type: entity.type,
+      location: entity.location,
+      affectedAt: entity.affectedAt,
+      severity: entity.severity,
+      severityCount: entity.severityCount
+    }));
+  } else {
+    // Fallback to original entities data structure
+    return response.data.entities.map((entity: any) => ({
+      id: entity.entityId,
+      name: entity.entityName,
+      type: entity.entityType,
+      location: entity.location,
+      affectedAt: entity.lastUpdated,
+      severity: entity.gapSummary?.criticalGaps > 0 ? 'CRITICAL' : 
+               entity.gapSummary?.totalGaps > 0 ? 'HIGH' : 'LOW',
+      severityCount: 0 // Not available in old format
+    }));
+  }
 };
 
 /**
@@ -240,9 +305,7 @@ export function EntitySelector({
                   ({entityTypeConfig[selectedEntity.type].label})
                 </span>
               </div>
-              <Badge variant={severityVariants[selectedEntity.severity]} className="text-xs">
-                {selectedEntity.severity}
-              </Badge>
+              <EntitySeverityBadge severity={selectedEntity.severity} count={selectedEntity.severityCount} />
             </div>
           ) : (
             <span>Select an entity...</span>
@@ -285,9 +348,7 @@ export function EntitySelector({
                         ({entityTypeConfig[entity.type].label})
                       </span>
                     </div>
-                    <Badge variant={severityVariants[entity.severity]} className="text-xs">
-                      {entity.severity}
-                    </Badge>
+                    <EntitySeverityBadge severity={entity.severity} count={entity.severityCount} />
                   </div>
                 </SelectItem>
               ))}
@@ -315,9 +376,7 @@ export function EntitySelector({
                         </span>
                       )}
                     </div>
-                    <Badge variant={severityVariants[entity.severity]} className="text-xs">
-                      {entity.severity}
-                    </Badge>
+                    <EntitySeverityBadge severity={entity.severity} count={entity.severityCount} />
                   </div>
                 </SelectItem>
               ))}

@@ -1,6 +1,6 @@
 # Prisma Schema Reference
 
-_Auto-generated on 2025-12-04T11:34:39.443Z_
+_Auto-generated on 2025-12-09T23:54:09.832Z_
 
 ## ReportTemplate
 
@@ -14,8 +14,8 @@ _Auto-generated on 2025-12-04T11:34:39.443Z_
 - `isPublic`
 - `createdAt`
 - `updatedAt`
-- `createdBy`
 - `configurations`
+- `createdBy`
 
 ## ReportConfiguration
 
@@ -29,8 +29,8 @@ _Auto-generated on 2025-12-04T11:34:39.443Z_
 - `schedule`
 - `createdBy`
 - `createdAt`
-- `template`
 - `creator`
+- `template`
 - `executions`
 
 ## ReportExecution
@@ -63,13 +63,13 @@ _Auto-generated on 2025-12-04T11:34:39.443Z_
 - `updatedAt`
 - `auditLogs`
 - `entityAssignments`
-- `assessments`
-- `responses`
-- `roles`
-- `reportTemplates`
-- `reportConfigurations`
 - `gapFieldSeveritiesCreated`
 - `gapFieldSeveritiesUpdated`
+- `assessments`
+- `responses`
+- `reportConfigurations`
+- `reportTemplates`
+- `roles`
 
 ## Role
 
@@ -125,10 +125,10 @@ _Auto-generated on 2025-12-04T11:34:39.443Z_
 - `autoApproveEnabled`
 - `createdAt`
 - `updatedAt`
+- `commitments`
 - `assignments`
 - `rapidAssessments`
 - `responses`
-- `commitments`
 
 ## EntityAssignment
 
@@ -155,9 +155,9 @@ _Auto-generated on 2025-12-04T11:34:39.443Z_
 - `createdBy`
 - `createdAt`
 - `updatedAt`
+- `commitments`
 - `preliminaryAssessments`
 - `rapidAssessments`
-- `commitments`
 
 ## PreliminaryAssessment
 
@@ -192,7 +192,6 @@ _Auto-generated on 2025-12-04T11:34:39.443Z_
 - `rapidAssessmentDate`
 - `assessorId`
 - `entityId`
-- `incidentId`
 - `assessorName`
 - `location`
 - `coordinates`
@@ -207,9 +206,10 @@ _Auto-generated on 2025-12-04T11:34:39.443Z_
 - `rejectionReason`
 - `rejectionFeedback`
 - `mediaAttachments`
-- `gapAnalysis`
 - `createdAt`
 - `updatedAt`
+- `gapAnalysis`
+- `incidentId`
 - `foodAssessment`
 - `healthAssessment`
 - `populationAssessment`
@@ -343,8 +343,8 @@ _Auto-generated on 2025-12-04T11:34:39.443Z_
 - `syncStatus`
 - `mediaAttachments`
 - `assessment`
-- `donor`
 - `commitment`
+- `donor`
 - `entity`
 - `responder`
 - `conflicts`
@@ -359,13 +359,13 @@ _Auto-generated on 2025-12-04T11:34:39.443Z_
 - `contactPhone`
 - `organization`
 - `isActive`
-- `selfReportedDeliveryRate`
-- `verifiedDeliveryRate`
-- `leaderboardRank`
 - `createdAt`
 - `updatedAt`
-- `responses`
+- `leaderboardRank`
+- `selfReportedDeliveryRate`
+- `verifiedDeliveryRate`
 - `commitments`
+- `responses`
 
 ## DonorCommitment
 
@@ -376,6 +376,17 @@ _Auto-generated on 2025-12-04T11:34:39.443Z_
 - `incidentId`
 - `status`
 - `items`
+- `totalCommittedQuantity`
+- `deliveredQuantity`
+- `verifiedDeliveredQuantity`
+- `commitmentDate`
+- `lastUpdated`
+- `notes`
+- `totalValueEstimated`
+- `donor`
+- `entity`
+- `incident`
+- `responses`
 
 ## MediaAttachment
 

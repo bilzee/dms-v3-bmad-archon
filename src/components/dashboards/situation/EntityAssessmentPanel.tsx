@@ -321,18 +321,24 @@ export function EntityAssessmentPanel({
                   <div className="text-2xl font-bold text-red-600">
                     {aggregatedAssessments.gapSummary.criticalGaps}
                   </div>
-                  <div className="text-xs text-gray-600">Critical Gaps</div>
+                  <div className="text-xs text-gray-600">Critical Assessments</div>
                 </div>
                 <div className="text-center">
                   <div className="text-2xl font-bold text-purple-600">
                     {aggregatedAssessments.gapSummary.totalGaps}
                   </div>
-                  <div className="text-xs text-gray-600">Total Gaps</div>
+                  <div className="text-xs text-gray-600">Assessments with Gaps</div>
                 </div>
               </div>
             </CardContent>
           </Card>
         )}
+
+        {/* Aggregation Method Explanation */}
+        <div className="text-center text-xs text-gray-500 mt-2 mb-2">
+          <Info className="h-3 w-3 inline mr-1" />
+          Field severity from Gap Field Management • Shows entity counts (e.g., "2 of 4")
+        </div>
 
         <Separator />
 
@@ -350,10 +356,13 @@ export function EntityAssessmentPanel({
                     hasGap: aggregatedAssessments.health.entitiesWithGaps > 0,
                     gapFields: aggregatedAssessments.health.fieldGapAnalysis?.gapFields || [],
                     severity: aggregatedAssessments.health.fieldGapAnalysis?.overallSeverity || 'MEDIUM',
+                    fieldSeverityMap: aggregatedAssessments.health.fieldGapAnalysis?.fieldSeverityMap || {},
+                    fieldCounts: aggregatedAssessments.health.fieldGapAnalysis?.fieldCounts || {},
                     recommendations: aggregatedAssessments.health.fieldGapAnalysis?.recommendations || []
                   }}
                   layout="full"
                   showRecommendations={false}
+                  isAggregated={true}
                 />
               )}
               {aggregatedAssessments.food && (
@@ -364,10 +373,13 @@ export function EntityAssessmentPanel({
                     hasGap: aggregatedAssessments.food.entitiesWithGaps > 0,
                     gapFields: aggregatedAssessments.food.fieldGapAnalysis?.gapFields || [],
                     severity: aggregatedAssessments.food.fieldGapAnalysis?.overallSeverity || 'MEDIUM',
+                    fieldSeverityMap: aggregatedAssessments.food.fieldGapAnalysis?.fieldSeverityMap || {},
+                    fieldCounts: aggregatedAssessments.food.fieldGapAnalysis?.fieldCounts || {},
                     recommendations: aggregatedAssessments.food.fieldGapAnalysis?.recommendations || []
                   }}
                   layout="full"
                   showRecommendations={false}
+                  isAggregated={true}
                 />
               )}
               {aggregatedAssessments.wash && (
@@ -378,10 +390,13 @@ export function EntityAssessmentPanel({
                     hasGap: aggregatedAssessments.wash.entitiesWithGaps > 0,
                     gapFields: aggregatedAssessments.wash.fieldGapAnalysis?.gapFields || [],
                     severity: aggregatedAssessments.wash.fieldGapAnalysis?.overallSeverity || 'MEDIUM',
+                    fieldSeverityMap: aggregatedAssessments.wash.fieldGapAnalysis?.fieldSeverityMap || {},
+                    fieldCounts: aggregatedAssessments.wash.fieldGapAnalysis?.fieldCounts || {},
                     recommendations: aggregatedAssessments.wash.fieldGapAnalysis?.recommendations || []
                   }}
                   layout="full"
                   showRecommendations={false}
+                  isAggregated={true}
                 />
               )}
               {aggregatedAssessments.shelter && (
@@ -392,10 +407,13 @@ export function EntityAssessmentPanel({
                     hasGap: aggregatedAssessments.shelter.entitiesWithGaps > 0,
                     gapFields: aggregatedAssessments.shelter.fieldGapAnalysis?.gapFields || [],
                     severity: aggregatedAssessments.shelter.fieldGapAnalysis?.overallSeverity || 'MEDIUM',
+                    fieldSeverityMap: aggregatedAssessments.shelter.fieldGapAnalysis?.fieldSeverityMap || {},
+                    fieldCounts: aggregatedAssessments.shelter.fieldGapAnalysis?.fieldCounts || {},
                     recommendations: aggregatedAssessments.shelter.fieldGapAnalysis?.recommendations || []
                   }}
                   layout="full"
                   showRecommendations={false}
+                  isAggregated={true}
                 />
               )}
               {aggregatedAssessments.security && (
@@ -406,10 +424,13 @@ export function EntityAssessmentPanel({
                     hasGap: aggregatedAssessments.security.entitiesWithGaps > 0,
                     gapFields: aggregatedAssessments.security.fieldGapAnalysis?.gapFields || [],
                     severity: aggregatedAssessments.security.fieldGapAnalysis?.overallSeverity || 'MEDIUM',
+                    fieldSeverityMap: aggregatedAssessments.security.fieldGapAnalysis?.fieldSeverityMap || {},
+                    fieldCounts: aggregatedAssessments.security.fieldGapAnalysis?.fieldCounts || {},
                     recommendations: aggregatedAssessments.security.fieldGapAnalysis?.recommendations || []
                   }}
                   layout="full"
                   showRecommendations={false}
+                  isAggregated={true}
                 />
               )}
             </div>

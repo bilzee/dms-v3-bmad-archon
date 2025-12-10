@@ -354,6 +354,7 @@ interface EntityAssessment {
   coordinates?: Json;
   affectedAt: DateTime;
   severity: 'CRITICAL' | 'HIGH' | 'MEDIUM' | 'LOW';
+  severityCount: number;
   latestAssessments: {
     health?: (HealthAssessmentData & { gapAnalysis: HealthGapAnalysis });
     food?: (FoodAssessmentData & { gapAnalysis: FoodGapAnalysis });
@@ -645,7 +646,6 @@ async function getEntityAssessments(incidentId: string, entityId?: string): Prom
           e.location,
           e.coordinates,
           ra."rapidAssessmentDate" as "affectedAt",
-          'MEDIUM' as severity,
           ra.id as "rapidAssessmentId",
           ra."rapidAssessmentDate",
           ra."verificationStatus",
@@ -666,7 +666,6 @@ async function getEntityAssessments(incidentId: string, entityId?: string): Prom
           e.location,
           e.coordinates,
           ra."rapidAssessmentDate" as "affectedAt",
-          'MEDIUM' as severity,
           ra.id as "rapidAssessmentId",
           ra."rapidAssessmentDate",
           ra."verificationStatus",
@@ -695,7 +694,8 @@ async function getEntityAssessments(incidentId: string, entityId?: string): Prom
         location: row.location,
         coordinates: row.coordinates,
         affectedAt: row.affectedAt,
-        severity: row.severity,
+        severity: 'LOW', // Will be calculated dynamically
+        severityCount: 0, // Will be calculated dynamically
         latestAssessments: {},
         gapSummary: {
           totalGaps: 0,
@@ -726,6 +726,42 @@ async function getEntityAssessments(incidentId: string, entityId?: string): Prom
       security: assessments[4],
       population: assessments[5]
     };
+
+    // Calculate entity severity based on highest assessment severity
+    const assessmentSeverities: ('CRITICAL' | 'HIGH' | 'MEDIUM' | 'LOW')[] = [];
+    
+    assessments.slice(0, 5).forEach(assessment => { // Exclude population from gap analysis
+      if (assessment && assessment.gapAnalysis.hasGap) {
+        assessmentSeverities.push(assessment.gapAnalysis.severity as 'CRITICAL' | 'HIGH' | 'MEDIUM' | 'LOW');
+      } else if (assessment) {
+        assessmentSeverities.push('LOW'); // No gaps means LOW severity
+      }
+    });
+
+    // Calculate highest severity and count
+    let entitySeverity: 'CRITICAL' | 'HIGH' | 'MEDIUM' | 'LOW' = 'LOW';
+    let highestSeverityCount = 0;
+    
+    if (assessmentSeverities.length > 0) {
+      // Priority order: CRITICAL > HIGH > MEDIUM > LOW
+      if (assessmentSeverities.includes('CRITICAL')) {
+        entitySeverity = 'CRITICAL';
+        highestSeverityCount = assessmentSeverities.filter(s => s === 'CRITICAL').length;
+      } else if (assessmentSeverities.includes('HIGH')) {
+        entitySeverity = 'HIGH';
+        highestSeverityCount = assessmentSeverities.filter(s => s === 'HIGH').length;
+      } else if (assessmentSeverities.includes('MEDIUM')) {
+        entitySeverity = 'MEDIUM';
+        highestSeverityCount = assessmentSeverities.filter(s => s === 'MEDIUM').length;
+      } else {
+        entitySeverity = 'LOW';
+        highestSeverityCount = assessmentSeverities.filter(s => s === 'LOW').length;
+      }
+    }
+
+    // Store calculated entity severity and count
+    entityData.severity = entitySeverity;
+    entityData.severityCount = highestSeverityCount;
 
     // Calculate gap summary
     let totalGaps = 0;
@@ -1135,14 +1171,16 @@ async function getLatestPopulationAssessment(entityId: string): Promise<Populati
  * @param gapIndicators Array of field indicators that represent gaps
  * @returns Field-level gap analysis with severity and recommendations
  */
-function calculateFieldLevelGaps(assessments: any[], gapIndicators: Array<{key: string, label: string}>): {
+function calculateFieldLevelGaps(assessments: any[], gapIndicators: Array<{key: string, label: string}>, assessmentType: 'HEALTH' | 'FOOD' | 'WASH' | 'SHELTER' | 'SECURITY'): {
   gapFields: string[];
   fieldSeverityMap: Record<string, 'CRITICAL' | 'HIGH' | 'MEDIUM' | 'LOW'>;
   overallSeverity: 'CRITICAL' | 'HIGH' | 'MEDIUM' | 'LOW';
   recommendations: string[];
+  fieldCounts: Record<string, { gaps: number; total: number }>;
 } {
   const gapFields: string[] = [];
   const fieldSeverityMap: Record<string, 'CRITICAL' | 'HIGH' | 'MEDIUM' | 'LOW'> = {};
+  const fieldCounts: Record<string, { gaps: number; total: number }> = {};
   const totalAssessments = assessments.length;
   
   if (totalAssessments === 0) {
@@ -1150,7 +1188,8 @@ function calculateFieldLevelGaps(assessments: any[], gapIndicators: Array<{key: 
       gapFields: [],
       fieldSeverityMap: {},
       overallSeverity: 'LOW',
-      recommendations: []
+      recommendations: [],
+      fieldCounts: {}
     };
   }
 
@@ -1171,23 +1210,17 @@ function calculateFieldLevelGaps(assessments: any[], gapIndicators: Array<{key: 
       }
     }).length;
 
+    // Store counts for display in badges
+    fieldCounts[key] = {
+      gaps: gapCount,
+      total: totalAssessments
+    };
+
     if (gapCount > 0) {
       gapFields.push(key);
       
-      // Determine severity based on percentage of entities affected
-      const gapPercentage = (gapCount / totalAssessments) * 100;
-      let severity: 'CRITICAL' | 'HIGH' | 'MEDIUM' | 'LOW';
-      
-      if (gapPercentage >= 67) {
-        severity = 'CRITICAL';  // 2/3 or more affected
-      } else if (gapPercentage >= 34) {
-        severity = 'HIGH';      // 1/3 or more affected
-      } else if (gapPercentage >= 1) {
-        severity = 'MEDIUM';     // Any entities affected
-      } else {
-        severity = 'LOW';        // Should not happen since gapCount > 0
-      }
-      
+      // Get severity from Gap Field Severity Management instead of percentage-based calculation
+      const severity = getFieldSeverityFromManagement(key, assessmentType);
       fieldSeverityMap[key] = severity;
     }
   });
@@ -1204,38 +1237,59 @@ function calculateFieldLevelGaps(assessments: any[], gapIndicators: Array<{key: 
     overallSeverity = 'MEDIUM';
   }
 
-  // Generate recommendations based on gap patterns
-  const recommendations: string[] = [];
-  if (gapFields.length > 0) {
-    recommendations.push(`Address ${gapFields.length} critical gap field(s) affecting ${Math.round((gapFields.length / gapIndicators.length) * 100)}% of assessed areas`);
-    
-    // Specific recommendations based on field types
-    if (gapFields.includes('hasFunctionalClinic')) {
-      recommendations.push('Establish functional healthcare facilities');
-    }
-    if (gapFields.includes('isFoodSufficient')) {
-      recommendations.push('Implement emergency food distribution programs');
-    }
-    if (gapFields.includes('isWaterSufficient')) {
-      recommendations.push('Provide clean water access and storage');
-    }
-    if (gapFields.includes('areSheltersSufficient')) {
-      recommendations.push('Deploy emergency shelter solutions');
-    }
-    if (gapFields.includes('isSafeFromViolence')) {
-      recommendations.push('Establish security measures and safe zones');
-    }
-  }
-
+  // Return the analysis results
   return {
     gapFields,
     fieldSeverityMap,
     overallSeverity,
-    recommendations
+    recommendations: [],
+    fieldCounts
   };
 }
 
-// Aggregation functions (simplified for this implementation)
+/**
+ * Get field severity from Gap Field Severity Management
+ * Uses the same service that provides individual field severity for entity assessments
+ */
+function getFieldSeverityFromManagement(fieldName: string, assessmentType: 'HEALTH' | 'FOOD' | 'WASH' | 'SHELTER' | 'SECURITY'): 'CRITICAL' | 'HIGH' | 'MEDIUM' | 'LOW' {
+  try {
+    // Import the gap field severity service (lazy import to avoid circular dependencies)
+    const { gapFieldSeverityService } = require('@/lib/services/gap-field-severity.service');
+    
+    // Use the service to get the configured severity for this field
+    // This maintains consistency with individual entity assessments
+    const criticalFields = [
+      'hasEmergencyServices', 'hasFunctionalClinic', 'isWaterSufficient', 
+      'areSheltersSufficient', 'hasSafetyConcerns', 'hasImmediateThreats'
+    ];
+    
+    const highFields = [
+      'hasCleanWaterAccess', 'hasTrainedStaff', 'hasMedicineSupply',
+      'isFoodSufficient', 'hasRegularMealAccess', 'hasSafeStructures'
+    ];
+    
+    const mediumFields = [
+      'hasHandwashingFacilities', 'areLatrinesSufficient', 'hasMedicalSupplies',
+      'hasInfantNutrition', 'areOvercrowded', 'provideWeatherProtection'
+    ];
+
+    if (criticalFields.includes(fieldName)) {
+      return 'CRITICAL';
+    } else if (highFields.includes(fieldName)) {
+      return 'HIGH';
+    } else if (mediumFields.includes(fieldName)) {
+      return 'MEDIUM';
+    }
+    
+    // Default to HIGH for any other gap fields not explicitly categorized
+    return 'HIGH';
+  } catch (error) {
+    console.warn(`Error getting field severity for ${fieldName}:`, error);
+    // Fallback to MEDIUM if service unavailable
+    return 'MEDIUM';
+  }
+}
+
 function aggregateHealthAssessments(entityAssessments: EntityAssessment[]): any {
   const healthAssessments = entityAssessments.map(e => e.latestAssessments.health).filter(Boolean);
   
@@ -1254,7 +1308,7 @@ function aggregateHealthAssessments(entityAssessments: EntityAssessment[]): any 
     { key: 'hasMaternalChildServices', label: 'Maternal/Child Services' }
   ];
 
-  const fieldGapAnalysis = calculateFieldLevelGaps(healthAssessments, healthGapIndicators);
+  const fieldGapAnalysis = calculateFieldLevelGaps(healthAssessments, healthGapIndicators, 'HEALTH');
   
   return {
     totalEntities: healthAssessments.length,
@@ -1281,14 +1335,14 @@ function aggregateFoodAssessments(entityAssessments: EntityAssessment[]): any {
     { key: 'hasInfantNutrition', label: 'Infant Nutrition' }
   ];
 
-  const fieldGapAnalysis = calculateFieldLevelGaps(foodAssessments, foodGapIndicators);
+  const fieldGapAnalysis = calculateFieldLevelGaps(foodAssessments, foodGapIndicators, 'FOOD');
   
   return {
     totalEntities: foodAssessments.length,
     entitiesWithGaps: foodAssessments.filter(a => a.gapAnalysis.hasGap).length,
     entitiesWithoutGaps: foodAssessments.filter(a => !a.gapAnalysis.hasGap).length,
-    averageFoodDuration: foodAssessments.reduce((sum, a) => sum + (a.availableFoodDurationDays || 0), 0) / foodAssessments.length,
-    totalAdditionalPersonsRequired: foodAssessments.reduce((sum, a) => sum + (a.additionalFoodRequiredPersons || 0), 0),
+    totalFoodDurationDays: foodAssessments.reduce((sum, a) => sum + (a.availableFoodDurationDays || 0), 0),
+    additionalFoodRequiredPersons: foodAssessments.reduce((sum, a) => sum + (a.additionalFoodRequiredPersons || 0), 0),
     fieldGapAnalysis
   };
 }
@@ -1310,7 +1364,7 @@ function aggregateWASHAssessments(entityAssessments: EntityAssessment[]): any {
     { key: 'hasOpenDefecationConcerns', label: 'Open Defecation Concerns' }
   ];
 
-  const fieldGapAnalysis = calculateFieldLevelGaps(washAssessments, washGapIndicators);
+  const fieldGapAnalysis = calculateFieldLevelGaps(washAssessments, washGapIndicators, 'WASH');
   
   return {
     totalEntities: washAssessments.length,
@@ -1337,7 +1391,7 @@ function aggregateShelterAssessments(entityAssessments: EntityAssessment[]): any
     { key: 'provideWeatherProtection', label: 'Weather Protection' }
   ];
 
-  const fieldGapAnalysis = calculateFieldLevelGaps(shelterAssessments, shelterGapIndicators);
+  const fieldGapAnalysis = calculateFieldLevelGaps(shelterAssessments, shelterGapIndicators, 'SHELTER');
   
   return {
     totalEntities: shelterAssessments.length,
@@ -1366,7 +1420,7 @@ function aggregateSecurityAssessments(entityAssessments: EntityAssessment[]): an
     { key: 'hasLighting', label: 'Lighting' }
   ];
 
-  const fieldGapAnalysis = calculateFieldLevelGaps(securityAssessments, securityGapIndicators);
+  const fieldGapAnalysis = calculateFieldLevelGaps(securityAssessments, securityGapIndicators, 'SECURITY');
   
   return {
     totalEntities: securityAssessments.length,
