@@ -168,7 +168,7 @@ export function AggregateMetrics({ incidentId, className }: AggregateMetricsProp
         <CardHeader className="pb-3">
           <CardTitle className="text-lg font-semibold flex items-center gap-2">
             <Loader2 className="h-5 w-5 animate-spin" />
-            Loading Metrics...
+            Loading Operational Metrics...
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -199,7 +199,7 @@ export function AggregateMetrics({ incidentId, className }: AggregateMetricsProp
         <CardHeader className="pb-3">
           <CardTitle className="text-lg font-semibold flex items-center gap-2">
             <AlertCircle className="h-5 w-5 text-red-500" />
-            Metrics Error
+            Operational Metrics Error
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -278,7 +278,7 @@ export function AggregateMetrics({ incidentId, className }: AggregateMetricsProp
       <CardHeader className="pb-3">
         <CardTitle className="text-lg font-semibold flex items-center gap-2">
           <BarChart3 className="h-5 w-5" />
-          Aggregate Metrics
+          Operational Metrics
         </CardTitle>
       </CardHeader>
       
