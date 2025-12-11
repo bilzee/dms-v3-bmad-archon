@@ -149,8 +149,8 @@ export function AssessmentRelationshipMap({
     queryKey: ['detailed-relationships', incidentId],
     queryFn: async () => {
       if (incidentId) {
-        // Get all entities for specific incident (no filters)
-        const response = await fetch(`/api/v1/incidents/${incidentId}/entities`);
+        // Use the same API as EntitySelector to get entities with calculated severity
+        const response = await fetch(`/api/v1/dashboard/situation?incidentId=${incidentId}&includeEntityAssessments=true`);
         
         if (!response.ok) {
           throw new Error('Failed to fetch incident entities');
@@ -158,28 +158,57 @@ export function AssessmentRelationshipMap({
         
         const result = await response.json();
         
-        console.log('Entities API response:', result);
-        console.log('Number of entities received:', result.data?.length);
-        console.log('Sample entity data:', result.data?.[0]);
+        if (!result.success) {
+          throw new Error(result.error || 'Failed to fetch entities');
+        }
         
-        // Transform EntityWithRelationships[] to EntityIncidentRelationship[]
-        return result.data.map((entity: any) => ({
-          entityId: entity.id,
-          incidentId: incidentId,
-          entity: entity,
-          incident: { id: incidentId }, // Will be populated from context
-          assessments: [],
-          priorityDistribution: entity.priorityDistribution || {
-            CRITICAL: 0,
-            HIGH: 0,
-            MEDIUM: 0,
-            LOW: 0,
-          },
-          latestAssessment: { id: `assessment-${entity.id}` }, // Placeholder
-          totalAssessments: entity.assessmentCount || 0,
-          firstAssessmentDate: new Date(),
-          lastAssessmentDate: new Date(),
-        }));
+        console.log('Dashboard API response:', result);
+        console.log('Number of entities received:', result.data?.entityAssessments?.length || 0);
+        console.log('Sample entity data:', result.data?.entityAssessments?.[0]);
+        
+        // Use entityAssessments from dashboard API (same as EntitySelector)
+        if (result.data.entityAssessments) {
+          return result.data.entityAssessments.map((entity: any) => ({
+            entityId: entity.id,
+            incidentId: incidentId,
+            entity: entity,
+            incident: { id: incidentId }, // Will be populated from context
+            assessments: [],
+            priorityDistribution: entity.priorityDistribution || {
+              CRITICAL: 0,
+              HIGH: 0,
+              MEDIUM: 0,
+              LOW: 0,
+            },
+            latestAssessment: { id: `assessment-${entity.id}` }, // Placeholder
+            totalAssessments: entity.assessmentCount || 0,
+            firstAssessmentDate: new Date(),
+            lastAssessmentDate: new Date(),
+          }));
+        } else {
+          // Fallback to entities if entityAssessments not available
+          return result.data.entities?.map((entity: any) => ({
+            entityId: entity.entityId,
+            incidentId: incidentId,
+            entity: {
+              ...entity,
+              severity: entity.gapSummary?.criticalGaps > 0 ? 'CRITICAL' : 
+                       entity.gapSummary?.totalGaps > 0 ? 'HIGH' : 'LOW',
+            },
+            incident: { id: incidentId },
+            assessments: [],
+            priorityDistribution: {
+              CRITICAL: 0,
+              HIGH: 0,
+              MEDIUM: 0,
+              LOW: 0,
+            },
+            latestAssessment: { id: `assessment-${entity.entityId}` },
+            totalAssessments: 0,
+            firstAssessmentDate: new Date(),
+            lastAssessmentDate: new Date(),
+          })) || [];
+        }
       } else {
         // Get comprehensive relationships (no filters)
         const response = await fetch('/api/v1/relationships');
@@ -243,6 +272,14 @@ export function AssessmentRelationshipMap({
           fillOpacity: markerColor ? 0.8 : 0, // Transparent fill if no severity
         }}
         eventHandlers={{
+          mouseover: (e) => {
+            // Open popup on hover
+            const marker = e.target;
+            marker.bindPopup().openPopup();
+          },
+          mouseout: (e) => {
+            // Keep popup open for better UX - users can click to close
+          },
           click: () => {
             // console.log(`Clicked on entity: ${entity.name}`);
             setSelectedEntityId(relationship.entityId);
@@ -358,13 +395,14 @@ export function AssessmentRelationshipMap({
 
   
       <CardContent className="p-0">
-        <div className="h-96 w-full relative">
-          <MapContainer
-            center={mapCenter}
-            zoom={zoomLevel}
-            style={{ height: '100%', width: '100%' }}
-            className="rounded-b-lg"
-          >
+        <div className="h-96 w-full relative flex justify-center">
+          <div className="w-1/2 relative">
+            <MapContainer
+              center={mapCenter}
+              zoom={zoomLevel}
+              style={{ height: '100%', width: '100%' }}
+              className="rounded-b-lg"
+            >
             <TileLayer
               url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
               attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
@@ -398,6 +436,8 @@ export function AssessmentRelationshipMap({
               </CardContent>
             </Card>
           )}
+          </MapContainer>
+          </div>
         </div>
       </CardContent>
     </Card>
