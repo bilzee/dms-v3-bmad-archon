@@ -2,12 +2,22 @@
 
 import React, { useState, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
+import dynamic from 'next/dynamic';
 import { SituationDashboardLayout } from '@/components/dashboards/situation/SituationDashboardLayout';
 import { IncidentOverviewPanel } from '@/components/dashboards/situation/IncidentOverviewPanel';
 import { EntityAssessmentPanel } from '@/components/dashboards/situation/EntityAssessmentPanel';
 import { AggregateMetrics } from '@/components/dashboards/situation/components/AggregateMetrics';
 import { useIncidentSelection, useIncidentActions } from '@/stores/dashboardLayout.store';
 import { apiGet } from '@/lib/api';
+
+// Dynamic import for client-side only map component
+const AssessmentRelationshipMap = dynamic(
+  () => import('@/components/coordinator/AssessmentRelationshipMap').then(mod => ({ default: mod.AssessmentRelationshipMap })),
+  { 
+    ssr: false,
+    loading: () => <div className="h-full w-full flex items-center justify-center bg-muted rounded-lg">Loading map...</div>
+  }
+);
 
 // Fetch incident data for dynamic incident name
 const fetchIncidentData = async (incidentId: string) => {
@@ -23,10 +33,13 @@ const fetchIncidentData = async (incidentId: string) => {
  * 
  * This page provides a comprehensive situation awareness dashboard with three panels:
  * - Left Panel: Incident Overview (Story 7.2) - IMPLEMENTED
- * - Center Panel: Entity Assessment (Story 7.3) - IMPLEMENTED
+ * - Center Panel: Divided into two sections:
+ *   - Upper Center: Entity Assessment (Story 7.3) - IMPLEMENTED
+ *   - Lower Center: Interactive Leaflet Map from entity-incident-map - NEW
  * - Right Panel: Aggregate Metrics (moved from left panel)
  * 
- * Note: Interactive Map (Story 7.4) temporarily disabled due to SSR issues
+ * The map dynamically updates based on the selected incident from the left panel.
+ * Map component dynamically imported for client-side rendering (SSR-safe).
  */
 export default function SituationDashboardPage() {
   // State management for selected incident
@@ -66,26 +79,37 @@ export default function SituationDashboardPage() {
             className="h-full"
           />
 
-          {/* Center Panel: Entity Assessment - Story 7.3 IMPLEMENTED */}
+          {/* Center Panel: Divided into upper and lower sections */}
           <div className="flex flex-col h-full">
-            <EntityAssessmentPanel
-              incidentId={currentIncidentId}
-              onEntityChange={(entityId) => {
-                console.log('Entity changed to:', entityId);
-              }}
-              className="h-full"
-            />
+            {/* Upper Center: Entity Assessment Panel */}
+            <div className="flex-1 min-h-0">
+              <EntityAssessmentPanel
+                incidentId={currentIncidentId}
+                onEntityChange={(entityId) => {
+                  console.log('Entity changed to:', entityId);
+                }}
+                className="h-full"
+              />
+            </div>
             
-            {/* Map placeholder - Story 7.4 implementation temporarily disabled due to SSR issues */}
-            <div className="flex-1 max-h-[50%] overflow-hidden mt-4">
-              <div className="h-full bg-gray-100 border-2 border-dashed border-gray-300 rounded-lg flex items-center justify-center">
-                <div className="text-center text-gray-500">
-                  <div className="text-lg mb-2">🗺️</div>
-                  <p className="text-sm font-medium">Interactive Map</p>
-                  <p className="text-xs">Story 7.4 - Temporarily disabled due to SSR issues</p>
-                  <p className="text-xs">Implementation complete, will be restored after SSR fix</p>
-                </div>
-              </div>
+            {/* Lower Center: Assessment Relationship Map */}
+            <div className="flex-1 min-h-0 mt-2">
+              <AssessmentRelationshipMap
+                incidentId={currentIncidentId}
+                showTimeline={false}
+                priorityFilter={[]}
+                assessmentTypeFilter={[]}
+                onEntitySelect={(entityId) => {
+                  console.log('Map entity selected:', entityId);
+                }}
+                onIncidentSelect={(incidentId) => {
+                  console.log('Map incident selected:', incidentId);
+                }}
+                onAssessmentSelect={(assessmentId) => {
+                  console.log('Map assessment selected:', assessmentId);
+                }}
+                className="h-full"
+              />
             </div>
           </div>
 
