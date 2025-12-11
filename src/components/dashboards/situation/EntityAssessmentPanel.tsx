@@ -297,34 +297,34 @@ export function EntityAssessmentPanel({
         {/* Gap Summary for "All Entities" view */}
         {includeAllEntities && aggregatedAssessments && (
           <Card className="border-blue-200 bg-blue-50">
-            <CardHeader className="pb-2"> {/* Reduced padding */}
-              <CardTitle className="text-base flex items-center gap-2">
-                <Users className="h-5 w-5" />
+            <CardHeader className="pb-1 pt-2"> {/* Further reduced padding */}
+              <CardTitle className="text-sm flex items-center gap-2">
+                <Users className="h-4 w-4" />
                 Aggregated Assessment Summary
               </CardTitle>
             </CardHeader>
-            <CardContent className="pt-0"> {/* Removed top padding */}
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-3"> {/* Tighter gap */}
+            <CardContent className="pt-0 pb-2"> {/* Further reduced padding */}
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-2"> {/* Tighter gap */}
                 <div className="text-center">
-                  <div className="text-2xl font-bold text-blue-600">
+                  <div className="text-xl font-bold text-blue-600">
                     {aggregatedAssessments.gapSummary.entitiesWithGaps}
                   </div>
                   <div className="text-xs text-gray-600">Entities with Gaps</div>
                 </div>
                 <div className="text-center">
-                  <div className="text-2xl font-bold text-green-600">
+                  <div className="text-xl font-bold text-green-600">
                     {aggregatedAssessments.gapSummary.entitiesWithoutGaps}
                   </div>
                   <div className="text-xs text-gray-600">Entities without Gaps</div>
                 </div>
                 <div className="text-center">
-                  <div className="text-2xl font-bold text-red-600">
+                  <div className="text-xl font-bold text-red-600">
                     {aggregatedAssessments.gapSummary.criticalGaps}
                   </div>
                   <div className="text-xs text-gray-600">Critical Assessments</div>
                 </div>
                 <div className="text-center">
-                  <div className="text-2xl font-bold text-purple-600">
+                  <div className="text-xl font-bold text-purple-600">
                     {aggregatedAssessments.gapSummary.totalGaps}
                   </div>
                   <div className="text-xs text-gray-600">Assessments with Gaps</div>
@@ -334,19 +334,13 @@ export function EntityAssessmentPanel({
           </Card>
         )}
 
-        {/* Aggregation Method Explanation */}
-        <div className="text-center text-xs text-gray-500 mt-2 mb-2">
-          <Info className="h-3 w-3 inline mr-1" />
-          Field severity from Gap Field Management • Shows entity counts (e.g., "2 of 4")
-        </div>
-
-        <Separator />
+          <Separator />
 
         {/* Assessment Categories */}
         <div className="space-y-3 flex-1 overflow-hidden"> {/* Reduced spacing and made scrollable */}
           {includeAllEntities && aggregatedAssessments ? (
             // Aggregated view - show aggregated data for each category
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-4 gap-3"> {/* 4 columns for better space utilization */}
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3"> {/* 5 columns for better space utilization */}
               {/* Only show aggregated gap-based assessments */}
               {aggregatedAssessments.health && (
                 <AssessmentCategorySummary
@@ -454,7 +448,7 @@ export function EntityAssessmentPanel({
                   </div>
 
                   {/* Gap-based Assessments Grid */}
-                  <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-4 gap-3"> {/* 4 columns for better space utilization */}
+                  <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3"> {/* 5 columns for better space utilization */}
                     {/* Only render gap-based assessment categories that have data */}
                     {entity.latestAssessments?.health && (
                       <AssessmentCategorySummary

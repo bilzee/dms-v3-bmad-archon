@@ -5,8 +5,7 @@ import { useQuery } from '@tanstack/react-query';
 import { SituationDashboardLayout } from '@/components/dashboards/situation/SituationDashboardLayout';
 import { IncidentOverviewPanel } from '@/components/dashboards/situation/IncidentOverviewPanel';
 import { EntityAssessmentPanel } from '@/components/dashboards/situation/EntityAssessmentPanel';
-import { GapAnalysisSummary } from '@/components/dashboards/situation/components/GapAnalysisSummary';
-import { useGapAnalysisRealtime } from '@/hooks/useGapAnalysisRealtime';
+import { AggregateMetrics } from '@/components/dashboards/situation/components/AggregateMetrics';
 import { useIncidentSelection, useIncidentActions } from '@/stores/dashboardLayout.store';
 import { apiGet } from '@/lib/api';
 
@@ -25,7 +24,7 @@ const fetchIncidentData = async (incidentId: string) => {
  * This page provides a comprehensive situation awareness dashboard with three panels:
  * - Left Panel: Incident Overview (Story 7.2) - IMPLEMENTED
  * - Center Panel: Entity Assessment (Story 7.3) - IMPLEMENTED
- * - Right Panel: Gap Analysis Summary (Story 7.5) - IMPLEMENTED
+ * - Right Panel: Aggregate Metrics (moved from left panel)
  * 
  * Note: Interactive Map (Story 7.4) temporarily disabled due to SSR issues
  */
@@ -38,42 +37,12 @@ export default function SituationDashboardPage() {
   const defaultIncidentId = 'incident-flood-001';
   const currentIncidentId = selectedIncidentId || defaultIncidentId;
 
-  // Fetch incident data for dynamic incident name
-  const { data: incidentData } = useQuery({
-    queryKey: ['api-v1-dashboard-situation', currentIncidentId, 'all'],
-    queryFn: () => fetchIncidentData(currentIncidentId!),
-    enabled: !!currentIncidentId,
-    staleTime: 5 * 60 * 1000, // 5 minutes
-  });
-
-  // Get dynamic incident name
-  const currentIncidentName = incidentData?.selectedIncident?.incident?.description || 
-                            incidentData?.incidents?.find((inc: any) => inc.id === currentIncidentId)?.description || 
-                            'Selected Incident';
-
   // Set default incident on component mount
   useEffect(() => {
     if (!selectedIncidentId) {
       setSelectedIncident(defaultIncidentId);
     }
   }, [selectedIncidentId, setSelectedIncident]);
-
-  // Real-time gap analysis data
-  const { 
-    data: gapAnalysisData, 
-    isLoading: isGapAnalysisLoading,
-    isError: isGapAnalysisError 
-  } = useGapAnalysisRealtime({
-    incidentId: currentIncidentId,
-    enabled: !!currentIncidentId,
-    refetchInterval: 30000, // 30 seconds
-    onSuccess: (data) => {
-      console.log('Gap analysis data updated:', data);
-    },
-    onError: (error) => {
-      console.error('Gap analysis error:', error);
-    }
-  });
 
   return (
     <div className="w-full h-screen overflow-hidden pl-4"> {/* Use full screen height with left padding */}
@@ -120,26 +89,12 @@ export default function SituationDashboardPage() {
             </div>
           </div>
 
-          {/* Right Panel: Gap Analysis Summary - Story 7.5 IMPLEMENTED */}
+          {/* Right Panel: Aggregate Metrics (moved from left panel) */}
           <div className="flex flex-col h-full">
-            <GapAnalysisSummary
+            <AggregateMetrics
               incidentId={currentIncidentId}
-              incidentName={currentIncidentName}
-              data={gapAnalysisData}
-              isLoading={isGapAnalysisLoading}
               className="h-full"
             />
-            
-            {isGapAnalysisError && (
-              <div className="mt-4 p-4 bg-red-50 border border-red-200 rounded-lg">
-                <p className="text-sm text-red-800">
-                  <strong>Error loading gap analysis data</strong>
-                </p>
-                <p className="text-xs text-red-600 mt-1">
-                  Please check your connection and try again
-                </p>
-              </div>
-            )}
           </div>
         </SituationDashboardLayout>
       </div>

@@ -13,7 +13,6 @@ import { useIncidentSelection } from '@/stores/dashboardLayout.store';
 import IncidentSelector from './components/IncidentSelector';
 import IncidentSummary from './components/IncidentSummary';
 import PopulationImpact from './components/PopulationImpact';
-import AggregateMetrics from './components/AggregateMetrics';
 
 // Types for main panel
 interface IncidentOverviewPanelProps {
@@ -96,18 +95,6 @@ function IncidentOverviewSkeleton() {
             <Skeleton className="h-12 w-full" />
           </div>
           <Skeleton className="h-10 w-full" /> {/* Reduced height */}
-        </CardContent>
-      </Card>
-
-      {/* Aggregate Metrics Skeleton */}
-      <Card>
-        <CardContent className="p-3"> {/* Reduced padding */}
-          <Skeleton className="h-5 w-36 mb-3" /> {/* Reduced margin */}
-          <div className="space-y-2"> {/* Reduced spacing */}
-            <Skeleton className="h-10 w-full" /> {/* Reduced height */}
-            <Skeleton className="h-10 w-full" />
-            <Skeleton className="h-10 w-full" />
-          </div>
         </CardContent>
       </Card>
     </div>
@@ -247,12 +234,6 @@ export function IncidentOverviewPanel({
 
           {/* Population Impact Statistics */}
           <PopulationImpact
-            incidentId={currentIncidentId}
-            className="px-1"
-          />
-
-          {/* Aggregate Metrics */}
-          <AggregateMetrics
             incidentId={currentIncidentId}
             className="px-1"
           />
