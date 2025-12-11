@@ -79,10 +79,10 @@ export default function SituationDashboardPage() {
             className="h-full"
           />
 
-          {/* Center Panel: Divided into upper and lower sections */}
+          {/* Center Panel: Divided into upper and lower sections (70-30) */}
           <div className="flex flex-col h-full">
-            {/* Upper Center: Entity Assessment Panel */}
-            <div className="flex-1 min-h-0">
+            {/* Upper Center: Entity Assessment Panel - 70% */}
+            <div className="flex-[7] min-h-0">
               <EntityAssessmentPanel
                 incidentId={currentIncidentId}
                 onEntityChange={(entityId) => {
@@ -92,8 +92,8 @@ export default function SituationDashboardPage() {
               />
             </div>
             
-            {/* Lower Center: Assessment Relationship Map */}
-            <div className="flex-1 min-h-0 mt-2">
+            {/* Lower Center: Assessment Relationship Map - 30% */}
+            <div className="flex-[3] min-h-0 mt-2">
               <AssessmentRelationshipMap
                 incidentId={currentIncidentId}
                 showTimeline={false}

@@ -50,8 +50,16 @@ interface AssessmentRelationshipMapProps {
   className?: string;
 }
 
-// Priority color mapping for map visualization
+// Priority color mapping for map visualization (fallback)
 const PRIORITY_COLORS = {
+  CRITICAL: '#dc2626', // red-600
+  HIGH: '#ea580c',     // orange-600
+  MEDIUM: '#ca8a04',   // yellow-600
+  LOW: '#16a34a',      // green-600
+} as const;
+
+// Entity Severity color mapping (primary)
+const ENTITY_SEVERITY_COLORS = {
   CRITICAL: '#dc2626', // red-600
   HIGH: '#ea580c',     // orange-600
   MEDIUM: '#ca8a04',   // yellow-600
@@ -142,16 +150,11 @@ export function AssessmentRelationshipMap({
 
   // Fetch detailed relationship data for map markers
   const { data: detailedRelationships } = useQuery({
-    queryKey: ['detailed-relationships', queryParams],
+    queryKey: ['detailed-relationships', incidentId],
     queryFn: async () => {
       if (incidentId) {
-        // Get entities for specific incident
-        const response = await fetch(`/api/v1/incidents/${incidentId}/entities?` + new URLSearchParams({
-          ...(queryParams.priorityFilter && { priorityFilter: queryParams.priorityFilter.join(',') }),
-          ...(queryParams.assessmentTypeFilter && { assessmentTypeFilter: queryParams.assessmentTypeFilter.join(',') }),
-          ...(queryParams.startDate && { startDate: queryParams.startDate.toISOString() }),
-          ...(queryParams.endDate && { endDate: queryParams.endDate.toISOString() }),
-        }));
+        // Get all entities for specific incident (no filters)
+        const response = await fetch(`/api/v1/incidents/${incidentId}/entities`);
         
         if (!response.ok) {
           throw new Error('Failed to fetch incident entities');
@@ -181,14 +184,8 @@ export function AssessmentRelationshipMap({
           lastAssessmentDate: new Date(),
         }));
       } else {
-        // Get comprehensive relationships
-        const response = await fetch('/api/v1/relationships?' + new URLSearchParams({
-          ...(queryParams.entityId && { entityId: queryParams.entityId }),
-          ...(queryParams.priorityFilter && { priorityFilter: queryParams.priorityFilter.join(',') }),
-          ...(queryParams.assessmentTypeFilter && { assessmentTypeFilter: queryParams.assessmentTypeFilter.join(',') }),
-          ...(queryParams.startDate && { startDate: queryParams.startDate.toISOString() }),
-          ...(queryParams.endDate && { endDate: queryParams.endDate.toISOString() }),
-        }));
+        // Get comprehensive relationships (no filters)
+        const response = await fetch('/api/v1/relationships');
         
         if (!response.ok) {
           throw new Error('Failed to fetch relationship data');
@@ -198,7 +195,7 @@ export function AssessmentRelationshipMap({
         return result.data as EntityIncidentRelationship[];
       }
     },
-    enabled: !!relationships?.success,
+    enabled: !!incidentId,
   });
 
   // Filter handlers
@@ -226,13 +223,17 @@ export function AssessmentRelationshipMap({
       return null;
     }
 
-    const dominantPriority = Object.entries(relationship.priorityDistribution)
-      .reduce((max, [priority, count]) => count > max.count ? { priority: priority as Priority, count } : max, 
-        { priority: 'LOW' as Priority, count: 0 }).priority;
+    // Use Entity Severity as primary color, fallback to priority distribution
+    const entitySeverity = entity.severity?.toUpperCase() as keyof typeof ENTITY_SEVERITY_COLORS;
+    const markerColor = entitySeverity ? ENTITY_SEVERITY_COLORS[entitySeverity] : 
+      (() => {
+        const dominantPriority = Object.entries(relationship.priorityDistribution)
+          .reduce((max, [priority, count]) => count > max.count ? { priority: priority as Priority, count } : max, 
+            { priority: 'LOW' as Priority, count: 0 }).priority;
+        return PRIORITY_COLORS[dominantPriority];
+      })();
 
-    const markerColor = PRIORITY_COLORS[dominantPriority];
-
-    // console.log(`Creating CircleMarker at [${coordinates.lat}, ${coordinates.lng}] with priority ${dominantPriority} for ${entity.name}`);
+    // console.log(`Creating CircleMarker at [${coordinates.lat}, ${coordinates.lng}] with severity ${entitySeverity || 'priority'} for ${entity.name}`);
 
     return (
       <CircleMarker
@@ -264,31 +265,22 @@ export function AssessmentRelationshipMap({
                 <Badge variant="outline" className="text-xs">{entity.type}</Badge>
               </div>
               <div className="flex justify-between">
+                <span>Entity Severity:</span>
+                <Badge 
+                  variant="outline" 
+                  className="text-xs"
+                  style={{ backgroundColor: markerColor, color: 'white' }}
+                >
+                  {entitySeverity || 'LOW'}
+                </Badge>
+              </div>
+              <div className="flex justify-between">
                 <span>Total Assessments:</span>
                 <span className="font-medium">{relationship.totalAssessments}</span>
               </div>
               <div className="flex justify-between">
                 <span>Incident:</span>
                 <span className="font-medium text-xs">{relationship.incident.type}</span>
-              </div>
-              <div className="space-y-1">
-                <span className="text-xs font-medium">Priority Distribution:</span>
-                <div className="grid grid-cols-2 gap-1 text-xs">
-                  {Object.entries(relationship.priorityDistribution).map(([priority, count]) => (
-                    count > 0 && (
-                      <div key={priority} className="flex justify-between">
-                        <Badge 
-                          variant="outline" 
-                          className="text-xs"
-                          style={{ backgroundColor: PRIORITY_COLORS[priority as Priority], color: 'white' }}
-                        >
-                          {priority}
-                        </Badge>
-                        <span>{count}</span>
-                      </div>
-                    )
-                  ))}
-                </div>
               </div>
               <div className="pt-2 border-t">
                 <Button 
