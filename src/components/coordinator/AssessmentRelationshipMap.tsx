@@ -393,7 +393,6 @@ export function AssessmentRelationshipMap({
           </CardTitle>
         </CardHeader>
 
-  
       <CardContent className="p-0">
         <div className="h-96 w-full relative flex justify-center">
           <div className="w-1/2 relative">
@@ -412,7 +411,7 @@ export function AssessmentRelationshipMap({
               {detailedRelationships?.map(createMarkerForRelationship).filter(Boolean)}
             </LayerGroup>
           </MapContainer>
-
+          
           {/* Statistics Overlay */}
           {relationships?.data && (
             <Card className="absolute top-4 right-4 z-[1000] bg-white/95 backdrop-blur-sm">
@@ -436,7 +435,6 @@ export function AssessmentRelationshipMap({
               </CardContent>
             </Card>
           )}
-          </MapContainer>
           </div>
         </div>
       </CardContent>
@@ -474,7 +472,7 @@ export function AssessmentRelationshipMap({
                       <Badge 
                         variant="outline"
                         style={{ 
-                          backgroundColor: PRIORITY_COLORS[assessmentData.assessment.priority as Priority],
+                          backgroundColor: ENTITY_SEVERITY_COLORS[assessmentData.assessment.priority as Priority],
                           color: 'white'
                         }}
                       >
