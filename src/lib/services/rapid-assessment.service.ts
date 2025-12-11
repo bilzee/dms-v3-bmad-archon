@@ -154,6 +154,9 @@ export class RapidAssessmentService {
       return { rapidAssessment, typeSpecificAssessment }
     })
 
+    // Automatically trigger gap analysis calculation after successful creation
+    await this.triggerGapAnalysis(result.rapidAssessment.id)
+
     // Return the combined assessment
     return {
       ...result.rapidAssessment,
@@ -419,37 +422,52 @@ export class RapidAssessmentService {
 
       // Calculate gap analysis based on assessment type and data
       const gapAnalysisData: any = {}
+      let calculatedSeverity: any = null
 
       switch (assessment.rapidAssessmentType) {
         case 'HEALTH':
           if (assessment.healthAssessment) {
-            gapAnalysisData.gapAnalysis = analyzeHealthGaps(assessment.healthAssessment)
+            gapAnalysisData.gapAnalysis = await analyzeHealthGaps(assessment.healthAssessment)
+            calculatedSeverity = gapAnalysisData.gapAnalysis.severity
           }
           break
         case 'FOOD':
           if (assessment.foodAssessment) {
-            gapAnalysisData.gapAnalysis = analyzeFoodGaps(assessment.foodAssessment)
+            gapAnalysisData.gapAnalysis = await analyzeFoodGaps(assessment.foodAssessment)
+            calculatedSeverity = gapAnalysisData.gapAnalysis.severity
           }
           break
         case 'WASH':
           if (assessment.wASHAssessment) {
-            gapAnalysisData.gapAnalysis = analyzeWASHGaps(assessment.wASHAssessment)
+            gapAnalysisData.gapAnalysis = await analyzeWASHGaps(assessment.wASHAssessment)
+            calculatedSeverity = gapAnalysisData.gapAnalysis.severity
           }
           break
         case 'SHELTER':
           if (assessment.shelterAssessment) {
-            gapAnalysisData.gapAnalysis = analyzeShelterGaps(assessment.shelterAssessment)
+            gapAnalysisData.gapAnalysis = await analyzeShelterGaps(assessment.shelterAssessment)
+            calculatedSeverity = gapAnalysisData.gapAnalysis.severity
           }
           break
         case 'SECURITY':
           if (assessment.securityAssessment) {
-            gapAnalysisData.gapAnalysis = analyzeSecurityGaps(assessment.securityAssessment)
+            gapAnalysisData.gapAnalysis = await analyzeSecurityGaps(assessment.securityAssessment)
+            calculatedSeverity = gapAnalysisData.gapAnalysis.severity
           }
           break
       }
 
-      // Update the assessment with gap analysis data
-      if (Object.keys(gapAnalysisData).length > 0) {
+      // Update the assessment with gap analysis data AND priority based on calculated severity
+      if (Object.keys(gapAnalysisData).length > 0 && calculatedSeverity) {
+        await prisma.rapidAssessment.update({
+          where: { id: assessmentId },
+          data: {
+            ...gapAnalysisData,
+            priority: calculatedSeverity // Set priority to match severity from gap analysis
+          }
+        })
+      } else if (Object.keys(gapAnalysisData).length > 0) {
+        // Fallback: update without priority change if severity calculation failed
         await prisma.rapidAssessment.update({
           where: { id: assessmentId },
           data: gapAnalysisData
