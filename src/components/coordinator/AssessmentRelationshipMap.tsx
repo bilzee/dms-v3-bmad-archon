@@ -26,6 +26,7 @@ import type {
   RelationshipQueryParams 
 } from '@/types/assessment-relationships';
 import type { Priority, AssessmentType } from '@prisma/client';
+import { useEntityActions } from '@/stores/dashboardLayout.store';
 
 // Fix Leaflet default markers
 import L from 'leaflet';
@@ -50,15 +51,7 @@ interface AssessmentRelationshipMapProps {
   className?: string;
 }
 
-// Priority color mapping for map visualization (fallback)
-const PRIORITY_COLORS = {
-  CRITICAL: '#dc2626', // red-600
-  HIGH: '#ea580c',     // orange-600
-  MEDIUM: '#ca8a04',   // yellow-600
-  LOW: '#16a34a',      // green-600
-} as const;
-
-// Entity Severity color mapping (primary)
+// Entity Severity color mapping
 const ENTITY_SEVERITY_COLORS = {
   CRITICAL: '#dc2626', // red-600
   HIGH: '#ea580c',     // orange-600
@@ -97,6 +90,9 @@ export function AssessmentRelationshipMap({
   const [zoomLevel, setZoomLevel] = useState(10);
   const [mapCenter, setMapCenter] = useState<[number, number]>([11.8311, 13.1511]); // Maiduguri center
   const [selectedEntityId, setSelectedEntityId] = useState<string | null>(null);
+  
+  // Entity selection actions for dropdown integration
+  const { setSelectedEntity } = useEntityActions();
 
   // Query parameters
   const queryParams: RelationshipQueryParams = useMemo(() => ({
@@ -223,17 +219,16 @@ export function AssessmentRelationshipMap({
       return null;
     }
 
-    // Use Entity Severity as primary color, fallback to priority distribution
+    // Use Entity Severity only - no fallback colors
     const entitySeverity = entity.severity?.toUpperCase() as keyof typeof ENTITY_SEVERITY_COLORS;
-    const markerColor = entitySeverity ? ENTITY_SEVERITY_COLORS[entitySeverity] : 
-      (() => {
-        const dominantPriority = Object.entries(relationship.priorityDistribution)
-          .reduce((max, [priority, count]) => count > max.count ? { priority: priority as Priority, count } : max, 
-            { priority: 'LOW' as Priority, count: 0 }).priority;
-        return PRIORITY_COLORS[dominantPriority];
-      })();
+    const markerColor = entitySeverity ? ENTITY_SEVERITY_COLORS[entitySeverity] : null;
 
     // console.log(`Creating CircleMarker at [${coordinates.lat}, ${coordinates.lng}] with severity ${entitySeverity || 'priority'} for ${entity.name}`);
+
+    // Don't render marker if no severity (transparent)
+    if (!markerColor) {
+      return null;
+    }
 
     return (
       <CircleMarker
@@ -251,18 +246,27 @@ export function AssessmentRelationshipMap({
           click: () => {
             // console.log(`Clicked on entity: ${entity.name}`);
             setSelectedEntityId(relationship.entityId);
+            
+            // Update the dropdown selection in the EntitySelector
+            setSelectedEntity(relationship.entityId);
+            
+            // Call the callback props for any external handling
             onEntitySelect?.(relationship.entityId);
             onIncidentSelect?.(relationship.incidentId);
           },
         }}
       >
         <Popup>
-          <div className="p-2 min-w-64">
+          <div className="p-3 min-w-72">
             <h3 className="font-semibold text-sm mb-2">{entity.name}</h3>
-            <div className="space-y-1 text-xs">
+            <div className="space-y-2 text-xs">
               <div className="flex justify-between">
                 <span>Type:</span>
                 <Badge variant="outline" className="text-xs">{entity.type}</Badge>
+              </div>
+              <div className="flex justify-between">
+                <span>Location:</span>
+                <span className="font-medium text-xs">{entity.location || 'Not specified'}</span>
               </div>
               <div className="flex justify-between">
                 <span>Entity Severity:</span>
@@ -271,17 +275,32 @@ export function AssessmentRelationshipMap({
                   className="text-xs"
                   style={{ backgroundColor: markerColor, color: 'white' }}
                 >
-                  {entitySeverity || 'LOW'}
+                  {entitySeverity}
                 </Badge>
               </div>
+              
+              {/* Assessment Types */}
+              {entity.latestAssessments && Object.keys(entity.latestAssessments).length > 0 && (
+                <div>
+                  <span className="font-medium">Available Assessments:</span>
+                  <div className="flex flex-wrap gap-1 mt-1">
+                    {Object.keys(entity.latestAssessments).map((assessmentType) => (
+                      <Badge key={assessmentType} variant="secondary" className="text-xs">
+                        {assessmentType}
+                      </Badge>
+                    ))}
+                  </div>
+                </div>
+              )}
+              
+              {/* Verified Responses */}
               <div className="flex justify-between">
-                <span>Total Assessments:</span>
-                <span className="font-medium">{relationship.totalAssessments}</span>
+                <span>Verified Responses:</span>
+                <span className="font-medium">
+                  {entity.verifiedResponses || entity.responseCount || 0}
+                </span>
               </div>
-              <div className="flex justify-between">
-                <span>Incident:</span>
-                <span className="font-medium text-xs">{relationship.incident.type}</span>
-              </div>
+              
               <div className="pt-2 border-t">
                 <Button 
                   size="sm" 
