@@ -10,7 +10,7 @@
 
 import React, { useState, useEffect, useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { MapContainer, TileLayer, CircleMarker, Popup, LayerGroup } from 'react-leaflet';
+import { MapContainer, TileLayer, CircleMarker, LayerGroup } from 'react-leaflet';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -90,6 +90,7 @@ export function AssessmentRelationshipMap({
   const [zoomLevel, setZoomLevel] = useState(10);
   const [mapCenter, setMapCenter] = useState<[number, number]>([11.8311, 13.1511]); // Maiduguri center
   const [selectedEntityId, setSelectedEntityId] = useState<string | null>(null);
+  const [hoveredEntityId, setHoveredEntityId] = useState<string | null>(null);
   
   // Entity selection actions for dropdown integration
   const { setSelectedEntity } = useEntityActions();
@@ -104,13 +105,13 @@ export function AssessmentRelationshipMap({
     endDate: dateRange.end || undefined,
   }), [incidentId, entityId, selectedPriorities, selectedAssessmentTypes, dateRange]);
 
-  // Fetch latest assessments for selected entity
+  // Fetch latest assessments for hovered entity (for details panel)
   const { data: entityAssessments, isLoading: assessmentsLoading } = useQuery({
-    queryKey: ['entity-assessments', selectedEntityId],
+    queryKey: ['entity-assessments', hoveredEntityId],
     queryFn: async () => {
-      if (!selectedEntityId) return null;
+      if (!hoveredEntityId) return null;
       
-      const response = await fetch(`/api/v1/entities/${selectedEntityId}/assessments/latest`);
+      const response = await fetch(`/api/v1/entities/${hoveredEntityId}/assessments/latest`);
       
       if (!response.ok) {
         throw new Error('Failed to fetch entity assessments');
@@ -118,7 +119,7 @@ export function AssessmentRelationshipMap({
       
       return response.json();
     },
-    enabled: !!selectedEntityId,
+    enabled: !!hoveredEntityId,
     staleTime: 5 * 60 * 1000, // 5 minutes
   });
 
@@ -224,6 +225,14 @@ export function AssessmentRelationshipMap({
     enabled: !!incidentId,
   });
 
+  // Get hovered entity data from the same source as the map (dashboard API)
+  const hoveredEntity = useMemo(() => {
+    if (!hoveredEntityId || !detailedRelationships) return null;
+    
+    const relationship = detailedRelationships.find(rel => rel.entityId === hoveredEntityId);
+    return relationship?.entity || null;
+  }, [hoveredEntityId, detailedRelationships]);
+
   // Filter handlers
   const handlePriorityFilterChange = (priorities: string[]) => {
     setSelectedPriorities(priorities as Priority[]);
@@ -272,13 +281,13 @@ export function AssessmentRelationshipMap({
           fillOpacity: markerColor ? 0.8 : 0, // Transparent fill if no severity
         }}
         eventHandlers={{
-          mouseover: (e) => {
-            // Open popup on hover
-            const marker = e.target;
-            marker.bindPopup().openPopup();
+          mouseover: () => {
+            // Show details in left panel on hover
+            setHoveredEntityId(relationship.entityId);
           },
-          mouseout: (e) => {
-            // Keep popup open for better UX - users can click to close
+          mouseout: () => {
+            // Hide details when not hovering
+            setHoveredEntityId(null);
           },
           click: () => {
             // console.log(`Clicked on entity: ${entity.name}`);
@@ -292,75 +301,13 @@ export function AssessmentRelationshipMap({
             onIncidentSelect?.(relationship.incidentId);
           },
         }}
-      >
-        <Popup>
-          <div className="p-3 min-w-72">
-            <h3 className="font-semibold text-sm mb-2">{entity.name}</h3>
-            <div className="space-y-2 text-xs">
-              <div className="flex justify-between">
-                <span>Type:</span>
-                <Badge variant="outline" className="text-xs">{entity.type}</Badge>
-              </div>
-              <div className="flex justify-between">
-                <span>Location:</span>
-                <span className="font-medium text-xs">{entity.location || 'Not specified'}</span>
-              </div>
-              <div className="flex justify-between">
-                <span>Entity Severity:</span>
-                <Badge 
-                  variant="outline" 
-                  className="text-xs"
-                  style={{ 
-                    backgroundColor: markerColor || '#e5e7eb', 
-                    color: markerColor ? 'white' : '#374151' 
-                  }}
-                >
-                  {entitySeverity || 'Not Assessed'}
-                </Badge>
-              </div>
-              
-              {/* Assessment Types */}
-              {entity.latestAssessments && Object.keys(entity.latestAssessments).length > 0 && (
-                <div>
-                  <span className="font-medium">Available Assessments:</span>
-                  <div className="flex flex-wrap gap-1 mt-1">
-                    {Object.keys(entity.latestAssessments).map((assessmentType) => (
-                      <Badge key={assessmentType} variant="secondary" className="text-xs">
-                        {assessmentType}
-                      </Badge>
-                    ))}
-                  </div>
-                </div>
-              )}
-              
-              {/* Verified Responses */}
-              <div className="flex justify-between">
-                <span>Verified Responses:</span>
-                <span className="font-medium">
-                  {entity.verifiedResponses || entity.responseCount || 0}
-                </span>
-              </div>
-              
-              <div className="pt-2 border-t">
-                <Button 
-                  size="sm" 
-                  className="w-full text-xs"
-                  variant={selectedEntityId === relationship.entityId ? "default" : "outline"}
-                  onClick={() => setSelectedEntityId(relationship.entityId)}
-                >
-                  {selectedEntityId === relationship.entityId ? "✓ Selected" : "Select Entity"}
-                </Button>
-              </div>
-            </div>
-          </div>
-        </Popup>
-      </CircleMarker>
+      />
     );
   };
 
   if (isLoading) {
     return (
-      <Card className={cn("w-full h-96", className)}>
+      <Card className={cn("w-full h-80", className)}>
         <CardContent className="flex items-center justify-center h-full">
           <div className="animate-pulse text-muted-foreground">Loading relationship map...</div>
         </CardContent>
@@ -370,7 +317,7 @@ export function AssessmentRelationshipMap({
 
   if (error) {
     return (
-      <Card className={cn("w-full h-96", className)}>
+      <Card className={cn("w-full h-80", className)}>
         <CardContent className="flex items-center justify-center h-full">
           <div className="text-destructive">Failed to load relationship data</div>
         </CardContent>
@@ -381,201 +328,154 @@ export function AssessmentRelationshipMap({
   return (
     <div className={cn("w-full space-y-4", className)}>
       <Card className="w-full">
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <MapPin className="h-5 w-5" />
-            Visualise Affected Entities
-            {relationships?.data && (
-              <Badge variant="outline">
-                {relationships.data.totalAssessments} assessments
-              </Badge>
-            )}
-          </CardTitle>
-        </CardHeader>
-
-      <CardContent className="p-0">
-        <div className="h-96 w-full relative flex justify-center">
-          <div className="w-1/2 relative">
-            <MapContainer
-              center={mapCenter}
-              zoom={zoomLevel}
-              style={{ height: '100%', width: '100%' }}
-              className="rounded-b-lg"
-            >
-            <TileLayer
-              url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-              attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-            />
-            
-            <LayerGroup>
-              {detailedRelationships?.map(createMarkerForRelationship).filter(Boolean)}
-            </LayerGroup>
-          </MapContainer>
-          
-          {/* Statistics Overlay */}
-          {relationships?.data && (
-            <Card className="absolute top-4 right-4 z-[1000] bg-white/95 backdrop-blur-sm">
-              <CardContent className="p-4">
-                <div className="grid grid-cols-2 gap-4 text-sm">
-                  <div className="flex items-center gap-2">
-                    <TrendingUp className="h-4 w-4 text-blue-600" />
-                    <div>
-                      <div className="font-medium">{relationships.data.totalEntities}</div>
-                      <div className="text-muted-foreground text-xs">Entities</div>
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <AlertTriangle className="h-4 w-4 text-orange-600" />
-                    <div>
-                      <div className="font-medium">{relationships.data.totalIncidents}</div>
-                      <div className="text-muted-foreground text-xs">Incidents</div>
-                    </div>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          )}
-          </div>
-        </div>
-      </CardContent>
-    </Card>
-
-    {/* Assessment Details Panel */}
-    {selectedEntityId && (
-      <Card className="w-full">
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <TrendingUp className="h-5 w-5" />
-            Latest Assessments
-            {entityAssessments?.data?.entity && (
-              <Badge variant="outline">
-                {entityAssessments.data.entity.name}
-              </Badge>
-            )}
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          {assessmentsLoading ? (
-            <div className="flex items-center justify-center py-8">
-              <div className="animate-pulse text-muted-foreground">Loading assessment details...</div>
-            </div>
-          ) : entityAssessments?.data?.latestAssessments?.length > 0 ? (
-            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-              {entityAssessments.data.latestAssessments.map((assessmentData: any) => (
-                <Card key={assessmentData.type} className="bg-gray-50">
-                  <CardHeader className="pb-2">
-                    <CardTitle className="flex items-center justify-between text-sm">
-                      <div className="flex items-center gap-2">
-                        <span>{ASSESSMENT_TYPE_SYMBOLS[assessmentData.type as keyof typeof ASSESSMENT_TYPE_SYMBOLS]}</span>
-                        <span>{assessmentData.type}</span>
-                      </div>
-                      <Badge 
-                        variant="outline"
-                        style={{ 
-                          backgroundColor: ENTITY_SEVERITY_COLORS[assessmentData.assessment.priority as Priority],
-                          color: 'white'
-                        }}
-                      >
-                        {assessmentData.assessment.priority}
-                      </Badge>
+        <CardContent className="p-4">
+          <div className="h-80 w-full flex gap-4">
+            {/* Left Panel: Entity Details (30% width) */}
+            <div className="flex-[3] flex flex-col">
+              {hoveredEntityId ? (
+                <Card className="h-full border-2">
+                  <CardHeader className="pb-3">
+                    <CardTitle className="flex items-center gap-2 text-lg">
+                      <TrendingUp className="h-5 w-5" />
+                      Entity Details
                     </CardTitle>
                   </CardHeader>
-                  <CardContent className="space-y-3">
-                    {/* Assessment Score */}
-                    {assessmentData.assessment.summary.overallScore !== undefined && (
-                      <div className="flex justify-between items-center">
-                        <span className="text-sm text-muted-foreground">Score:</span>
-                        <div className="flex items-center gap-2">
-                          <div className="w-16 bg-gray-200 rounded-full h-2">
-                            <div 
-                              className="h-2 rounded-full bg-blue-600"
-                              style={{ width: `${assessmentData.assessment.summary.overallScore}%` }}
-                            />
+                  <CardContent className="flex-1 overflow-y-auto">
+                    {assessmentsLoading ? (
+                      <div className="flex items-center justify-center h-full">
+                        <div className="animate-pulse text-muted-foreground">Loading entity details...</div>
+                      </div>
+                    ) : hoveredEntity ? (
+                      <div className="space-y-4">
+                        {/* Entity Info */}
+                        <div className="space-y-2">
+                          <h3 className="font-semibold text-lg">{hoveredEntity.name}</h3>
+                          <div className="grid grid-cols-1 gap-2 text-sm">
+                            <div className="flex justify-between">
+                              <span className="text-muted-foreground">Type:</span>
+                              <Badge variant="outline">{hoveredEntity.type}</Badge>
+                            </div>
+                            <div className="flex justify-between">
+                              <span className="text-muted-foreground">Location:</span>
+                              <span className="font-medium">{hoveredEntity.location || hoveredEntity.area || hoveredEntity.zone || 'Not specified'}</span>
+                            </div>
+                            <div className="flex justify-between">
+                              <span className="text-muted-foreground">Severity:</span>
+                              <Badge 
+                                variant="outline"
+                                style={{ 
+                                  backgroundColor: hoveredEntity.severity ? ENTITY_SEVERITY_COLORS[hoveredEntity.severity as keyof typeof ENTITY_SEVERITY_COLORS] : '#e5e7eb',
+                                  color: hoveredEntity.severity ? 'white' : '#374151'
+                                }}
+                              >
+                                {hoveredEntity.severity || 'Not Assessed'}
+                              </Badge>
+                            </div>
+                            <div className="flex justify-between">
+                              <span className="text-muted-foreground">Affected Date:</span>
+                              <span className="font-medium">
+                                {hoveredEntity.affectedAt 
+                                  ? new Date(hoveredEntity.affectedAt).toLocaleDateString()
+                                  : hoveredEntity.lastUpdated 
+                                    ? new Date(hoveredEntity.lastUpdated).toLocaleDateString()
+                                    : hoveredEntity.createdAt 
+                                      ? new Date(hoveredEntity.createdAt).toLocaleDateString()
+                                      : 'Not specified'
+                                }
+                              </span>
+                            </div>
                           </div>
-                          <span className="text-sm font-medium">
-                            {assessmentData.assessment.summary.overallScore}%
+                        </div>
+
+                        {/* Assessment Types Available */}
+                        {entityAssessments.data.latestAssessments?.length > 0 && (
+                          <div className="space-y-2">
+                            <h4 className="font-medium text-sm">Available Assessment Types:</h4>
+                            <div className="flex flex-wrap gap-1">
+                              {entityAssessments.data.latestAssessments.map((assessment: any) => (
+                                <Badge key={assessment.type} variant="secondary" className="text-xs">
+                                  {assessment.type}
+                                </Badge>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+
+                        {/* Verified Responses */}
+                        <div className="flex justify-between text-sm">
+                          <span className="text-muted-foreground">Verified Responses:</span>
+                          <span className="font-medium">
+                            {entityAssessments.data.entity.verifiedResponses || entityAssessments.data.entity.responseCount || 0}
                           </span>
                         </div>
                       </div>
-                    )}
-
-                    {/* Critical Gaps */}
-                    {assessmentData.assessment.summary.criticalGaps.length > 0 && (
-                      <div>
-                        <div className="flex items-center gap-1 mb-2">
-                          <AlertTriangle className="h-3 w-3 text-orange-600" />
-                          <span className="text-xs font-medium text-orange-800">Critical Gaps</span>
-                        </div>
-                        <div className="space-y-1">
-                          {assessmentData.assessment.summary.criticalGaps.slice(0, 3).map((gap: string, index: number) => (
-                            <div key={index} className="text-xs text-red-700 bg-red-50 px-2 py-1 rounded">
-                              {gap}
-                            </div>
-                          ))}
-                          {assessmentData.assessment.summary.criticalGaps.length > 3 && (
-                            <div className="text-xs text-muted-foreground">
-                              +{assessmentData.assessment.summary.criticalGaps.length - 3} more gaps
-                            </div>
-                          )}
-                        </div>
+                    ) : (
+                      <div className="text-center h-full flex items-center justify-center">
+                        <div className="text-muted-foreground">No details available</div>
                       </div>
                     )}
-
-                    {/* Key Metrics */}
-                    <div>
-                      <span className="text-xs font-medium text-gray-700 mb-2 block">Key Metrics</span>
-                      <div className="grid grid-cols-2 gap-2 text-xs">
-                        {Object.entries(assessmentData.assessment.summary.keyMetrics).slice(0, 4).map(([key, value]) => (
-                          <div key={key} className="flex justify-between">
-                            <span className="text-muted-foreground truncate pr-1">
-                              {key.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase())}:
-                            </span>
-                            <span className="font-medium">
-                              {typeof value === 'boolean' ? (value ? '✓' : '✗') : value}
-                            </span>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-
-                    {/* Assessment Date */}
-                    <div className="pt-2 border-t border-gray-200">
-                      <div className="flex justify-between items-center text-xs text-muted-foreground">
-                        <span>Assessed:</span>
-                        <span>{new Date(assessmentData.assessment.date).toLocaleDateString()}</span>
-                      </div>
-                      <div className="flex justify-between items-center text-xs text-muted-foreground">
-                        <span>By:</span>
-                        <span className="truncate pl-1">{assessmentData.assessment.assessor?.name}</span>
-                      </div>
-                    </div>
-
-                    {/* View Details Button */}
-                    <Button 
-                      size="sm" 
-                      variant="outline" 
-                      className="w-full text-xs"
-                      onClick={() => {
-                        onAssessmentSelect?.(assessmentData.assessment.id);
-                      }}
-                    >
-                      View Details
-                    </Button>
                   </CardContent>
                 </Card>
-              ))}
+              ) : (
+                <Card className="h-full border-2 border-dashed">
+                  <CardContent className="h-full flex items-center justify-center">
+                    <div className="text-center text-muted-foreground">
+                      <MapPin className="h-8 w-8 mx-auto mb-2 opacity-50" />
+                      <p>Hover over an entity on the map</p>
+                      <p className="text-xs">to view detailed information</p>
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
             </div>
-          ) : (
-            <div className="text-center py-8">
-              <div className="text-muted-foreground">No assessments available for this entity</div>
-              <div className="text-xs text-muted-foreground mt-1">
-                Select a different entity on the map to view assessments
+
+            {/* Right Panel: Leaflet Map (70% width) */}
+            <div className="flex-[7] relative">
+              <div className="h-full w-full border-2 border-gray-200 rounded-lg overflow-hidden">
+                <MapContainer
+                  center={mapCenter}
+                  zoom={zoomLevel}
+                  style={{ height: '100%', width: '100%' }}
+                  className="z-10"
+                >
+                  <TileLayer
+                    url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+                    attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+                  />
+                  
+                  <LayerGroup>
+                    {detailedRelationships?.map(createMarkerForRelationship).filter(Boolean)}
+                  </LayerGroup>
+                </MapContainer>
+                
+                {/* Statistics Overlay */}
+                {relationships?.data && (
+                  <Card className="absolute top-4 right-4 z-[1000] bg-white/95 backdrop-blur-sm">
+                    <CardContent className="p-4">
+                      <div className="grid grid-cols-2 gap-4 text-sm">
+                        <div className="flex items-center gap-2">
+                          <TrendingUp className="h-4 w-4 text-blue-600" />
+                          <div>
+                            <div className="font-medium">{relationships.data.totalEntities}</div>
+                            <div className="text-muted-foreground text-xs">Entities</div>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <AlertTriangle className="h-4 w-4 text-orange-600" />
+                          <div>
+                            <div className="font-medium">{relationships.data.totalIncidents}</div>
+                            <div className="text-muted-foreground text-xs">Incidents</div>
+                          </div>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                )}
               </div>
             </div>
-          )}
+          </div>
         </CardContent>
       </Card>
-    )}
     </div>
   );
 }

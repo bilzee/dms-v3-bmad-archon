@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useMemo, useState, useEffect } from 'react';
-import { cn } from '@/lib/utils';
+import { cn, formatNumber, formatArrayValue } from '@/lib/utils';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
@@ -70,6 +70,38 @@ const categoryConfig = {
     bgColor: 'bg-gray-50',
     borderColor: 'border-gray-200'
   }
+} as const;
+
+// Units mapping for numeric fields
+const fieldUnits = {
+  // Health
+  numberHealthFacilities: 'facilities',
+  qualifiedHealthWorkers: 'workers',
+  
+  // Food
+  availableFoodDurationDays: 'days',
+  additionalFoodRequiredPersons: 'persons',
+  additionalFoodRequiredHouseholds: 'households',
+  
+  // WASH
+  functionalLatrinesAvailable: 'latrines',
+  
+  // Shelter
+  numberSheltersRequired: 'shelters',
+  
+  // Population
+  totalPopulation: 'people',
+  totalHouseholds: 'households',
+  populationMale: 'people',
+  populationFemale: 'people',
+  populationUnder5: 'children',
+  pregnantWomen: 'women',
+  lactatingMothers: 'mothers',
+  personWithDisability: 'people',
+  elderlyPersons: 'people',
+  separatedChildren: 'children',
+  numberLivesLost: 'lives',
+  numberInjured: 'people'
 } as const;
 
 // Field definitions for gap vs non-gap indicating fields
@@ -393,7 +425,7 @@ export function AssessmentCategorySummary({
         const hasGap = fieldCount.gaps > 0;
         
         return (
-          <div key={key} className="flex items-center justify-between">
+          <div key={key} className="flex items-center justify-between py-1">
             <span className="text-sm text-gray-600">{label}</span>
             <div className="flex items-center gap-2">
               {hasGap ? (
@@ -419,7 +451,7 @@ export function AssessmentCategorySummary({
         const hasGap = invert ? value : !value;
         const severity = hasGap ? (fieldSeverities[key] || getFieldSeveritySync(key)) : 'LOW';
         return (
-          <div key={key} className="flex items-center justify-between">
+          <div key={key} className="flex items-center justify-between py-1">
             <span className="text-sm text-gray-600">{label}</span>
             <GapIndicator hasGap={hasGap} severity={severity} size="sm" />
           </div>
@@ -427,18 +459,52 @@ export function AssessmentCategorySummary({
       }
     }
 
-    // Format non-boolean values
-    let displayValue = value;
+    // Format non-boolean values with improved styling
+    let displayValue: string;
+    let unit: string = '';
+    
     if (typeof value === 'number') {
-      displayValue = value.toLocaleString();
+      displayValue = formatNumber(value);
+      // Add unit if available
+      const fieldKey = key as keyof typeof fieldUnits;
+      if (fieldUnits[fieldKey]) {
+        unit = fieldUnits[fieldKey];
+      }
     } else if (typeof value === 'object' && value !== null) {
-      displayValue = JSON.stringify(value);
+      displayValue = formatArrayValue(value);
+    } else if (typeof value === 'string' && (value.startsWith('[') || value.includes(','))) {
+      // Handle string arrays
+      displayValue = formatArrayValue(value);
+    } else {
+      displayValue = value ? String(value) : 'N/A';
     }
 
+    // Check if this is being rendered in the Overview section (non-gap fields)
+    const isOverviewField = fieldConfig.nonGapIndicators.some(field => field.key === key);
+
+    if (isOverviewField) {
+      // Overview layout: variable name and value on same row, minimizing vertical space
+      return (
+        <div key={key} className="flex items-center justify-between py-0.5">
+          <div className="text-gray-500 font-medium uppercase tracking-wide leading-tight" style={{fontSize: '8px'}}>
+            {label}
+          </div>
+          <div className="text-sm font-medium text-gray-900">
+            {displayValue}
+            {unit && <span className="text-xs text-gray-600 ml-1">{unit}</span>}
+          </div>
+        </div>
+      );
+    }
+
+    // Gap analysis layout: regular row format
     return (
-      <div key={key} className="flex items-center justify-between">
-        <span className="text-sm text-gray-600">{label}</span>
-        <span className="text-sm font-medium">{displayValue || 'N/A'}</span>
+      <div key={key} className="flex items-center justify-between py-1">
+        <span className="text-sm text-gray-600 flex-1">{label}</span>
+        <span className="text-sm font-semibold text-gray-900 bg-gray-50 px-2 py-1 rounded text-right min-w-0 flex-shrink-0">
+          {displayValue}
+          {unit && <span className="text-xs text-gray-600 ml-1">{unit}</span>}
+        </span>
       </div>
     );
   };
@@ -530,35 +596,47 @@ export function AssessmentCategorySummary({
             )}
           </div>
         ) : layout === 'split' && gapFieldElements.length > 0 ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {/* Non-gap indicators (left side) */}
+          <div className="space-y-4">
+            {/* Gap indicators (top section) */}
             <div className="space-y-2">
-              {nonGapFieldElements.length > 0 ? (
+              {gapFieldElements.length > 0 ? (
                 <>
-                  <h4 className="text-sm font-medium text-gray-700 mb-2">Overview</h4>
-                  {nonGapFieldElements}
+                  <div className="border border-gray-200 rounded-lg p-3">
+                    <h4 className="text-sm font-semibold text-gray-800 mb-3 flex items-center gap-2">
+                      <AlertTriangle className="h-4 w-4" />
+                      Gap Analysis
+                    </h4>
+                    <div className="space-y-2">
+                      {gapFieldElements}
+                    </div>
+                  </div>
                 </>
               ) : (
-                <div className="text-center py-4 text-gray-500">
-                  <Info className="h-6 w-6 mx-auto mb-2 opacity-50" />
-                  <p className="text-xs">No overview data</p>
+                <div className="text-center py-4 text-gray-500 bg-green-50 rounded-lg border border-green-200">
+                  <CheckCircle className="h-6 w-6 mx-auto mb-2 text-green-500" />
+                  <p className="text-xs text-green-700">No gap indicators</p>
                 </div>
               )}
             </div>
 
-            <Separator orientation="vertical" className="hidden md:block" />
-
-            {/* Gap indicators (right side) */}
+            {/* Non-gap indicators (bottom section) */}
             <div className="space-y-2">
-              {gapFieldElements.length > 0 ? (
+              {nonGapFieldElements.length > 0 ? (
                 <>
-                  <h4 className="text-sm font-medium text-gray-700 mb-2">Gap Analysis</h4>
-                  {gapFieldElements}
+                  <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+                    <h4 className="text-sm font-semibold text-blue-800 mb-3 flex items-center gap-2">
+                      <Info className="h-4 w-4" />
+                      Overview
+                    </h4>
+                    <div className="space-y-1">
+                      {nonGapFieldElements}
+                    </div>
+                  </div>
                 </>
               ) : (
-                <div className="text-center py-4 text-gray-500">
-                  <CheckCircle className="h-6 w-6 mx-auto mb-2 text-green-500" />
-                  <p className="text-xs">No gap indicators</p>
+                <div className="text-center py-4 text-gray-500 bg-gray-50 rounded-lg">
+                  <Info className="h-6 w-6 mx-auto mb-2 opacity-50" />
+                  <p className="text-xs">No overview data</p>
                 </div>
               )}
             </div>

@@ -404,19 +404,6 @@ export function EntitySelector({
         </SelectContent>
       </Select>
 
-      {/* Selected entity details */}
-      {selectedEntity && (
-        <div className="mt-2 p-2 bg-gray-50 rounded-md text-xs text-gray-600">
-          <div className="font-medium text-gray-700">{selectedEntity.name}</div>
-          <div className="mt-1 text-gray-500">
-            Type: {entityTypeConfig[selectedEntity.type].label}
-            {selectedEntity.location && ` • Location: ${selectedEntity.location}`}
-          </div>
-          <div className="text-gray-400">
-            Affected: {new Date(selectedEntity.affectedAt).toLocaleDateString()}
-          </div>
-        </div>
-      )}
     </div>
   );
 }

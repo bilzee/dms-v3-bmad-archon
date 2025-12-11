@@ -433,19 +433,6 @@ export function EntityAssessmentPanel({
             <div className="space-y-4 overflow-hidden"> {/* Reduced spacing */}
               {entityAssessments.map((entity: any, index: number) => (
                 <div key={entity.id || index} className="space-y-3"> {/* Reduced spacing */}
-                  <div className="flex items-center gap-2">
-                    <h3 className="text-lg font-semibold text-gray-900">
-                      {entity.name}
-                    </h3>
-                    <span className="text-sm text-gray-500">
-                      ({entity.type})
-                    </span>
-                    {entity.location && (
-                      <span className="text-sm text-gray-500">
-                        • {entity.location}
-                      </span>
-                    )}
-                  </div>
 
                   {/* Gap-based Assessments Grid */}
                   <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3"> {/* 5 columns for better space utilization */}
@@ -519,15 +506,6 @@ export function EntityAssessmentPanel({
                     </div>
                   )}
 
-                  {/* Gap-based Assessments Note */}
-                  <div className="mt-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
-                    <div className="text-sm text-blue-800">
-                      <div className="font-medium mb-1">💡 Gap-Based Assessments</div>
-                      <div className="text-xs">
-                        These assessments identify gaps in critical services and infrastructure for effective humanitarian response.
-                      </div>
-                    </div>
-                  </div>
 
                   {index < entityAssessments.length - 1 && <Separator />}
                 </div>
