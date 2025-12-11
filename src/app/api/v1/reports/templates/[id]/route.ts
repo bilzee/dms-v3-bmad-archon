@@ -9,7 +9,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { z } from 'zod';
 import { db } from '@/lib/db/client';
-import { ReportTemplateEngine } from '@/lib/ports/template-engine';
+import { ReportTemplateEngine } from '@/lib/reports/template-engine';
 import { ApiResponse } from '@/types/api';
 
 // Validation schemas
@@ -43,7 +43,7 @@ export async function GET(
     // Check if it's a default template
     if (templateId.startsWith('default_')) {
       const defaultTemplateName = templateId.replace('default_', '').replace(/_/g, ' ');
-      const defaultTemplate = await import('@/lib/ports/template-engine')
+      const defaultTemplate = await import('@/lib/reports/template-engine')
         .then(module => module.DEFAULT_TEMPLATES)
         .then(templates => 
           templates.find(t => 

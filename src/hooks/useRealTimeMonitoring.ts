@@ -373,53 +373,36 @@ export function useRealTimeMonitoring(config: RealTimeConfig) {
     };
   }, [config.incidentId, config.enableWebSocket, updateStatus, config, queryClient]);
 
-  // Connection status indicator
-  const ConnectionIndicator = useCallback(() => {
-    const getStatusColor = () => {
-      switch (state.connectionStatus) {
-        case 'connected':
-          return 'text-green-600 bg-green-100';
-        case 'connecting':
-          return 'text-blue-600 bg-blue-100';
-        case 'disconnected':
-          return 'text-gray-600 bg-gray-100';
-        case 'error':
-          return 'text-red-600 bg-red-100';
-        default:
-          return 'text-gray-600 bg-gray-100';
-      }
-    };
+  // Connection status helper functions
+  const getStatusColor = useCallback(() => {
+    switch (state.connectionStatus) {
+      case 'connected':
+        return 'text-green-600 bg-green-100';
+      case 'connecting':
+        return 'text-blue-600 bg-blue-100';
+      case 'disconnected':
+        return 'text-gray-600 bg-gray-100';
+      case 'error':
+        return 'text-red-600 bg-red-100';
+      default:
+        return 'text-gray-600 bg-gray-100';
+    }
+  }, [state.connectionStatus]);
 
-    const getStatusIcon = () => {
-      switch (state.connectionStatus) {
-        case 'connected':
-          return '●'; // Green circle
-        case 'connecting':
-          return '⟳'; // Spinning circle
-        case 'disconnected':
-          return '○'; // Empty circle
-        case 'error':
-          return '✕'; // X mark
-        default:
-          return '?';
-      }
-    };
-
-    return (
-      <div className={`flex items-center gap-2 px-2 py-1 rounded-full text-xs font-medium ${getStatusColor()}`}>
-        <span className="text-sm">{getStatusIcon()}</span>
-        <span>
-          {state.connectionStatus.charAt(0).toUpperCase() + state.connectionStatus.slice(1)}
-          {state.retryCount > 0 && ` (${state.retryCount} retries)`}
-        </span>
-        {state.lastUpdate && (
-          <span className="text-xs opacity-75">
-            at {state.lastUpdate.toLocaleTimeString()}
-          </span>
-        )}
-      </div>
-    );
-  }, [state]);
+  const getStatusIcon = useCallback(() => {
+    switch (state.connectionStatus) {
+      case 'connected':
+        return '●'; // Green circle
+      case 'connecting':
+        return '⟳'; // Spinning circle
+      case 'disconnected':
+        return '○'; // Empty circle
+      case 'error':
+        return '✕'; // X mark
+      default:
+        return '?';
+    }
+  }, [state.connectionStatus]);
 
   return {
     // State
@@ -428,8 +411,9 @@ export function useRealTimeMonitoring(config: RealTimeConfig) {
     lastUpdate: state.lastUpdate,
     retryCount: state.retryCount,
     
-    // UI Components
-    ConnectionIndicator,
+    // UI Helper functions
+    getStatusColor,
+    getStatusIcon,
     
     // Manual controls
     disconnect: useCallback(() => {

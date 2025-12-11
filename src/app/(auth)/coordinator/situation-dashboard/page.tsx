@@ -7,6 +7,7 @@ import { SituationDashboardLayout } from '@/components/dashboards/situation/Situ
 import { IncidentOverviewPanel } from '@/components/dashboards/situation/IncidentOverviewPanel';
 import { EntityAssessmentPanel } from '@/components/dashboards/situation/EntityAssessmentPanel';
 import { AggregateMetrics } from '@/components/dashboards/situation/components/AggregateMetrics';
+import { TopDonorsSection } from '@/components/dashboards/situation/components/TopDonorsSection';
 import { useIncidentSelection, useIncidentActions } from '@/stores/dashboardLayout.store';
 import { apiGet } from '@/lib/api';
 
@@ -113,11 +114,15 @@ export default function SituationDashboardPage() {
             </div>
           </div>
 
-          {/* Right Panel: Aggregate Metrics (moved from left panel) */}
-          <div className="flex flex-col h-full">
+          {/* Right Panel: Aggregate Metrics + Top Donors */}
+          <div className="flex flex-col h-full space-y-4">
             <AggregateMetrics
               incidentId={currentIncidentId}
-              className="h-full"
+              className="flex-1"
+            />
+            <TopDonorsSection
+              incidentId={currentIncidentId}
+              className="flex-shrink-0"
             />
           </div>
         </SituationDashboardLayout>

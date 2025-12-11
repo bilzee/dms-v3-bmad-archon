@@ -53,8 +53,8 @@ export default function LeaderboardPage() {
         </div>
         <p className="text-lg text-gray-600 max-w-3xl mx-auto">
           Recognizing and celebrating our most dedicated disaster response partners. 
-          Rankings are updated {criteria?.calculation?.updateFrequency || 'every 15 minutes'} based on verified delivery rates, 
-          commitment value, consistency, and response speed.
+          Rankings are updated {criteria?.calculation?.updateFrequency || 'every 15 minutes'} based on response verification rate 
+          and total commitments made to ensure both reliability and volume are rewarded.
         </p>
         {stats && (
           <div className="flex items-center justify-center gap-4 text-sm text-gray-500">
@@ -103,34 +103,32 @@ export default function LeaderboardPage() {
             </div>
           ) : criteria ? (
             <>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                <div className={`text-center p-4 bg-${criteria.weights.deliveryRate.color}-50 rounded-lg`}>
-                  <div className={`text-2xl font-bold text-${criteria.weights.deliveryRate.color}-700`}>
-                    {criteria.weights.deliveryRate.percentage}%
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="text-center p-6 bg-blue-50 rounded-lg border">
+                  <div className="text-3xl font-bold text-blue-700 mb-2">
+                    Response Verification Rate
                   </div>
-                  <div className="text-sm text-gray-600">{criteria.weights.deliveryRate.name}</div>
-                  <div className="text-xs text-gray-500 mt-1">{criteria.weights.deliveryRate.description}</div>
+                  <div className="text-sm text-gray-600 mb-2">Percentage of verified donor responses</div>
+                  <div className="text-xs text-gray-500">
+                    {criteria.performanceMetrics?.responseVerificationRate?.description || 
+                     "Percentage of donor responses that have been verified"}
+                  </div>
+                  <div className="mt-3 px-3 py-1 bg-blue-100 text-blue-700 rounded text-xs font-semibold">
+                    Direct Addition to Score
+                  </div>
                 </div>
-                <div className={`text-center p-4 bg-${criteria.weights.commitmentValue.color}-50 rounded-lg`}>
-                  <div className={`text-2xl font-bold text-${criteria.weights.commitmentValue.color}-700`}>
-                    {criteria.weights.commitmentValue.percentage}%
+                <div className="text-center p-6 bg-green-50 rounded-lg border">
+                  <div className="text-3xl font-bold text-green-700 mb-2">
+                    Total Commitments
                   </div>
-                  <div className="text-sm text-gray-600">{criteria.weights.commitmentValue.name}</div>
-                  <div className="text-xs text-gray-500 mt-1">{criteria.weights.commitmentValue.description}</div>
-                </div>
-                <div className={`text-center p-4 bg-${criteria.weights.consistency.color}-50 rounded-lg`}>
-                  <div className={`text-2xl font-bold text-${criteria.weights.consistency.color}-700`}>
-                    {criteria.weights.consistency.percentage}%
+                  <div className="text-sm text-gray-600 mb-2">Count of all commitments made</div>
+                  <div className="text-xs text-gray-500">
+                    {criteria.performanceMetrics?.totalCommitments?.description || 
+                     "Total number of commitments regardless of status"}
                   </div>
-                  <div className="text-sm text-gray-600">{criteria.weights.consistency.name}</div>
-                  <div className="text-xs text-gray-500 mt-1">{criteria.weights.consistency.description}</div>
-                </div>
-                <div className={`text-center p-4 bg-${criteria.weights.responseSpeed.color}-50 rounded-lg`}>
-                  <div className={`text-2xl font-bold text-${criteria.weights.responseSpeed.color}-700`}>
-                    {criteria.weights.responseSpeed.percentage}%
+                  <div className="mt-3 px-3 py-1 bg-green-100 text-green-700 rounded text-xs font-semibold">
+                    Direct Addition to Score
                   </div>
-                  <div className="text-sm text-gray-600">{criteria.weights.responseSpeed.name}</div>
-                  <div className="text-xs text-gray-500 mt-1">{criteria.weights.responseSpeed.description}</div>
                 </div>
               </div>
               

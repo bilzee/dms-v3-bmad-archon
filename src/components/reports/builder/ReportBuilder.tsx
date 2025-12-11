@@ -36,7 +36,7 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, Di
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { cn } from '@/lib/utils';
-import { ReportTemplate, ReportLayout, DEFAULT_TEMPLATES } from '@/lib/ports/template-engine';
+import { ReportTemplate, ReportLayout, DEFAULT_TEMPLATES } from '@/lib/reports/template-engine';
 import { DataSourceType, ReportFilters } from '@/lib/ports/data-aggregator';
 
 // Report element types

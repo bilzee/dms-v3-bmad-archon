@@ -18,7 +18,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { BadgeList, Filter, Plus, Search, Eye, Edit } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { ReportTemplate, DEFAULT_TEMPLATES } from '@/lib/ports/template-engine';
+import { ReportTemplate, DEFAULT_TEMPLATES } from '@/lib/reports/template-engine';
 
 interface TemplateSelectorProps {
   onTemplateSelect: (template: ReportTemplate) => void;

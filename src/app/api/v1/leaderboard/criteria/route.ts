@@ -68,31 +68,26 @@ export const GET = withAuth(async (request: NextRequest, context) => {
         }
       },
       calculation: {
-        formula: "Overall Score = (Delivery Rate × 0.4) + (Commitment Value Score × 0.3) + (Consistency Score × 0.2) + (Speed Score × 0.1)",
+        formula: "Overall Score = (Response Verification Rate × 100) + Total Commitments",
         updateFrequency: "Every 15 minutes",
         dataSource: "Real-time verification and commitment data",
         scoringPeriod: "Rolling 30-day period (configurable)"
       },
       performanceMetrics: {
-        deliveryRate: {
-          calculation: "Verified deliveries ÷ Total commitments × 100",
-          weight: 0.4,
-          maxScore: 100
+        responseVerificationRate: {
+          calculation: "Verified responses ÷ Total responses × 100",
+          description: "Percentage of donor responses that have been verified",
+          contribution: "Direct addition to overall score"
         },
-        commitmentValue: {
-          calculation: "Total verified value delivered (normalized across all donors)",
-          weight: 0.3,
-          maxScore: 100
+        totalCommitments: {
+          calculation: "Count of all commitments made by donor",
+          description: "Total number of commitments regardless of status",
+          contribution: "Direct addition to overall score"
         },
-        consistency: {
-          calculation: "Activity frequency × Commitment regularity",
-          weight: 0.2,
-          maxScore: 100
-        },
-        responseSpeed: {
-          calculation: "Average response time (inverse, faster = higher score)",
-          weight: 0.1,
-          maxScore: 100
+        overallScore: {
+          calculation: "(Response Verification Rate × 100) + Total Commitments",
+          description: "Simple additive formula prioritizing both verification rate and commitment volume",
+          note: "Higher verification rates and more commitments lead to higher rankings"
         }
       }
     };

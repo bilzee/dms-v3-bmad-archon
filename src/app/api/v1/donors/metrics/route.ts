@@ -231,13 +231,20 @@ export const GET = withAuth(async (request: NextRequest, context) => {
         : 0,
       totalVerifiedResponses: donorMetrics.reduce((sum, d) => sum + Number(d.metrics.responses.verified || 0), 0),
       topPerformers: donorMetrics
-        .sort((a, b) => b.metrics.combined.overallSuccessRate - a.metrics.combined.overallSuccessRate)
+        .sort((a, b) => {
+          // New formula: (responseVerificationRate * 100) + totalCommitments
+          const scoreA = (a.metrics.responses.verificationRate * 100) + a.metrics.commitments.total;
+          const scoreB = (b.metrics.responses.verificationRate * 100) + b.metrics.commitments.total;
+          return scoreB - scoreA;
+        })
         .slice(0, 5)
         .map(d => ({
           donorName: d.donorName,
-          successRate: Number(d.metrics.combined.overallSuccessRate),
+          successRate: Number((d.metrics.responses.verificationRate * 100) + d.metrics.commitments.total),
           verifiedActivities: Number(d.metrics.combined.verifiedActivities),
-          totalActivities: Number(d.metrics.combined.totalActivities)
+          totalActivities: Number(d.metrics.combined.totalActivities),
+          responseVerificationRate: Number(d.metrics.responses.verificationRate * 100),
+          totalCommitments: Number(d.metrics.commitments.total)
         }))
     };
 
