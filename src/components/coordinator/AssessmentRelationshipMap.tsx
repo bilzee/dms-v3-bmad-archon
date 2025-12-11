@@ -158,8 +158,9 @@ export function AssessmentRelationshipMap({
         
         const result = await response.json();
         
-        // console.log('Entities API response:', result);
-        // console.log('Number of entities received:', result.data?.length);
+        console.log('Entities API response:', result);
+        console.log('Number of entities received:', result.data?.length);
+        console.log('Sample entity data:', result.data?.[0]);
         
         // Transform EntityWithRelationships[] to EntityIncidentRelationship[]
         return result.data.map((entity: any) => ({
@@ -223,12 +224,11 @@ export function AssessmentRelationshipMap({
     const entitySeverity = entity.severity?.toUpperCase() as keyof typeof ENTITY_SEVERITY_COLORS;
     const markerColor = entitySeverity ? ENTITY_SEVERITY_COLORS[entitySeverity] : null;
 
-    // console.log(`Creating CircleMarker at [${coordinates.lat}, ${coordinates.lng}] with severity ${entitySeverity || 'priority'} for ${entity.name}`);
+    console.log(`Creating CircleMarker at [${coordinates.lat}, ${coordinates.lng}] with severity ${entitySeverity || 'no severity'} for ${entity.name}`);
+    console.log('Entity severity:', entitySeverity);
+    console.log('Marker color:', markerColor);
 
-    // Don't render marker if no severity (transparent)
-    if (!markerColor) {
-      return null;
-    }
+    // Always render marker, but with transparent fill if no severity
 
     return (
       <CircleMarker
@@ -237,10 +237,10 @@ export function AssessmentRelationshipMap({
         radius={12}
         pathOptions={{
           fillColor: markerColor,
-          color: '#ffffff',
+          color: '#666666', // Gray border for entities without severity
           weight: 3,
           opacity: 1,
-          fillOpacity: 0.8,
+          fillOpacity: markerColor ? 0.8 : 0, // Transparent fill if no severity
         }}
         eventHandlers={{
           click: () => {
@@ -273,9 +273,12 @@ export function AssessmentRelationshipMap({
                 <Badge 
                   variant="outline" 
                   className="text-xs"
-                  style={{ backgroundColor: markerColor, color: 'white' }}
+                  style={{ 
+                    backgroundColor: markerColor || '#e5e7eb', 
+                    color: markerColor ? 'white' : '#374151' 
+                  }}
                 >
-                  {entitySeverity}
+                  {entitySeverity || 'Not Assessed'}
                 </Badge>
               </div>
               
