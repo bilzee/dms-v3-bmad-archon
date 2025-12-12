@@ -92,20 +92,31 @@ export function AssessmentRelationshipMap({
   const [selectedEntityId, setSelectedEntityId] = useState<string | null>(null);
   const [hoveredEntityId, setHoveredEntityId] = useState<string | null>(null);
   const [isMaximized, setIsMaximized] = useState(false);
+  const mapRef = useRef<HTMLDivElement>(null);
+  const [mapPosition, setMapPosition] = useState({ top: 0, left: 0, width: 0, height: 0 });
   
   // Entity selection actions for dropdown integration
   const { setSelectedEntity } = useEntityActions();
 
   // Maximize/minimize handlers
   const handleMaximize = () => {
+    if (mapRef.current) {
+      const rect = mapRef.current.getBoundingClientRect();
+      setMapPosition({
+        top: rect.top,
+        left: rect.left,
+        width: rect.width,
+        height: rect.height
+      });
+    }
     setIsMaximized(true);
-    // Allow body scroll since map won't cover entire screen
-    document.body.style.overflow = '';
+    // Prevent body scroll when overlay is active
+    document.body.style.overflow = 'hidden';
   };
 
   const handleMinimize = () => {
     setIsMaximized(false);
-    // Restore normal scroll
+    // Restore body scroll
     document.body.style.overflow = '';
   };
 
@@ -141,6 +152,14 @@ export function AssessmentRelationshipMap({
     }, 100);
 
     return () => clearTimeout(timer);
+  }, [isMaximized]);
+
+  // Effect to handle hover state management between original and overlay maps
+  useEffect(() => {
+    // When maximizing, clear any existing hover to prevent state conflicts
+    if (isMaximized) {
+      setHoveredEntityId(null);
+    }
   }, [isMaximized]);
 
   // Query parameters
@@ -374,41 +393,15 @@ export function AssessmentRelationshipMap({
   }
 
   return (
-    <div className={cn("w-full", className)}>
-      <Card className={cn("w-full", isMaximized && "border-2 border-blue-200 shadow-lg")}>
-        <CardContent className="p-4">
-          {/* Header when maximized */}
-          {isMaximized && (
-            <div className="mb-4 pb-3 border-b border-gray-200">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <MapPin className="h-5 w-5 text-blue-600" />
-                  <h2 className="text-lg font-semibold">Interactive Assessment Map</h2>
-                  {relationships?.data && (
-                    <div className="flex items-center gap-4 text-sm text-muted-foreground">
-                      <span>{relationships.data.totalEntities} Entities</span>
-                      <span>{relationships.data.totalIncidents} Incidents</span>
-                    </div>
-                  )}
-                </div>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={handleMinimize}
-                  className="flex items-center gap-2"
-                >
-                  <Minimize2 className="h-4 w-4" />
-                  Minimize
-                </Button>
-              </div>
-            </div>
-          )}
-          
-          <div className={cn("w-full flex gap-4", isMaximized ? "h-[calc(80vh-5rem)] min-h-[550px]" : "h-80")}>
+    <>
+      <div className={cn("w-full", className)}>
+        <Card ref={mapRef} className="w-full">
+          <CardContent className="p-4">
+            <div className="w-full flex gap-4 h-80">
             {/* Left Panel: Entity Details (30% width) */}
-            <div className={cn("flex-[3] flex flex-col", isMaximized && "overflow-y-auto")}>
+            <div className="flex-[3] flex flex-col">
               {hoveredEntityId ? (
-                <Card className={cn("h-full border-2", isMaximized && "sticky top-0")}>
+                <Card className="h-full border-2">
                   <CardHeader className="pb-3">
                     <CardTitle className="flex items-center gap-2 text-lg">
                       <TrendingUp className="h-5 w-5" />
@@ -573,5 +566,163 @@ export function AssessmentRelationshipMap({
         </CardContent>
       </Card>
       </div>
+
+      {/* Overlay when maximized - anchored to original position */}
+      {isMaximized && (
+        <div className="fixed inset-0 z-[9999] pointer-events-none">
+          {/* Calculate the position of the original map and create overlay */}
+          <div 
+            className="absolute bg-white rounded-lg shadow-2xl border-2 border-blue-200 pointer-events-auto"
+            style={{
+              // Anchor to original map position and expand upward
+              bottom: `${window.innerHeight - mapPosition.top - mapPosition.height}px`,
+              left: `${mapPosition.left}px`,
+              width: `${Math.max(mapPosition.width, 1200)}px`, // Ensure minimum width
+              height: '80vh',
+              transform: 'none',
+            }}
+          >
+            {/* Header with minimize control */}
+            <div className="absolute top-0 left-0 right-0 z-[10001] bg-white/95 backdrop-blur-sm border-b rounded-t-lg">
+              <div className="flex items-center justify-between p-4">
+                <div className="flex items-center gap-3">
+                  <MapPin className="h-5 w-5 text-blue-600" />
+                  <h2 className="text-lg font-semibold">Interactive Assessment Map</h2>
+                  {relationships?.data && (
+                    <div className="flex items-center gap-4 text-sm text-muted-foreground">
+                      <span>{relationships.data.totalEntities} Entities</span>
+                      <span>{relationships.data.totalIncidents} Incidents</span>
+                    </div>
+                  )}
+                </div>
+                <div className="flex items-center gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={handleMinimize}
+                    className="flex items-center gap-2"
+                  >
+                    <Minimize2 className="h-4 w-4" />
+                    Minimize
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={handleMinimize}
+                    className="h-8 w-8 p-0"
+                  >
+                    <X className="h-4 w-4" />
+                  </Button>
+                </div>
+              </div>
+            </div>
+            
+            {/* Main content area - same structure as original */}
+            <div className="absolute inset-0 pt-16 p-4">
+              <div className="w-full h-full flex gap-4">
+                {/* Left Panel: Entity Details */}
+                <div className="flex-[3] flex flex-col">
+                  {hoveredEntityId ? (
+                    <Card className="h-full border-2">
+                      <CardHeader className="pb-3">
+                        <CardTitle className="flex items-center gap-2 text-lg">
+                          <TrendingUp className="h-5 w-5" />
+                          Entity Details
+                        </CardTitle>
+                      </CardHeader>
+                      <CardContent className="flex-1 overflow-y-auto">
+                        {assessmentsLoading ? (
+                          <div className="flex items-center justify-center h-full">
+                            <div className="animate-pulse text-muted-foreground">Loading entity details...</div>
+                          </div>
+                        ) : hoveredEntity ? (
+                          <div className="space-y-4">
+                            <div>
+                              <h3 className="font-semibold text-lg">{hoveredEntity.name}</h3>
+                              <p className="text-sm text-muted-foreground">{hoveredEntity.type}</p>
+                              {hoveredEntity.location && (
+                                <p className="text-sm text-muted-foreground">
+                                  <MapPin className="h-3 w-3 inline mr-1" />
+                                  {hoveredEntity.location}
+                                </p>
+                              )}
+                            </div>
+                            
+                            {/* Assessment details would go here - using same structure as original */}
+                            <div className="text-sm text-muted-foreground">
+                              <p>Entity assessment details available</p>
+                            </div>
+                          </div>
+                        ) : (
+                          <div className="text-center text-muted-foreground">
+                            <p>No entity details available</p>
+                          </div>
+                        )}
+                      </CardContent>
+                    </Card>
+                  ) : (
+                    <Card className="h-full border-2 border-dashed">
+                      <CardContent className="h-full flex items-center justify-center">
+                        <div className="text-center text-muted-foreground">
+                          <MapPin className="h-8 w-8 mx-auto mb-2 opacity-50" />
+                          <p>Hover over an entity on the map</p>
+                          <p className="text-xs">to view detailed information</p>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  )}
+                </div>
+
+                {/* Right Panel: Map */}
+                <div className="flex-[7] relative">
+                  <MapContainer
+                    center={mapCenter}
+                    zoom={zoomLevel}
+                    className="w-full h-full rounded-lg"
+                    whenCreated={(mapInstance) => {
+                      mapInstance.invalidateSize();
+                    }}
+                  >
+                    <TileLayer
+                      url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+                      attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+                    />
+                    
+                    {/* Map markers */}
+                    <LayerGroup>
+                      {detailedRelationships?.map(createMarkerForRelationship).filter(Boolean)}
+                    </LayerGroup>
+                  </MapContainer>
+                  
+                  {/* Statistics Overlay in maximized view */}
+                  {relationships?.data && (
+                    <Card className="absolute top-4 right-4 z-[1000] bg-white/95 backdrop-blur-sm">
+                      <CardContent className="p-4">
+                        <div className="grid grid-cols-2 gap-4 text-sm mb-3">
+                          <div className="flex items-center gap-2">
+                            <TrendingUp className="h-4 w-4 text-blue-600" />
+                            <div>
+                              <div className="font-medium">{relationships.data.totalEntities}</div>
+                              <div className="text-muted-foreground text-xs">Entities</div>
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <AlertTriangle className="h-4 w-4 text-orange-600" />
+                            <div>
+                              <div className="font-medium">{relationships.data.totalIncidents}</div>
+                              <div className="text-muted-foreground text-xs">Incidents</div>
+                            </div>
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  )}
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+    </>
   );
 }
