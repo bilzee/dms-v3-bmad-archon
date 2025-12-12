@@ -220,66 +220,101 @@ export default function EntityIncidentMapPage() {
               </Select>
             </div>
 
-            {/* Priority Filter */}
-            <div className="flex flex-wrap gap-1">
-              {(['CRITICAL', 'HIGH', 'MEDIUM', 'LOW'] as Priority[]).map((priority) => (
-                <Button
-                  key={priority}
-                  variant={selectedPriorities.includes(priority) ? "default" : "outline"}
-                  size="sm"
-                  onClick={() => {
-                    const newPriorities = selectedPriorities.includes(priority)
-                      ? selectedPriorities.filter(p => p !== priority)
-                      : [...selectedPriorities, priority];
-                    handlePriorityFilterChange(newPriorities);
-                  }}
-                  className="text-xs"
-                >
-                  {priority.charAt(0) + priority.slice(1).toLowerCase()}
-                </Button>
-              ))}
+            {/* Priority Filters */}
+            <div className="space-y-2">
+              <div className="flex items-center gap-2">
+                <AlertTriangle className="h-4 w-4 text-orange-600" />
+                <span className="text-sm font-medium">Priority</span>
+              </div>
+              <div className="flex flex-wrap gap-1">
+                {(['CRITICAL', 'HIGH', 'MEDIUM', 'LOW'] as Priority[]).map((priority) => (
+                  <Button
+                    key={priority}
+                    variant={selectedPriorities.includes(priority) ? "default" : "outline"}
+                    size="sm"
+                    onClick={() => {
+                      const newPriorities = selectedPriorities.includes(priority)
+                        ? selectedPriorities.filter(p => p !== priority)
+                        : [...selectedPriorities, priority];
+                      handlePriorityFilterChange(newPriorities);
+                    }}
+                    className={`text-xs ${
+                      priority === 'CRITICAL' ? 'border-red-200 hover:bg-red-50' :
+                      priority === 'HIGH' ? 'border-orange-200 hover:bg-orange-50' :
+                      priority === 'MEDIUM' ? 'border-yellow-200 hover:bg-yellow-50' :
+                      'border-green-200 hover:bg-green-50'
+                    }`}
+                  >
+                    {priority.charAt(0) + priority.slice(1).toLowerCase()}
+                  </Button>
+                ))}
+              </div>
             </div>
 
-            {/* Assessment Type Filter */}
-            <div className="flex flex-wrap gap-1">
-              {(['HEALTH', 'WASH', 'SHELTER', 'FOOD', 'SECURITY', 'POPULATION'] as AssessmentType[]).map((type) => (
-                <Button
-                  key={type}
-                  variant={selectedAssessmentTypes.includes(type) ? "default" : "outline"}
-                  size="sm"
-                  onClick={() => {
-                    const newTypes = selectedAssessmentTypes.includes(type)
-                      ? selectedAssessmentTypes.filter(t => t !== type)
-                      : [...selectedAssessmentTypes, type];
-                    handleAssessmentTypeFilterChange(newTypes);
-                  }}
-                  className="text-xs"
-                >
-                  {type.charAt(0) + type.slice(1).toLowerCase()}
-                </Button>
-              ))}
+            {/* Assessment Type Filters */}
+            <div className="space-y-2">
+              <div className="flex items-center gap-2">
+                <FileText className="h-4 w-4 text-blue-600" />
+                <span className="text-sm font-medium">Assessment Type</span>
+              </div>
+              <div className="flex flex-wrap gap-1">
+                {(['HEALTH', 'WASH', 'SHELTER', 'FOOD', 'SECURITY', 'POPULATION'] as AssessmentType[]).map((type) => (
+                  <Button
+                    key={type}
+                    variant={selectedAssessmentTypes.includes(type) ? "default" : "outline"}
+                    size="sm"
+                    onClick={() => {
+                      const newTypes = selectedAssessmentTypes.includes(type)
+                        ? selectedAssessmentTypes.filter(t => t !== type)
+                        : [...selectedAssessmentTypes, type];
+                      handleAssessmentTypeFilterChange(newTypes);
+                    }}
+                    className={`text-xs border-blue-200 hover:bg-blue-50`}
+                  >
+                    {type.charAt(0) + type.slice(1).toLowerCase()}
+                  </Button>
+                ))}
+              </div>
             </div>
 
             {/* Filter Status */}
-            <div className="flex items-center gap-2">
-              <Filter className="h-4 w-4 text-muted-foreground" />
-              <span className="text-xs text-muted-foreground">
-                {selectedPriorities.length + selectedAssessmentTypes.length + (dateRange.start ? 1 : 0)} active
-              </span>
-              {(selectedPriorities.length > 0 || selectedAssessmentTypes.length > 0) && (
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => {
-                    handlePriorityFilterChange([]);
-                    handleAssessmentTypeFilterChange([]);
-                    handleDateRangeChange(null, null);
-                  }}
-                  className="text-xs flex items-center gap-1 h-6 px-2"
-                >
-                  <X className="h-3 w-3" />
-                </Button>
-              )}
+            <div className="space-y-2">
+              <div className="flex items-center gap-2">
+                <Filter className="h-4 w-4 text-muted-foreground" />
+                <span className="text-xs font-medium">Active Filters</span>
+                {(selectedPriorities.length > 0 || selectedAssessmentTypes.length > 0 || dateRange.start) && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => {
+                      handlePriorityFilterChange([]);
+                      handleAssessmentTypeFilterChange([]);
+                      handleDateRangeChange(null, null);
+                    }}
+                    className="text-xs flex items-center gap-1 h-6 px-2"
+                  >
+                    <X className="h-3 w-3" />
+                    Clear All
+                  </Button>
+                )}
+              </div>
+              
+              <div className="flex gap-4 text-xs text-muted-foreground">
+                <span className="flex items-center gap-1">
+                  <AlertTriangle className="h-3 w-3 text-orange-600" />
+                  {selectedPriorities.length} priority
+                </span>
+                <span className="flex items-center gap-1">
+                  <FileText className="h-3 w-3 text-blue-600" />
+                  {selectedAssessmentTypes.length} assessment
+                </span>
+                {dateRange.start && (
+                  <span className="flex items-center gap-1">
+                    <CalendarIcon className="h-3 w-3" />
+                    date range
+                  </span>
+                )}
+              </div>
             </div>
 
             {/* Date Range */}

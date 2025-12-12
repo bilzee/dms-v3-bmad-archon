@@ -221,12 +221,12 @@ export function AssessmentRelationshipMap({
     staleTime: 5 * 60 * 1000, // 5 minutes
   });
 
-  // Fetch detailed relationship data for map markers
+  // Fetch detailed relationship data for map markers (without server-side filtering)
   const { data: detailedRelationships } = useQuery({
     queryKey: ['detailed-relationships', incidentId],
     queryFn: async () => {
       if (incidentId) {
-        // Use the same API as EntitySelector to get entities with calculated severity
+        // Use the same API as EntitySelector to get all entities with calculated severity
         const response = await fetch(`/api/v1/dashboard/situation?incidentId=${incidentId}&includeEntityAssessments=true`);
         
         if (!response.ok) {
@@ -241,7 +241,6 @@ export function AssessmentRelationshipMap({
         
         console.log('Dashboard API response:', result);
         console.log('Number of entities received:', result.data?.entityAssessments?.length || 0);
-        console.log('Sample entity data:', result.data?.entityAssessments?.[0]);
         
         // Use entityAssessments from dashboard API (same as EntitySelector)
         if (result.data.entityAssessments) {
@@ -300,6 +299,38 @@ export function AssessmentRelationshipMap({
     },
     enabled: !!incidentId,
   });
+
+  // Client-side filtering of relationships based on selected filters
+  const filteredRelationships = useMemo(() => {
+    if (!detailedRelationships) return [];
+    
+    return detailedRelationships.filter((relationship: any) => {
+      const entity = relationship.entity;
+      
+      // Priority/Severity filtering
+      if (selectedPriorities.length > 0) {
+        const entitySeverity = entity.severity || entity.gapSummary?.overallPriority || 'LOW';
+        if (!selectedPriorities.includes(entitySeverity as Priority)) {
+          return false;
+        }
+      }
+      
+      // Assessment Type filtering
+      if (selectedAssessmentTypes.length > 0) {
+        // Check if entity has any assessments of the selected types
+        const entityAssessmentTypes = entity.assessments?.map((assessment: any) => assessment.type) || [];
+        const hasMatchingAssessmentType = selectedAssessmentTypes.some(type => 
+          entityAssessmentTypes.includes(type)
+        );
+        
+        if (!hasMatchingAssessmentType) {
+          return false;
+        }
+      }
+      
+      return true;
+    });
+  }, [detailedRelationships, selectedPriorities, selectedAssessmentTypes]);
 
   // Get hovered entity data from the same source as the map (dashboard API)
   const hoveredEntity = useMemo(() => {
@@ -521,7 +552,7 @@ export function AssessmentRelationshipMap({
                   />
                   
                   <LayerGroup>
-                    {detailedRelationships?.map(createMarkerForRelationship).filter(Boolean)}
+                    {filteredRelationships?.map(createMarkerForRelationship).filter(Boolean)}
                   </LayerGroup>
                 </MapContainer>
                 
