@@ -7,6 +7,7 @@ import {
 } from '@prisma/client'
 import { 
   CreatePlannedResponseInput,
+  CreateDeliveredResponseInput,
   UpdatePlannedResponseInput,
   ResponseQueryInput,
   ResponseItem,
@@ -107,6 +108,62 @@ export class ResponseService {
           type: baseData.type,
           priority: baseData.priority,
           itemsCount: items.length
+        }
+      )
+
+      return response
+    })
+
+    return result
+  }
+
+  static async createDeliveredResponse(
+    input: CreateDeliveredResponseInput,
+    responderId: string
+  ): Promise<RapidResponseWithData> {
+    const { assessmentId, entityId, items, deliveryNotes, ...baseData } = input
+
+    // Validate responder has assignment to this entity
+    await this.validateEntityAssignment(responderId, entityId)
+    
+    // Validate assessment exists and is verified
+    const assessment = await this.validateAssessmentAccess(assessmentId, entityId)
+
+    // Create the delivered response
+    const result = await prisma.$transaction(async (tx) => {
+      const response = await tx.rapidResponse.create({
+        data: {
+          ...baseData,
+          responderId,
+          assessmentId,
+          entityId,
+          status: 'DELIVERED',
+          verificationStatus: 'SUBMITTED', // Delivered responses go straight to verification queue
+          verifiedAt: new Date(), // Mark as verified for delivery timestamp
+          items: items,
+          resources: deliveryNotes ? { deliveryNotes } : null,
+          versionNumber: 1,
+          isOfflineCreated: false,
+          syncStatus: 'SYNCED'
+        }
+      })
+
+      // Create audit log
+      await this.createAuditLog(
+        tx,
+        responderId,
+        'CREATE',
+        'response',
+        response.id,
+        null,
+        {
+          assessmentId,
+          entityId,
+          type: baseData.type,
+          priority: baseData.priority,
+          status: 'DELIVERED',
+          itemsCount: items.length,
+          deliveryNotes
         }
       )
 

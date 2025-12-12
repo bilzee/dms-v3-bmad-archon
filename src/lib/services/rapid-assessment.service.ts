@@ -116,7 +116,7 @@ export class RapidAssessmentService {
           if (!washData) {
             throw new Error('WASH assessment data (washData) is required but missing from input')
           }
-          typeSpecificAssessment = await tx.wASHAssessment.create({
+          typeSpecificAssessment = await tx.washAssessment.create({
             data: {
               rapidAssessmentId: rapidAssessment.id,
               ...washData,
@@ -438,8 +438,8 @@ export class RapidAssessmentService {
           }
           break
         case 'WASH':
-          if (assessment.wASHAssessment) {
-            gapAnalysisData.gapAnalysis = await analyzeWASHGaps(assessment.wASHAssessment)
+          if (assessment.washAssessment) {
+            gapAnalysisData.gapAnalysis = await analyzeWASHGaps(assessment.washAssessment)
             calculatedSeverity = gapAnalysisData.gapAnalysis.severity
           }
           break
@@ -478,6 +478,103 @@ export class RapidAssessmentService {
     } catch (error) {
       console.error('Error calculating gap analysis:', error)
       // Don't throw error to avoid breaking submission workflow
+    }
+  }
+
+  /**
+   * Updates all historical assessments to have correct priorities based on gap analysis severity
+   * This method should be called once to migrate existing assessments to the new priority system
+   */
+  static async updateAllHistoricalAssessmentPriorities(): Promise<{ updated: number; failed: number; total: number }> {
+    try {
+      console.log('Starting historical assessment priority update...')
+
+      // Fetch all assessments that need priority updates
+      const allAssessments = await prisma.rapidAssessment.findMany({
+        include: {
+          healthAssessment: true,
+          populationAssessment: true,
+          foodAssessment: true,
+          washAssessment: true,
+          shelterAssessment: true,
+          securityAssessment: true
+        }
+      })
+
+      console.log(`Found ${allAssessments.length} assessments to process`)
+
+      let updatedCount = 0
+      let failedCount = 0
+
+      for (const assessment of allAssessments) {
+        try {
+          // Calculate gap analysis based on assessment type and data
+          const gapAnalysisData: any = {}
+          let calculatedSeverity: any = null
+
+          switch (assessment.rapidAssessmentType) {
+            case 'HEALTH':
+              if (assessment.healthAssessment) {
+                gapAnalysisData.gapAnalysis = await analyzeHealthGaps(assessment.healthAssessment)
+                calculatedSeverity = gapAnalysisData.gapAnalysis.severity
+              }
+              break
+            case 'FOOD':
+              if (assessment.foodAssessment) {
+                gapAnalysisData.gapAnalysis = await analyzeFoodGaps(assessment.foodAssessment)
+                calculatedSeverity = gapAnalysisData.gapAnalysis.severity
+              }
+              break
+            case 'WASH':
+              if (assessment.washAssessment) {
+                gapAnalysisData.gapAnalysis = await analyzeWASHGaps(assessment.washAssessment)
+                calculatedSeverity = gapAnalysisData.gapAnalysis.severity
+              }
+              break
+            case 'SHELTER':
+              if (assessment.shelterAssessment) {
+                gapAnalysisData.gapAnalysis = await analyzeShelterGaps(assessment.shelterAssessment)
+                calculatedSeverity = gapAnalysisData.gapAnalysis.severity
+              }
+              break
+            case 'SECURITY':
+              if (assessment.securityAssessment) {
+                gapAnalysisData.gapAnalysis = await analyzeSecurityGaps(assessment.securityAssessment)
+                calculatedSeverity = gapAnalysisData.gapAnalysis.severity
+              }
+              break
+          }
+
+          // Update the assessment with gap analysis data AND priority based on calculated severity
+          if (Object.keys(gapAnalysisData).length > 0 && calculatedSeverity) {
+            await prisma.rapidAssessment.update({
+              where: { id: assessment.id },
+              data: {
+                ...gapAnalysisData,
+                priority: calculatedSeverity // Set priority to match severity from gap analysis
+              }
+            })
+            console.log(`Updated assessment ${assessment.id} (${assessment.rapidAssessmentType}) - Priority: ${calculatedSeverity}`)
+            updatedCount++
+          } else {
+            console.log(`No gap analysis data for assessment ${assessment.id} (${assessment.rapidAssessmentType})`)
+          }
+        } catch (error) {
+          console.error(`Failed to update assessment ${assessment.id}:`, error)
+          failedCount++
+        }
+      }
+
+      console.log(`Historical assessment priority update completed. Updated: ${updatedCount}, Failed: ${failedCount}, Total: ${allAssessments.length}`)
+
+      return {
+        updated: updatedCount,
+        failed: failedCount,
+        total: allAssessments.length
+      }
+    } catch (error) {
+      console.error('Error updating historical assessment priorities:', error)
+      throw error
     }
   }
 

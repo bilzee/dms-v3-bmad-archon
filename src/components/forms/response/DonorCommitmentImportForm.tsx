@@ -22,13 +22,21 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 // Icons
 import { Package, AlertTriangle, Search, Filter, Users, MapPin, Calendar, CheckCircle, AlertCircle, Plus, Minus, Eye, EyeOff } from 'lucide-react'
 
+// Shared components
+import { AssessmentSelector } from '@/components/response/AssessmentSelector'
+
 // Services and types
 import { useAuthStore } from '@/stores/auth.store'
 import { CommitmentService, type CommitmentItem } from '@/lib/services/commitment.service'
+import { ResponseService } from '@/lib/services/response.service'
+import { CreateDeliveredResponseInput } from '@/lib/validation/response'
 
 // Validation schema
 const CommitmentImportSchema = z.object({
   commitmentId: z.string().min(1, 'Please select a commitment'),
+  assessmentId: z.string().min(1, 'Please select an assessment'),
+  type: z.enum(['HEALTH', 'WASH', 'SHELTER', 'FOOD', 'SECURITY', 'POPULATION', 'LOGISTICS']),
+  priority: z.enum(['CRITICAL', 'HIGH', 'MEDIUM', 'LOW']).default('MEDIUM'),
   items: z.array(z.object({
     name: z.string(),
     quantity: z.number().positive(),
@@ -68,6 +76,9 @@ export function DonorCommitmentImportForm({
     resolver: zodResolver(CommitmentImportSchema),
     defaultValues: {
       commitmentId: '',
+      assessmentId: '',
+      type: 'LOGISTICS',
+      priority: 'MEDIUM',
       items: [],
       notes: ''
     }
@@ -123,6 +134,28 @@ export function DonorCommitmentImportForm({
     enabled: !!token && !!user?.id
   })
 
+  // Query verified assessments for the selected entity
+  const { data: assessmentsData = [] } = useQuery({
+    queryKey: ['verified-assessments', filters.entityId],
+    queryFn: async () => {
+      if (!filters.entityId || filters.entityId === 'all') return []
+      
+      const response = await fetch(`/api/v1/assessments/verified?entityId=${filters.entityId}`, {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      })
+      
+      if (!response.ok) {
+        throw new Error('Failed to fetch verified assessments')
+      }
+      
+      const result = await response.json()
+      return result.data || []
+    },
+    enabled: !!token && !!filters.entityId && filters.entityId !== 'all'
+  })
+
   // Import commitment mutation
   const importMutation = useMutation({
     mutationFn: async (data: FormData) => {
@@ -146,6 +179,27 @@ export function DonorCommitmentImportForm({
       queryClient.invalidateQueries({ queryKey: ['available-commitments'] })
       queryClient.invalidateQueries({ queryKey: ['planned-responses'] })
       onSuccess?.(data.data)
+    }
+  })
+
+  // Create delivered response mutation
+  const createDeliveredMutation = useMutation({
+    mutationFn: async (data: CreateDeliveredResponseInput) => {
+      if (!user) throw new Error('User not authenticated')
+      
+      // Add user ID to data
+      const dataWithUser = { ...data, responderId: user.id }
+      
+      return await ResponseService.createDeliveredResponse(dataWithUser, user.id)
+    },
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ['available-commitments'] })
+      queryClient.invalidateQueries({ queryKey: ['delivered-responses'] })
+      onSuccess?.(data)
+    },
+    onError: (error: any) => {
+      console.error('Error creating delivered response:', error)
+      // You might want to set an error state here
     }
   })
 
@@ -198,6 +252,15 @@ export function DonorCommitmentImportForm({
     data.items = selectedItems.filter(item => item.quantity > 0)
     
     importMutation.mutate(data)
+    setIsPreviewOpen(false)
+  }
+
+  // Handle creating delivered response directly
+  const handleCreateDelivery = () => {
+    const data = form.getValues()
+    data.items = selectedItems.filter(item => item.quantity > 0)
+    
+    createDeliveredMutation.mutate(data)
     setIsPreviewOpen(false)
   }
 
@@ -375,6 +438,125 @@ export function DonorCommitmentImportForm({
             <>
               <Separator />
               <div>
+                <h3 className="text-lg font-medium mb-4">Response Details</h3>
+                
+                {/* Assessment Selection */}
+                <div className="space-y-4 mb-6">
+                  <FormField
+                    control={form.control}
+                    name="assessmentId"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Assessment *</FormLabel>
+                        <FormControl>
+                          <AssessmentSelector
+                            entityId={filters.entityId}
+                            value={field.value}
+                            onValueChange={(assessmentId, assessment) => {
+                              field.onChange(assessmentId)
+                              // Auto-match response type to assessment type
+                              if (assessment && assessment.rapidAssessmentType) {
+                                form.setValue('type', assessment.rapidAssessmentType)
+                              }
+                              // Set response priority to match assessment priority
+                              if (assessment && assessment.priority) {
+                                form.setValue('priority', assessment.priority)
+                              }
+                            }}
+                            disabled={!filters.entityId || filters.entityId === 'all'}
+                            showConflictWarning={true}
+                            selectedAssessment={assessmentsData.find((a: any) => a.id === field.value)}
+                          />
+                        </FormControl>
+                        <FormDescription>
+                          Select the assessment this response plan is for
+                        </FormDescription>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  {/* Response Type and Priority */}
+                  <div className="grid grid-cols-2 gap-4">
+                    <FormField
+                      control={form.control}
+                      name="type"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Response Type *</FormLabel>
+                          <FormControl>
+                            <Select value={field.value} onValueChange={field.onChange} disabled={true}>
+                              <SelectTrigger className="bg-gray-50">
+                                <SelectValue placeholder="Auto-populated from assessment..." />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="HEALTH">Health</SelectItem>
+                                <SelectItem value="WASH">WASH</SelectItem>
+                                <SelectItem value="SHELTER">Shelter</SelectItem>
+                                <SelectItem value="FOOD">Food</SelectItem>
+                                <SelectItem value="SECURITY">Security</SelectItem>
+                                <SelectItem value="POPULATION">Population</SelectItem>
+                                <SelectItem value="LOGISTICS">Logistics</SelectItem>
+                              </SelectContent>
+                            </Select>
+                          </FormControl>
+                          <FormDescription>
+                            Auto-populated from selected assessment type
+                          </FormDescription>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    <FormField
+                      control={form.control}
+                      name="priority"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Priority *</FormLabel>
+                          <FormControl>
+                            <Select value={field.value} onValueChange={field.onChange} disabled={true}>
+                              <SelectTrigger className="bg-gray-50">
+                                <SelectValue placeholder="Auto-populated from assessment..." />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="CRITICAL">
+                                  <span className="flex items-center gap-2">
+                                    <div className="w-3 h-3 bg-red-500 rounded-full"></div>
+                                    Critical
+                                  </span>
+                                </SelectItem>
+                                <SelectItem value="HIGH">
+                                  <span className="flex items-center gap-2">
+                                    <div className="w-3 h-3 bg-orange-500 rounded-full"></div>
+                                    High
+                                  </span>
+                                </SelectItem>
+                                <SelectItem value="MEDIUM">
+                                  <span className="flex items-center gap-2">
+                                    <div className="w-3 h-3 bg-yellow-500 rounded-full"></div>
+                                    Medium
+                                  </span>
+                                </SelectItem>
+                                <SelectItem value="LOW">
+                                  <span className="flex items-center gap-2">
+                                    <div className="w-3 h-3 bg-green-500 rounded-full"></div>
+                                    Low
+                                  </span>
+                                </SelectItem>
+                              </SelectContent>
+                            </Select>
+                          </FormControl>
+                          <FormDescription>
+                            Auto-populated from selected assessment priority
+                          </FormDescription>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+                </div>
+
                 <h3 className="text-lg font-medium mb-4">Select Items to Import</h3>
                 
                 <Form {...form}>
@@ -542,10 +724,17 @@ export function DonorCommitmentImportForm({
             <Button
               variant="outline"
               onClick={() => setIsPreviewOpen(false)}
-              disabled={importMutation.isPending}
+              disabled={importMutation.isPending || createDeliveredMutation.isPending}
               className="min-w-24"
             >
               Back
+            </Button>
+            <Button
+              onClick={handleCreateDelivery}
+              disabled={createDeliveredMutation.isPending}
+              className="min-w-40 bg-green-600 hover:bg-green-700 text-white font-semibold"
+            >
+              {createDeliveredMutation.isPending ? 'Creating...' : 'Create Delivery Directly'}
             </Button>
             <Button
               onClick={handleConfirmImport}
