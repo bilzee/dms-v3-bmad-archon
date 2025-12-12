@@ -21,7 +21,8 @@ import {
   Activity,
   RefreshCw,
   FileText,
-  Users
+  Users,
+  X
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
@@ -220,32 +221,66 @@ export default function EntityIncidentMapPage() {
             </div>
 
             {/* Priority Filter */}
-            <Select onValueChange={(value) => handlePriorityFilterChange([value])}>
-              <SelectTrigger className="w-32">
-                <SelectValue placeholder="Priority" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="CRITICAL">Critical</SelectItem>
-                <SelectItem value="HIGH">High</SelectItem>
-                <SelectItem value="MEDIUM">Medium</SelectItem>
-                <SelectItem value="LOW">Low</SelectItem>
-              </SelectContent>
-            </Select>
+            <div className="flex flex-wrap gap-1">
+              {(['CRITICAL', 'HIGH', 'MEDIUM', 'LOW'] as Priority[]).map((priority) => (
+                <Button
+                  key={priority}
+                  variant={selectedPriorities.includes(priority) ? "default" : "outline"}
+                  size="sm"
+                  onClick={() => {
+                    const newPriorities = selectedPriorities.includes(priority)
+                      ? selectedPriorities.filter(p => p !== priority)
+                      : [...selectedPriorities, priority];
+                    handlePriorityFilterChange(newPriorities);
+                  }}
+                  className="text-xs"
+                >
+                  {priority.charAt(0) + priority.slice(1).toLowerCase()}
+                </Button>
+              ))}
+            </div>
 
             {/* Assessment Type Filter */}
-            <Select onValueChange={(value) => handleAssessmentTypeFilterChange([value])}>
-              <SelectTrigger className="w-32">
-                <SelectValue placeholder="Assessment" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="HEALTH">Health</SelectItem>
-                <SelectItem value="WASH">WASH</SelectItem>
-                <SelectItem value="SHELTER">Shelter</SelectItem>
-                <SelectItem value="FOOD">Food</SelectItem>
-                <SelectItem value="SECURITY">Security</SelectItem>
-                <SelectItem value="POPULATION">Population</SelectItem>
-              </SelectContent>
-            </Select>
+            <div className="flex flex-wrap gap-1">
+              {(['HEALTH', 'WASH', 'SHELTER', 'FOOD', 'SECURITY', 'POPULATION'] as AssessmentType[]).map((type) => (
+                <Button
+                  key={type}
+                  variant={selectedAssessmentTypes.includes(type) ? "default" : "outline"}
+                  size="sm"
+                  onClick={() => {
+                    const newTypes = selectedAssessmentTypes.includes(type)
+                      ? selectedAssessmentTypes.filter(t => t !== type)
+                      : [...selectedAssessmentTypes, type];
+                    handleAssessmentTypeFilterChange(newTypes);
+                  }}
+                  className="text-xs"
+                >
+                  {type.charAt(0) + type.slice(1).toLowerCase()}
+                </Button>
+              ))}
+            </div>
+
+            {/* Filter Status */}
+            <div className="flex items-center gap-2">
+              <Filter className="h-4 w-4 text-muted-foreground" />
+              <span className="text-xs text-muted-foreground">
+                {selectedPriorities.length + selectedAssessmentTypes.length + (dateRange.start ? 1 : 0)} active
+              </span>
+              {(selectedPriorities.length > 0 || selectedAssessmentTypes.length > 0) && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => {
+                    handlePriorityFilterChange([]);
+                    handleAssessmentTypeFilterChange([]);
+                    handleDateRangeChange(null, null);
+                  }}
+                  className="text-xs flex items-center gap-1 h-6 px-2"
+                >
+                  <X className="h-3 w-3" />
+                </Button>
+              )}
+            </div>
 
             {/* Date Range */}
             <Popover>

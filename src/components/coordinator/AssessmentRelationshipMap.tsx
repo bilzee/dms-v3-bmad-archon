@@ -162,6 +162,15 @@ export function AssessmentRelationshipMap({
     }
   }, [isMaximized]);
 
+  // Synchronize filter state with props
+  useEffect(() => {
+    setSelectedPriorities(priorityFilter);
+  }, [priorityFilter]);
+
+  useEffect(() => {
+    setSelectedAssessmentTypes(assessmentTypeFilter);
+  }, [assessmentTypeFilter]);
+
   // Query parameters
   const queryParams: RelationshipQueryParams = useMemo(() => ({
     incidentId,
