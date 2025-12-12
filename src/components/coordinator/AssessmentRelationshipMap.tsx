@@ -8,7 +8,7 @@
  * and cluster visualization for performance with large datasets.
  */
 
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { MapContainer, TileLayer, CircleMarker, LayerGroup } from 'react-leaflet';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
