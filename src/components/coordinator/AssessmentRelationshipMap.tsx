@@ -99,13 +99,13 @@ export function AssessmentRelationshipMap({
   // Maximize/minimize handlers
   const handleMaximize = () => {
     setIsMaximized(true);
-    // Prevent body scroll when map is maximized
-    document.body.style.overflow = 'hidden';
+    // Allow body scroll since map won't cover entire screen
+    document.body.style.overflow = '';
   };
 
   const handleMinimize = () => {
     setIsMaximized(false);
-    // Restore body scroll
+    // Restore normal scroll
     document.body.style.overflow = '';
   };
 
@@ -130,6 +130,17 @@ export function AssessmentRelationshipMap({
         document.removeEventListener('keydown', handleKeyDown);
       };
     }
+  }, [isMaximized]);
+
+  // Effect to handle map resize when maximized state changes
+  useEffect(() => {
+    // Small delay to ensure DOM has updated
+    const timer = setTimeout(() => {
+      // Trigger Leaflet resize event if map exists
+      window.dispatchEvent(new Event('resize'));
+    }, 100);
+
+    return () => clearTimeout(timer);
   }, [isMaximized]);
 
   // Query parameters
@@ -363,14 +374,41 @@ export function AssessmentRelationshipMap({
   }
 
   return (
-    <div className={cn("w-full space-y-4", className)}>
-      <Card className="w-full">
+    <div className={cn("w-full", className)}>
+      <Card className={cn("w-full", isMaximized && "border-2 border-blue-200 shadow-lg")}>
         <CardContent className="p-4">
-          <div className="h-80 w-full flex gap-4">
+          {/* Header when maximized */}
+          {isMaximized && (
+            <div className="mb-4 pb-3 border-b border-gray-200">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <MapPin className="h-5 w-5 text-blue-600" />
+                  <h2 className="text-lg font-semibold">Interactive Assessment Map</h2>
+                  {relationships?.data && (
+                    <div className="flex items-center gap-4 text-sm text-muted-foreground">
+                      <span>{relationships.data.totalEntities} Entities</span>
+                      <span>{relationships.data.totalIncidents} Incidents</span>
+                    </div>
+                  )}
+                </div>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleMinimize}
+                  className="flex items-center gap-2"
+                >
+                  <Minimize2 className="h-4 w-4" />
+                  Minimize
+                </Button>
+              </div>
+            </div>
+          )}
+          
+          <div className={cn("w-full flex gap-4", isMaximized ? "h-[calc(80vh-5rem)] min-h-[550px]" : "h-80")}>
             {/* Left Panel: Entity Details (30% width) */}
-            <div className="flex-[3] flex flex-col">
+            <div className={cn("flex-[3] flex flex-col", isMaximized && "overflow-y-auto")}>
               {hoveredEntityId ? (
-                <Card className="h-full border-2">
+                <Card className={cn("h-full border-2", isMaximized && "sticky top-0")}>
                   <CardHeader className="pb-3">
                     <CardTitle className="flex items-center gap-2 text-lg">
                       <TrendingUp className="h-5 w-5" />
@@ -506,15 +544,24 @@ export function AssessmentRelationshipMap({
                         </div>
                       </div>
                       
-                      {/* Maximize Button */}
+                      {/* Maximize/Minimize Button */}
                       <Button
                         variant="outline"
                         size="sm"
-                        onClick={handleMaximize}
+                        onClick={isMaximized ? handleMinimize : handleMaximize}
                         className="w-full flex items-center gap-2 text-xs"
                       >
-                        <Maximize2 className="h-3 w-3" />
-                        Maximize Map
+                        {isMaximized ? (
+                          <>
+                            <Minimize2 className="h-3 w-3" />
+                            Minimize Map
+                          </>
+                        ) : (
+                          <>
+                            <Maximize2 className="h-3 w-3" />
+                            Maximize Map
+                          </>
+                        )}
                       </Button>
                     </CardContent>
                   </Card>
@@ -525,70 +572,6 @@ export function AssessmentRelationshipMap({
           </div>
         </CardContent>
       </Card>
-      
-      {/* Full-screen overlay when maximized */}
-      {isMaximized && (
-        <div className="fixed inset-0 z-[9999] bg-black/50 backdrop-blur-sm">
-          <div className="absolute inset-4 bg-white rounded-lg shadow-2xl overflow-hidden">
-            {/* Header with controls */}
-            <div className="absolute top-0 left-0 right-0 z-[10001] bg-white/95 backdrop-blur-sm border-b">
-              <div className="flex items-center justify-between p-4">
-                <div className="flex items-center gap-3">
-                  <MapPin className="h-5 w-5 text-blue-600" />
-                  <h2 className="text-lg font-semibold">Interactive Assessment Map</h2>
-                  {relationships?.data && (
-                    <div className="flex items-center gap-4 text-sm text-muted-foreground">
-                      <span>{relationships.data.totalEntities} Entities</span>
-                      <span>{relationships.data.totalIncidents} Incidents</span>
-                    </div>
-                  )}
-                </div>
-                <div className="flex items-center gap-2">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={handleMinimize}
-                    className="flex items-center gap-2"
-                  >
-                    <Minimize2 className="h-4 w-4" />
-                    Minimize
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={handleMinimize}
-                    className="h-8 w-8 p-0"
-                  >
-                    <X className="h-4 w-4" />
-                  </Button>
-                </div>
-              </div>
-            </div>
-            
-            {/* Full-screen map */}
-            <div className="absolute inset-0 pt-16">
-              <MapContainer
-                center={mapCenter}
-                zoom={zoomLevel}
-                className="w-full h-full"
-                whenCreated={(mapInstance) => {
-                  mapInstance.invalidateSize();
-                }}
-              >
-                <TileLayer
-                  url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-                  attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-                />
-                
-                {/* Map markers */}
-                <LayerGroup>
-                  {detailedRelationships?.map(createMarkerForRelationship).filter(Boolean)}
-                </LayerGroup>
-              </MapContainer>
-            </div>
-          </div>
-        </div>
-      )}
-    </div>
+      </div>
   );
 }
