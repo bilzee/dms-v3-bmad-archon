@@ -12,8 +12,18 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Textarea } from '@/components/ui/textarea';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Loader2, MapPin, Building2, CheckCircle, AlertCircle } from 'lucide-react';
+import { Loader2, MapPin, Building2, CheckCircle, AlertCircle, MapIcon, Crosshair } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
+import dynamic from 'next/dynamic';
+
+// Dynamic import for map component to avoid SSR issues
+const LocationSelector = dynamic(
+  () => import('./LocationSelector').then(mod => ({ default: mod.LocationSelector })),
+  { 
+    ssr: false,
+    loading: () => <div className="h-48 w-full flex items-center justify-center bg-muted rounded-lg">Loading map...</div>
+  }
+);
 
 // Entity types from the database schema
 const entityTypes = [
@@ -31,9 +41,12 @@ const entitySchema = z.object({
   type: z.enum(['COMMUNITY', 'WARD', 'LGA', 'STATE', 'FACILITY', 'CAMP']),
   location: z.string().optional(),
   coordinates: z.object({
-    latitude: z.number().min(-90).max(90).optional(),
-    longitude: z.number().min(-180).max(180).optional()
-  }).optional(),
+    latitude: z.number().min(-90).max(90),
+    longitude: z.number().min(-180).max(180)
+  }).refine(
+    (coords) => coords.latitude !== undefined && coords.longitude !== undefined,
+    { message: 'Both latitude and longitude are required' }
+  ),
   autoApproveEnabled: z.boolean().default(false),
   metadata: z.record(z.any()).optional()
 });
@@ -51,6 +64,7 @@ export function EntityForm({ onSubmit, onCancel, initialData, isEditing = false 
   const { token } = useAuth();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitStatus, setSubmitStatus] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
+  const [showMapSelector, setShowMapSelector] = useState(false);
 
   const {
     register,
@@ -64,7 +78,7 @@ export function EntityForm({ onSubmit, onCancel, initialData, isEditing = false 
       name: initialData?.name || '',
       type: initialData?.type || 'COMMUNITY',
       location: initialData?.location || '',
-      coordinates: initialData?.coordinates || { latitude: undefined, longitude: undefined },
+      coordinates: initialData?.coordinates || { latitude: 11.8311, longitude: 13.1511 }, // Default to Maiduguri, Nigeria
       autoApproveEnabled: initialData?.autoApproveEnabled || false,
       metadata: initialData?.metadata || {}
     }
@@ -73,16 +87,18 @@ export function EntityForm({ onSubmit, onCancel, initialData, isEditing = false 
   const watchedType = watch('type');
   const watchedCoordinates = watch('coordinates');
 
+  // Handle location selection from map
+  const handleLocationSelect = (latitude: number, longitude: number) => {
+    setValue('coordinates.latitude', latitude);
+    setValue('coordinates.longitude', longitude);
+    setShowMapSelector(false);
+  };
+
   const handleFormSubmit = async (data: EntityFormData) => {
     setIsSubmitting(true);
     setSubmitStatus(null);
     
     try {
-      // Clean up coordinates if they're empty
-      if (data.coordinates && (!data.coordinates.latitude || !data.coordinates.longitude)) {
-        data.coordinates = undefined;
-      }
-
       await onSubmit(data);
       
       setSubmitStatus({ 
@@ -170,43 +186,86 @@ export function EntityForm({ onSubmit, onCancel, initialData, isEditing = false 
           <div className="space-y-4">
             <Label className="flex items-center gap-2">
               <MapPin className="h-4 w-4" />
-              Geographical Coordinates (Optional)
+              Geographical Coordinates *
             </Label>
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="latitude">Latitude</Label>
-                <Input
-                  id="latitude"
-                  type="number"
-                  step="any"
-                  placeholder="e.g., 9.0765"
-                  value={watchedCoordinates?.latitude || ''}
-                  onChange={(e) => {
-                    const value = e.target.value ? parseFloat(e.target.value) : undefined;
-                    setValue('coordinates.latitude', value);
-                  }}
-                />
+            
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              {/* Manual Input */}
+              <div className="space-y-3">
+                <Label className="text-sm font-medium">Manual Entry</Label>
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-2">
+                    <Label htmlFor="latitude">Latitude</Label>
+                    <Input
+                      id="latitude"
+                      type="number"
+                      step="any"
+                      placeholder="e.g., 11.8311"
+                      value={watchedCoordinates?.latitude || ''}
+                      onChange={(e) => {
+                        const value = e.target.value ? parseFloat(e.target.value) : undefined;
+                        setValue('coordinates.latitude', value);
+                      }}
+                      className={errors.coordinates?.latitude ? 'border-red-500' : ''}
+                    />
+                    {errors.coordinates?.latitude && (
+                      <p className="text-xs text-red-600">{errors.coordinates?.latitude.message}</p>
+                    )}
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="longitude">Longitude</Label>
+                    <Input
+                      id="longitude"
+                      type="number"
+                      step="any"
+                      placeholder="e.g., 13.1511"
+                      value={watchedCoordinates?.longitude || ''}
+                      onChange={(e) => {
+                        const value = e.target.value ? parseFloat(e.target.value) : undefined;
+                        setValue('coordinates.longitude', value);
+                      }}
+                      className={errors.coordinates?.longitude ? 'border-red-500' : ''}
+                    />
+                    {errors.coordinates?.longitude && (
+                      <p className="text-xs text-red-600">{errors.coordinates?.longitude.message}</p>
+                    )}
+                  </div>
+                </div>
+                <p className="text-xs text-gray-500">
+                  Enter decimal coordinates (-90 to 90, -180 to 180)
+                </p>
               </div>
-              <div className="space-y-2">
-                <Label htmlFor="longitude">Longitude</Label>
-                <Input
-                  id="longitude"
-                  type="number"
-                  step="any"
-                  placeholder="e.g., 7.3986"
-                  value={watchedCoordinates?.longitude || ''}
-                  onChange={(e) => {
-                    const value = e.target.value ? parseFloat(e.target.value) : undefined;
-                    setValue('coordinates.longitude', value);
-                  }}
-                />
+
+              {/* Map Selection */}
+              <div className="space-y-3">
+                <Label className="text-sm font-medium">Map Selection</Label>
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => setShowMapSelector(true)}
+                  className="w-full h-48 border-2 border-dashed border-gray-300 hover:border-blue-300 flex flex-col items-center justify-center text-gray-500 hover:text-blue-600 transition-colors"
+                >
+                  <MapIcon className="h-8 w-8 mb-2" />
+                  <span className="text-sm">Click to Select on Map</span>
+                  <span className="text-xs">or drag to location</span>
+                </Button>
+                <p className="text-xs text-gray-500">
+                  Click on the map to select coordinates
+                </p>
               </div>
             </div>
-            {(errors.coordinates?.latitude || errors.coordinates?.longitude) && (
-              <p className="text-sm text-red-600">
-                Please enter valid coordinates (Latitude: -90 to 90, Longitude: -180 to 180)
-              </p>
-            )}
+
+            {/* Current coordinates display */}
+            <div className="bg-gray-50 p-3 rounded-lg">
+              <div className="flex items-center gap-2 text-sm">
+                <Crosshair className="h-4 w-4 text-blue-600" />
+                <span className="font-medium">Current Coordinates:</span>
+              </div>
+              <div className="text-xs text-gray-600 mt-1">
+                Latitude: {watchedCoordinates?.latitude?.toFixed(6) || 'N/A'}, 
+                Longitude: {watchedCoordinates?.longitude?.toFixed(6) || 'N/A'}
+              </div>
+            </div>
           </div>
 
           {/* Auto-approval setting */}
@@ -271,5 +330,26 @@ export function EntityForm({ onSubmit, onCancel, initialData, isEditing = false 
         </form>
       </CardContent>
     </Card>
+
+    {/* Map Selector Dialog */}
+    <Dialog open={showMapSelector} onOpenChange={setShowMapSelector}>
+      <DialogContent className="max-w-4xl max-h-[80vh]">
+        <DialogHeader>
+          <DialogTitle>Select Location on Map</DialogTitle>
+          <DialogDescription>
+            Click anywhere on the map to select coordinates for this entity, or close to cancel.
+          </DialogDescription>
+        </DialogHeader>
+        <div className="mt-4">
+          <LocationSelector
+            onLocationSelect={handleLocationSelect}
+            initialCoordinates={{
+              latitude: watchedCoordinates?.latitude || 11.8311,
+              longitude: watchedCoordinates?.longitude || 13.1511
+            }}
+          />
+        </div>
+      </DialogContent>
+    </Dialog>
   );
 }

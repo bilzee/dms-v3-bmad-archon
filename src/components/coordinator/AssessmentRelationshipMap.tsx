@@ -44,7 +44,6 @@ interface AssessmentRelationshipMapProps {
   entityId?: string;
   showTimeline?: boolean;
   priorityFilter?: Priority[];
-  assessmentTypeFilter?: AssessmentType[];
   onEntitySelect?: (entityId: string) => void;
   onIncidentSelect?: (incidentId: string) => void;
   onAssessmentSelect?: (assessmentId: string) => void;
@@ -74,7 +73,6 @@ export function AssessmentRelationshipMap({
   entityId,
   showTimeline = true,
   priorityFilter = [],
-  assessmentTypeFilter = [],
   onEntitySelect,
   onIncidentSelect,
   onAssessmentSelect,
@@ -82,7 +80,6 @@ export function AssessmentRelationshipMap({
 }: AssessmentRelationshipMapProps) {
   // State management
   const [selectedPriorities, setSelectedPriorities] = useState<Priority[]>(priorityFilter);
-  const [selectedAssessmentTypes, setSelectedAssessmentTypes] = useState<AssessmentType[]>(assessmentTypeFilter);
   const [dateRange, setDateRange] = useState<{ start: Date | null; end: Date | null }>({
     start: null,
     end: null,
@@ -167,19 +164,14 @@ export function AssessmentRelationshipMap({
     setSelectedPriorities(priorityFilter);
   }, [priorityFilter]);
 
-  useEffect(() => {
-    setSelectedAssessmentTypes(assessmentTypeFilter);
-  }, [assessmentTypeFilter]);
-
   // Query parameters
   const queryParams: RelationshipQueryParams = useMemo(() => ({
     incidentId,
     entityId,
     priorityFilter: selectedPriorities.length > 0 ? selectedPriorities : undefined,
-    assessmentTypeFilter: selectedAssessmentTypes.length > 0 ? selectedAssessmentTypes : undefined,
     startDate: dateRange.start || undefined,
     endDate: dateRange.end || undefined,
-  }), [incidentId, entityId, selectedPriorities, selectedAssessmentTypes, dateRange]);
+  }), [incidentId, entityId, selectedPriorities, dateRange]);
 
   // Fetch latest assessments for hovered entity (for details panel)
   const { data: entityAssessments, isLoading: assessmentsLoading } = useQuery({
@@ -307,7 +299,7 @@ export function AssessmentRelationshipMap({
     return detailedRelationships.filter((relationship: any) => {
       const entity = relationship.entity;
       
-      // Priority/Severity filtering
+      // Priority/Severity filtering only
       if (selectedPriorities.length > 0) {
         const entitySeverity = entity.severity || entity.gapSummary?.overallPriority || 'LOW';
         if (!selectedPriorities.includes(entitySeverity as Priority)) {
@@ -315,22 +307,9 @@ export function AssessmentRelationshipMap({
         }
       }
       
-      // Assessment Type filtering
-      if (selectedAssessmentTypes.length > 0) {
-        // Check if entity has any assessments of the selected types
-        const entityAssessmentTypes = entity.assessments?.map((assessment: any) => assessment.type) || [];
-        const hasMatchingAssessmentType = selectedAssessmentTypes.some(type => 
-          entityAssessmentTypes.includes(type)
-        );
-        
-        if (!hasMatchingAssessmentType) {
-          return false;
-        }
-      }
-      
       return true;
     });
-  }, [detailedRelationships, selectedPriorities, selectedAssessmentTypes]);
+  }, [detailedRelationships, selectedPriorities]);
 
   // Get hovered entity data from the same source as the map (dashboard API)
   const hoveredEntity = useMemo(() => {

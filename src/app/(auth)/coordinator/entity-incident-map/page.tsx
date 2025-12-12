@@ -53,7 +53,6 @@ export default function EntityIncidentMapPage() {
   // State management
   const [selectedIncidentId, setSelectedIncidentId] = useState<string>('');
   const [selectedPriorities, setSelectedPriorities] = useState<Priority[]>([]);
-  const [selectedAssessmentTypes, setSelectedAssessmentTypes] = useState<AssessmentType[]>([]);
   const [dateRange, setDateRange] = useState<{ start: Date | null; end: Date | null }>({
     start: null,
     end: null,
@@ -114,10 +113,6 @@ export default function EntityIncidentMapPage() {
 
   const handlePriorityFilterChange = (priorities: string[]) => {
     setSelectedPriorities(priorities as Priority[]);
-  };
-
-  const handleAssessmentTypeFilterChange = (types: string[]) => {
-    setSelectedAssessmentTypes(types as AssessmentType[]);
   };
 
   const handleDateRangeChange = (start: Date | null, end: Date | null) => {
@@ -251,44 +246,18 @@ export default function EntityIncidentMapPage() {
               </div>
             </div>
 
-            {/* Assessment Type Filters */}
-            <div className="space-y-2">
-              <div className="flex items-center gap-2">
-                <FileText className="h-4 w-4 text-blue-600" />
-                <span className="text-sm font-medium">Assessment Type</span>
-              </div>
-              <div className="flex flex-wrap gap-1">
-                {(['HEALTH', 'WASH', 'SHELTER', 'FOOD', 'SECURITY', 'POPULATION'] as AssessmentType[]).map((type) => (
-                  <Button
-                    key={type}
-                    variant={selectedAssessmentTypes.includes(type) ? "default" : "outline"}
-                    size="sm"
-                    onClick={() => {
-                      const newTypes = selectedAssessmentTypes.includes(type)
-                        ? selectedAssessmentTypes.filter(t => t !== type)
-                        : [...selectedAssessmentTypes, type];
-                      handleAssessmentTypeFilterChange(newTypes);
-                    }}
-                    className={`text-xs border-blue-200 hover:bg-blue-50`}
-                  >
-                    {type.charAt(0) + type.slice(1).toLowerCase()}
-                  </Button>
-                ))}
-              </div>
-            </div>
-
+  
             {/* Filter Status */}
             <div className="space-y-2">
               <div className="flex items-center gap-2">
                 <Filter className="h-4 w-4 text-muted-foreground" />
                 <span className="text-xs font-medium">Active Filters</span>
-                {(selectedPriorities.length > 0 || selectedAssessmentTypes.length > 0 || dateRange.start) && (
+                {(selectedPriorities.length > 0 || dateRange.start) && (
                   <Button
                     variant="ghost"
                     size="sm"
                     onClick={() => {
                       handlePriorityFilterChange([]);
-                      handleAssessmentTypeFilterChange([]);
                       handleDateRangeChange(null, null);
                     }}
                     className="text-xs flex items-center gap-1 h-6 px-2"
@@ -303,10 +272,6 @@ export default function EntityIncidentMapPage() {
                 <span className="flex items-center gap-1">
                   <AlertTriangle className="h-3 w-3 text-orange-600" />
                   {selectedPriorities.length} priority
-                </span>
-                <span className="flex items-center gap-1">
-                  <FileText className="h-3 w-3 text-blue-600" />
-                  {selectedAssessmentTypes.length} assessment
                 </span>
                 {dateRange.start && (
                   <span className="flex items-center gap-1">
@@ -453,7 +418,6 @@ export default function EntityIncidentMapPage() {
               incidentId={selectedIncidentId}
               showTimeline={true}
               priorityFilter={selectedPriorities}
-              assessmentTypeFilter={selectedAssessmentTypes}
               onEntitySelect={(entityId) => {
                 console.log('Selected entity:', entityId);
               }}
