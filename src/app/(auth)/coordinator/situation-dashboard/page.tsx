@@ -29,6 +29,7 @@ const fetchIncidentData = async (incidentId: string) => {
   return response.data;
 };
 
+
 /**
  * Coordinator Situation Dashboard Page
  * 

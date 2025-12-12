@@ -18,7 +18,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Slider } from '@/components/ui/slider';
 import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { CalendarIcon, Filter, MapPin, TrendingUp, AlertTriangle } from 'lucide-react';
+import { CalendarIcon, Filter, MapPin, TrendingUp, AlertTriangle, Maximize2, Minimize2, X } from 'lucide-react';
 import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
 import type { 
@@ -91,9 +91,46 @@ export function AssessmentRelationshipMap({
   const [mapCenter, setMapCenter] = useState<[number, number]>([11.8311, 13.1511]); // Maiduguri center
   const [selectedEntityId, setSelectedEntityId] = useState<string | null>(null);
   const [hoveredEntityId, setHoveredEntityId] = useState<string | null>(null);
+  const [isMaximized, setIsMaximized] = useState(false);
   
   // Entity selection actions for dropdown integration
   const { setSelectedEntity } = useEntityActions();
+
+  // Maximize/minimize handlers
+  const handleMaximize = () => {
+    setIsMaximized(true);
+    // Prevent body scroll when map is maximized
+    document.body.style.overflow = 'hidden';
+  };
+
+  const handleMinimize = () => {
+    setIsMaximized(false);
+    // Restore body scroll
+    document.body.style.overflow = '';
+  };
+
+  // Cleanup effect to restore body scroll on unmount
+  useEffect(() => {
+    return () => {
+      document.body.style.overflow = '';
+    };
+  }, []);
+
+  // Keyboard shortcut effect for Escape key
+  useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape' && isMaximized) {
+        handleMinimize();
+      }
+    };
+
+    if (isMaximized) {
+      document.addEventListener('keydown', handleKeyDown);
+      return () => {
+        document.removeEventListener('keydown', handleKeyDown);
+      };
+    }
+  }, [isMaximized]);
 
   // Query parameters
   const queryParams: RelationshipQueryParams = useMemo(() => ({
@@ -448,11 +485,11 @@ export function AssessmentRelationshipMap({
                   </LayerGroup>
                 </MapContainer>
                 
-                {/* Statistics Overlay */}
+                {/* Statistics Overlay with Maximize Button */}
                 {relationships?.data && (
                   <Card className="absolute top-4 right-4 z-[1000] bg-white/95 backdrop-blur-sm">
                     <CardContent className="p-4">
-                      <div className="grid grid-cols-2 gap-4 text-sm">
+                      <div className="grid grid-cols-2 gap-4 text-sm mb-3">
                         <div className="flex items-center gap-2">
                           <TrendingUp className="h-4 w-4 text-blue-600" />
                           <div>
@@ -468,14 +505,90 @@ export function AssessmentRelationshipMap({
                           </div>
                         </div>
                       </div>
+                      
+                      {/* Maximize Button */}
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={handleMaximize}
+                        className="w-full flex items-center gap-2 text-xs"
+                      >
+                        <Maximize2 className="h-3 w-3" />
+                        Maximize Map
+                      </Button>
                     </CardContent>
                   </Card>
                 )}
-              </div>
+                
+                </div>
             </div>
           </div>
         </CardContent>
       </Card>
+      
+      {/* Full-screen overlay when maximized */}
+      {isMaximized && (
+        <div className="fixed inset-0 z-[9999] bg-black/50 backdrop-blur-sm">
+          <div className="absolute inset-4 bg-white rounded-lg shadow-2xl overflow-hidden">
+            {/* Header with controls */}
+            <div className="absolute top-0 left-0 right-0 z-[10001] bg-white/95 backdrop-blur-sm border-b">
+              <div className="flex items-center justify-between p-4">
+                <div className="flex items-center gap-3">
+                  <MapPin className="h-5 w-5 text-blue-600" />
+                  <h2 className="text-lg font-semibold">Interactive Assessment Map</h2>
+                  {relationships?.data && (
+                    <div className="flex items-center gap-4 text-sm text-muted-foreground">
+                      <span>{relationships.data.totalEntities} Entities</span>
+                      <span>{relationships.data.totalIncidents} Incidents</span>
+                    </div>
+                  )}
+                </div>
+                <div className="flex items-center gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={handleMinimize}
+                    className="flex items-center gap-2"
+                  >
+                    <Minimize2 className="h-4 w-4" />
+                    Minimize
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={handleMinimize}
+                    className="h-8 w-8 p-0"
+                  >
+                    <X className="h-4 w-4" />
+                  </Button>
+                </div>
+              </div>
+            </div>
+            
+            {/* Full-screen map */}
+            <div className="absolute inset-0 pt-16">
+              <MapContainer
+                center={mapCenter}
+                zoom={zoomLevel}
+                className="w-full h-full"
+                whenCreated={(mapInstance) => {
+                  mapInstance.invalidateSize();
+                }}
+              >
+                <TileLayer
+                  url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+                  attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+                />
+                
+                {/* Map markers */}
+                <LayerGroup>
+                  {detailedRelationships?.map(createMarkerForRelationship).filter(Boolean)}
+                </LayerGroup>
+              </MapContainer>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
