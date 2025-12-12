@@ -604,7 +604,10 @@ export function ResponsePlanningForm({
                         }
                         // Set response plan priority to match assessment priority
                         if (assessment && assessment.priority) {
+                          console.log('Setting priority from assessment:', assessment.priority, 'Assessment:', assessment)
                           form.setValue('priority', assessment.priority)
+                        } else {
+                          console.log('No priority found in assessment:', assessment)
                         }
                         // Note: Don't override entityId as it's already selected by the user
                         // The assessment should be for the same entity that was selected
@@ -814,13 +817,13 @@ export function ResponsePlanningForm({
                   </div>
 
                   {/* Submit Buttons */}
-                  <div className="flex gap-3 pt-4">
+                  <div className="flex justify-between items-center pt-4">
                     {mode === 'create' ? (
                       <>
                         <Button
                           type="submit"
                           disabled={isLoading || !form.formState.isValid}
-                          className="flex-1"
+                          className="bg-orange-600 hover:bg-orange-700 text-white min-w-32"
                         >
                           {isLoading ? 'Saving...' : 'Create Plan'}
                         </Button>
@@ -828,31 +831,46 @@ export function ResponsePlanningForm({
                         <Button
                           type="button"
                           variant="default"
-                          className="bg-green-600 hover:bg-green-700"
+                          className="bg-green-600 hover:bg-green-700 text-white min-w-40"
                           disabled={isLoading || !form.formState.isValid}
                           onClick={handleCreateDelivery}
                         >
                           {createDeliveredMutation.isPending ? 'Creating...' : 'Create Delivery Directly'}
                         </Button>
+                        
+                        <Button
+                          type="button"
+                          variant="outline"
+                          onClick={handleCancel}
+                          disabled={isLoading}
+                          className="min-w-20"
+                        >
+                          Cancel
+                        </Button>
                       </>
                     ) : (
-                      <Button
-                        type="submit"
-                        disabled={isLoading || !form.formState.isValid}
-                        className="flex-1"
-                      >
-                        {isLoading ? 'Saving...' : 'Update Plan'}
-                      </Button>
+                      <>
+                        <Button
+                          type="submit"
+                          disabled={isLoading || !form.formState.isValid}
+                          className="bg-orange-600 hover:bg-orange-700 text-white min-w-32"
+                        >
+                          {isLoading ? 'Saving...' : 'Update Plan'}
+                        </Button>
+                        
+                        <div></div>
+                        
+                        <Button
+                          type="button"
+                          variant="outline"
+                          onClick={handleCancel}
+                          disabled={isLoading}
+                          className="min-w-20"
+                        >
+                          Cancel
+                        </Button>
+                      </>
                     )}
-                    
-                    <Button
-                      type="button"
-                      variant="outline"
-                      onClick={handleCancel}
-                      disabled={isLoading}
-                    >
-                      Cancel
-                    </Button>
                   </div>
 
                   {submitError && (

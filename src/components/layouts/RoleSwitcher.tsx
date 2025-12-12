@@ -115,16 +115,16 @@ export const RoleSwitcher = ({ className }: RoleSwitcherProps) => {
       // Perform role switch
       switchRole(role);
       
-      // Redirect to role-appropriate dashboard using Next.js router
+      // Redirect to role-appropriate page using Next.js router
       const rolePaths: Record<RoleName, string> = {
-        ASSESSOR: '/dashboard',
+        ASSESSOR: '/assessor/rapid-assessments',
         COORDINATOR: '/dashboard',
-        RESPONDER: '/dashboard', 
+        RESPONDER: '/responder/planning', 
         DONOR: '/dashboard',
         ADMIN: '/dashboard',
       };
       
-      // Navigate to role-appropriate dashboard without full page reload
+      // Navigate to role-appropriate page without full page reload
       router.push(rolePaths[role]);
       
     } catch (error) {

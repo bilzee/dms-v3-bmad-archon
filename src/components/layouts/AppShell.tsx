@@ -4,7 +4,6 @@ import { useState } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { Header } from '@/components/shared/Header';
 import { Navigation } from '@/components/layouts/Navigation';
-import { RoleSwitcher } from '@/components/layouts/RoleSwitcher';
 import { SyncIndicator } from '@/components/shared/SyncIndicator';
 import { OfflineIndicator } from '@/components/shared/OfflineIndicator';
 import { Breadcrumbs } from '@/components/shared/Breadcrumbs';
@@ -72,10 +71,8 @@ export const AppShell = ({
       {/* Desktop sidebar */}
       <div className="hidden lg:fixed lg:inset-y-0 lg:left-0 lg:z-50 lg:block lg:w-64 lg:overflow-y-auto lg:bg-white lg:border-r lg:border-gray-200">
         <div className="flex h-full flex-col">
-          {/* Logo and role switcher */}
-          <div className="flex items-center justify-between p-4 border-b">
-            <h1 className="text-lg font-semibold text-gray-900">DMS Borno</h1>
-            <RoleSwitcher />
+          {/* Role information */}
+          <div className="flex h-16 items-center justify-center px-4 border-b">
           </div>
           
           {/* Navigation */}
@@ -105,7 +102,6 @@ export const AppShell = ({
           
           <div className="flex flex-1 gap-x-4 self-stretch lg:gap-x-6">
             <div className="flex flex-1 items-center">
-              <h1 className="text-lg font-semibold text-gray-900">DMS Borno</h1>
             </div>
             
             <div className="flex items-center gap-x-4 lg:gap-x-6">
@@ -113,7 +109,6 @@ export const AppShell = ({
                 <SyncIndicator />
               </div>
               <OfflineIndicator />
-              <RoleSwitcher />
             </div>
           </div>
         </div>

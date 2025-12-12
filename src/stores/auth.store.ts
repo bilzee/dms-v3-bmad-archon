@@ -198,6 +198,9 @@ export const useAuthStore = create<AuthState>()(
         // Clear token from localStorage
         if (typeof window !== 'undefined') {
           localStorage.removeItem('auth_token')
+          localStorage.removeItem('token')
+          // Redirect to login page
+          window.location.href = '/login'
         }
       },
 

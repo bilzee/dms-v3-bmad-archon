@@ -68,12 +68,6 @@ const getNavigationItems = (role: string | null): NavItem[] => {
 
   const roleItems: Record<string, NavItem[]> = {
     ASSESSOR: [
-      { 
-        name: 'Dashboard', 
-        href: '/assessor/dashboard', 
-        icon: LayoutDashboard,
-        description: 'View and manage rapid assessments'
-      },
       {
         name: 'Rapid Assessments',
         href: '/assessor/rapid-assessments',
@@ -100,19 +94,6 @@ const getNavigationItems = (role: string | null): NavItem[] => {
         icon: LayoutDashboard,
         children: [
           { 
-            name: 'Main Dashboard', 
-            href: '/coordinator/dashboard', 
-            icon: LayoutDashboard,
-            description: 'Main coordinator dashboard' 
-          },
-          { 
-            name: 'Crisis Dashboard', 
-            href: '/coordinator/dashboard?view=crisis', 
-            icon: AlertTriangle,
-            badge: 'NEW',
-            description: 'Real-time crisis overview' 
-          },
-          { 
             name: 'Situation Awareness', 
             href: '/coordinator/situation-dashboard', 
             icon: Monitor,
@@ -132,10 +113,16 @@ const getNavigationItems = (role: string | null): NavItem[] => {
             description: 'Manage verification workflows' 
           },
           { 
-            name: 'Entity Management', 
+            name: 'Entity Assignment', 
             href: '/coordinator/entities', 
             icon: Building2,
-            description: 'Manage entities and locations' 
+            description: 'Manage entities and user/donor assignments' 
+          },
+          { 
+            name: 'Entity Management', 
+            href: '/coordinator/entity-management', 
+            icon: Building2,
+            description: 'Create and manage entities in the system' 
           },
           { 
             name: 'Resource Allocation', 
@@ -192,18 +179,6 @@ const getNavigationItems = (role: string | null): NavItem[] => {
             href: '/coordinator/settings/gap-field-management',
             icon: Settings,
             description: 'Configure gap field severities'
-          },
-          {
-            name: 'Export Functions',
-            href: '/coordinator/dashboard?tab=exports',
-            icon: FileText,
-            description: 'Export data and reports'
-          },
-          {
-            name: 'Report Builder',
-            href: '/coordinator/dashboard?tab=reports',
-            icon: FileText,
-            description: 'Create custom reports'
           }
         ]
       },
@@ -217,31 +192,19 @@ const getNavigationItems = (role: string | null): NavItem[] => {
             href: '/coordinator/entity-incident-map', 
             icon: MapPin,
             description: 'Interactive entity-incident relationship map with incident selector' 
-          },
-          { 
-            name: 'Interactive Maps', 
-            href: '/coordinator/maps', 
-            icon: MapPin,
-            description: 'Advanced mapping tools' 
           }
         ]
       }
     ],
     RESPONDER: [
-      { 
-        name: 'Dashboard', 
-        href: '/responder/dashboard', 
-        icon: LayoutDashboard 
-      },
       {
         name: 'Response Planning',
         href: '/responder/planning',
         icon: Package,
         children: [
           { name: 'Create Response', href: '/responder/planning/new', icon: Package },
-          { name: 'My Responses', href: '/responder/responses', icon: Package },
-          { name: 'My Response Planning', href: '/responder/planning/', icon: Package },
-          { name: 'Commitment Import', href: '/responder/planning?tab=commitments', icon: HandHeart }
+          { name: 'Response Deliveries', href: '/responder/responses', icon: Package },
+          { name: 'Response Plans', href: '/responder/planning/', icon: Package }
         ]
       },
       { 
@@ -371,6 +334,25 @@ const getNavigationItems = (role: string | null): NavItem[] => {
             href: '/roles', 
             icon: Settings,
             description: 'Manage user roles and permissions' 
+          }
+        ]
+      },
+      {
+        name: 'Donor Management',
+        href: '/admin/donors',
+        icon: Building2,
+        children: [
+          { 
+            name: 'All Donors', 
+            href: '/admin/donors', 
+            icon: Building2,
+            description: 'View and manage all donor organizations' 
+          },
+          { 
+            name: 'Register New Donor', 
+            href: '/admin/donors/register', 
+            icon: HandHeart,
+            description: 'Register a new donor organization and user account' 
           }
         ]
       },

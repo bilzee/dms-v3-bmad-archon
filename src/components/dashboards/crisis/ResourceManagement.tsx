@@ -32,7 +32,6 @@ import {
   Edit
 } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
-import { EntityDonorAssignment } from '@/components/donor/EntityDonorAssignment';
 import { ResourceGapAnalysis } from './ResourceGapAnalysis';
 import { DonorCommitment, Donor, Entity, Incident } from '@/types/entities';
 
@@ -222,38 +221,25 @@ export function ResourceManagement({ className }: ResourceManagementProps) {
   return (
     <div className={className}>
       {/* Header with Controls */}
-      <Card className="mb-6">
-        <CardHeader>
-          <div className="flex items-center justify-between">
-            <div>
-              <CardTitle className="flex items-center gap-2 text-2xl">
-                <BarChart3 className="h-6 w-6" />
-                Resource & Donation Management
-              </CardTitle>
-              <CardDescription>
-                Monitor donor commitments, track delivery progress, and identify resource gaps
-                {hasAuthError && (
-                  <div className="text-amber-600 text-sm mt-1 flex items-center gap-1">
-                    <AlertTriangle className="h-3 w-3" />
-                    Data loading in progress...
-                  </div>
-                )}
-              </CardDescription>
+      <div className="flex items-center justify-between mb-6">
+        <div className="flex items-center gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleRefresh}
+            disabled={statsLoading || commitmentsLoading}
+          >
+            <RefreshCw className={`h-4 w-4 mr-2 ${statsLoading ? 'animate-spin' : ''}`} />
+            Refresh
+          </Button>
+          {hasAuthError && (
+            <div className="text-amber-600 text-sm flex items-center gap-1">
+              <AlertTriangle className="h-3 w-3" />
+              Data loading in progress...
             </div>
-            <div className="flex items-center gap-2">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={handleRefresh}
-                disabled={statsLoading || commitmentsLoading}
-              >
-                <RefreshCw className={`h-4 w-4 mr-2 ${statsLoading ? 'animate-spin' : ''}`} />
-                Refresh
-              </Button>
-            </div>
-          </div>
-        </CardHeader>
-      </Card>
+          )}
+        </div>
+      </div>
 
       {/* Statistics Cards */}
       <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4 mb-6">
@@ -328,14 +314,10 @@ export function ResourceManagement({ className }: ResourceManagementProps) {
 
       {/* Main Content Tabs */}
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-        <TabsList className="grid w-full grid-cols-3">
+        <TabsList className="grid w-full grid-cols-2">
           <TabsTrigger value="overview" className="flex items-center gap-2">
             <Package className="h-4 w-4" />
             Donation Overview
-          </TabsTrigger>
-          <TabsTrigger value="assignments" className="flex items-center gap-2">
-            <Users className="h-4 w-4" />
-            Entity Assignments
           </TabsTrigger>
           <TabsTrigger value="gaps" className="flex items-center gap-2">
             <Target className="h-4 w-4" />
@@ -519,11 +501,6 @@ export function ResourceManagement({ className }: ResourceManagementProps) {
               )}
             </CardContent>
           </Card>
-        </TabsContent>
-
-        {/* Entity Assignments Tab */}
-        <TabsContent value="assignments">
-          <EntityDonorAssignment />
         </TabsContent>
 
         {/* Gap Analysis Tab */}

@@ -66,21 +66,7 @@ export default function ResourceDonationManagement() {
         </div>
 
         {/* Resource Management Section */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Package className="h-5 w-5" />
-              Resource & Donation Management
-            </CardTitle>
-            <CardDescription>
-              Comprehensive resource allocation and donation coordination system for crisis response management.
-              Monitor resource availability, track donation flows, and optimize allocation strategies.
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="pt-6">
-            <ResourceManagement />
-          </CardContent>
-        </Card>
+        <ResourceManagement />
 
         {/* Information Card */}
         <Card>

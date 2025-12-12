@@ -47,16 +47,7 @@ function NewResponsePlanningPageContent() {
       
       {/* Form */}
       <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Package className="h-5 w-5" />
-            Create New Response Plan
-          </CardTitle>
-          <CardDescription>
-            Plan and coordinate disaster response resources before deployment
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
+        <CardContent className="p-6">
           <ResponsePlanningForm
             mode="create"
             onCancel={handleCancel}

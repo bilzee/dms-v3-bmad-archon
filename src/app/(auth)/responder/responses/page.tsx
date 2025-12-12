@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
+import Link from 'next/link'
 
 // UI components
 import { RoleBasedRoute } from '@/components/shared/RoleBasedRoute'
@@ -122,7 +123,7 @@ function ResponderResponsesPageContent() {
                   
                   <div className="flex items-center gap-3">
                     <Package className="h-6 w-6 text-blue-600" />
-                    <h1 className="text-3xl font-bold">My Assigned Responses</h1>
+                    <h1 className="text-3xl font-bold">Response Deliveries</h1>
                     <Badge variant="outline">Responder</Badge>
                   </div>
                 </div>
@@ -149,7 +150,7 @@ function ResponderResponsesPageContent() {
                 
                 <div className="flex items-center gap-3">
                   <Package className="h-6 w-6 text-blue-600" />
-                  <h1 className="text-3xl font-bold">My Assigned Responses</h1>
+                  <h1 className="text-3xl font-bold">Response Deliveries</h1>
                   <Badge variant="outline">Responder</Badge>
                 </div>
               </div>
@@ -270,7 +271,7 @@ function ResponderResponsesPageContent() {
             {/* Responses List */}
             <Card>
               <CardHeader>
-                <CardTitle>Assigned Responses</CardTitle>
+                <CardTitle>Responses (Planned and Delivered)</CardTitle>
                 <CardDescription>
                   {filteredResponses.length} of {total} responses match your filters
                 </CardDescription>
@@ -313,9 +314,11 @@ function ResponderResponsesPageContent() {
                               Confirm Delivery
                             </Button>
                           )}
-                          <Button variant="outline" size="sm">
-                            View Details
-                          </Button>
+                          <Link href={`/responder/responses/${response.id}`}>
+                            <Button variant="outline" size="sm">
+                              View Details
+                            </Button>
+                          </Link>
                         </div>
                       </div>
                     ))}

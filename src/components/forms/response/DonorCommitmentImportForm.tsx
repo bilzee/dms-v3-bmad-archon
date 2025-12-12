@@ -720,14 +720,13 @@ export function DonorCommitmentImportForm({
             </div>
           )}
 
-          <DialogFooter className="bg-gray-50 dark:bg-gray-800 -mx-6 -mb-6 px-6 py-4 mt-6">
+          <DialogFooter className="bg-gray-50 dark:bg-gray-800 -mx-6 -mb-6 px-6 py-4 mt-6 flex justify-between">
             <Button
-              variant="outline"
-              onClick={() => setIsPreviewOpen(false)}
-              disabled={importMutation.isPending || createDeliveredMutation.isPending}
-              className="min-w-24"
+              onClick={handleConfirmImport}
+              disabled={importMutation.isPending}
+              className="min-w-32 bg-orange-600 hover:bg-orange-700 text-white font-semibold"
             >
-              Back
+              {importMutation.isPending ? 'Creating...' : 'Create Plan'}
             </Button>
             <Button
               onClick={handleCreateDelivery}
@@ -737,11 +736,12 @@ export function DonorCommitmentImportForm({
               {createDeliveredMutation.isPending ? 'Creating...' : 'Create Delivery Directly'}
             </Button>
             <Button
-              onClick={handleConfirmImport}
-              disabled={importMutation.isPending}
-              className="min-w-32 bg-blue-600 hover:bg-blue-700 text-white font-semibold"
+              variant="outline"
+              onClick={() => setIsPreviewOpen(false)}
+              disabled={importMutation.isPending || createDeliveredMutation.isPending}
+              className="min-w-20"
             >
-              {importMutation.isPending ? 'Importing...' : 'Confirm Import'}
+              Cancel
             </Button>
           </DialogFooter>
         </DialogContent>

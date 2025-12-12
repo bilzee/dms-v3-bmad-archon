@@ -97,6 +97,8 @@ export default function AssessorRapidAssessmentsPage() {
     switch (displayStatus) {
       case 'VERIFIED':
         return <Badge className="bg-green-100 text-green-800"><CheckCircle className="w-3 h-3 mr-1" />Verified</Badge>
+      case 'PUBLISHED':
+        return <Badge className="bg-green-100 text-green-800"><CheckCircle className="w-3 h-3 mr-1" />Verified</Badge>
       case 'AUTO_VERIFIED':
         return <Badge className="bg-blue-100 text-blue-800"><CheckCircle className="w-3 h-3 mr-1" />Auto-Verified</Badge>
       case 'REJECTED':
@@ -278,7 +280,7 @@ export default function AssessorRapidAssessmentsPage() {
                         </Badge>
                       )}
                       {getStatusBadge(assessment)}
-                      <Link href={`/rapid-assessments/${assessment.id}`}>
+                      <Link href={`/assessor/rapid-assessments/${assessment.id}`}>
                         <Button variant="outline" size="sm">
                           View Details
                         </Button>

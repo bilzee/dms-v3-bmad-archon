@@ -187,11 +187,15 @@ export class ResponseService {
             rapidAssessmentDate: true,
             status: true,
             verificationStatus: true,
+            location: true,
+            coordinates: true,
             entity: {
               select: {
                 id: true,
                 name: true,
-                type: true
+                type: true,
+                location: true,
+                coordinates: true
               }
             }
           }
@@ -200,7 +204,9 @@ export class ResponseService {
           select: {
             id: true,
             name: true,
-            type: true
+            type: true,
+            location: true,
+            coordinates: true
           }
         },
         responder: {
