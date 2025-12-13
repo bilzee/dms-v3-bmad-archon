@@ -232,6 +232,20 @@ export default function AssessorRapidAssessmentsPage() {
     }
   }
 
+  const formatIncidentDisplay = (incident: any) => {
+    if (!incident) return 'Unknown Incident'
+    
+    const type = incident.type || 'Unknown'
+    const subType = incident.subType ? `-${incident.subType}` : ''
+    const date = incident.createdAt ? new Date(incident.createdAt).toLocaleDateString('en-US', { 
+      month: 'short', 
+      day: 'numeric', 
+      year: 'numeric' 
+    }).replace(/\s+/g, '') : ''
+    
+    return `${type}${subType}${date ? `-${date}` : ''}`
+  }
+
   const getTypeIcon = (type: string) => {
     switch (type) {
       case 'HEALTH':
@@ -543,7 +557,7 @@ export default function AssessorRapidAssessmentsPage() {
                           <span className="font-medium">Entity:</span> {assessment.entity?.name || 'Unknown Entity'}
                           {assessment.incident && (
                             <span className="ml-3">
-                              <span className="font-medium">Incident:</span> {assessment.incident.name || assessment.incidentId}
+                              <span className="font-medium">Incident:</span> {formatIncidentDisplay(assessment.incident)}
                             </span>
                           )}
                         </p>
@@ -621,7 +635,7 @@ export default function AssessorRapidAssessmentsPage() {
                   <div className="space-y-1 text-sm text-gray-600">
                     <p><strong>Type:</strong> {selectedAssessmentForReason.rapidAssessmentType}</p>
                     <p><strong>Entity:</strong> {selectedAssessmentForReason.entity?.name}</p>
-                    <p><strong>Incident:</strong> {selectedAssessmentForReason.incident?.name || selectedAssessmentForReason.incidentId}</p>
+                    <p><strong>Incident:</strong> {formatIncidentDisplay(selectedAssessmentForReason.incident)}</p>
                     <p><strong>Date:</strong> {new Date(selectedAssessmentForReason.createdAt).toLocaleDateString()}</p>
                   </div>
                 </div>

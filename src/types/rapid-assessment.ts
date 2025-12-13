@@ -24,8 +24,9 @@ export interface RapidAssessmentWithData extends RapidAssessment {
   }
   incident?: {
     id: string
-    name: string
     type: string
+    subType?: string
+    createdAt: Date
     severity: string
   }
 }

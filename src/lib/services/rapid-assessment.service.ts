@@ -192,8 +192,9 @@ export class RapidAssessmentService {
         incident: {
           select: {
             id: true,
-            name: true,
             type: true,
+            subType: true,
+            createdAt: true,
             severity: true
           }
         }
@@ -251,8 +252,9 @@ export class RapidAssessmentService {
         incident: {
           select: {
             id: true,
-            name: true,
             type: true,
+            subType: true,
+            createdAt: true,
             severity: true
           }
         }
@@ -324,8 +326,9 @@ export class RapidAssessmentService {
         incident: {
           select: {
             id: true,
-            name: true,
             type: true,
+            subType: true,
+            createdAt: true,
             severity: true
           }
         }
