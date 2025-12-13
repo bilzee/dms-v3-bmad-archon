@@ -71,6 +71,7 @@ function NewAssessmentContent() {
   const { token, user } = useAuthStore()
   const [selectedType, setSelectedType] = useState<string>('')
   const [showForm, setShowForm] = useState(false)
+  const [latestAssessmentData, setLatestAssessmentData] = useState<any>(null)
 
   useEffect(() => {
     const typeParam = searchParams.get('type')
@@ -79,6 +80,29 @@ function NewAssessmentContent() {
       setShowForm(true)
     }
   }, [searchParams])
+
+  // Fetch latest assessment data when incident and entity are selected
+  const fetchLatestAssessment = async (incidentId: string, entityId: string, assessmentType: string) => {
+    try {
+      const response = await fetch(
+        `/api/v1/rapid-assessments/latest?incidentId=${incidentId}&entityId=${entityId}&type=${assessmentType}`,
+        {
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
+        }
+      );
+      
+      if (response.ok) {
+        const result = await response.json();
+        if (result.success && result.data) {
+          setLatestAssessmentData(result.data);
+        }
+      }
+    } catch (error) {
+      console.error('Error fetching latest assessment:', error);
+    }
+  };
 
   const selectedAssessment = assessmentTypes.find(t => t.value === selectedType)
 
@@ -173,8 +197,14 @@ function NewAssessmentContent() {
 
     const commonProps = {
       entityId: '', // This would normally be provided by the router or context
+      initialData: latestAssessmentData,
       onSubmit: handleAssessmentSubmit,
-      onCancel: handleGoBack
+      onCancel: handleGoBack,
+      onIncidentEntityChange: (incidentId: string, entityId: string) => {
+        if (selectedType && incidentId && entityId) {
+          fetchLatestAssessment(incidentId, entityId, selectedType);
+        }
+      }
     }
 
     switch (selectedType) {

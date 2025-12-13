@@ -142,6 +142,7 @@ export interface BaseAssessmentFormProps {
   onCancel: () => void
   isSubmitting?: boolean
   disabled?: boolean
+  onIncidentEntityChange?: (incidentId: string, entityId: string) => void
 }
 
 export interface HealthAssessmentFormProps extends BaseAssessmentFormProps {

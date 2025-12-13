@@ -93,30 +93,49 @@ export function HealthAssessmentForm({
   onSubmit, 
   onCancel, 
   isSubmitting = false,
-  disabled = false 
+  disabled = false,
+  onIncidentEntityChange
 }: HealthAssessmentFormProps) {
   const [gpsCoordinates, setGpsCoordinates] = useState<{ lat: number; lng: number } | null>(null)
   const [mediaFiles, setMediaFiles] = useState<string[]>((initialData as any)?.mediaAttachments || [])
   const [selectedEntity, setSelectedEntity] = useState<string>(entityId)
-  const [selectedIncident, setSelectedIncident] = useState<string>('')
+  const [selectedIncident, setSelectedIncident] = useState<string>(initialData?.incidentId || '')
   const [selectedEntityData, setSelectedEntityData] = useState<any>(null)
+
+  // Extract health data from initialData
+  const healthData = (initialData as any)?.healthAssessment || (initialData as any);
 
   const form = useForm<FormData>({
     resolver: zodResolver(HealthAssessmentSchema),
     defaultValues: {
-      hasFunctionalClinic: initialData?.hasFunctionalClinic || false,
-      hasEmergencyServices: initialData?.hasEmergencyServices || false,
-      numberHealthFacilities: initialData?.numberHealthFacilities || 0,
-      healthFacilityType: initialData?.healthFacilityType || '',
-      qualifiedHealthWorkers: initialData?.qualifiedHealthWorkers || 0,
-      hasTrainedStaff: initialData?.hasTrainedStaff || false,
-      hasMedicineSupply: initialData?.hasMedicineSupply || false,
-      hasMedicalSupplies: initialData?.hasMedicalSupplies || false,
-      hasMaternalChildServices: initialData?.hasMaternalChildServices || false,
-      commonHealthIssues: initialData?.commonHealthIssues || [],
-      additionalHealthDetails: initialData?.additionalHealthDetails || ''
+      hasFunctionalClinic: healthData?.hasFunctionalClinic || false,
+      hasEmergencyServices: healthData?.hasEmergencyServices || false,
+      numberHealthFacilities: healthData?.numberHealthFacilities || 0,
+      healthFacilityType: healthData?.healthFacilityType || '',
+      qualifiedHealthWorkers: healthData?.qualifiedHealthWorkers || 0,
+      hasTrainedStaff: healthData?.hasTrainedStaff || false,
+      hasMedicineSupply: healthData?.hasMedicineSupply || false,
+      hasMedicalSupplies: healthData?.hasMedicalSupplies || false,
+      hasMaternalChildServices: healthData?.hasMaternalChildServices || false,
+      commonHealthIssues: healthData?.commonHealthIssues || [],
+      additionalHealthDetails: healthData?.additionalHealthDetails || ''
     }
   })
+
+  // Handle incident and entity changes
+  const handleIncidentChange = (incidentId: string) => {
+    setSelectedIncident(incidentId);
+    if (selectedEntity && onIncidentEntityChange) {
+      onIncidentEntityChange(incidentId, selectedEntity);
+    }
+  };
+
+  const handleEntityChange = (entityId: string) => {
+    setSelectedEntity(entityId);
+    if (selectedIncident && onIncidentEntityChange) {
+      onIncidentEntityChange(selectedIncident, entityId);
+    }
+  };
 
   const watchedValues = form.watch()
 
@@ -220,7 +239,7 @@ export function HealthAssessmentForm({
             <CardContent>
               <IncidentSelector
                 value={selectedIncident}
-                onValueChange={setSelectedIncident}
+                onValueChange={handleIncidentChange}
                 disabled={disabled}
                 required
               />
@@ -238,11 +257,7 @@ export function HealthAssessmentForm({
             <CardContent>
               <EntitySelector
                 value={selectedEntity}
-                onValueChange={(entityId) => {
-                  setSelectedEntity(entityId)
-                  // Reset entity data when selection changes
-                  setSelectedEntityData(null)
-                }}
+                onValueChange={handleEntityChange}
                 disabled={disabled}
                 data-testid="entity-select"
               />

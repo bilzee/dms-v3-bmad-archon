@@ -592,6 +592,38 @@ export class RapidAssessmentService {
     }
   }
 
+  static async findLatestByIncidentEntityAndType(
+    incidentId: string,
+    entityId: string,
+    type: AssessmentType
+  ): Promise<RapidAssessmentWithData | null> {
+    try {
+      const typeFieldName = this.getTypeSpecificFieldName(type)
+      
+      const assessment = await prisma.rapidAssessment.findFirst({
+        where: {
+          incidentId,
+          entityId,
+          type,
+          status: {
+            not: 'DRAFT' // Exclude drafts
+          }
+        },
+        include: {
+          [typeFieldName]: true
+        },
+        orderBy: {
+          rapidAssessmentDate: 'desc'
+        }
+      })
+
+      return assessment as RapidAssessmentWithData
+    } catch (error) {
+      console.error('Error finding latest assessment:', error)
+      throw new Error('Failed to find latest assessment')
+    }
+  }
+
   private static getTypeSpecificFieldName(type: AssessmentType): string {
     const fieldMap = {
       'HEALTH': 'healthAssessment',
