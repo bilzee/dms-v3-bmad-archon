@@ -436,75 +436,38 @@ export function EntityAssessmentPanel({
 
                   {/* Gap-based Assessments Grid */}
                   <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3"> {/* 5 columns for better space utilization */}
-                    {/* Only render gap-based assessment categories that have data */}
-                    {entity.latestAssessments?.health && (
-                      <AssessmentCategorySummary
-                        category="health"
-                        assessment={entity.latestAssessments?.health}
-                        gapAnalysis={entity.latestAssessments?.health?.gapAnalysis}
-                        layout="split"
-                      />
-                    )}
-                    {entity.latestAssessments?.food && (
-                      <AssessmentCategorySummary
-                        category="food"
-                        assessment={entity.latestAssessments?.food}
-                        gapAnalysis={entity.latestAssessments?.food?.gapAnalysis}
-                        layout="split"
-                      />
-                    )}
-                    {entity.latestAssessments?.wash && (
-                      <AssessmentCategorySummary
-                        category="wash"
-                        assessment={entity.latestAssessments?.wash}
-                        gapAnalysis={entity.latestAssessments?.wash?.gapAnalysis}
-                        layout="split"
-                      />
-                    )}
-                    {entity.latestAssessments?.shelter && (
-                      <AssessmentCategorySummary
-                        category="shelter"
-                        assessment={entity.latestAssessments?.shelter}
-                        gapAnalysis={entity.latestAssessments?.shelter?.gapAnalysis}
-                        layout="split"
-                      />
-                    )}
-                    {entity.latestAssessments?.security && (
-                      <AssessmentCategorySummary
-                        category="security"
-                        assessment={entity.latestAssessments?.security}
-                        gapAnalysis={entity.latestAssessments?.security?.gapAnalysis}
-                        layout="split"
-                      />
-                    )}
+                    {/* Always render all assessment types, showing empty tiles when data is missing */}
+                    <AssessmentCategorySummary
+                      category="health"
+                      assessment={entity.latestAssessments?.health}
+                      gapAnalysis={entity.latestAssessments?.health?.gapAnalysis}
+                      layout="split"
+                    />
+                    <AssessmentCategorySummary
+                      category="food"
+                      assessment={entity.latestAssessments?.food}
+                      gapAnalysis={entity.latestAssessments?.food?.gapAnalysis}
+                      layout="split"
+                    />
+                    <AssessmentCategorySummary
+                      category="wash"
+                      assessment={entity.latestAssessments?.wash}
+                      gapAnalysis={entity.latestAssessments?.wash?.gapAnalysis}
+                      layout="split"
+                    />
+                    <AssessmentCategorySummary
+                      category="shelter"
+                      assessment={entity.latestAssessments?.shelter}
+                      gapAnalysis={entity.latestAssessments?.shelter?.gapAnalysis}
+                      layout="split"
+                    />
+                    <AssessmentCategorySummary
+                      category="security"
+                      assessment={entity.latestAssessments?.security}
+                      gapAnalysis={entity.latestAssessments?.security?.gapAnalysis}
+                      layout="split"
+                    />
                   </div>
-
-                  {/* No gap-based assessments available */}
-                  {!entity.latestAssessments?.health && 
-                   !entity.latestAssessments?.food && 
-                   !entity.latestAssessments?.wash && 
-                   !entity.latestAssessments?.shelter && 
-                   !entity.latestAssessments?.security && (
-                    <div className="text-center py-12 bg-gray-50 rounded-lg">
-                      <div className="text-6xl mb-4">📊</div>
-                      <h3 className="text-lg font-semibold text-gray-900 mb-2">
-                        No Gap-Based Assessments Available
-                      </h3>
-                      <p className="text-gray-600 mb-4">
-                        This entity doesn&apos;t have gap-based assessments yet.
-                      </p>
-                      <div className="text-sm text-gray-500 space-y-1">
-                        <p>Gap-based assessments include:</p>
-                        <div className="flex flex-wrap justify-center gap-2 mt-2">
-                          <span className="px-2 py-1 bg-red-100 text-red-700 rounded text-xs">Health</span>
-                          <span className="px-2 py-1 bg-orange-100 text-orange-700 rounded text-xs">Food</span>
-                          <span className="px-2 py-1 bg-blue-100 text-blue-700 rounded text-xs">WASH</span>
-                          <span className="px-2 py-1 bg-purple-100 text-purple-700 rounded text-xs">Shelter</span>
-                          <span className="px-2 py-1 bg-green-100 text-green-700 rounded text-xs">Security</span>
-                        </div>
-                      </div>
-                    </div>
-                  )}
 
 
                   {index < entityAssessments.length - 1 && <Separator />}

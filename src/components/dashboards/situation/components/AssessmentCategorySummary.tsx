@@ -397,17 +397,18 @@ export function AssessmentCategorySummary({
 
   if (!assessment) {
     return (
-      <Card className={cn("opacity-60", className)}>
+      <Card className={cn("opacity-60 border-dashed border-2", config.borderColor, className)}>
         <CardHeader className="pb-3">
-          <CardTitle className="flex items-center gap-2 text-base">
-            <span>{config.icon}</span>
+          <CardTitle className="flex items-center gap-2 text-base text-muted-foreground">
+            <span className="opacity-50">{config.icon}</span>
             {config.title}
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="text-center py-8 text-gray-500">
-            <Info className="h-8 w-8 mx-auto mb-2 opacity-50" />
-            <p className="text-sm">No assessment data available</p>
+          <div className="text-center py-8 text-muted-foreground">
+            <div className="text-2xl mb-2 opacity-50">📋</div>
+            <p className="text-sm font-medium">Assessment Missing</p>
+            <p className="text-xs mt-1">This assessment hasn't been completed yet</p>
           </div>
         </CardContent>
       </Card>
