@@ -12,6 +12,13 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Textarea } from '@/components/ui/textarea';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Alert, AlertDescription } from '@/components/ui/alert';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
 import { Loader2, MapPin, Building2, CheckCircle, AlertCircle, MapIcon, Crosshair } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import dynamic from 'next/dynamic';
@@ -116,240 +123,242 @@ export function EntityForm({ onSubmit, onCancel, initialData, isEditing = false 
   };
 
   return (
-    <Card className="w-full max-w-2xl mx-auto">
-      <CardHeader>
-        <CardTitle className="flex items-center gap-2">
-          <Building2 className="h-5 w-5" />
-          {isEditing ? 'Edit Entity' : 'Create New Entity'}
-        </CardTitle>
-        <CardDescription>
-          {isEditing 
-            ? 'Update the entity information below'
-            : 'Fill in the details to create a new entity in the system'
-          }
-        </CardDescription>
-      </CardHeader>
-      
-      <CardContent>
-        <form onSubmit={handleSubmit(handleFormSubmit)} className="space-y-6">
-          {/* Name Field */}
-          <div className="space-y-2">
-            <Label htmlFor="name">Entity Name *</Label>
-            <Input
-              id="name"
-              {...register('name')}
-              placeholder="Enter entity name"
-              className={errors.name ? 'border-red-500' : ''}
-            />
-            {errors.name && (
-              <p className="text-sm text-red-600">{errors.name.message}</p>
-            )}
-          </div>
+    <>
+      <Card className="w-full max-w-2xl mx-auto">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Building2 className="h-5 w-5" />
+            {isEditing ? 'Edit Entity' : 'Create New Entity'}
+          </CardTitle>
+          <CardDescription>
+            {isEditing 
+              ? 'Update the entity information below'
+              : 'Fill in the details to create a new entity in the system'
+            }
+          </CardDescription>
+        </CardHeader>
+        
+        <CardContent>
+          <form onSubmit={handleSubmit(handleFormSubmit)} className="space-y-6">
+            {/* Name Field */}
+            <div className="space-y-2">
+              <Label htmlFor="name">Entity Name *</Label>
+              <Input
+                id="name"
+                {...register('name')}
+                placeholder="Enter entity name"
+                className={errors.name ? 'border-red-500' : ''}
+              />
+              {errors.name && (
+                <p className="text-sm text-red-600">{errors.name.message}</p>
+              )}
+            </div>
 
-          {/* Type Field */}
-          <div className="space-y-2">
-            <Label htmlFor="type">Entity Type *</Label>
-            <Select 
-              value={watchedType} 
-              onValueChange={(value) => setValue('type', value as any)}
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Select entity type" />
-              </SelectTrigger>
-              <SelectContent>
-                {entityTypes.map((type) => (
-                  <SelectItem key={type.value} value={type.value}>
-                    {type.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            {errors.type && (
-              <p className="text-sm text-red-600">{errors.type.message}</p>
-            )}
-          </div>
+            {/* Type Field */}
+            <div className="space-y-2">
+              <Label htmlFor="type">Entity Type *</Label>
+              <Select 
+                value={watchedType} 
+                onValueChange={(value) => setValue('type', value as any)}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select entity type" />
+                </SelectTrigger>
+                <SelectContent>
+                  {entityTypes.map((type) => (
+                    <SelectItem key={type.value} value={type.value}>
+                      {type.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              {errors.type && (
+                <p className="text-sm text-red-600">{errors.type.message}</p>
+              )}
+            </div>
 
-          {/* Location Field */}
-          <div className="space-y-2">
-            <Label htmlFor="location">Location</Label>
-            <Input
-              id="location"
-              {...register('location')}
-              placeholder="Enter location description"
-            />
-            <p className="text-xs text-gray-500">
-              Optional descriptive location (e.g., "Northern District", "Downtown Area")
-            </p>
-          </div>
+            {/* Location Field */}
+            <div className="space-y-2">
+              <Label htmlFor="location">Location</Label>
+              <Input
+                id="location"
+                {...register('location')}
+                placeholder="Enter location description"
+              />
+              <p className="text-xs text-gray-500">
+                Optional descriptive location (e.g., "Northern District", "Downtown Area")
+              </p>
+            </div>
 
-          {/* Coordinates */}
-          <div className="space-y-4">
-            <Label className="flex items-center gap-2">
-              <MapPin className="h-4 w-4" />
-              Geographical Coordinates *
-            </Label>
-            
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              {/* Manual Input */}
-              <div className="space-y-3">
-                <Label className="text-sm font-medium">Manual Entry</Label>
-                <div className="grid grid-cols-2 gap-3">
-                  <div className="space-y-2">
-                    <Label htmlFor="latitude">Latitude</Label>
-                    <Input
-                      id="latitude"
-                      type="number"
-                      step="any"
-                      placeholder="e.g., 11.8311"
-                      value={watchedCoordinates?.latitude || ''}
-                      onChange={(e) => {
-                        const value = e.target.value ? parseFloat(e.target.value) : undefined;
-                        setValue('coordinates.latitude', value);
-                      }}
-                      className={errors.coordinates?.latitude ? 'border-red-500' : ''}
-                    />
-                    {errors.coordinates?.latitude && (
-                      <p className="text-xs text-red-600">{errors.coordinates?.latitude.message}</p>
-                    )}
+            {/* Coordinates */}
+            <div className="space-y-4">
+              <Label className="flex items-center gap-2">
+                <MapPin className="h-4 w-4" />
+                Geographical Coordinates *
+              </Label>
+              
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                {/* Manual Input */}
+                <div className="space-y-3">
+                  <Label className="text-sm font-medium">Manual Entry</Label>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="space-y-2">
+                      <Label htmlFor="latitude">Latitude</Label>
+                      <Input
+                        id="latitude"
+                        type="number"
+                        step="any"
+                        placeholder="e.g., 11.8311"
+                        value={watchedCoordinates?.latitude || ''}
+                        onChange={(e) => {
+                          const value = e.target.value ? parseFloat(e.target.value) : undefined;
+                          setValue('coordinates.latitude', value);
+                        }}
+                        className={errors.coordinates?.latitude ? 'border-red-500' : ''}
+                      />
+                      {errors.coordinates?.latitude && (
+                        <p className="text-xs text-red-600">{errors.coordinates?.latitude.message}</p>
+                      )}
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="longitude">Longitude</Label>
+                      <Input
+                        id="longitude"
+                        type="number"
+                        step="any"
+                        placeholder="e.g., 13.1511"
+                        value={watchedCoordinates?.longitude || ''}
+                        onChange={(e) => {
+                          const value = e.target.value ? parseFloat(e.target.value) : undefined;
+                          setValue('coordinates.longitude', value);
+                        }}
+                        className={errors.coordinates?.longitude ? 'border-red-500' : ''}
+                      />
+                      {errors.coordinates?.longitude && (
+                        <p className="text-xs text-red-600">{errors.coordinates?.longitude.message}</p>
+                      )}
+                    </div>
                   </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="longitude">Longitude</Label>
-                    <Input
-                      id="longitude"
-                      type="number"
-                      step="any"
-                      placeholder="e.g., 13.1511"
-                      value={watchedCoordinates?.longitude || ''}
-                      onChange={(e) => {
-                        const value = e.target.value ? parseFloat(e.target.value) : undefined;
-                        setValue('coordinates.longitude', value);
-                      }}
-                      className={errors.coordinates?.longitude ? 'border-red-500' : ''}
-                    />
-                    {errors.coordinates?.longitude && (
-                      <p className="text-xs text-red-600">{errors.coordinates?.longitude.message}</p>
-                    )}
-                  </div>
+                  <p className="text-xs text-gray-500">
+                    Enter decimal coordinates (-90 to 90, -180 to 180)
+                  </p>
                 </div>
-                <p className="text-xs text-gray-500">
-                  Enter decimal coordinates (-90 to 90, -180 to 180)
-                </p>
+
+                {/* Map Selection */}
+                <div className="space-y-3">
+                  <Label className="text-sm font-medium">Map Selection</Label>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => setShowMapSelector(true)}
+                    className="w-full h-48 border-2 border-dashed border-gray-300 hover:border-blue-300 flex flex-col items-center justify-center text-gray-500 hover:text-blue-600 transition-colors"
+                  >
+                    <MapIcon className="h-8 w-8 mb-2" />
+                    <span className="text-sm">Click to Select on Map</span>
+                    <span className="text-xs">or drag to location</span>
+                  </Button>
+                  <p className="text-xs text-gray-500">
+                    Click on the map to select coordinates
+                  </p>
+                </div>
               </div>
 
-              {/* Map Selection */}
-              <div className="space-y-3">
-                <Label className="text-sm font-medium">Map Selection</Label>
+              {/* Current coordinates display */}
+              <div className="bg-gray-50 p-3 rounded-lg">
+                <div className="flex items-center gap-2 text-sm">
+                  <Crosshair className="h-4 w-4 text-blue-600" />
+                  <span className="font-medium">Current Coordinates:</span>
+                </div>
+                <div className="text-xs text-gray-600 mt-1">
+                  Latitude: {watchedCoordinates?.latitude?.toFixed(6) || 'N/A'}, 
+                  Longitude: {watchedCoordinates?.longitude?.toFixed(6) || 'N/A'}
+                </div>
+              </div>
+            </div>
+
+            {/* Auto-approval setting */}
+            <div className="flex items-center space-x-2">
+              <Checkbox
+                id="autoApproveEnabled"
+                checked={watch('autoApproveEnabled')}
+                onCheckedChange={(checked) => setValue('autoApproveEnabled', checked as boolean)}
+              />
+              <div className="space-y-1">
+                <Label htmlFor="autoApproveEnabled" className="text-sm font-medium">
+                  Enable Auto-Approval
+                </Label>
+                <p className="text-xs text-gray-500">
+                  Automatically approve certain actions for this entity based on configured rules
+                </p>
+              </div>
+            </div>
+
+            {/* Submit Status */}
+            {submitStatus && (
+              <Alert variant={submitStatus.type === 'error' ? 'destructive' : 'default'}>
+                {submitStatus.type === 'success' ? (
+                  <CheckCircle className="h-4 w-4" />
+                ) : (
+                  <AlertCircle className="h-4 w-4" />
+                )}
+                <AlertDescription>{submitStatus.message}</AlertDescription>
+              </Alert>
+            )}
+
+            {/* Action Buttons */}
+            <div className="flex items-center justify-end space-x-3 pt-4 border-t">
+              {onCancel && (
                 <Button
                   type="button"
                   variant="outline"
-                  onClick={() => setShowMapSelector(true)}
-                  className="w-full h-48 border-2 border-dashed border-gray-300 hover:border-blue-300 flex flex-col items-center justify-center text-gray-500 hover:text-blue-600 transition-colors"
+                  onClick={onCancel}
+                  disabled={isSubmitting}
                 >
-                  <MapIcon className="h-8 w-8 mb-2" />
-                  <span className="text-sm">Click to Select on Map</span>
-                  <span className="text-xs">or drag to location</span>
+                  Cancel
                 </Button>
-                <p className="text-xs text-gray-500">
-                  Click on the map to select coordinates
-                </p>
-              </div>
-            </div>
-
-            {/* Current coordinates display */}
-            <div className="bg-gray-50 p-3 rounded-lg">
-              <div className="flex items-center gap-2 text-sm">
-                <Crosshair className="h-4 w-4 text-blue-600" />
-                <span className="font-medium">Current Coordinates:</span>
-              </div>
-              <div className="text-xs text-gray-600 mt-1">
-                Latitude: {watchedCoordinates?.latitude?.toFixed(6) || 'N/A'}, 
-                Longitude: {watchedCoordinates?.longitude?.toFixed(6) || 'N/A'}
-              </div>
-            </div>
-          </div>
-
-          {/* Auto-approval setting */}
-          <div className="flex items-center space-x-2">
-            <Checkbox
-              id="autoApproveEnabled"
-              checked={watch('autoApproveEnabled')}
-              onCheckedChange={(checked) => setValue('autoApproveEnabled', checked as boolean)}
-            />
-            <div className="space-y-1">
-              <Label htmlFor="autoApproveEnabled" className="text-sm font-medium">
-                Enable Auto-Approval
-              </Label>
-              <p className="text-xs text-gray-500">
-                Automatically approve certain actions for this entity based on configured rules
-              </p>
-            </div>
-          </div>
-
-          {/* Submit Status */}
-          {submitStatus && (
-            <Alert variant={submitStatus.type === 'error' ? 'destructive' : 'default'}>
-              {submitStatus.type === 'success' ? (
-                <CheckCircle className="h-4 w-4" />
-              ) : (
-                <AlertCircle className="h-4 w-4" />
               )}
-              <AlertDescription>{submitStatus.message}</AlertDescription>
-            </Alert>
-          )}
-
-          {/* Action Buttons */}
-          <div className="flex items-center justify-end space-x-3 pt-4 border-t">
-            {onCancel && (
               <Button
-                type="button"
-                variant="outline"
-                onClick={onCancel}
+                type="submit"
                 disabled={isSubmitting}
+                className="min-w-[120px]"
               >
-                Cancel
+                {isSubmitting ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    {isEditing ? 'Updating...' : 'Creating...'}
+                  </>
+                ) : (
+                  <>
+                    <Building2 className="mr-2 h-4 w-4" />
+                    {isEditing ? 'Update Entity' : 'Create Entity'}
+                  </>
+                )}
               </Button>
-            )}
-            <Button
-              type="submit"
-              disabled={isSubmitting}
-              className="min-w-[120px]"
-            >
-              {isSubmitting ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  {isEditing ? 'Updating...' : 'Creating...'}
-                </>
-              ) : (
-                <>
-                  <Building2 className="mr-2 h-4 w-4" />
-                  {isEditing ? 'Update Entity' : 'Create Entity'}
-                </>
-              )}
-            </Button>
-          </div>
-        </form>
-      </CardContent>
-    </Card>
+            </div>
+          </form>
+        </CardContent>
+      </Card>
 
-    {/* Map Selector Dialog */}
-    <Dialog open={showMapSelector} onOpenChange={setShowMapSelector}>
-      <DialogContent className="max-w-4xl max-h-[80vh]">
-        <DialogHeader>
-          <DialogTitle>Select Location on Map</DialogTitle>
-          <DialogDescription>
-            Click anywhere on the map to select coordinates for this entity, or close to cancel.
-          </DialogDescription>
-        </DialogHeader>
-        <div className="mt-4">
-          <LocationSelector
-            onLocationSelect={handleLocationSelect}
-            initialCoordinates={{
-              latitude: watchedCoordinates?.latitude || 11.8311,
-              longitude: watchedCoordinates?.longitude || 13.1511
-            }}
-          />
-        </div>
-      </DialogContent>
-    </Dialog>
+      {/* Map Selector Dialog */}
+      <Dialog open={showMapSelector} onOpenChange={setShowMapSelector}>
+        <DialogContent className="max-w-4xl max-h-[80vh]">
+          <DialogHeader>
+            <DialogTitle>Select Location on Map</DialogTitle>
+            <DialogDescription>
+              Click anywhere on the map to select coordinates for this entity, or close to cancel.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="mt-4">
+            <LocationSelector
+              onLocationSelect={handleLocationSelect}
+              initialCoordinates={{
+                latitude: watchedCoordinates?.latitude || 11.8311,
+                longitude: watchedCoordinates?.longitude || 13.1511
+              }}
+            />
+          </div>
+        </DialogContent>
+      </Dialog>
+    </>
   );
 }

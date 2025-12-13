@@ -25,12 +25,16 @@ interface LocationSelectorProps {
 interface LocationMarkerProps {
   position: [number, number];
   onLocationSelect: (latitude: number, longitude: number) => void;
+  onPositionChange: (position: [number, number]) => void;
 }
 
-function LocationMarker({ position, onLocationSelect }: LocationMarkerProps) {
+function LocationMarker({ position, onLocationSelect, onPositionChange }: LocationMarkerProps) {
   const map = useMapEvents({
-    click: () => {
-      onLocationSelect(position[0], position[1]);
+    click: (e: L.LeafletMouseEvent) => {
+      const { lat, lng } = e.latlng;
+      const newPosition: [number, number] = [lat, lng];
+      onPositionChange(newPosition);
+      onLocationSelect(lat, lng);
     },
   });
 
@@ -50,12 +54,6 @@ export function LocationSelector({ onLocationSelect, initialCoordinates = { lati
   const [position, setPosition] = useState<[number, number]>([initialCoordinates.latitude, initialCoordinates.longitude]);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const mapRef = useRef<L.Map>(null);
-
-  const handleMapClick = (e: any) => {
-    const { lat, lng } = e.latlng;
-    setPosition([lat, lng]);
-    onLocationSelect(lat, lng);
-  };
 
   const handleCurrentLocation = () => {
     if ('geolocation' in navigator) {
@@ -124,7 +122,8 @@ export function LocationSelector({ onLocationSelect, initialCoordinates = { lati
           
           <LocationMarker
             position={position}
-            onLocationSelect={handleMapClick}
+            onLocationSelect={onLocationSelect}
+            onPositionChange={setPosition}
           />
         </MapContainer>
       </div>
