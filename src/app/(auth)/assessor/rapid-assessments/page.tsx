@@ -543,7 +543,7 @@ export default function AssessorRapidAssessmentsPage() {
                           <span className="font-medium">Entity:</span> {assessment.entity?.name || 'Unknown Entity'}
                           {assessment.incident && (
                             <span className="ml-3">
-                              <span className="font-medium">Incident:</span> {assessment.incident.name || assessment.incidentId}
+                              <span className="font-medium">Incident:</span> {assessment.incident.description || assessment.incidentId}
                             </span>
                           )}
                         </p>
