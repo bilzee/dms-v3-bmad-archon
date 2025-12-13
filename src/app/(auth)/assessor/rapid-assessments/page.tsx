@@ -39,6 +39,13 @@ const priorityOptions = [
   { value: 'LOW', label: 'Low' },
 ]
 
+const dateFilterOptions = [
+  { value: 'ALL', label: 'All Dates' },
+  { value: 'BEFORE', label: 'Created Before' },
+  { value: 'ON', label: 'Created On' },
+  { value: 'AFTER', label: 'Created After' },
+]
+
 export default function AssessorRapidAssessmentsPage() {
   const [selectedType, setSelectedType] = useState<string>('')
   const [assessments, setAssessments] = useState<any[]>([])
@@ -52,8 +59,8 @@ export default function AssessorRapidAssessmentsPage() {
     type: 'ALL',
     status: 'ALL',
     priority: 'ALL',
-    startDate: '',
-    endDate: '',
+    dateFilter: 'ALL',
+    filterDate: '',
     entityName: ''
   })
 
@@ -69,8 +76,6 @@ export default function AssessorRapidAssessmentsPage() {
     if (filters.type !== 'ALL') params.append('type', filters.type)
     if (filters.status !== 'ALL') params.append('status', filters.status)
     if (filters.priority !== 'ALL') params.append('priority', filters.priority)
-    if (filters.startDate) params.append('startDate', filters.startDate)
-    if (filters.endDate) params.append('endDate', filters.endDate)
     
     return params.toString()
   }
@@ -91,11 +96,30 @@ export default function AssessorRapidAssessmentsPage() {
           const allAssessments = result.data || []
           setAssessments(allAssessments)
           
-          // Apply client-side filtering for entity name
+          // Apply client-side filtering for entity name and date filtering
           const filtered = allAssessments.filter(assessment => {
             const matchesEntity = !filters.entityName || 
               assessment.entity?.name?.toLowerCase().includes(filters.entityName.toLowerCase())
-            return matchesEntity
+            
+            let matchesDate = true
+            if (filters.dateFilter !== 'ALL' && filters.filterDate) {
+              const assessmentDate = new Date(assessment.createdAt).toDateString()
+              const filterDateObj = new Date(filters.filterDate).toDateString()
+              
+              switch (filters.dateFilter) {
+                case 'BEFORE':
+                  matchesDate = assessmentDate < filterDateObj
+                  break
+                case 'ON':
+                  matchesDate = assessmentDate === filterDateObj
+                  break
+                case 'AFTER':
+                  matchesDate = assessmentDate > filterDateObj
+                  break
+              }
+            }
+            
+            return matchesEntity && matchesDate
           })
           
           setFilteredAssessments(filtered)
@@ -190,6 +214,21 @@ export default function AssessorRapidAssessmentsPage() {
         return <Badge className="bg-gray-100 text-gray-800"><Clock className="w-3 h-3 mr-1" />Draft</Badge>
       default:
         return <Badge variant="outline">{displayStatus}</Badge>
+    }
+  }
+
+  const getPriorityBadge = (priority: string) => {
+    switch (priority) {
+      case 'CRITICAL':
+        return <Badge className="bg-red-100 text-red-800 text-xs font-medium">CRITICAL</Badge>
+      case 'HIGH':
+        return <Badge className="bg-orange-100 text-orange-800 text-xs font-medium">HIGH</Badge>
+      case 'MEDIUM':
+        return <Badge className="bg-blue-100 text-blue-800 text-xs font-medium">MEDIUM</Badge>
+      case 'LOW':
+        return <Badge className="bg-green-100 text-green-800 text-xs font-medium">LOW</Badge>
+      default:
+        return <Badge className="bg-gray-100 text-gray-800 text-xs font-medium">{priority || 'MEDIUM'}</Badge>
     }
   }
 
@@ -334,25 +373,32 @@ export default function AssessorRapidAssessmentsPage() {
                   </Select>
                 </div>
 
-                {/* Start Date Filter */}
+                {/* Date Filter Type */}
                 <div>
-                  <Label htmlFor="startDate">Start Date</Label>
-                  <Input
-                    id="startDate"
-                    type="date"
-                    value={filters.startDate}
-                    onChange={(e) => setFilters(prev => ({ ...prev, startDate: e.target.value }))}
-                  />
+                  <Label htmlFor="dateFilter">Date Filter</Label>
+                  <Select value={filters.dateFilter} onValueChange={(value) => setFilters(prev => ({ ...prev, dateFilter: value }))}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="All dates" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {dateFilterOptions.map(option => (
+                        <SelectItem key={option.value} value={option.value}>
+                          {option.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
 
-                {/* End Date Filter */}
+                {/* Filter Date */}
                 <div>
-                  <Label htmlFor="endDate">End Date</Label>
+                  <Label htmlFor="filterDate">Filter Date</Label>
                   <Input
-                    id="endDate"
+                    id="filterDate"
                     type="date"
-                    value={filters.endDate}
-                    onChange={(e) => setFilters(prev => ({ ...prev, endDate: e.target.value }))}
+                    value={filters.filterDate}
+                    onChange={(e) => setFilters(prev => ({ ...prev, filterDate: e.target.value }))}
+                    disabled={filters.dateFilter === 'ALL'}
                   />
                 </div>
               </div>
@@ -366,8 +412,8 @@ export default function AssessorRapidAssessmentsPage() {
                     type: 'ALL',
                     status: 'ALL',
                     priority: 'ALL',
-                    startDate: '',
-                    endDate: '',
+                    dateFilter: 'ALL',
+                    filterDate: '',
                     entityName: ''
                   })}
                 >
@@ -489,10 +535,20 @@ export default function AssessorRapidAssessmentsPage() {
                     <div className="flex items-center gap-4">
                       {getTypeIcon(assessment.rapidAssessmentType)}
                       <div>
-                        <h3 className="font-medium">{assessment.rapidAssessmentType} Assessment</h3>
-                        <p className="text-sm text-gray-600">{assessment.entity?.name || 'Unknown Entity'}</p>
+                        <div className="flex items-center gap-2 mb-1">
+                          <h3 className="font-medium">{assessment.rapidAssessmentType} Assessment</h3>
+                          {getPriorityBadge(assessment.priority)}
+                        </div>
+                        <p className="text-sm text-gray-600">
+                          <span className="font-medium">Entity:</span> {assessment.entity?.name || 'Unknown Entity'}
+                          {assessment.incident && (
+                            <span className="ml-3">
+                              <span className="font-medium">Incident:</span> {assessment.incident.name || assessment.incidentId}
+                            </span>
+                          )}
+                        </p>
                         <p className="text-xs text-gray-500">
-                          {new Date(assessment.createdAt).toLocaleDateString()} at{' '}
+                          Created: {new Date(assessment.createdAt).toLocaleDateString()} at{' '}
                           {new Date(assessment.createdAt).toLocaleTimeString()}
                         </p>
                       </div>
