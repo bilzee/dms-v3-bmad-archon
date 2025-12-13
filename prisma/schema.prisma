@@ -162,6 +162,7 @@ model EntityAssignment {
 
 model Incident {
   id                     String                  @id @default(uuid())
+  name                   String
   type                   String
   subType                String?
   severity               Priority                @default(MEDIUM)

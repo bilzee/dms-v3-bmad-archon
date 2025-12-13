@@ -543,7 +543,7 @@ export default function AssessorRapidAssessmentsPage() {
                           <span className="font-medium">Entity:</span> {assessment.entity?.name || 'Unknown Entity'}
                           {assessment.incident && (
                             <span className="ml-3">
-                              <span className="font-medium">Incident:</span> {assessment.incident.description || assessment.incidentId}
+                              <span className="font-medium">Incident:</span> {assessment.incident.name || assessment.incidentId}
                             </span>
                           )}
                         </p>
@@ -621,6 +621,7 @@ export default function AssessorRapidAssessmentsPage() {
                   <div className="space-y-1 text-sm text-gray-600">
                     <p><strong>Type:</strong> {selectedAssessmentForReason.rapidAssessmentType}</p>
                     <p><strong>Entity:</strong> {selectedAssessmentForReason.entity?.name}</p>
+                    <p><strong>Incident:</strong> {selectedAssessmentForReason.incident?.name || selectedAssessmentForReason.incidentId}</p>
                     <p><strong>Date:</strong> {new Date(selectedAssessmentForReason.createdAt).toLocaleDateString()}</p>
                   </div>
                 </div>

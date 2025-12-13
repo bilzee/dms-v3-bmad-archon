@@ -192,8 +192,8 @@ export class RapidAssessmentService {
         incident: {
           select: {
             id: true,
+            name: true,
             type: true,
-            description: true,
             severity: true
           }
         }
@@ -251,8 +251,8 @@ export class RapidAssessmentService {
         incident: {
           select: {
             id: true,
+            name: true,
             type: true,
-            description: true,
             severity: true
           }
         }
@@ -324,8 +324,8 @@ export class RapidAssessmentService {
         incident: {
           select: {
             id: true,
+            name: true,
             type: true,
-            description: true,
             severity: true
           }
         }
