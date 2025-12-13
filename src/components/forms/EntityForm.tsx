@@ -264,12 +264,12 @@ export function EntityForm({ onSubmit, onCancel, initialData, isEditing = false 
               </div>
 
               {/* Current coordinates display */}
-              <div className="bg-gray-50 p-3 rounded-lg">
+              <div className="bg-muted p-3 rounded-lg">
                 <div className="flex items-center gap-2 text-sm">
-                  <Crosshair className="h-4 w-4 text-blue-600" />
+                  <Crosshair className="h-4 w-4 text-primary" />
                   <span className="font-medium">Current Coordinates:</span>
                 </div>
-                <div className="text-xs text-gray-600 mt-1">
+                <div className="text-xs text-muted-foreground mt-1">
                   Latitude: {watchedCoordinates?.latitude?.toFixed(6) || 'N/A'}, 
                   Longitude: {watchedCoordinates?.longitude?.toFixed(6) || 'N/A'}
                 </div>

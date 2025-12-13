@@ -80,7 +80,7 @@ export function LocationSelector({ onLocationSelect, initialCoordinates = { lati
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
-        <div className="text-sm text-gray-600">
+        <div className="text-sm text-muted-foreground">
           Selected: {position[0].toFixed(6)}, {position[1].toFixed(6)}
         </div>
         <div className="flex gap-2">

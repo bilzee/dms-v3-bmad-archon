@@ -57,15 +57,15 @@ export const SyncIndicator = () => {
   };
 
   const getSyncColor = () => {
-    if (isSyncing) return 'text-blue-600';
-    if (pendingOperations > 0) return isOnline ? 'text-orange-600' : 'text-gray-600';
-    return 'text-green-600';
+    if (isSyncing) return 'text-blue-600 dark:text-blue-400';
+    if (pendingOperations > 0) return isOnline ? 'text-orange-600 dark:text-orange-400' : 'text-muted-foreground';
+    return 'text-green-600 dark:text-green-400';
   };
 
   const getBgColor = () => {
-    if (isSyncing) return 'bg-blue-50 border-blue-200';
-    if (pendingOperations > 0) return isOnline ? 'bg-orange-50 border-orange-200' : 'bg-gray-50 border-gray-200';
-    return 'bg-green-50 border-green-200';
+    if (isSyncing) return 'bg-blue-50 dark:bg-blue-950 border-blue-200 dark:border-blue-800';
+    if (pendingOperations > 0) return isOnline ? 'bg-orange-50 dark:bg-orange-950 border-orange-200 dark:border-orange-800' : 'bg-muted border-border';
+    return 'bg-green-50 dark:bg-green-950 border-green-200 dark:border-green-800';
   };
 
   return (
@@ -79,9 +79,9 @@ export const SyncIndicator = () => {
       </span>
       
       {isSyncing && syncProgress > 0 && (
-        <div className="w-16 h-1 bg-gray-200 rounded-full overflow-hidden">
+        <div className="w-16 h-1 bg-muted rounded-full overflow-hidden">
           <div 
-            className="h-full bg-blue-600 transition-all duration-300 ease-out"
+            className="h-full bg-blue-600 dark:bg-blue-400 transition-all duration-300 ease-out"
             style={{ width: `${syncProgress}%` }}
           />
         </div>
