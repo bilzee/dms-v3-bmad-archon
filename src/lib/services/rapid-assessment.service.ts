@@ -188,11 +188,19 @@ export class RapidAssessmentService {
             type: true,
             location: true
           }
+        },
+        incident: {
+          select: {
+            id: true,
+            name: true,
+            type: true,
+            severity: true
+          }
         }
       }
     })
 
-    return assessment
+    return assessment as RapidAssessmentWithData
   }
 
   static async findByUserId(
@@ -238,6 +246,14 @@ export class RapidAssessmentService {
             name: true,
             type: true,
             location: true
+          }
+        },
+        incident: {
+          select: {
+            id: true,
+            name: true,
+            type: true,
+            severity: true
           }
         }
       },
@@ -303,6 +319,14 @@ export class RapidAssessmentService {
             name: true,
             type: true,
             location: true
+          }
+        },
+        incident: {
+          select: {
+            id: true,
+            name: true,
+            type: true,
+            severity: true
           }
         }
       },
