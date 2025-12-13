@@ -101,10 +101,9 @@ export default function EntityIncidentMapPage() {
   const queryParams: RelationshipQueryParams = useMemo(() => ({
     incidentId: selectedIncidentId || undefined,
     priorityFilter: selectedPriorities.length > 0 ? selectedPriorities : undefined,
-    assessmentTypeFilter: selectedAssessmentTypes.length > 0 ? selectedAssessmentTypes : undefined,
     startDate: dateRange.start || undefined,
     endDate: dateRange.end || undefined,
-  }), [selectedIncidentId, selectedPriorities, selectedAssessmentTypes, dateRange]);
+  }), [selectedIncidentId, selectedPriorities, dateRange]);
 
   // Filter handlers
   const handleIncidentChange = (incidentId: string) => {
