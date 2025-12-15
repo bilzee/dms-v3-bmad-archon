@@ -35,7 +35,7 @@ import { useSync } from '@/hooks/useSync'
 
 // Services and types
 import { responseOfflineService } from '@/lib/services/response-offline.service'
-import { ResponseService } from '@/lib/services/response.service'
+import { ResponseService } from '@/lib/services/response-client.service'
 import { CreatePlannedResponseInput, CreateDeliveredResponseInput, ResponseItem } from '@/lib/validation/response'
 import { useAuthStore } from '@/stores/auth.store'
 
@@ -52,6 +52,7 @@ const ResponsePlanningFormSchema = z.object({
   type: z.enum(['HEALTH', 'WASH', 'SHELTER', 'FOOD', 'SECURITY', 'POPULATION', 'LOGISTICS']),
   priority: z.enum(['CRITICAL', 'HIGH', 'MEDIUM', 'LOW']).default('MEDIUM'),
   description: z.string().optional(),
+  donorId: z.string().optional(),
   items: z.array(ResponseItemSchema).min(1, 'At least one item is required'),
   timeline: z.record(z.any()).optional()
 })
@@ -60,7 +61,7 @@ type FormData = z.infer<typeof ResponsePlanningFormSchema>
 
 interface ResponsePlanningFormProps {
   initialData?: FormData & { id?: string, assessment?: any }
-  mode?: 'create' | 'edit'
+  mode?: 'create' | 'edit' | 'resubmit'
   onSuccess?: (response: any) => void
   onCancel?: () => void
   entityId?: string
@@ -79,7 +80,7 @@ export function ResponsePlanningForm({
   const queryClient = useQueryClient()
   const [isDirty, setIsDirty] = useState(false)
   const [editingResponseId, setEditingResponseId] = useState<string | null>(
-    mode === 'edit' && initialData?.id ? initialData.id : null
+    (mode === 'edit' || mode === 'resubmit') && initialData?.id ? initialData.id : null
   )
   const [submitError, setSubmitError] = useState<string | null>(null)
   const [inputMode, setInputMode] = useState<'manual' | 'commitment'>('manual')
@@ -167,6 +168,30 @@ export function ResponsePlanningForm({
     enabled: !!selectedEntityId && !!token
   })
 
+  // Get donors assigned to the selected entity
+  const { data: entityDonors = [], isLoading: donorsLoading } = useQuery({
+    queryKey: ['donors', 'assigned', selectedEntityId],
+    queryFn: async () => {
+      if (!selectedEntityId || !token) return []
+      
+      const response = await fetch(`/api/v1/entities/${selectedEntityId}/donors`, {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      })
+      
+      if (!response.ok) {
+        // If endpoint doesn't exist or returns error, return empty array
+        console.warn('Failed to fetch entity donors:', response.statusText)
+        return []
+      }
+      
+      const result = await response.json()
+      return result.data || []
+    },
+    enabled: !!selectedEntityId && !!token
+  })
+
   // Use assessment data from initialData for edit mode
   const editAssessment = mode === 'edit' ? initialData?.assessment : null
 
@@ -222,6 +247,9 @@ export function ResponsePlanningForm({
       if (commitmentImportData) {
         dataWithUser.commitmentId = commitmentImportData.commitmentId
         dataWithUser.donorId = commitmentImportData.donorId
+      } else if (data.donorId) {
+        // Use manually selected donor if no commitment
+        dataWithUser.donorId = data.donorId
       }
       
       return await responseOfflineService.createPlannedResponse(dataWithUser)
@@ -281,6 +309,9 @@ export function ResponsePlanningForm({
       if (commitmentImportData) {
         dataWithUser.commitmentId = commitmentImportData.commitmentId
         dataWithUser.donorId = commitmentImportData.donorId
+      } else if (data.donorId) {
+        // Use manually selected donor if no commitment
+        dataWithUser.donorId = data.donorId
       }
       
       return await ResponseService.createDeliveredResponse(dataWithUser, (user as any).id)
@@ -313,7 +344,16 @@ export function ResponsePlanningForm({
     },
     onSuccess: (response) => {
       setSubmitError(null) // Clear any previous errors
-      queryClient.invalidateQueries({ queryKey: ['responses', 'planned', (user as any)?.id] })
+      
+      // For resubmit mode, invalidate both planned and assigned response queries
+      if (mode === 'resubmit') {
+        queryClient.invalidateQueries({ queryKey: ['responses'] })
+        queryClient.invalidateQueries({ queryKey: ['responses', 'assigned'] })
+        queryClient.invalidateQueries({ queryKey: ['responses', 'delivered', (user as any)?.id] })
+      } else {
+        queryClient.invalidateQueries({ queryKey: ['responses', 'planned', (user as any)?.id] })
+      }
+      
       setIsDirty(false)
       // Stop editing after successful update (only in create mode)
       if (mode === 'create' && collaboration.isCurrentUserCollaborating) {
@@ -382,6 +422,21 @@ export function ResponsePlanningForm({
           throw new Error('Response ID is required for editing')
         }
         updateMutation.mutate({ id: editingResponseId, data: dataWithCategory })
+      } else if (mode === 'resubmit') {
+        // For resubmit mode, update only the allowed fields from UpdatePlannedResponseSchema
+        // The backend should handle status/verification status changes and clearing rejection reason
+        const resubmitData = {
+          type: dataWithCategory.type,
+          priority: dataWithCategory.priority,
+          description: dataWithCategory.description,
+          items: dataWithCategory.items,
+          timeline: dataWithCategory.timeline
+        }
+        
+        if (!editingResponseId) {
+          throw new Error('Response ID is required for resubmission')
+        }
+        updateMutation.mutate({ id: editingResponseId, data: resubmitData })
       }
     } catch (error) {
       console.error('Form submission error:', error)
@@ -479,9 +534,9 @@ export function ResponsePlanningForm({
         <CardTitle className="flex items-center justify-between">
           <div className="flex items-center gap-2">
             <Package className="h-5 w-5" />
-            {mode === 'create' ? 'Create Response Plan' : 'Edit Response Plan'}
+            {mode === 'create' ? 'Create Response Plan' : mode === 'resubmit' ? 'Re-Submit Response' : 'Edit Response Plan'}
             <Badge variant="outline">
-              {mode === 'create' ? 'PLANNING' : 'EDITING'}
+              {mode === 'create' ? 'PLANNING' : mode === 'resubmit' ? 'RESUBMITTING' : 'EDITING'}
             </Badge>
             {commitmentImportData && (
               <Badge variant="secondary" className="text-blue-700 border-blue-300">
@@ -516,6 +571,8 @@ export function ResponsePlanningForm({
         <CardDescription>
           {mode === 'create' 
             ? 'Plan response resources for a verified assessment. Choose between manual planning or importing from donor commitments.'
+            : mode === 'resubmit'
+            ? 'Edit the rejected response details. Update the information and save to prepare for resubmission to coordinator.'
             : 'Edit the planned response. Only responses in PLANNED status can be modified.'
           }
           {!isOnline && (
@@ -704,6 +761,60 @@ export function ResponsePlanningForm({
                     />
                   </div>
 
+                  {/* Donor Selection */}
+                  <FormField
+                    control={form.control}
+                    name="donorId"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Donor (Optional)</FormLabel>
+                        <FormControl>
+                          <Select value={field.value ?? '__none__'} onValueChange={(value) => {
+                            // Handle special values
+                            if (value === '__none__') {
+                              field.onChange(undefined)
+                            } else if (value && !value.startsWith('__')) {
+                              field.onChange(value)
+                            }
+                          }}>
+                            <SelectTrigger>
+                              <SelectValue placeholder="Select a donor..." />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="__none__">
+                                <span className="text-muted-foreground">No donor assigned</span>
+                              </SelectItem>
+                              {donorsLoading ? (
+                                <SelectItem value="__loading__" disabled>
+                                  <span className="text-muted-foreground">Loading donors...</span>
+                                </SelectItem>
+                              ) : entityDonors.length === 0 ? (
+                                <SelectItem value="__empty__" disabled>
+                                  <span className="text-muted-foreground">No donors assigned to this entity</span>
+                                </SelectItem>
+                              ) : (
+                                entityDonors.map((donor: any) => (
+                                  <SelectItem key={donor.id} value={donor.id}>
+                                    <div className="flex items-center gap-2">
+                                      <span>{donor.name}</span>
+                                      <Badge variant="outline" className="text-xs">
+                                        {donor.type || 'Unknown'}
+                                      </Badge>
+                                    </div>
+                                  </SelectItem>
+                                ))
+                              )}
+                            </SelectContent>
+                          </Select>
+                        </FormControl>
+                        <FormDescription>
+                          Attribute this response to a specific donor assigned to this entity
+                        </FormDescription>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
                   {/* Description */}
                   <FormField
                     control={form.control}
@@ -848,6 +959,28 @@ export function ResponsePlanningForm({
                           Cancel
                         </Button>
                       </>
+                    ) : mode === 'resubmit' ? (
+                      <>
+                        <Button
+                          type="submit"
+                          disabled={isLoading || !form.formState.isValid}
+                          className="bg-green-600 hover:bg-green-700 text-white min-w-40"
+                        >
+                          {isLoading ? 'Updating...' : 'Update Response'}
+                        </Button>
+                        
+                        <div></div>
+                        
+                        <Button
+                          type="button"
+                          variant="outline"
+                          onClick={handleCancel}
+                          disabled={isLoading}
+                          className="min-w-20"
+                        >
+                          Cancel
+                        </Button>
+                      </>
                     ) : (
                       <>
                         <Button
@@ -893,8 +1026,8 @@ export function ResponsePlanningForm({
           </Tabs>
         )}
 
-        {/* Edit Mode - Show the existing form */}
-        {mode === 'edit' && (
+        {/* Edit Mode & Resubmit Mode - Show the existing form */}
+        {(mode === 'edit' || mode === 'resubmit') && (
           <Form {...form}>
             <form onSubmit={handleSubmit} className="space-y-6">
               {/* Entity Display - Read-only in edit mode */}
@@ -974,8 +1107,8 @@ export function ResponsePlanningForm({
                     <FormItem>
                       <FormLabel>Priority *</FormLabel>
                       <FormControl>
-                        <Select value={field.value} onValueChange={field.onChange}>
-                          <SelectTrigger>
+                        <Select value={field.value} onValueChange={field.onChange} disabled={mode === 'edit' || mode === 'resubmit'}>
+                          <SelectTrigger className={mode === 'edit' || mode === 'resubmit' ? 'bg-gray-50' : ''}>
                             <SelectValue placeholder="Select priority..." />
                           </SelectTrigger>
                           <SelectContent>
@@ -1011,6 +1144,60 @@ export function ResponsePlanningForm({
                   )}
                 />
               </div>
+
+              {/* Donor Selection */}
+              <FormField
+                control={form.control}
+                name="donorId"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Donor (Optional)</FormLabel>
+                    <FormControl>
+                      <Select value={field.value ?? '__none__'} onValueChange={(value) => {
+                        // Handle special values
+                        if (value === '__none__') {
+                          field.onChange(undefined)
+                        } else if (value && !value.startsWith('__')) {
+                          field.onChange(value)
+                        }
+                      }}>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select a donor..." />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="__none__">
+                            <span className="text-muted-foreground">No donor assigned</span>
+                          </SelectItem>
+                          {donorsLoading ? (
+                            <SelectItem value="__loading__" disabled>
+                              <span className="text-muted-foreground">Loading donors...</span>
+                            </SelectItem>
+                          ) : entityDonors.length === 0 ? (
+                            <SelectItem value="__empty__" disabled>
+                              <span className="text-muted-foreground">No donors assigned to this entity</span>
+                            </SelectItem>
+                          ) : (
+                            entityDonors.map((donor: any) => (
+                              <SelectItem key={donor.id} value={donor.id}>
+                                <div className="flex items-center gap-2">
+                                  <span>{donor.name}</span>
+                                  <Badge variant="outline" className="text-xs">
+                                    {donor.type || 'Unknown'}
+                                  </Badge>
+                                </div>
+                              </SelectItem>
+                            ))
+                          )}
+                        </SelectContent>
+                      </Select>
+                    </FormControl>
+                    <FormDescription>
+                      Attribute this response to a specific donor assigned to this entity
+                    </FormDescription>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
 
               {/* Description */}
               <FormField

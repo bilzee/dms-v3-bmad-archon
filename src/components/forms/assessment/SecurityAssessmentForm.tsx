@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
@@ -37,7 +37,8 @@ export function SecurityAssessmentForm({
   onSubmit, 
   onCancel, 
   isSubmitting = false,
-  disabled = false 
+  disabled = false,
+  onIncidentEntityChange
 }: SecurityAssessmentFormProps) {
   const [gpsCoordinates, setGpsCoordinates] = useState<{ lat: number; lng: number } | null>(null)
   const [mediaFiles, setMediaFiles] = useState<string[]>((initialData as any)?.mediaAttachments || [])
@@ -45,18 +46,60 @@ export function SecurityAssessmentForm({
   const [selectedIncident, setSelectedIncident] = useState<string>('')
   const [selectedEntityData, setSelectedEntityData] = useState<any>(null)
 
+  // Extract security data from initialData
+  const securityData = (initialData as any)?.securityAssessment || (initialData as any);
+  
+  // Debug logging
+  console.log('SecurityAssessmentForm - initialData:', initialData);
+  console.log('SecurityAssessmentForm - securityData:', securityData);
+
   const form = useForm<FormData>({
     resolver: zodResolver(SecurityAssessmentSchema),
     defaultValues: {
-      isSafeFromViolence: initialData?.isSafeFromViolence || false,
-      gbvCasesReported: initialData?.gbvCasesReported || false,
-      hasSecurityPresence: initialData?.hasSecurityPresence || false,
-      hasProtectionReportingMechanism: initialData?.hasProtectionReportingMechanism || false,
-      vulnerableGroupsHaveAccess: initialData?.vulnerableGroupsHaveAccess || false,
-      hasLighting: initialData?.hasLighting || false,
-      additionalSecurityDetails: initialData?.additionalSecurityDetails || ''
+      isSafeFromViolence: securityData?.isSafeFromViolence || false,
+      gbvCasesReported: securityData?.gbvCasesReported || false,
+      hasSecurityPresence: securityData?.hasSecurityPresence || false,
+      hasProtectionReportingMechanism: securityData?.hasProtectionReportingMechanism || false,
+      vulnerableGroupsHaveAccess: securityData?.vulnerableGroupsHaveAccess || false,
+      hasLighting: securityData?.hasLighting || false,
+      additionalSecurityDetails: securityData?.additionalSecurityDetails || ''
     }
   })
+
+  // Track when initialData changes and update form
+  useEffect(() => {
+    console.log('SecurityAssessmentForm - initialData changed:', initialData);
+    
+    if (securityData) {
+      const newValues = {
+        isSafeFromViolence: securityData?.isSafeFromViolence || false,
+        gbvCasesReported: securityData?.gbvCasesReported || false,
+        hasSecurityPresence: securityData?.hasSecurityPresence || false,
+        hasProtectionReportingMechanism: securityData?.hasProtectionReportingMechanism || false,
+        vulnerableGroupsHaveAccess: securityData?.vulnerableGroupsHaveAccess || false,
+        hasLighting: securityData?.hasLighting || false,
+        additionalSecurityDetails: securityData?.additionalSecurityDetails || ''
+      };
+      
+      console.log('SecurityAssessmentForm - updating form with values:', newValues);
+      form.reset(newValues);
+    }
+  }, [initialData, securityData]);
+
+  // Handle incident and entity changes
+  const handleIncidentChange = (incidentId: string) => {
+    setSelectedIncident(incidentId);
+    if (selectedEntity && onIncidentEntityChange) {
+      onIncidentEntityChange(incidentId, selectedEntity);
+    }
+  };
+
+  const handleEntityChange = (entityId: string) => {
+    setSelectedEntity(entityId);
+    if (selectedIncident && onIncidentEntityChange) {
+      onIncidentEntityChange(selectedIncident, entityId);
+    }
+  };
 
   const watchedValues = form.watch()
 
@@ -163,7 +206,7 @@ export function SecurityAssessmentForm({
             <CardContent>
               <IncidentSelector
                 value={selectedIncident}
-                onValueChange={setSelectedIncident}
+                onValueChange={handleIncidentChange}
                 disabled={disabled}
                 required
               />
@@ -182,7 +225,7 @@ export function SecurityAssessmentForm({
               <EntitySelector
                 value={selectedEntity}
                 onValueChange={(value) => {
-                  setSelectedEntity(value)
+                  handleEntityChange(value)
                   setSelectedEntityData(null)
                 }}
                 disabled={disabled}

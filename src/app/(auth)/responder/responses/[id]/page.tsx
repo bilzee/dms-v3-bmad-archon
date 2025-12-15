@@ -5,6 +5,7 @@ import { useParams, useRouter } from 'next/navigation'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { ArrowLeft, CheckCircle, Clock, Package, MapPin, AlertTriangle } from 'lucide-react'
 import { useAuth } from '@/hooks/useAuth'
 
@@ -20,6 +21,7 @@ interface Response {
   plannedDate?: string
   deliveredDate?: string
   verificationStatus: string
+  rejectionReason?: string
   createdAt: string
   updatedAt: string
   verifiedAt?: string
@@ -319,7 +321,7 @@ export default function ResponseDetailsPage() {
             {/* Verification Status */}
             <div>
               <label className="text-sm font-medium text-muted-foreground">Verification Status</label>
-              <div className="mt-1">
+              <div className="mt-1 flex items-center gap-2">
                 <Badge variant={response.verificationStatus === 'VERIFIED' ? 'default' : response.verificationStatus === 'REJECTED' ? 'destructive' : 'secondary'}>
                   {response.verificationStatus}
                 </Badge>
@@ -340,7 +342,7 @@ export default function ResponseDetailsPage() {
               {response.items.map((item: any, index: number) => (
                 <div key={index} className="border rounded-lg p-4">
                   <div className="flex items-center justify-between mb-2">
-                    <h4 className="font-semibold">{item.category || 'General'}</h4>
+                    <h4 className="font-semibold">{item.name || 'Unnamed Item'}</h4>
                     {item.quantity && (
                       <Badge variant="outline">
                         Qty: {item.quantity} {item.unit || ''}
@@ -378,6 +380,7 @@ export default function ResponseDetailsPage() {
           </CardContent>
         </Card>
       )}
+
     </div>
   )
 }

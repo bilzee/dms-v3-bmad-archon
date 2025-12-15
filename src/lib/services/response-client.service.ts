@@ -1,5 +1,5 @@
-import { CreatePlannedResponseInput, ResponseItem } from '@/lib/validation/response'
-import { useAuthStore } from '@/stores/auth.store'
+import { CreatePlannedResponseInput, CreateDeliveredResponseInput, ResponseItem } from '@/lib/validation/response'
+import { getAuthToken } from '@/lib/auth/token-utils'
 
 export class ResponseService {
   private static readonly BASE_URL = '/api/v1/responses'
@@ -17,6 +17,25 @@ export class ResponseService {
     if (!response.ok) {
       const error = await response.json()
       throw new Error(error.error || 'Failed to create planned response')
+    }
+
+    const result = await response.json()
+    return result.data
+  }
+
+  static async createDeliveredResponse(data: CreateDeliveredResponseInput) {
+    const response = await fetch(`${this.BASE_URL}/delivered`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${this.getAuthToken()}`
+      },
+      body: JSON.stringify(data)
+    })
+
+    if (!response.ok) {
+      const error = await response.json()
+      throw new Error(error.error || 'Failed to create delivered response')
     }
 
     const result = await response.json()
@@ -148,13 +167,7 @@ export class ResponseService {
   }
 
   private static getAuthToken(): string {
-    if (typeof window === 'undefined') {
-      throw new Error('getAuthToken can only be called on client side')
-    }
-
-    // Get token from auth store
-    const authStore = useAuthStore.getState()
-    const token = authStore.token
+    const token = getAuthToken()
     
     if (!token) {
       throw new Error('User not authenticated - no token found')

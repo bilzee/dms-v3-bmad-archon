@@ -61,9 +61,10 @@ const nextConfig = {
     PWA_ENABLED: pwaConfig.shouldEnablePWA().toString(),
     PWA_ENVIRONMENT: process.env.NODE_ENV,
   },
-  webpack: (config, { isServer }) => {
-    if (!isServer) {
-      // Client-side webpack configuration
+  webpack: (config, { isServer, dev }) => {
+    // Only modify CSS extraction in production builds
+    if (!isServer && !dev) {
+      // Client-side webpack configuration for production only
       const MiniCssExtractPlugin = require('mini-css-extract-plugin');
       
       // Add MiniCssExtractPlugin if not already present

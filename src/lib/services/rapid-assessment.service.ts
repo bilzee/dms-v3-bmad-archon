@@ -212,7 +212,7 @@ export class RapidAssessmentService {
     total: number
     totalPages: number
   }> {
-    const { page, limit, entityId, type, status, priority, startDate, endDate } = query
+    const { page, limit, entityId, type, status, verificationStatus, priority, startDate, endDate } = query
     const skip = (page - 1) * limit
 
     // Build where clause
@@ -221,6 +221,7 @@ export class RapidAssessmentService {
     if (entityId) where.entityId = entityId
     if (type) where.rapidAssessmentType = type
     if (status) where.status = status
+    if (verificationStatus) where.verificationStatus = verificationStatus
     if (priority) where.priority = priority
     if (startDate || endDate) {
       where.rapidAssessmentDate = {}
@@ -278,7 +279,7 @@ export class RapidAssessmentService {
     total: number
     totalPages: number
   }> {
-    const { page, limit, userId, entityId, type, status, priority, startDate, endDate } = query
+    const { page, limit, userId, entityId, type, status, verificationStatus, priority, startDate, endDate } = query
     const skip = (page - 1) * limit
 
     // Build where clause
@@ -288,6 +289,7 @@ export class RapidAssessmentService {
     if (entityId) where.entityId = entityId
     if (type) where.rapidAssessmentType = type
     if (status) where.status = status
+    if (verificationStatus) where.verificationStatus = verificationStatus
     if (priority) where.priority = priority
     if (startDate || endDate) {
       where.rapidAssessmentDate = {}
@@ -631,7 +633,7 @@ export class RapidAssessmentService {
         where: {
           incidentId,
           entityId,
-          type,
+          rapidAssessmentType: type,
           status: {
             not: 'DRAFT' // Exclude drafts
           }

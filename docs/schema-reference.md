@@ -1,6 +1,6 @@
 # Prisma Schema Reference
 
-_Auto-generated on 2025-12-09T23:54:09.832Z_
+_Auto-generated on 2025-12-14T09:36:37.706Z_
 
 ## ReportTemplate
 
@@ -145,6 +145,7 @@ _Auto-generated on 2025-12-09T23:54:09.832Z_
 
 **Fields:**
 - `id`
+- `name`
 - `type`
 - `subType`
 - `severity`

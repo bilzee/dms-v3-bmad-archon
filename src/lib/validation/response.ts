@@ -18,7 +18,7 @@ export const CreatePlannedResponseSchema = z.object({
   timeline: z.record(z.any()).optional(),
   // Commitment import fields
   commitmentId: z.string().uuid().optional(),
-  donorId: z.string().uuid().optional()
+  donorId: z.string().optional()
 })
 
 export const UpdatePlannedResponseSchema = z.object({
@@ -40,7 +40,7 @@ export const CreateDeliveredResponseSchema = z.object({
   deliveryNotes: z.string().optional(),
   // Commitment import fields
   commitmentId: z.string().uuid().optional(),
-  donorId: z.string().uuid().optional()
+  donorId: z.string().optional()
 })
 
 export const ResponseQuerySchema = z.object({

@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
@@ -44,7 +44,8 @@ export function PopulationAssessmentForm({
   onSubmit, 
   onCancel, 
   isSubmitting = false,
-  disabled = false 
+  disabled = false,
+  onIncidentEntityChange
 }: PopulationAssessmentFormProps) {
   const [gpsCoordinates, setGpsCoordinates] = useState<{ lat: number; lng: number } | null>(null)
   const [mediaFiles, setMediaFiles] = useState<string[]>((initialData as any)?.mediaAttachments || [])
@@ -52,24 +53,72 @@ export function PopulationAssessmentForm({
   const [selectedIncident, setSelectedIncident] = useState<string>('')
   const [selectedEntityData, setSelectedEntityData] = useState<any>(null)
 
+  // Extract population data from initialData
+  const populationData = (initialData as any)?.populationAssessment || (initialData as any);
+  
+  // Debug logging
+  console.log('PopulationAssessmentForm - initialData:', initialData);
+  console.log('PopulationAssessmentForm - populationData:', populationData);
+
   const form = useForm<FormData>({
     resolver: zodResolver(PopulationAssessmentSchema),
     defaultValues: {
-      totalHouseholds: initialData?.totalHouseholds || 0,
-      totalPopulation: initialData?.totalPopulation || 0,
-      populationMale: initialData?.populationMale || 0,
-      populationFemale: initialData?.populationFemale || 0,
-      populationUnder5: initialData?.populationUnder5 || 0,
-      pregnantWomen: initialData?.pregnantWomen || 0,
-      lactatingMothers: initialData?.lactatingMothers || 0,
-      personWithDisability: initialData?.personWithDisability || 0,
-      elderlyPersons: initialData?.elderlyPersons || 0,
-      separatedChildren: initialData?.separatedChildren || 0,
-      numberLivesLost: initialData?.numberLivesLost || 0,
-      numberInjured: initialData?.numberInjured || 0,
-      additionalPopulationDetails: initialData?.additionalPopulationDetails || ''
+      totalHouseholds: populationData?.totalHouseholds || 0,
+      totalPopulation: populationData?.totalPopulation || 0,
+      populationMale: populationData?.populationMale || 0,
+      populationFemale: populationData?.populationFemale || 0,
+      populationUnder5: populationData?.populationUnder5 || 0,
+      pregnantWomen: populationData?.pregnantWomen || 0,
+      lactatingMothers: populationData?.lactatingMothers || 0,
+      personWithDisability: populationData?.personWithDisability || 0,
+      elderlyPersons: populationData?.elderlyPersons || 0,
+      separatedChildren: populationData?.separatedChildren || 0,
+      numberLivesLost: populationData?.numberLivesLost || 0,
+      numberInjured: populationData?.numberInjured || 0,
+      additionalPopulationDetails: populationData?.additionalPopulationDetails || ''
     }
   })
+
+  // Track when initialData changes and update form
+  useEffect(() => {
+    console.log('PopulationAssessmentForm - initialData changed:', initialData);
+    
+    if (populationData) {
+      const newValues = {
+        totalHouseholds: populationData?.totalHouseholds || 0,
+        totalPopulation: populationData?.totalPopulation || 0,
+        populationMale: populationData?.populationMale || 0,
+        populationFemale: populationData?.populationFemale || 0,
+        populationUnder5: populationData?.populationUnder5 || 0,
+        pregnantWomen: populationData?.pregnantWomen || 0,
+        lactatingMothers: populationData?.lactatingMothers || 0,
+        personWithDisability: populationData?.personWithDisability || 0,
+        elderlyPersons: populationData?.elderlyPersons || 0,
+        separatedChildren: populationData?.separatedChildren || 0,
+        numberLivesLost: populationData?.numberLivesLost || 0,
+        numberInjured: populationData?.numberInjured || 0,
+        additionalPopulationDetails: populationData?.additionalPopulationDetails || ''
+      };
+      
+      console.log('PopulationAssessmentForm - updating form with values:', newValues);
+      form.reset(newValues);
+    }
+  }, [initialData, populationData]);
+
+  // Handle incident and entity changes
+  const handleIncidentChange = (incidentId: string) => {
+    setSelectedIncident(incidentId);
+    if (selectedEntity && onIncidentEntityChange) {
+      onIncidentEntityChange(incidentId, selectedEntity);
+    }
+  };
+
+  const handleEntityChange = (entityId: string) => {
+    setSelectedEntity(entityId);
+    if (selectedIncident && onIncidentEntityChange) {
+      onIncidentEntityChange(selectedIncident, entityId);
+    }
+  };
 
   const watchedValues = form.watch()
 
@@ -142,7 +191,7 @@ export function PopulationAssessmentForm({
             <CardContent>
               <IncidentSelector
                 value={selectedIncident}
-                onValueChange={setSelectedIncident}
+                onValueChange={handleIncidentChange}
                 disabled={disabled}
                 required
               />
@@ -161,7 +210,7 @@ export function PopulationAssessmentForm({
               <EntitySelector
                 value={selectedEntity}
                 onValueChange={(value) => {
-                  setSelectedEntity(value)
+                  handleEntityChange(value)
                   setSelectedEntityData(null)
                 }}
                 disabled={disabled}

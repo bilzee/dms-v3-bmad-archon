@@ -13,13 +13,14 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Alert, AlertDescription } from '@/components/ui/alert'
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 
 // New error handling components
 import { SafeDataLoader } from '@/components/shared/SafeDataLoader'
 import { EmptyResponses, EmptySearchResults } from '@/components/shared/EmptyState'
 
 // Icons
-import { Package, Truck, Search, Filter, Clock, CheckCircle, ArrowLeft, Plus, AlertTriangle, User } from 'lucide-react'
+import { Package, Truck, Search, Filter, Clock, CheckCircle, ArrowLeft, Plus, AlertTriangle, User, X, Edit, Info } from 'lucide-react'
 
 // Token utilities
 import { getAuthToken } from '@/lib/auth/token-utils'
@@ -30,6 +31,23 @@ function ResponderResponsesPageContent() {
   const [searchTerm, setSearchTerm] = useState('')
   const [filterStatus, setFilterStatus] = useState<string>('all')
   const [filterType, setFilterType] = useState<string>('all')
+  const [showReasonDialog, setShowReasonDialog] = useState(false)
+  const [selectedResponse, setSelectedResponse] = useState<any>(null)
+
+  // Format incident display similar to assessment list
+  const formatIncidentDisplay = (incident: any) => {
+    if (!incident) return 'Unknown Incident'
+    
+    const type = incident.type || 'Unknown'
+    const subType = incident.subType ? `-${incident.subType}` : ''
+    const date = incident.createdAt ? new Date(incident.createdAt).toLocaleDateString('en-US', { 
+      month: 'short', 
+      day: 'numeric', 
+      year: 'numeric' 
+    }).replace(/\s+/g, '') : ''
+    
+    return `${type}${subType}${date ? `-${date}` : ''}`
+  }
 
   const handleNavigateToDelivery = (responseId: string) => {
     router.push(`/responder/responses/${responseId}/deliver`)
@@ -37,6 +55,16 @@ function ResponderResponsesPageContent() {
 
   const handleBackToPlanning = () => {
     router.push('/responder/planning')
+  }
+
+  const handleEditResponse = (responseId: string) => {
+    // Navigate to edit page for rejected responses
+    router.push(`/responder/responses/${responseId}/edit`)
+  }
+
+  const handleShowRejectionReason = (response: any) => {
+    setSelectedResponse(response)
+    setShowReasonDialog(true)
   }
 
   return (
@@ -89,6 +117,8 @@ function ResponderResponsesPageContent() {
             } else if (filterStatus === 'VERIFIED') {
               matchesStatus = response.status === 'DELIVERED' && 
                 (response.verificationStatus === 'VERIFIED' || response.verificationStatus === 'AUTO_VERIFIED')
+            } else if (filterStatus === 'REJECTED') {
+              matchesStatus = response.verificationStatus === 'REJECTED'
             }
             
             const matchesType = filterType === 'all' || response.type === filterType
@@ -104,6 +134,7 @@ function ResponderResponsesPageContent() {
         const verifiedCount = responses.filter((r: any) => 
           r.status === 'DELIVERED' && (r.verificationStatus === 'VERIFIED' || r.verificationStatus === 'AUTO_VERIFIED')
         ).length
+        const rejectedCount = responses.filter((r: any) => r.verificationStatus === 'REJECTED').length
 
         // Empty state handling
         if (!isLoading && responses.length === 0) {
@@ -157,7 +188,7 @@ function ResponderResponsesPageContent() {
             </div>
 
             {/* Statistics */}
-            <div className="grid gap-4 md:grid-cols-4">
+            <div className="grid gap-4 md:grid-cols-5">
               <Card>
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                   <CardTitle className="text-sm font-medium">Total Responses</CardTitle>
@@ -209,6 +240,19 @@ function ResponderResponsesPageContent() {
                   </p>
                 </CardContent>
               </Card>
+
+              <Card>
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                  <CardTitle className="text-sm font-medium">Rejected</CardTitle>
+                  <X className="h-4 w-4 text-red-600" />
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold text-red-600">{rejectedCount}</div>
+                  <p className="text-xs text-muted-foreground">
+                    Require attention
+                  </p>
+                </CardContent>
+              </Card>
             </div>
 
             {/* Filters */}
@@ -245,6 +289,7 @@ function ResponderResponsesPageContent() {
                         <SelectItem value="PLANNED">Planned</SelectItem>
                         <SelectItem value="AWAITING_VERIFICATION">Awaiting Verification</SelectItem>
                         <SelectItem value="VERIFIED">Verified</SelectItem>
+                        <SelectItem value="REJECTED">Rejected</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
@@ -257,10 +302,13 @@ function ResponderResponsesPageContent() {
                       </SelectTrigger>
                       <SelectContent>
                         <SelectItem value="all">All Types</SelectItem>
-                        <SelectItem value="FOOD">Food</SelectItem>
+                        <SelectItem value="HEALTH">Health</SelectItem>
+                        <SelectItem value="WASH">WASH</SelectItem>
                         <SelectItem value="SHELTER">Shelter</SelectItem>
-                        <SelectItem value="MEDICAL">Medical</SelectItem>
-                        <SelectItem value="CLOTHING">Clothing</SelectItem>
+                        <SelectItem value="FOOD">Food</SelectItem>
+                        <SelectItem value="SECURITY">Security</SelectItem>
+                        <SelectItem value="POPULATION">Population</SelectItem>
+                        <SelectItem value="LOGISTICS">Logistics</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
@@ -290,18 +338,45 @@ function ResponderResponsesPageContent() {
                         <div className="flex items-center gap-4">
                           <Truck className="h-5 w-5 text-blue-600" />
                           <div>
-                            <h3 className="font-medium">{response.type}</h3>
-                            <p className="text-sm text-muted-foreground">{response.description}</p>
-                            <div className="flex items-center gap-2 mt-1">
-                              <Badge variant={response.status === 'DELIVERED' ? 'default' : 'secondary'}>
+                            <div className="flex items-center gap-2 mb-1">
+                              <h3 className="font-medium">{response.type} Response</h3>
+                              <Badge variant={
+                                response.status === 'DELIVERED' ? 'default' : 
+                                response.status === 'PLANNED' ? 'secondary' : 
+                                'outline'
+                              }>
                                 {response.status}
                               </Badge>
                               {response.verificationStatus && (
-                                <Badge variant="outline">
+                                <Badge variant={
+                                  response.verificationStatus === 'VERIFIED' ? 'default' :
+                                  response.verificationStatus === 'AUTO_VERIFIED' ? 'default' :
+                                  response.verificationStatus === 'REJECTED' ? 'destructive' :
+                                  response.verificationStatus === 'SUBMITTED' ? 'secondary' :
+                                  'outline'
+                                } className={
+                                  response.verificationStatus === 'VERIFIED' ? 'bg-green-100 text-green-800 border-green-200' :
+                                  response.verificationStatus === 'AUTO_VERIFIED' ? 'bg-green-100 text-green-800 border-green-200' :
+                                  response.verificationStatus === 'REJECTED' ? 'bg-red-100 text-red-800 border-red-200' :
+                                  response.verificationStatus === 'SUBMITTED' ? 'bg-yellow-100 text-yellow-800 border-yellow-200' :
+                                  ''
+                                }>
                                   {response.verificationStatus.replace('_', ' ')}
                                 </Badge>
                               )}
                             </div>
+                            <p className="text-sm text-gray-600">
+                              <span className="font-medium">Entity:</span> {response.entity?.name || 'Unknown Entity'}
+                              {response.assessment?.incident && (
+                                <span className="ml-3">
+                                  <span className="font-medium">Incident:</span> {formatIncidentDisplay(response.assessment.incident)}
+                                </span>
+                              )}
+                            </p>
+                            <p className="text-xs text-gray-500">
+                              Created: {new Date(response.createdAt).toLocaleDateString()} at{' '}
+                              {new Date(response.createdAt).toLocaleTimeString()}
+                            </p>
                           </div>
                         </div>
                         
@@ -313,6 +388,28 @@ function ResponderResponsesPageContent() {
                             >
                               Confirm Delivery
                             </Button>
+                          )}
+                          {response.verificationStatus === 'REJECTED' && (
+                            <>
+                              <Button 
+                                onClick={() => handleEditResponse(response.id)}
+                                size="sm"
+                                variant="outline"
+                                className="text-blue-600 hover:text-blue-700 border-blue-600 hover:border-blue-700"
+                              >
+                                <Edit className="h-4 w-4 mr-1" />
+                                Edit
+                              </Button>
+                              <Button 
+                                onClick={() => handleShowRejectionReason(response)}
+                                size="sm"
+                                variant="outline"
+                                className="text-orange-600 hover:text-orange-700 border-orange-600 hover:border-orange-700"
+                              >
+                                <Info className="h-4 w-4 mr-1" />
+                                Reason
+                              </Button>
+                            </>
                           )}
                           <Link href={`/responder/responses/${response.id}`}>
                             <Button variant="outline" size="sm">
@@ -326,6 +423,40 @@ function ResponderResponsesPageContent() {
                 )}
               </CardContent>
             </Card>
+            
+            {/* Rejection Reason Dialog */}
+            <Dialog open={showReasonDialog} onOpenChange={setShowReasonDialog}>
+              <DialogContent className="max-w-md">
+                <DialogHeader>
+                  <DialogTitle>Response Rejection Reason</DialogTitle>
+                  <DialogDescription>
+                    This response was rejected by the Coordinator for the following reason:
+                  </DialogDescription>
+                </DialogHeader>
+                <div className="space-y-4">
+                  <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+                    <div className="flex items-start gap-3">
+                      <X className="h-5 w-5 text-red-600 mt-0.5" />
+                      <div>
+                        <h4 className="font-medium text-red-900 mb-1">Rejection Reason</h4>
+                        <p className="text-sm text-red-700">
+                          {selectedResponse?.rejectionReason || 'No reason provided'}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                  
+                  <div className="flex justify-end">
+                    <Button 
+                      variant="outline" 
+                      onClick={() => setShowReasonDialog(false)}
+                    >
+                      Close
+                    </Button>
+                  </div>
+                </div>
+              </DialogContent>
+            </Dialog>
           </div>
         )
       }}

@@ -74,7 +74,14 @@ export default function AssessorRapidAssessmentsPage() {
     params.append('userId', 'me')
     
     if (filters.type !== 'ALL') params.append('type', filters.type)
-    if (filters.status !== 'ALL') params.append('status', filters.status)
+    if (filters.status !== 'ALL') {
+      // REJECTED is a verification status, not a regular status
+      if (filters.status === 'REJECTED') {
+        params.append('verificationStatus', filters.status)
+      } else {
+        params.append('status', filters.status)
+      }
+    }
     if (filters.priority !== 'ALL') params.append('priority', filters.priority)
     
     return params.toString()

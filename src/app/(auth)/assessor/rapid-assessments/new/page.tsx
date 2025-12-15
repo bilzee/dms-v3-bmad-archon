@@ -95,7 +95,9 @@ function NewAssessmentContent() {
       
       if (response.ok) {
         const result = await response.json();
+        console.log('Latest assessment API response:', result);
         if (result.success && result.data) {
+          console.log('Setting latest assessment data:', result.data);
           setLatestAssessmentData(result.data);
         }
       }

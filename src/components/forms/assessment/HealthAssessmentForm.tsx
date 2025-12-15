@@ -104,6 +104,48 @@ export function HealthAssessmentForm({
 
   // Extract health data from initialData
   const healthData = (initialData as any)?.healthAssessment || (initialData as any);
+  
+  // Debug logging
+  console.log('HealthAssessmentForm - initialData:', initialData);
+  console.log('HealthAssessmentForm - healthData:', healthData);
+  
+  // Track when initialData changes and update form
+  useEffect(() => {
+    console.log('HealthAssessmentForm - initialData changed:', initialData);
+    
+    if (healthData) {
+      const newValues = {
+        hasFunctionalClinic: healthData?.hasFunctionalClinic || false,
+        hasEmergencyServices: healthData?.hasEmergencyServices || false,
+        numberHealthFacilities: healthData?.numberHealthFacilities || 0,
+        healthFacilityType: healthData?.healthFacilityType || '',
+        qualifiedHealthWorkers: healthData?.qualifiedHealthWorkers || 0,
+        hasTrainedStaff: healthData?.hasTrainedStaff || false,
+        hasMedicineSupply: healthData?.hasMedicineSupply || false,
+        hasMedicalSupplies: healthData?.hasMedicalSupplies || false,
+        hasMaternalChildServices: healthData?.hasMaternalChildServices || false,
+        commonHealthIssues: parseHealthIssues(healthData?.commonHealthIssues),
+        additionalHealthDetails: healthData?.additionalHealthDetails || ''
+      };
+      
+      console.log('HealthAssessmentForm - updating form with values:', newValues);
+      form.reset(newValues);
+    }
+  }, [initialData, healthData]);
+  
+  // Parse commonHealthIssues from JSON string if needed
+  const parseHealthIssues = (issues: any): string[] => {
+    if (Array.isArray(issues)) return issues;
+    if (typeof issues === 'string') {
+      try {
+        const parsed = JSON.parse(issues);
+        return Array.isArray(parsed) ? parsed : [];
+      } catch {
+        return [];
+      }
+    }
+    return [];
+  };
 
   const form = useForm<FormData>({
     resolver: zodResolver(HealthAssessmentSchema),
@@ -117,7 +159,7 @@ export function HealthAssessmentForm({
       hasMedicineSupply: healthData?.hasMedicineSupply || false,
       hasMedicalSupplies: healthData?.hasMedicalSupplies || false,
       hasMaternalChildServices: healthData?.hasMaternalChildServices || false,
-      commonHealthIssues: healthData?.commonHealthIssues || [],
+      commonHealthIssues: parseHealthIssues(healthData?.commonHealthIssues),
       additionalHealthDetails: healthData?.additionalHealthDetails || ''
     }
   })
