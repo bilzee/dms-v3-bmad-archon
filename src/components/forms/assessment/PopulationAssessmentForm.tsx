@@ -18,7 +18,7 @@ import { IncidentSelector } from '@/components/shared/IncidentSelector'
 import { PopulationAssessmentFormProps, PopulationAssessment } from '@/types/rapid-assessment'
 import { cn } from '@/lib/utils'
 import { getCurrentUserName, getAssessmentLocationData } from '@/utils/assessment-utils'
-import { Users, Baby, User, UserPlus, AlertTriangle, Heart } from 'lucide-react'
+import { Users, Baby, User, UserPlus, AlertTriangle, Heart, BarChart3, PieChart } from 'lucide-react'
 
 const PopulationAssessmentSchema = z.object({
   totalHouseholds: z.number().int().min(0),
@@ -83,6 +83,7 @@ export function PopulationAssessmentForm({
   const [selectedEntity, setSelectedEntity] = useState<string>(entityId)
   const [selectedIncident, setSelectedIncident] = useState<string>('')
   const [selectedEntityData, setSelectedEntityData] = useState<any>(null)
+  const [chartType, setChartType] = useState<'bar' | 'pie'>('bar')
 
   // Extract population data from initialData
   const populationData = (initialData as any)?.populationAssessment || (initialData as any);
@@ -181,6 +182,52 @@ export function PopulationAssessmentForm({
   const genderExceedsTotal = genderTotal > watchedValues.totalPopulation
   const vulnerableExceedsTotal = vulnerableTotal > watchedValues.totalPopulation
   const casualtyExceedsTotal = casualtyTotal > watchedValues.totalPopulation
+  
+  // Vulnerable groups data for charts
+  const vulnerableGroupsData = [
+    {
+      name: 'Children Under 5',
+      value: watchedValues.populationUnder5,
+      percentage: calculatePercentage(watchedValues.populationUnder5, watchedValues.totalPopulation),
+      color: '#3b82f6', // blue
+      icon: Baby
+    },
+    {
+      name: 'Pregnant Women',
+      value: watchedValues.pregnantWomen,
+      percentage: calculatePercentage(watchedValues.pregnantWomen, watchedValues.totalPopulation),
+      color: '#ec4899', // pink
+      icon: User
+    },
+    {
+      name: 'Lactating Mothers',
+      value: watchedValues.lactatingMothers,
+      percentage: calculatePercentage(watchedValues.lactatingMothers, watchedValues.totalPopulation),
+      color: '#f59e0b', // amber
+      icon: Baby
+    },
+    {
+      name: 'Persons with Disabilities',
+      value: watchedValues.personWithDisability,
+      percentage: calculatePercentage(watchedValues.personWithDisability, watchedValues.totalPopulation),
+      color: '#8b5cf6', // violet
+      icon: User
+    },
+    {
+      name: 'Elderly Persons (60+)',
+      value: watchedValues.elderlyPersons,
+      percentage: calculatePercentage(watchedValues.elderlyPersons, watchedValues.totalPopulation),
+      color: '#10b981', // emerald
+      icon: User
+    },
+    {
+      name: 'Separated Children',
+      value: watchedValues.separatedChildren,
+      percentage: calculatePercentage(watchedValues.separatedChildren, watchedValues.totalPopulation),
+      color: '#f97316', // orange
+      icon: UserPlus
+    }
+  ].filter(group => group.value > 0) // Only show groups with values
 
   const handleSubmit = async (data: FormData) => {
     if (!selectedEntity) {
@@ -402,7 +449,122 @@ export function PopulationAssessmentForm({
                 Identify and count vulnerable population groups requiring special attention
               </CardDescription>
             </CardHeader>
-            <CardContent className="space-y-4">
+            <CardContent className="space-y-6">
+              {/* Chart Type Toggle */}
+              <div className="flex items-center justify-between">
+                <div className="text-sm text-gray-600">
+                  Visualization:
+                </div>
+                <div className="flex items-center gap-2">
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant={chartType === 'bar' ? 'default' : 'outline'}
+                    onClick={() => setChartType('bar')}
+                    className="gap-2"
+                  >
+                    <BarChart3 className="h-4 w-4" />
+                    Bar Chart
+                  </Button>
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant={chartType === 'pie' ? 'default' : 'outline'}
+                    onClick={() => setChartType('pie')}
+                    className="gap-2"
+                  >
+                    <PieChart className="h-4 w-4" />
+                    Pie Chart
+                  </Button>
+                </div>
+              </div>
+
+              {/* Chart Visualization */}
+              {vulnerableTotal > 0 && (
+                <div className="bg-gray-50 rounded-lg p-4">
+                  {chartType === 'bar' ? (
+                    <div className="space-y-3">
+                      <h4 className="text-sm font-medium text-center">Vulnerable Population Distribution</h4>
+                      <div className="space-y-2">
+                        {vulnerableGroupsData.map((group) => (
+                          <div key={group.name} className="flex items-center gap-3">
+                            <div className="w-24 text-xs text-right">{group.name}:</div>
+                            <div className="flex-1 relative h-6 bg-gray-200 rounded">
+                              <div
+                                className="h-full rounded transition-all duration-300"
+                                style={{
+                                  width: `${Math.max(group.percentage, 2)}%`,
+                                  backgroundColor: group.color,
+                                }}
+                              />
+                              <div className="absolute inset-0 flex items-center justify-center text-xs font-medium text-white mix-blend-difference">
+                                {group.value} ({group.percentage}%)
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="space-y-3">
+                      <h4 className="text-sm font-medium text-center">Vulnerable Population Distribution</h4>
+                      <div className="flex items-center justify-center">
+                        <div className="relative w-48 h-48">
+                          <svg viewBox="0 0 100 100" className="w-full h-full transform -rotate-90">
+                            {(() => {
+                              let currentAngle = 0;
+                              return vulnerableGroupsData.map((group) => {
+                                const angle = (group.value / vulnerableTotal) * 360;
+                                const startAngle = currentAngle;
+                                const endAngle = currentAngle + angle;
+                                currentAngle = endAngle;
+                                
+                                const x1 = 50 + 40 * Math.cos((startAngle * Math.PI) / 180);
+                                const y1 = 50 + 40 * Math.sin((startAngle * Math.PI) / 180);
+                                const x2 = 50 + 40 * Math.cos((endAngle * Math.PI) / 180);
+                                const y2 = 50 + 40 * Math.sin((endAngle * Math.PI) / 180);
+                                
+                                const largeArcFlag = angle > 180 ? 1 : 0;
+                                
+                                const pathData = [
+                                  `M 50 50`,
+                                  `L ${x1} ${y1}`,
+                                  `A 40 40 0 ${largeArcFlag} 1 ${x2} ${y2}`,
+                                  'Z'
+                                ].join(' ');
+                                
+                                return (
+                                  <path
+                                    key={group.name}
+                                    d={pathData}
+                                    fill={group.color}
+                                    stroke="white"
+                                    strokeWidth="0.5"
+                                  />
+                                );
+                              });
+                            })()}
+                          </svg>
+                        </div>
+                      </div>
+                      {/* Pie chart legend */}
+                      <div className="grid grid-cols-2 gap-2">
+                        {vulnerableGroupsData.map((group) => (
+                          <div key={group.name} className="flex items-center gap-2 text-xs">
+                            <div 
+                              className="w-3 h-3 rounded"
+                              style={{ backgroundColor: group.color }}
+                            />
+                            <span>{group.name}: {group.value} ({group.percentage}%)</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Form Fields Grid */}
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                 <FormField
                   control={form.control}
@@ -424,9 +586,7 @@ export function PopulationAssessmentForm({
                           disabled={disabled}
                         />
                       </FormControl>
-                      <FormDescription>
-                        Children under 5 years old
-                      </FormDescription>
+                      <FormDescription>Children under 5 years old</FormDescription>
                       <FormMessage />
                     </FormItem>
                   )}
@@ -452,9 +612,7 @@ export function PopulationAssessmentForm({
                           disabled={disabled}
                         />
                       </FormControl>
-                      <FormDescription>
-                        Pregnant women requiring care
-                      </FormDescription>
+                      <FormDescription>Pregnant women requiring care</FormDescription>
                       <FormMessage />
                     </FormItem>
                   )}
@@ -480,9 +638,7 @@ export function PopulationAssessmentForm({
                           disabled={disabled}
                         />
                       </FormControl>
-                      <FormDescription>
-                        Lactating mothers with infants
-                      </FormDescription>
+                      <FormDescription>Lactating mothers with infants</FormDescription>
                       <FormMessage />
                     </FormItem>
                   )}
@@ -508,9 +664,7 @@ export function PopulationAssessmentForm({
                           disabled={disabled}
                         />
                       </FormControl>
-                      <FormDescription>
-                        People with disabilities
-                      </FormDescription>
+                      <FormDescription>People with disabilities</FormDescription>
                       <FormMessage />
                     </FormItem>
                   )}
@@ -536,9 +690,7 @@ export function PopulationAssessmentForm({
                           disabled={disabled}
                         />
                       </FormControl>
-                      <FormDescription>
-                        Elderly persons over 60 years
-                      </FormDescription>
+                      <FormDescription>Elderly persons over 60 years</FormDescription>
                       <FormMessage />
                     </FormItem>
                   )}
@@ -564,9 +716,7 @@ export function PopulationAssessmentForm({
                           disabled={disabled}
                         />
                       </FormControl>
-                      <FormDescription>
-                        Unaccompanied or separated children
-                      </FormDescription>
+                      <FormDescription>Unaccompanied or separated children</FormDescription>
                       <FormMessage />
                     </FormItem>
                   )}
@@ -615,7 +765,7 @@ export function PopulationAssessmentForm({
                     <FormItem>
                       <FormLabel className="flex items-center gap-2 text-red-600">
                         Lives Lost
-                        {field.value > 0 && <Badge variant="destructive">{field.value}</Badge>}
+                        <Badge variant="outline">{calculatePercentage(field.value, watchedValues.totalPopulation)}%</Badge>
                       </FormLabel>
                       <FormControl>
                         <Input
@@ -643,7 +793,7 @@ export function PopulationAssessmentForm({
                     <FormItem>
                       <FormLabel className="flex items-center gap-2 text-orange-600">
                         Injured Persons
-                        {field.value > 0 && <Badge variant="secondary">{field.value}</Badge>}
+                        <Badge variant="outline">{calculatePercentage(field.value, watchedValues.totalPopulation)}%</Badge>
                       </FormLabel>
                       <FormControl>
                         <Input

@@ -152,7 +152,6 @@ export function IncidentOverviewPanel({
   onIncidentChange 
 }: IncidentOverviewPanelProps) {
   const { selectedIncidentId } = useIncidentSelection();
-  const [includeHistorical, setIncludeHistorical] = useState(false);
   
   // Use the incident ID from props or store
   const currentIncidentId = incidentId || selectedIncidentId;
@@ -207,21 +206,10 @@ export function IncidentOverviewPanel({
       <IncidentSelector
         selectedIncidentId={currentIncidentId}
         onIncidentChange={handleIncidentChange}
-        includeHistorical={includeHistorical}
+        includeHistorical={false}
         className="px-1"
       />
 
-      {/* Historical Incident Toggle - more compact */}
-      <div className="px-1">
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={() => setIncludeHistorical(!includeHistorical)}
-          className="w-full justify-start text-xs h-8" // Smaller height and text
-        >
-          {includeHistorical ? 'Hide' : 'Show'} Historical
-        </Button>
-      </div>
 
       {/* Selected Incident Content */}
       {selectedIncident ? (
