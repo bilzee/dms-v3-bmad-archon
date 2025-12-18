@@ -1,6 +1,6 @@
 # Prisma Schema Reference
 
-_Auto-generated on 2025-12-14T09:36:37.706Z_
+_Auto-generated on 2025-12-16T14:25:55.022Z_
 
 ## ReportTemplate
 
@@ -129,6 +129,7 @@ _Auto-generated on 2025-12-14T09:36:37.706Z_
 - `assignments`
 - `rapidAssessments`
 - `responses`
+- `preliminaryAssessments`
 
 ## EntityAssignment
 
@@ -184,6 +185,17 @@ _Auto-generated on 2025-12-14T09:36:37.706Z_
 - `createdAt`
 - `updatedAt`
 - `incident`
+- `affectedEntities`
+
+## PreliminaryAssessmentEntity
+
+**Fields:**
+- `id`
+- `preliminaryAssessmentId`
+- `entityId`
+- `createdAt`
+- `preliminaryAssessment`
+- `entity`
 
 ## RapidAssessment
 

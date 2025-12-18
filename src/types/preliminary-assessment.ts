@@ -16,6 +16,7 @@ export interface PreliminaryAssessmentData {
   reportingAgent: string
   additionalDetails?: any
   incidentId?: string
+  affectedEntityIds?: string[]
 }
 
 export interface CreatePreliminaryAssessmentRequest {

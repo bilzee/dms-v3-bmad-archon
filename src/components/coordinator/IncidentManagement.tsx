@@ -37,6 +37,7 @@ import {
   TableHeader,
   TableRow 
 } from '@/components/ui/table'
+import { Checkbox } from '@/components/ui/checkbox'
 import { IncidentCreationForm } from '@/components/forms/incident/IncidentCreationForm'
 
 // Token utilities
@@ -100,6 +101,11 @@ interface IncidentManagementState {
   showEditModal: boolean
   isUpdating: boolean
   expandedRows: Set<string>
+  showLinkAssessmentDialog: boolean
+  incidentToLink: any | null
+  availablePreliminaryAssessments: any[]
+  linkedPreliminaryAssessments: any[]
+  selectedAssessmentIds: string[]
 }
 
 const severityColors = {
@@ -238,7 +244,12 @@ export function IncidentManagement({
     showCreateModal: false,
     showEditModal: false,
     isUpdating: false,
-    expandedRows: new Set<string>()
+    expandedRows: new Set<string>(),
+    showLinkAssessmentDialog: false,
+    incidentToLink: null,
+    availablePreliminaryAssessments: [],
+    linkedPreliminaryAssessments: [],
+    selectedAssessmentIds: []
   })
 
   // Real-time updates interval is handled by TanStack Query refetchInterval
@@ -282,6 +293,164 @@ export function IncidentManagement({
   const handleIncidentCreated = async (incidentData?: any, retry?: () => void) => {
     setState(prev => ({ ...prev, showCreateModal: false }))
     retry?.() // Refresh incidents list
+  }
+
+  // Handler for opening link assessment dialog
+  const handleLinkAssessmentClick = async (incident: any) => {
+    try {
+      setState(prev => ({ 
+        ...prev, 
+        showLinkAssessmentDialog: true, 
+        incidentToLink: incident,
+        selectedAssessmentIds: []
+      }))
+      
+      // Fetch all preliminary assessments
+      const token = getAuthToken()
+      if (token) {
+        const response = await fetch('/api/v1/preliminary-assessments?limit=100', {
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
+        })
+        
+        if (response.ok) {
+          const result = await response.json()
+          const allAssessments = result.data || []
+          
+          // Separate linked and available assessments
+          const linkedAssessments = allAssessments.filter((assessment: any) => 
+            assessment.incidentId === incident.id
+          )
+          const availableAssessments = allAssessments.filter((assessment: any) => 
+            !assessment.incidentId || assessment.incidentId !== incident.id
+          )
+          
+          setState(prev => ({ 
+            ...prev, 
+            linkedPreliminaryAssessments: linkedAssessments,
+            availablePreliminaryAssessments: availableAssessments
+          }))
+        }
+      }
+    } catch (error) {
+      console.error('Error fetching preliminary assessments:', error)
+    }
+  }
+
+  // Handler for closing link assessment dialog
+  const handleCloseLinkDialog = () => {
+    setState(prev => ({ 
+      ...prev, 
+      showLinkAssessmentDialog: false, 
+      incidentToLink: null, 
+      availablePreliminaryAssessments: [],
+      linkedPreliminaryAssessments: [],
+      selectedAssessmentIds: []
+    }))
+  }
+
+  // Handler for checkbox selection
+  const handleAssessmentSelection = (assessmentId: string, checked: boolean) => {
+    setState(prev => ({
+      ...prev,
+      selectedAssessmentIds: checked 
+        ? [...prev.selectedAssessmentIds, assessmentId]
+        : prev.selectedAssessmentIds.filter(id => id !== assessmentId)
+    }))
+  }
+
+  // Handler for linking selected assessments
+  const handleLinkSelectedAssessments = async () => {
+    if (!state.incidentToLink || state.selectedAssessmentIds.length === 0) {
+      return
+    }
+
+    try {
+      const token = getAuthToken()
+      if (token) {
+        // Link each selected assessment to the incident
+        const linkPromises = state.selectedAssessmentIds.map(assessmentId =>
+          fetch(`/api/v1/preliminary-assessments/${assessmentId}`, {
+            method: 'PUT',
+            headers: {
+              'Authorization': `Bearer ${token}`,
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+              data: {
+                incidentId: state.incidentToLink.id
+              }
+            })
+          })
+        )
+
+        await Promise.all(linkPromises)
+        
+        // Close dialog and refresh data
+        handleCloseLinkDialog()
+        
+        // Refresh incidents data
+        try {
+          await fetchIncidents()
+        } catch (refreshError) {
+          console.error('Error refreshing incidents:', refreshError)
+        }
+      }
+    } catch (error) {
+      console.error('Error linking assessments:', error)
+    }
+  }
+
+  // Handler for unlinking assessments
+  const handleUnlinkAssessment = async (assessmentId: string) => {
+    if (!state.incidentToLink) {
+      return
+    }
+
+    try {
+      const token = getAuthToken()
+      if (token) {
+        // Unlink the assessment by setting incidentId to null
+        const response = await fetch(`/api/v1/preliminary-assessments/${assessmentId}`, {
+          method: 'PUT',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            data: {
+              incidentId: null
+            }
+          })
+        })
+
+        if (response.ok) {
+          // Update state to move assessment from linked to available
+          setState(prev => {
+            // Find the unlinked assessment to move to available
+            const unlinkedAssessment = prev.linkedPreliminaryAssessments.find(a => a.id === assessmentId)
+            
+            return {
+              ...prev,
+              linkedPreliminaryAssessments: prev.linkedPreliminaryAssessments.filter(a => a.id !== assessmentId),
+              availablePreliminaryAssessments: unlinkedAssessment 
+                ? [...prev.availablePreliminaryAssessments, unlinkedAssessment]
+                : prev.availablePreliminaryAssessments
+            }
+          })
+          
+          // Refresh incidents data
+          try {
+            await fetchIncidents()
+          } catch (refreshError) {
+            console.error('Error refreshing incidents:', refreshError)
+          }
+        }
+      }
+    } catch (error) {
+      console.error('Error unlinking assessment:', error)
+    }
   }
 
   const formatPopulationImpact = (impact: PopulationImpact) => {
@@ -663,36 +832,42 @@ export function IncidentManagement({
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                               {/* Preliminary Assessments */}
                               <div className="space-y-2">
-                                <h4 className="font-medium text-sm flex items-center gap-2">
-                                  <FileText className="h-4 w-4 text-blue-600" />
-                                  Preliminary Assessments ({incident.preliminaryAssessments?.length || 0})
-                                </h4>
+                                <div className="flex items-center justify-between">
+                                  <h4 className="font-medium text-sm flex items-center gap-2">
+                                    <FileText className="h-4 w-4 text-blue-600" />
+                                    Preliminary Assessments ({incident.preliminaryAssessments?.length || 0})
+                                  </h4>
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
+                                    className="text-xs"
+                                    onClick={() => handleLinkAssessmentClick(incident)}
+                                  >
+                                    <Link className="h-3 w-3 mr-1" />
+                                    Manage Links
+                                  </Button>
+                                </div>
                                 {(incident.preliminaryAssessments?.length || 0) > 0 ? (
                                   <div className="space-y-1 text-xs">
                                     {incident.preliminaryAssessments?.map((assessment: any, idx: number) => (
-                                      <div key={idx} className="flex justify-between p-2 bg-white rounded border">
-                                        <span>{assessment.reportingLGA}, {assessment.reportingWard}</span>
+                                      <div key={idx} className="flex justify-between items-center p-2 bg-white rounded border">
+                                        <div>
+                                          <div className="font-medium">{assessment.reportingLGA}, {assessment.reportingWard}</div>
+                                          <div className="text-xs text-gray-500">
+                                            {assessment.reportingDate ? new Date(assessment.reportingDate).toLocaleDateString() : 'N/A'} •
+                                            {assessment.numberLivesLost || 0} lives lost •
+                                            {assessment.numberDisplaced || 0} displaced
+                                          </div>
+                                        </div>
                                         <Badge variant="secondary" className="text-xs">
-                                          {assessment.reportingDate ? new Date(assessment.reportingDate).toLocaleDateString() : 'N/A'}
+                                          Linked
                                         </Badge>
                                       </div>
                                     ))}
                                   </div>
                                 ) : (
-                                  <div className="flex items-center justify-between p-2 bg-white rounded border">
+                                  <div className="flex items-center justify-center p-4 bg-gray-50 rounded border-2 border-dashed border-gray-300">
                                     <span className="text-xs text-gray-500">No preliminary assessments linked</span>
-                                    <Button
-                                      variant="outline"
-                                      size="sm"
-                                      className="text-xs"
-                                      onClick={() => {
-                                        // TODO: Implement link assessment functionality
-                                        console.log('Link assessment for incident:', incident.id)
-                                      }}
-                                    >
-                                      <Link className="h-3 w-3 mr-1" />
-                                      Link Assessment
-                                    </Button>
                                   </div>
                                 )}
                               </div>
@@ -743,6 +918,121 @@ export function IncidentManagement({
           )
         }}
       </SafeDataLoader>
+
+      {/* Link Assessment Dialog */}
+      <Dialog open={state.showLinkAssessmentDialog} onOpenChange={handleCloseLinkDialog}>
+        <DialogContent className="max-w-4xl max-h-[85vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Manage Preliminary Assessments</DialogTitle>
+            <DialogDescription>
+              Link or unlink preliminary assessments for incident: {state.incidentToLink?.type} {state.incidentToLink?.subType ? `- ${state.incidentToLink.subType}` : ''}
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="mt-6 space-y-6">
+            {/* Linked Assessments Section */}
+            <div>
+              <h3 className="text-sm font-medium text-gray-900 mb-3 flex items-center gap-2">
+                <FileText className="h-4 w-4" />
+                Linked Assessments ({state.linkedPreliminaryAssessments.length})
+              </h3>
+              
+              {state.linkedPreliminaryAssessments.length > 0 ? (
+                <div className="space-y-2">
+                  {state.linkedPreliminaryAssessments.map((assessment) => (
+                    <div key={assessment.id} className="flex items-center justify-between p-3 border border-green-200 bg-green-50 rounded-lg">
+                      <div className="flex-1">
+                        <div className="font-medium text-sm">
+                          {assessment.reportingLGA}, {assessment.reportingWard}
+                        </div>
+                        <div className="text-xs text-gray-600">
+                          {new Date(assessment.createdAt).toLocaleDateString()} • 
+                          {assessment.numberLivesLost} lives lost • 
+                          {assessment.numberDisplaced} displaced • 
+                          {assessment.numberHousesAffected} houses affected
+                        </div>
+                      </div>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleUnlinkAssessment(assessment.id)}
+                        className="text-red-600 border-red-200 hover:bg-red-50"
+                      >
+                        <Trash2 className="h-3 w-3 mr-1" />
+                        Unlink
+                      </Button>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="text-center py-4 border-2 border-dashed border-gray-300 rounded-lg">
+                  <p className="text-gray-500 text-sm">No preliminary assessments linked to this incident</p>
+                </div>
+              )}
+            </div>
+            
+            {/* Available Assessments Section */}
+            <div>
+              <h3 className="text-sm font-medium text-gray-900 mb-3 flex items-center gap-2">
+                <Link className="h-4 w-4" />
+                Available Assessments ({state.availablePreliminaryAssessments.length})
+              </h3>
+              
+              {state.availablePreliminaryAssessments.length > 0 ? (
+                <div className="space-y-2">
+                  {state.availablePreliminaryAssessments.map((assessment) => (
+                    <div key={assessment.id} className="flex items-center justify-between p-3 border rounded-lg hover:bg-gray-50">
+                      <div className="flex items-center gap-3">
+                        <Checkbox
+                          id={`assessment-${assessment.id}`}
+                          checked={state.selectedAssessmentIds.includes(assessment.id)}
+                          onCheckedChange={(checked) => handleAssessmentSelection(assessment.id, checked as boolean)}
+                        />
+                        <div className="flex-1">
+                          <label htmlFor={`assessment-${assessment.id}`} className="font-medium text-sm cursor-pointer">
+                            {assessment.reportingLGA}, {assessment.reportingWard}
+                          </label>
+                          <div className="text-xs text-gray-600">
+                            {new Date(assessment.createdAt).toLocaleDateString()} • 
+                            {assessment.numberLivesLost} lives lost • 
+                            {assessment.numberDisplaced} displaced • 
+                            {assessment.numberHousesAffected} houses affected
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="text-center py-4 border-2 border-dashed border-gray-300 rounded-lg">
+                  <p className="text-gray-500 text-sm">No available preliminary assessments</p>
+                  <p className="text-xs text-gray-400 mt-1">All assessments may already be linked to incidents</p>
+                </div>
+              )}
+            </div>
+          </div>
+          
+          {/* Action Buttons */}
+          <div className="flex justify-between items-center pt-4 border-t">
+            <div className="text-sm text-gray-600">
+              {state.selectedAssessmentIds.length > 0 && (
+                <span>{state.selectedAssessmentIds.length} assessment(s) selected</span>
+              )}
+            </div>
+            <div className="flex gap-2">
+              <Button variant="outline" onClick={handleCloseLinkDialog}>
+                Cancel
+              </Button>
+              <Button
+                onClick={handleLinkSelectedAssessments}
+                disabled={state.selectedAssessmentIds.length === 0}
+              >
+                Link Selected ({state.selectedAssessmentIds.length})
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }

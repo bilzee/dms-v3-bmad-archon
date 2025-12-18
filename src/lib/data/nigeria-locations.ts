@@ -17,6 +17,128 @@ export interface State {
 
 export const nigerianStatesData: State[] = [
   {
+    name: "Borno",
+    lgas: [
+      {
+        name: "Maiduguri",
+        wards: [
+          { name: "Bolori I" },
+          { name: "Bolori II" },
+          { name: "Bulabulin" },
+          { name: "Fezzan" },
+          { name: "Gamboru" },
+          { name: "Gwange I" },
+          { name: "Gwange II" },
+          { name: "Gwange III" },
+          { name: "Hausari" },
+          { name: "Lamisula" },
+          { name: "Limanti" },
+          { name: "Mafoni" },
+          { name: "Mairi" },
+          { name: "Shehuri North" },
+          { name: "Shehuri South" }
+        ]
+      },
+      {
+        name: "Jere",
+        wards: [
+          { name: "Addamari" },
+          { name: "Alargano" },
+          { name: "Dusuman" },
+          { name: "Gashagar" },
+          { name: "Gongulong" },
+          { name: "Jere" },
+          { name: "Maimusari" },
+          { name: "Mashamari" },
+          { name: "Mayana" },
+          { name: "Polo" },
+          { name: "Ruwan Zafi" }
+        ]
+      },
+      {
+        name: "Ngala",
+        wards: [
+          { name: "Arege" },
+          { name: "Cross Kauwa" },
+          { name: "Duya" },
+          { name: "Fotokol" },
+          { name: "Gamboru Ngala" },
+          { name: "Kirawa" },
+          { name: "Kumshe" },
+          { name: "Labdo" },
+          { name: "Mala Allahu" },
+          { name: "Ngala" },
+          { name: "Wulgo" }
+        ]
+      },
+      {
+        name: "Gwoza",
+        wards: [
+          { name: "Ashigashiya" },
+          { name: "Bita" },
+          { name: "Chikide" },
+          { name: "Chinene" },
+          { name: "Dure" },
+          { name: "Gavva" },
+          { name: "Gwoza" },
+          { name: "Hambagda" },
+          { name: "Johode" },
+          { name: "Kirawa" },
+          { name: "Ngoshe" },
+          { name: "Pulka" },
+          { name: "Wala" }
+        ]
+      },
+      {
+        name: "Bama",
+        wards: [
+          { name: "Bama" },
+          { name: "Dawashi" },
+          { name: "Derege" },
+          { name: "Gajibo" },
+          { name: "Goni Ajimi" },
+          { name: "Gongulong" },
+          { name: "Gulumba" },
+          { name: "Kawuri" },
+          { name: "Kuburmbula" },
+          { name: "Soye" },
+          { name: "Zangebe" }
+        ]
+      },
+      {
+        name: "Kala/Balge",
+        wards: [
+          { name: "Ayitaman" },
+          { name: "Balge Lamurde" },
+          { name: "Balge Tamsu" },
+          { name: "Kala Lawanti" },
+          { name: "Kala Mayi" },
+          { name: "Kimba" },
+          { name: "Mukdolo" },
+          { name: "New Marte" },
+          { name: "Tonda" },
+          { name: "Wamdo" },
+          { name: "Wurge" }
+        ]
+      },
+      {
+        name: "Konduga",
+        wards: [
+          { name: "Dalwa" },
+          { name: "Kawuri" },
+          { name: "Konduga" },
+          { name: "Koshebe" },
+          { name: "Malari" },
+          { name: "Masba" },
+          { name: "Nganzai" },
+          { name: "Tungushe" },
+          { name: "Umarari" },
+          { name: "Yawuri" }
+        ]
+      }
+    ]
+  },
+  {
     name: "Lagos",
     lgas: [
       {
@@ -177,6 +299,117 @@ export const nigerianStatesData: State[] = [
           { name: "Eleme Ward 3" },
           { name: "Eleme Ward 4" },
           { name: "Eleme Ward 5" }
+        ]
+      }
+    ]
+  },
+  {
+    name: "Federal Capital Territory",
+    lgas: [
+      {
+        name: "Abuja Municipal Area Council",
+        wards: [
+          { name: "Garki" },
+          { name: "Asokoro" },
+          { name: "Gwarimpa" },
+          { name: "Maitama" },
+          { name: "Wuse" },
+          { name: "Central Area" },
+          { name: "Durumi" },
+          { name: "Jabi" },
+          { name: "Kado" },
+          { name: "Lugbe" },
+          { name: "Nyanya" },
+          { name: "Utako" }
+        ]
+      },
+      {
+        name: "Gwagwalada",
+        wards: [
+          { name: "Ikwa" },
+          { name: "Gwagwalada Central" },
+          { name: "Dobi" },
+          { name: "Gbako" },
+          { name: "Tunga Maje" },
+          { name: "Paiko" },
+          { name: "Dogon Kurmi" },
+          { name: "Quarters" },
+          { name: "Zuba" },
+          { name: "Kutunku" }
+        ]
+      },
+      {
+        name: "Kuje",
+        wards: [
+          { name: "Kuje" },
+          { name: "Yenche" },
+          { name: "Gudun Karya" },
+          { name: "Kiami" },
+          { name: "Kabi" },
+          { name: "Chibiri" },
+          { name: "Rubochi" },
+          { name: "Kwaku" },
+          { name: "Wako" },
+          { name: "Kujekwa" }
+        ]
+      },
+      {
+        name: "Bwari",
+        wards: [
+          { name: "Bwari" },
+          { name: "Dutse Alhaji" },
+          { name: "Kubwa" },
+          { name: "Usuma" },
+          { name: "Ushafa" },
+          { name: "Kawu" },
+          { name: "Ijah-Gbagyi" },
+          { name: "Byazhin" },
+          { name: "Dikko" },
+          { name: "Guto" }
+        ]
+      }
+    ]
+  },
+  {
+    name: "Bayelsa",
+    lgas: [
+      {
+        name: "Yenagoa",
+        wards: [
+          { name: "Yenagoa Ward 1" },
+          { name: "Yenagoa Ward 2" },
+          { name: "Yenagoa Ward 3" },
+          { name: "Epie" },
+          { name: "Atissa" }
+        ]
+      },
+      {
+        name: "Sagbama",
+        wards: [
+          { name: "Sagbama Ward 1" },
+          { name: "Sagbama Ward 2" },
+          { name: "Sagbama Ward 3" }
+        ]
+      }
+    ]
+  },
+  {
+    name: "Cross River",
+    lgas: [
+      {
+        name: "Calabar Municipal",
+        wards: [
+          { name: "Calabar Municipal Ward 1" },
+          { name: "Calabar Municipal Ward 2" },
+          { name: "Calabar Municipal Ward 3" }
+        ]
+      },
+      {
+        name: "Calabar South",
+        wards: [
+          { name: "Calabar South Ward 1" },
+          { name: "Calabar South Ward 2" },
+          { name: "Calabar South Ward 3" }
         ]
       }
     ]

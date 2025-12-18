@@ -49,3 +49,38 @@ export const GET = withAuth(async (request, context) => {
     );
   }
 });
+
+export const POST = withAuth(async (request, context) => {
+  try {
+    const body = await request.json();
+    const input = CreatePreliminaryAssessmentSchema.parse(body);
+    
+    const assessment = await PreliminaryAssessmentService.create(input, context.user.id);
+
+    return NextResponse.json(
+      {
+        data: assessment,
+        meta: {
+          timestamp: new Date().toISOString(),
+          version: '1.0.0',
+          requestId: uuidv4()
+        }
+      },
+      { status: 201 }
+    );
+  } catch (error) {
+    console.error('Create preliminary assessment error:', error);
+    
+    return NextResponse.json(
+      {
+        error: error instanceof Error ? error.message : 'Internal server error',
+        meta: {
+          timestamp: new Date().toISOString(),
+          version: '1.0.0',
+          requestId: uuidv4()
+        }
+      },
+      { status: 500 }
+    );
+  }
+});

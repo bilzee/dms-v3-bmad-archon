@@ -12,13 +12,32 @@ import { Textarea } from '@/components/ui/textarea'
 import { Separator } from '@/components/ui/separator'
 import { Badge } from '@/components/ui/badge'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog'
 import { GPSCapture } from '@/components/shared/GPSCapture'
+import dynamic from 'next/dynamic'
+
+// Dynamic import for map component to avoid SSR issues
+const MapLocationSelector = dynamic(
+  () => import('@/components/forms/LocationSelector').then(mod => ({ default: mod.LocationSelector })),
+  { 
+    ssr: false,
+    loading: () => <div className="h-48 w-full flex items-center justify-center bg-muted rounded-lg">Loading map...</div>
+  }
+)
+
 import { LocationSelector } from '@/components/shared/LocationSelector'
+import { MultipleEntitySelector } from '@/components/shared/MultipleEntitySelector'
 import { usePreliminaryAssessment } from '@/hooks/usePreliminaryAssessment'
 import { useAuth } from '@/hooks/useAuth'
 import { PreliminaryAssessmentSchema } from '@/lib/validation/preliminary-assessment'
 import { PreliminaryAssessmentData } from '@/types/preliminary-assessment'
-import { AlertTriangle, Save, Send, Calendar, User, MapPin, Camera, Paperclip, X, CheckCircle2 } from 'lucide-react'
+import { AlertTriangle, Save, Send, Calendar, User, MapPin, Camera, Paperclip, X, CheckCircle2, Map as MapIcon, Crosshair } from 'lucide-react'
 import { z } from 'zod'
 
 type FormData = z.infer<typeof PreliminaryAssessmentSchema>
@@ -57,6 +76,7 @@ export function PreliminaryAssessmentForm({
   const [availableIncidents, setAvailableIncidents] = useState<any[]>([])
   const [mediaFiles, setMediaFiles] = useState<File[]>([])
   const [feedbackMessage, setFeedbackMessage] = useState<{type: 'success' | 'error', message: string} | null>(null)
+  const [showMapSelector, setShowMapSelector] = useState(false)
 
   const {
     register,
@@ -68,7 +88,9 @@ export function PreliminaryAssessmentForm({
   } = useForm<FormData>({
     resolver: zodResolver(PreliminaryAssessmentSchema),
     defaultValues: {
-      reportingDate: initialData?.reportingDate || new Date(),
+      reportingDate: initialData?.reportingDate 
+        ? new Date(initialData.reportingDate).toISOString().slice(0, 16)
+        : new Date().toISOString().slice(0, 16), // Always set to today's date in correct format
       reportingLatitude: initialData?.reportingLatitude || 0,
       reportingLongitude: initialData?.reportingLongitude || 0,
       reportingLGA: initialData?.reportingLGA || '',
@@ -77,11 +99,14 @@ export function PreliminaryAssessmentForm({
       numberInjured: initialData?.numberInjured || 0,
       numberDisplaced: initialData?.numberDisplaced || 0,
       numberHousesAffected: initialData?.numberHousesAffected || 0,
+      numberSchoolsAffected: initialData?.numberSchoolsAffected || 0,
+      numberMedicalFacilitiesAffected: initialData?.numberMedicalFacilitiesAffected || 0,
       schoolsAffected: initialData?.schoolsAffected || '',
       medicalFacilitiesAffected: initialData?.medicalFacilitiesAffected || '',
-      estimatedAgriculturalLandsAffected: initialData?.estimatedAgriculturalLandsAffected || '',
-      reportingAgent: initialData?.reportingAgent || (user as any)?.name || '',
-      additionalDetails: initialData?.additionalDetails || ''
+      estimatedAgriculturalLandsAffected: initialData?.estimatedAgriculturalLandsAffected ? Number(initialData.estimatedAgriculturalLandsAffected) || 0 : 0,
+      reportingAgent: (user as any)?.name || '', // Always set to current user
+      additionalDetails: initialData?.additionalDetails || '',
+      affectedEntityIds: initialData?.affectedEntityIds || []
     }
   })
 
@@ -142,6 +167,13 @@ export function PreliminaryAssessmentForm({
     setValue('reportingLongitude', lng)
   }
 
+  // Handle location selection from map
+  const handleLocationSelect = (latitude: number, longitude: number) => {
+    setValue('reportingLatitude', latitude)
+    setValue('reportingLongitude', longitude)
+    setShowMapSelector(false)
+  }
+
   const handleLocationChange = (lga: string, ward: string) => {
     setValue('reportingLGA', lga)
     setValue('reportingWard', ward)
@@ -172,6 +204,8 @@ export function PreliminaryAssessmentForm({
       
       const submissionData = {
         ...data,
+        reportingDate: new Date(data.reportingDate), // Convert string back to Date for backend
+        estimatedAgriculturalLandsAffected: data.estimatedAgriculturalLandsAffected ? String(data.estimatedAgriculturalLandsAffected) : undefined,
         incidentId: selectedIncidentId || undefined,
         mediaFiles
       }
@@ -252,9 +286,11 @@ export function PreliminaryAssessmentForm({
                 <Input
                   id="reportingDate"
                   type="datetime-local"
-                  {...register('reportingDate', { valueAsDate: true })}
-                  disabled={disabled}
+                  {...register('reportingDate')}
+                  disabled={true} // Always disabled
+                  className="bg-gray-50 text-gray-700 cursor-not-allowed"
                 />
+                <p className="text-xs text-gray-500">Automatically set to current date and time</p>
                 {errors.reportingDate && (
                   <p className="text-sm text-red-600">{errors.reportingDate.message}</p>
                 )}
@@ -269,10 +305,12 @@ export function PreliminaryAssessmentForm({
                   <Input
                     id="reportingAgent"
                     {...register('reportingAgent')}
-                    disabled={disabled}
-                    placeholder="LEMC agent or staff name"
+                    disabled={true} // Always disabled
+                    className="bg-gray-50 text-gray-700 cursor-not-allowed"
+                    placeholder="Automatically set to current user"
                   />
                 </div>
+                <p className="text-xs text-gray-500">Automatically set to current logged-in user</p>
                 {errors.reportingAgent && (
                   <p className="text-sm text-red-600">{errors.reportingAgent.message}</p>
                 )}
@@ -297,6 +335,38 @@ export function PreliminaryAssessmentForm({
               required
             />
             
+            {/* Map Selection */}
+            <div className="space-y-3">
+              <Label className="text-sm font-medium">Map Selection</Label>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setShowMapSelector(true)}
+                disabled={disabled}
+                className="w-full h-32 border-2 border-dashed border-gray-300 hover:border-blue-300 flex flex-col items-center justify-center text-gray-500 hover:text-blue-600 transition-colors"
+              >
+                <MapIcon className="h-6 w-6 mb-2" />
+                <span className="text-sm">Click to Select on Map</span>
+                <span className="text-xs">Alternative to GPS capture</span>
+              </Button>
+              <p className="text-xs text-gray-500">
+                Click on the map to select coordinates for the incident location
+              </p>
+            </div>
+
+            {/* Current coordinates display */}
+            {(watchedCoordinates.lat !== 0 || watchedCoordinates.lng !== 0) && (
+              <div className="bg-muted p-3 rounded-lg">
+                <div className="flex items-center gap-2 text-sm">
+                  <Crosshair className="h-4 w-4 text-primary" />
+                  <span className="font-medium">Current Coordinates:</span>
+                </div>
+                <div className="mt-1 text-sm text-muted-foreground">
+                  Latitude: {watchedCoordinates.lat?.toFixed(6) || '0'}, Longitude: {watchedCoordinates.lng?.toFixed(6) || '0'}
+                </div>
+              </div>
+            )}
+            
             <Separator />
             
             <LocationSelector
@@ -306,6 +376,24 @@ export function PreliminaryAssessmentForm({
               disabled={disabled}
               required
             />
+
+            <Separator />
+
+            <div className="space-y-2">
+              <Label>Affected Entities (Optional)</Label>
+              <MultipleEntitySelector
+                value={watch('affectedEntityIds')}
+                onValueChange={(entityIds) => setValue('affectedEntityIds', entityIds)}
+                disabled={disabled}
+                placeholder="Select entities affected by this disaster"
+              />
+              <p className="text-sm text-muted-foreground">
+                Select the entities (hospitals, schools, communities, etc.) that are affected by this disaster incident.
+              </p>
+              {errors.affectedEntityIds && (
+                <p className="text-sm text-red-600">{errors.affectedEntityIds.message}</p>
+              )}
+            </div>
           </CardContent>
         </Card>
 
@@ -325,7 +413,10 @@ export function PreliminaryAssessmentForm({
                   id="numberLivesLost"
                   type="number"
                   min="0"
-                  {...register('numberLivesLost', { valueAsNumber: true })}
+                  {...register('numberLivesLost', { 
+                    valueAsNumber: true,
+                    setValueAs: (value) => value === '' ? 0 : Number(value)
+                  })}
                   disabled={disabled}
                 />
                 {errors.numberLivesLost && (
@@ -339,7 +430,10 @@ export function PreliminaryAssessmentForm({
                   id="numberInjured"
                   type="number"
                   min="0"
-                  {...register('numberInjured', { valueAsNumber: true })}
+                  {...register('numberInjured', { 
+                    valueAsNumber: true,
+                    setValueAs: (value) => value === '' ? 0 : Number(value)
+                  })}
                   disabled={disabled}
                 />
                 {errors.numberInjured && (
@@ -353,7 +447,10 @@ export function PreliminaryAssessmentForm({
                   id="numberDisplaced"
                   type="number"
                   min="0"
-                  {...register('numberDisplaced', { valueAsNumber: true })}
+                  {...register('numberDisplaced', { 
+                    valueAsNumber: true,
+                    setValueAs: (value) => value === '' ? 0 : Number(value)
+                  })}
                   disabled={disabled}
                 />
                 {errors.numberDisplaced && (
@@ -367,7 +464,10 @@ export function PreliminaryAssessmentForm({
                   id="numberHousesAffected"
                   type="number"
                   min="0"
-                  {...register('numberHousesAffected', { valueAsNumber: true })}
+                  {...register('numberHousesAffected', { 
+                    valueAsNumber: true,
+                    setValueAs: (value) => value === '' ? 0 : Number(value)
+                  })}
                   disabled={disabled}
                 />
                 {errors.numberHousesAffected && (
@@ -396,7 +496,10 @@ export function PreliminaryAssessmentForm({
                   id="numberSchoolsAffected"
                   type="number"
                   min="0"
-                  {...register('numberSchoolsAffected', { valueAsNumber: true })}
+                  {...register('numberSchoolsAffected', { 
+                    valueAsNumber: true,
+                    setValueAs: (value) => value === '' ? 0 : Number(value)
+                  })}
                   disabled={disabled}
                 />
                 {errors.numberSchoolsAffected && (
@@ -412,7 +515,10 @@ export function PreliminaryAssessmentForm({
                   id="numberMedicalFacilitiesAffected"
                   type="number"
                   min="0"
-                  {...register('numberMedicalFacilitiesAffected', { valueAsNumber: true })}
+                  {...register('numberMedicalFacilitiesAffected', { 
+                    valueAsNumber: true,
+                    setValueAs: (value) => value === '' ? 0 : Number(value)
+                  })}
                   disabled={disabled}
                 />
                 {errors.numberMedicalFacilitiesAffected && (
@@ -444,13 +550,18 @@ export function PreliminaryAssessmentForm({
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="estimatedAgriculturalLandsAffected">Agricultural Lands Affected</Label>
-              <Textarea
+              <Label htmlFor="estimatedAgriculturalLandsAffected">Agricultural Lands Affected (Hectares)</Label>
+              <Input
                 id="estimatedAgriculturalLandsAffected"
-                {...register('estimatedAgriculturalLandsAffected')}
+                type="number"
+                min="0"
+                step="0.1"
+                {...register('estimatedAgriculturalLandsAffected', { 
+                  valueAsNumber: true,
+                  setValueAs: (value) => value === '' ? 0 : Number(value)
+                })}
                 disabled={disabled}
-                placeholder="Estimate of affected farmlands and crops"
-                rows={3}
+                placeholder="Enter hectares of affected agricultural land"
               />
             </div>
           </CardContent>
@@ -599,6 +710,27 @@ export function PreliminaryAssessmentForm({
           </Button>
         </div>
       </form>
+
+      {/* Map Selector Dialog */}
+      <Dialog open={showMapSelector} onOpenChange={setShowMapSelector}>
+        <DialogContent className="max-w-4xl max-h-[80vh]">
+          <DialogHeader>
+            <DialogTitle>Select Incident Location on Map</DialogTitle>
+            <DialogDescription>
+              Click anywhere on the map to select coordinates for this incident location, or close to cancel.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="mt-4">
+            <MapLocationSelector
+              onLocationSelect={handleLocationSelect}
+              initialCoordinates={{
+                latitude: watchedCoordinates.lat || 11.8311,
+                longitude: watchedCoordinates.lng || 13.1511
+              }}
+            />
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }

@@ -129,7 +129,7 @@ export function LocationSelector({ onLocationSelect, initialCoordinates = { lati
       </div>
 
       <div className="text-xs text-gray-500 text-center">
-        Click on the map to select coordinates or use "My Location" button
+        Click on the map to select coordinates or use &quot;My Location&quot; button
       </div>
     </div>
   );
