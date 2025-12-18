@@ -113,7 +113,51 @@ interface IncidentSummary {
   totalDuration?: number;
 }
 
+// Verified Population Assessment data (from Population Assessments)
+interface VerifiedPopulationImpact {
+  totalPopulation: number;
+  totalHouseholds: number;
+  livesLost: number;
+  injured: number;
+  percentageMale: number;
+  percentageFemale: number;
+  percentageChildren: number;
+  pregnantWomen: number;
+  lactatingWomen: number;
+  demographicBreakdown: {
+    under5: number;
+    elderly: number;
+    pwd: number;
+    pregnantWomen: number;
+    lactatingMothers: number;
+    separatedChildren: number;
+    populationMale: number;
+    populationFemale: number;
+  };
+  latestAssessmentDate: string | null;
+  assessmentCount: number;
+}
+
+// Preliminary Assessment data (estimates, not verified)
+interface PreliminaryImpact {
+  livesLost: number;
+  injured: number;
+  displaced: number;
+  housesAffected: number;
+  schoolsAffected: number;
+  medicalFacilitiesAffected: number;
+  agriculturalLandAffected: number;
+  latestAssessmentDate: string | null;
+  assessmentCount: number;
+}
+
+// Combined interface for backward compatibility and complete data structure
 interface PopulationImpact {
+  // Verified data from Population Assessments
+  verified: VerifiedPopulationImpact;
+  // Preliminary data from Preliminary Assessments
+  preliminary: PreliminaryImpact;
+  // Legacy combined fields for backward compatibility
   totalPopulation: number;
   totalHouseholds: number;
   aggregatedLivesLost: number;
@@ -474,6 +518,7 @@ async function getPopulationImpact(incidentId: string): Promise<PopulationImpact
             select: {
               id: true,
               entityId: true,
+              rapidAssessmentDate: true,
             },
           },
         },
@@ -507,6 +552,10 @@ async function getPopulationImpact(incidentId: string): Promise<PopulationImpact
       populationLivesLost: acc.populationLivesLost + (assessment.numberLivesLost || 0),
       populationInjured: acc.populationInjured + (assessment.numberInjured || 0),
       populationCount: acc.populationCount + 1,
+      latestDate: acc.latestDate && assessment.rapidAssessment?.rapidAssessmentDate ? 
+        (new Date(assessment.rapidAssessment.rapidAssessmentDate) > new Date(acc.latestDate) ? 
+          assessment.rapidAssessment.rapidAssessmentDate : acc.latestDate) : 
+        (assessment.rapidAssessment?.rapidAssessmentDate || acc.latestDate),
     }),
     {
       totalPopulation: 0,
@@ -522,6 +571,7 @@ async function getPopulationImpact(incidentId: string): Promise<PopulationImpact
       populationLivesLost: 0,
       populationInjured: 0,
       populationCount: 0,
+      latestDate: null as string | null,
     }
   );
 
@@ -530,6 +580,9 @@ async function getPopulationImpact(incidentId: string): Promise<PopulationImpact
     where: {
       incidentId: incidentId,
     },
+    orderBy: {
+      createdAt: 'desc'
+    }
   });
 
   const preliminaryAggregation = preliminaryData.reduce(
@@ -537,17 +590,72 @@ async function getPopulationImpact(incidentId: string): Promise<PopulationImpact
       preliminaryLivesLost: acc.preliminaryLivesLost + (assessment.numberLivesLost || 0),
       preliminaryInjured: acc.preliminaryInjured + (assessment.numberInjured || 0),
       aggregatedDisplaced: acc.aggregatedDisplaced + (assessment.numberDisplaced || 0),
+      housesAffected: acc.housesAffected + (assessment.numberHousesAffected || 0),
+      schoolsAffected: acc.schoolsAffected + (assessment.numberSchoolsAffected || 0),
+      medicalFacilitiesAffected: acc.medicalFacilitiesAffected + (assessment.numberMedicalFacilitiesAffected || 0),
+      agriculturalLandAffected: acc.agriculturalLandAffected + (assessment.estimatedAgriculturalLandsAffected ? parseFloat(assessment.estimatedAgriculturalLandsAffected) : 0),
       preliminaryCount: acc.preliminaryCount + 1,
+      latestDate: acc.latestDate && assessment.createdAt ? 
+        (new Date(assessment.createdAt) > new Date(acc.latestDate) ? 
+          assessment.createdAt : acc.latestDate) : 
+        (assessment.createdAt || acc.latestDate),
     }),
     {
       preliminaryLivesLost: 0,
       preliminaryInjured: 0,
       aggregatedDisplaced: 0,
+      housesAffected: 0,
+      schoolsAffected: 0,
+      medicalFacilitiesAffected: 0,
+      agriculturalLandAffected: 0,
       preliminaryCount: 0,
+      latestDate: null as Date | null,
     }
   );
 
+  // Calculate percentages for verified population data
+  const totalPop = populationAggregation.totalPopulation;
+  const percentageMale = totalPop > 0 ? Math.round((populationAggregation.populationMale / totalPop) * 100) : 0;
+  const percentageFemale = totalPop > 0 ? Math.round((populationAggregation.populationFemale / totalPop) * 100) : 0;
+  const percentageChildren = totalPop > 0 ? Math.round((populationAggregation.under5 / totalPop) * 100) : 0;
+
   return {
+    // New separated structure
+    verified: {
+      totalPopulation: populationAggregation.totalPopulation,
+      totalHouseholds: populationAggregation.totalHouseholds,
+      livesLost: populationAggregation.populationLivesLost,
+      injured: populationAggregation.populationInjured,
+      percentageMale,
+      percentageFemale,
+      percentageChildren,
+      pregnantWomen: populationAggregation.pregnantWomen,
+      lactatingWomen: populationAggregation.lactatingMothers,
+      demographicBreakdown: {
+        under5: populationAggregation.under5,
+        elderly: populationAggregation.elderly,
+        pwd: populationAggregation.pwd,
+        pregnantWomen: populationAggregation.pregnantWomen,
+        lactatingMothers: populationAggregation.lactatingMothers,
+        separatedChildren: populationAggregation.separatedChildren,
+        populationMale: populationAggregation.populationMale,
+        populationFemale: populationAggregation.populationFemale,
+      },
+      latestAssessmentDate: populationAggregation.latestDate,
+      assessmentCount: populationAggregation.populationCount,
+    },
+    preliminary: {
+      livesLost: preliminaryAggregation.preliminaryLivesLost,
+      injured: preliminaryAggregation.preliminaryInjured,
+      displaced: preliminaryAggregation.aggregatedDisplaced,
+      housesAffected: preliminaryAggregation.housesAffected,
+      schoolsAffected: preliminaryAggregation.schoolsAffected,
+      medicalFacilitiesAffected: preliminaryAggregation.medicalFacilitiesAffected,
+      agriculturalLandAffected: preliminaryAggregation.agriculturalLandAffected,
+      latestAssessmentDate: preliminaryAggregation.latestDate?.toISOString() || null,
+      assessmentCount: preliminaryAggregation.preliminaryCount,
+    },
+    // Legacy combined fields for backward compatibility
     totalPopulation: populationAggregation.totalPopulation,
     totalHouseholds: populationAggregation.totalHouseholds,
     aggregatedLivesLost: populationAggregation.populationLivesLost + preliminaryAggregation.preliminaryLivesLost,

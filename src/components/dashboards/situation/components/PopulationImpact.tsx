@@ -19,21 +19,26 @@ import {
   FileText,
   TrendingUp,
   Loader2,
-  AlertCircle
+  AlertCircle,
+  Calendar
 } from 'lucide-react';
 
-// Types for population impact data
+// Types for verified population impact data (Population Assessments only)
 interface PopulationImpactProps {
   incidentId?: string;
   className?: string;
 }
 
-interface PopulationImpactData {
+interface VerifiedPopulationData {
   totalPopulation: number;
   totalHouseholds: number;
-  aggregatedLivesLost: number;
-  aggregatedInjured: number;
-  aggregatedDisplaced: number;
+  livesLost: number;
+  injured: number;
+  percentageMale: number;
+  percentageFemale: number;
+  percentageChildren: number;
+  pregnantWomen: number;
+  lactatingWomen: number;
   demographicBreakdown: {
     under5: number;
     elderly: number;
@@ -44,10 +49,8 @@ interface PopulationImpactData {
     populationMale: number;
     populationFemale: number;
   };
-  sourceAssessments: {
-    populationCount: number;
-    preliminaryCount: number;
-  };
+  latestAssessmentDate: string | null;
+  assessmentCount: number;
 }
 
 interface DemographicItem {
@@ -84,16 +87,40 @@ const getCasualtySeverity = (livesLost: number, injured: number) => {
   return { level: 'Low', color: 'text-green-600 bg-green-100' };
 };
 
-// Fetch population impact from dashboard API
-const fetchPopulationImpact = async (incidentId?: string): Promise<PopulationImpactData> => {
+/**
+ * Format date to readable string
+ */
+const formatDate = (dateString: string | null): string => {
+  if (!dateString) return 'No verified assessments';
+  
+  try {
+    const date = new Date(dateString);
+    return date.toLocaleDateString('en-US', { 
+      year: 'numeric',
+      month: 'short', 
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    });
+  } catch (error) {
+    return 'Invalid date';
+  }
+};
+
+// Fetch verified population impact from dashboard API
+const fetchVerifiedPopulationImpact = async (incidentId?: string): Promise<VerifiedPopulationData> => {
   if (!incidentId) {
     // Return empty data if no incident selected
     return {
       totalPopulation: 0,
       totalHouseholds: 0,
-      aggregatedLivesLost: 0,
-      aggregatedInjured: 0,
-      aggregatedDisplaced: 0,
+      livesLost: 0,
+      injured: 0,
+      percentageMale: 0,
+      percentageFemale: 0,
+      percentageChildren: 0,
+      pregnantWomen: 0,
+      lactatingWomen: 0,
       demographicBreakdown: {
         under5: 0,
         elderly: 0,
@@ -104,26 +131,28 @@ const fetchPopulationImpact = async (incidentId?: string): Promise<PopulationImp
         populationMale: 0,
         populationFemale: 0
       },
-      sourceAssessments: {
-        populationCount: 0,
-        preliminaryCount: 0
-      }
+      latestAssessmentDate: null,
+      assessmentCount: 0
     };
   }
 
   const params = new URLSearchParams({ incidentId });
   const response = await apiGet(`/api/v1/dashboard/situation?${params}`);
   if (!response.success) {
-    throw new Error(response.error || 'Failed to fetch population impact');
+    throw new Error(response.error || 'Failed to fetch verified population impact');
   }
 
-  // Extract population impact from selected incident
-  const populationImpact = response.data.selectedIncident?.populationImpact || {
+  // Extract verified population impact from selected incident
+  const verifiedData = response.data.selectedIncident?.populationImpact?.verified || {
     totalPopulation: 0,
     totalHouseholds: 0,
-    aggregatedLivesLost: 0,
-    aggregatedInjured: 0,
-    aggregatedDisplaced: 0,
+    livesLost: 0,
+    injured: 0,
+    percentageMale: 0,
+    percentageFemale: 0,
+    percentageChildren: 0,
+    pregnantWomen: 0,
+    lactatingWomen: 0,
     demographicBreakdown: {
       under5: 0,
       elderly: 0,
@@ -134,35 +163,34 @@ const fetchPopulationImpact = async (incidentId?: string): Promise<PopulationImp
       populationMale: 0,
       populationFemale: 0
     },
-    sourceAssessments: {
-      populationCount: 0,
-      preliminaryCount: 0
-    }
+    latestAssessmentDate: null,
+    assessmentCount: 0
   };
 
-  return populationImpact;
+  return verifiedData;
 };
 
 /**
  * PopulationImpact Component
  * 
- * Displays comprehensive population impact statistics including:
+ * Displays verified population impact statistics from Population Assessments including:
  * - Total population and households affected
- * - Casualty statistics (lives lost, injured, displaced)
- * - Demographic breakdown with visual indicators
- * - Assessment source information
+ * - Verified casualty statistics (lives lost, injured)
+ * - Demographic breakdown with percentages
+ * - Gender distribution
  * - Vulnerable population highlights
+ * - Latest verified assessment date
  */
 export function PopulationImpact({ incidentId, className }: PopulationImpactProps) {
-  // Fetch population impact data
+  // Fetch verified population impact data
   const {
     data: populationData,
     isLoading,
     error,
     refetch
   } = useQuery({
-    queryKey: ['populationImpact', incidentId],
-    queryFn: () => fetchPopulationImpact(incidentId),
+    queryKey: ['verifiedPopulationImpact', incidentId],
+    queryFn: () => fetchVerifiedPopulationImpact(incidentId),
     staleTime: 5 * 60 * 1000, // 5 minutes
     gcTime: 10 * 60 * 1000, // 10 minutes
     enabled: !!incidentId // Only fetch if incident is selected
@@ -175,7 +203,7 @@ export function PopulationImpact({ incidentId, className }: PopulationImpactProp
         <CardHeader className="pb-3">
           <CardTitle className="text-lg font-semibold flex items-center gap-2">
             <Loader2 className="h-5 w-5 animate-spin" />
-            Population Impact
+            Population Impact (Verified)
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -195,7 +223,7 @@ export function PopulationImpact({ incidentId, className }: PopulationImpactProp
         <CardHeader className="pb-3">
           <CardTitle className="text-lg font-semibold flex items-center gap-2">
             <AlertCircle className="h-5 w-5 text-red-500" />
-            Population Impact Error
+            Verified Population Impact Error
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -221,7 +249,7 @@ export function PopulationImpact({ incidentId, className }: PopulationImpactProp
         <CardHeader className="pb-3">
           <CardTitle className="text-lg font-semibold flex items-center gap-2">
             <Users className="h-5 w-5" />
-            Population Impact
+            Population Impact (Verified)
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -304,24 +332,27 @@ export function PopulationImpact({ incidentId, className }: PopulationImpactProp
     <Card className={cn("h-fit", className)}>
       <CardHeader className="pb-3">
         <CardTitle className="text-lg font-semibold flex items-center gap-2">
-          <Users className="h-5 w-5" />
-          Population Impact
+          <Users className="h-5 w-5 text-blue-600" />
+          Population Impact (Verified)
         </CardTitle>
+        <p className="text-sm text-blue-700 bg-blue-50 px-2 py-1 rounded mt-2">
+          Verified population data from latest Population Assessments of all affected entities
+        </p>
       </CardHeader>
       
       <CardContent className="space-y-4">
         {/* No data state */}
-        {populationData.totalPopulation === 0 && populationData.sourceAssessments.populationCount === 0 && populationData.sourceAssessments.preliminaryCount === 0 && (
+        {populationData.assessmentCount === 0 && (
           <div className="text-center py-6 text-gray-500">
             <Users className="h-12 w-12 mx-auto mb-2 opacity-50" />
-            <p className="text-sm">No population assessment data available</p>
+            <p className="text-sm">No verified population assessment data available</p>
             <p className="text-xs text-gray-400 mt-1">
-              Complete population assessments to see impact statistics
+              Complete and verify population assessments to see verified impact statistics
             </p>
           </div>
         )}
 
-        {(populationData.totalPopulation > 0 || populationData.sourceAssessments.preliminaryCount > 0) && (
+        {populationData.assessmentCount > 0 && (
           <>
             {/* Total Population and Households */}
             <div className="grid grid-cols-2 gap-4">
@@ -355,23 +386,23 @@ export function PopulationImpact({ incidentId, className }: PopulationImpactProp
               <div className="grid grid-cols-3 gap-2">
                 <div className="text-center p-2 bg-red-50 rounded border border-red-200">
                   <div className="text-lg font-bold text-red-700">
-                    {formatNumber(populationData.aggregatedLivesLost)}
+                    {formatNumber(populationData.livesLost)}
                   </div>
                   <div className="text-xs text-red-600">Lives Lost</div>
                 </div>
                 
                 <div className="text-center p-2 bg-orange-50 rounded border border-orange-200">
                   <div className="text-lg font-bold text-orange-700">
-                    {formatNumber(populationData.aggregatedInjured)}
+                    {formatNumber(populationData.injured)}
                   </div>
-                  <div className="text-xs text-orange-600">Injured</div>
+                  <div className="text-xs text-orange-600">Injured Persons</div>
                 </div>
                 
-                <div className="text-center p-2 bg-yellow-50 rounded border border-yellow-200">
-                  <div className="text-lg font-bold text-yellow-700">
-                    {formatNumber(populationData.aggregatedDisplaced)}
+                <div className="text-center p-2 bg-blue-50 rounded border border-blue-200">
+                  <div className="text-lg font-bold text-blue-700">
+                    {formatNumber(populationData.pregnantWomen)}
                   </div>
-                  <div className="text-xs text-yellow-600">Displaced</div>
+                  <div className="text-xs text-blue-600">Pregnant Women</div>
                 </div>
               </div>
             </div>
@@ -380,14 +411,14 @@ export function PopulationImpact({ incidentId, className }: PopulationImpactProp
             {(populationData.demographicBreakdown.populationMale > 0 || populationData.demographicBreakdown.populationFemale > 0) && (
               <div className="space-y-2">
                 <div className="text-sm font-medium text-gray-700">Gender Distribution</div>
-                <div className="grid grid-cols-2 gap-2">
+                <div className="grid grid-cols-3 gap-2">
                   <div className="text-center p-2 bg-blue-50 rounded border border-blue-200">
                     <div className="text-lg font-bold text-blue-700">
                       {formatNumber(populationData.demographicBreakdown.populationMale)}
                     </div>
                     <div className="text-xs text-blue-600">Male</div>
                     <div className="text-xs text-gray-400">
-                      {calculatePercentage(populationData.demographicBreakdown.populationMale, populationData.totalPopulation)}%
+                      {populationData.percentageMale}%
                     </div>
                   </div>
                   
@@ -397,7 +428,17 @@ export function PopulationImpact({ incidentId, className }: PopulationImpactProp
                     </div>
                     <div className="text-xs text-pink-600">Female</div>
                     <div className="text-xs text-gray-400">
-                      {calculatePercentage(populationData.demographicBreakdown.populationFemale, populationData.totalPopulation)}%
+                      {populationData.percentageFemale}%
+                    </div>
+                  </div>
+                  
+                  <div className="text-center p-2 bg-green-50 rounded border border-green-200">
+                    <div className="text-lg font-bold text-green-700">
+                      {populationData.percentageChildren}%
+                    </div>
+                    <div className="text-xs text-green-600">Children (&lt; 5 years)</div>
+                    <div className="text-xs text-gray-400">
+                      {formatNumber(populationData.demographicBreakdown.under5)} total
                     </div>
                   </div>
                 </div>
@@ -445,17 +486,16 @@ export function PopulationImpact({ incidentId, className }: PopulationImpactProp
               </div>
             )}
 
-            {/* Data Sources */}
+            {/* Assessment Information */}
             <div className="pt-2 border-t border-gray-100">
               <div className="flex items-center gap-2 text-xs text-gray-500">
-                <FileText className="h-3 w-3" />
-                <span>Data Sources:</span>
+                <Calendar className="h-3 w-3" />
+                <span>Latest Verified Assessment:</span>
+                <span className="font-medium">{formatDate(populationData.latestAssessmentDate)}</span>
               </div>
-              <div className="flex items-center gap-4 ml-5 text-xs text-gray-400">
-                <span>{populationData.sourceAssessments.populationCount} Population Assessments</span>
-                {populationData.sourceAssessments.preliminaryCount > 0 && (
-                  <span>{populationData.sourceAssessments.preliminaryCount} Preliminary Reports</span>
-                )}
+              <div className="flex items-center gap-2 ml-5 text-xs text-gray-400">
+                <FileText className="h-3 w-3" />
+                <span>Based on {populationData.assessmentCount} verified population assessment{populationData.assessmentCount !== 1 ? 's' : ''}</span>
               </div>
             </div>
           </>

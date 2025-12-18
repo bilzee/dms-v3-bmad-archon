@@ -13,6 +13,7 @@ import { useIncidentSelection } from '@/stores/dashboardLayout.store';
 import IncidentSelector from './components/IncidentSelector';
 import IncidentSummary from './components/IncidentSummary';
 import PopulationImpact from './components/PopulationImpact';
+import PreliminaryImpact from './components/PreliminaryImpact';
 
 // Types for main panel
 interface IncidentOverviewPanelProps {
@@ -232,8 +233,14 @@ export function IncidentOverviewPanel({
             className="px-1"
           />
 
-          {/* Population Impact Statistics */}
+          {/* Population Impact Statistics (Verified) */}
           <PopulationImpact
+            incidentId={currentIncidentId}
+            className="px-1"
+          />
+
+          {/* Preliminary Impact Assessment */}
+          <PreliminaryImpact
             incidentId={currentIncidentId}
             className="px-1"
           />
