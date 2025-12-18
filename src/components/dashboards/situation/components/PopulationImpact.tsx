@@ -1,12 +1,13 @@
 'use client';
 
-import React from 'react';
+import React, { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { cn } from '@/lib/utils';
 import { apiGet } from '@/lib/api';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
+import { Button } from '@/components/ui/button';
 import {
   Users,
   Home,
@@ -20,7 +21,9 @@ import {
   TrendingUp,
   Loader2,
   AlertCircle,
-  Calendar
+  Calendar,
+  BarChart3,
+  PieChart
 } from 'lucide-react';
 
 // Types for verified population impact data (Population Assessments only)
@@ -67,6 +70,14 @@ interface DemographicItem {
  */
 const formatNumber = (num: number): string => {
   return new Intl.NumberFormat().format(num);
+};
+
+/**
+ * Calculate percentage with proper rounding
+ */
+const calculatePercentage = (value: number, total: number): number => {
+  if (total === 0) return 0;
+  return Math.round((value / total) * 100);
 };
 
 /**
@@ -182,6 +193,9 @@ const fetchVerifiedPopulationImpact = async (incidentId?: string): Promise<Verif
  * - Latest verified assessment date
  */
 export function PopulationImpact({ incidentId, className }: PopulationImpactProps) {
+  // Chart type state for vulnerable populations
+  const [chartType, setChartType] = useState<'bar' | 'pie'>('bar');
+  
   // Fetch verified population impact data
   const {
     data: populationData,
@@ -389,6 +403,9 @@ export function PopulationImpact({ incidentId, className }: PopulationImpactProp
                     {formatNumber(populationData.livesLost)}
                   </div>
                   <div className="text-xs text-red-600">Lives Lost</div>
+                  <div className="text-xs text-gray-500">
+                    {calculatePercentage(populationData.livesLost, populationData.totalPopulation)}% of population
+                  </div>
                 </div>
                 
                 <div className="text-center p-2 bg-orange-50 rounded border border-orange-200">
@@ -396,6 +413,9 @@ export function PopulationImpact({ incidentId, className }: PopulationImpactProp
                     {formatNumber(populationData.injured)}
                   </div>
                   <div className="text-xs text-orange-600">Injured Persons</div>
+                  <div className="text-xs text-gray-500">
+                    {calculatePercentage(populationData.injured, populationData.totalPopulation)}% of population
+                  </div>
                 </div>
                 
                 <div className="text-center p-2 bg-blue-50 rounded border border-blue-200">
@@ -447,42 +467,135 @@ export function PopulationImpact({ incidentId, className }: PopulationImpactProp
 
             {/* Vulnerable Populations */}
             {totalVulnerable > 0 && (
-              <div className="space-y-2">
-                <div className="flex items-center gap-2">
-                  <span className="text-sm font-medium text-gray-700">Vulnerable Populations</span>
-                  <div className="flex items-center gap-1 text-xs text-orange-600 bg-orange-50 px-2 py-1 rounded-full">
-                    <TrendingUp className="h-3 w-3" />
-                    {formatNumber(totalVulnerable)} total
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm font-medium text-gray-700">Vulnerable Populations</span>
+                    <div className="flex items-center gap-1 text-xs text-orange-600 bg-orange-50 px-2 py-1 rounded-full">
+                      <TrendingUp className="h-3 w-3" />
+                      {formatNumber(totalVulnerable)} total
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-1">
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant={chartType === 'bar' ? 'default' : 'outline'}
+                      onClick={() => setChartType('bar')}
+                      className="h-6 px-2 text-xs"
+                    >
+                      <BarChart3 className="h-3 w-3" />
+                    </Button>
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant={chartType === 'pie' ? 'default' : 'outline'}
+                      onClick={() => setChartType('pie')}
+                      className="h-6 px-2 text-xs"
+                    >
+                      <PieChart className="h-3 w-3" />
+                    </Button>
                   </div>
                 </div>
-                
-                <div className="space-y-2">
-                  {sortedDemographics
-                    .filter(demo => demo.value > 0)
-                    .slice(0, 4) // Show top 4 most significant
-                    .map((demo, index) => {
-                      const Icon = demo.icon;
-                      return (
-                        <div key={index} className="space-y-1">
-                          <div className="flex items-center justify-between text-xs">
-                            <div className="flex items-center gap-1">
-                              <Icon className="h-3 w-3" />
-                              <span className="text-gray-600">{demo.label}</span>
-                            </div>
-                            <div className="flex items-center gap-2">
+
+                {/* Chart Visualization */}
+                {chartType === 'pie' ? (
+                  <div className="bg-gray-50 rounded-lg p-3">
+                    <div className="flex items-center justify-center mb-2">
+                      <div className="relative w-32 h-32">
+                        <svg viewBox="0 0 100 100" className="w-full h-full transform -rotate-90">
+                          {(() => {
+                            const visibleDemographics = sortedDemographics.filter(demo => demo.value > 0);
+                            const colors = ['#3b82f6', '#f59e0b', '#10b981', '#ef4444', '#8b5cf6', '#f97316'];
+                            let currentAngle = 0;
+                            
+                            return visibleDemographics.map((demo, index) => {
+                              const angle = (demo.value / totalVulnerable) * 360;
+                              const startAngle = currentAngle;
+                              const endAngle = currentAngle + angle;
+                              currentAngle = endAngle;
+                              
+                              const x1 = 50 + 35 * Math.cos((startAngle * Math.PI) / 180);
+                              const y1 = 50 + 35 * Math.sin((startAngle * Math.PI) / 180);
+                              const x2 = 50 + 35 * Math.cos((endAngle * Math.PI) / 180);
+                              const y2 = 50 + 35 * Math.sin((endAngle * Math.PI) / 180);
+                              
+                              const largeArcFlag = angle > 180 ? 1 : 0;
+                              
+                              const pathData = [
+                                `M 50 50`,
+                                `L ${x1} ${y1}`,
+                                `A 35 35 0 ${largeArcFlag} 1 ${x2} ${y2}`,
+                                'Z'
+                              ].join(' ');
+                              
+                              return (
+                                <path
+                                  key={index}
+                                  d={pathData}
+                                  fill={colors[index % colors.length]}
+                                  stroke="white"
+                                  strokeWidth="0.5"
+                                />
+                              );
+                            });
+                          })()
+                          }
+                        </svg>
+                      </div>
+                    </div>
+                    {/* Pie chart legend */}
+                    <div className="space-y-1">
+                      {sortedDemographics
+                        .filter(demo => demo.value > 0)
+                        .slice(0, 6)
+                        .map((demo, index) => {
+                          const colors = ['#3b82f6', '#f59e0b', '#10b981', '#ef4444', '#8b5cf6', '#f97316'];
+                          const Icon = demo.icon;
+                          return (
+                            <div key={index} className="flex items-center gap-2 text-xs">
+                              <div 
+                                className="w-2 h-2 rounded-full"
+                                style={{ backgroundColor: colors[index % colors.length] }}
+                              />
+                              <Icon className="h-3 w-3 text-gray-500" />
+                              <span className="text-gray-600 flex-1">{demo.label}</span>
                               <span className="font-medium">{formatNumber(demo.value)}</span>
-                              <span className="text-gray-400">{demo.percentage}%</span>
+                              <span className="text-gray-400">({demo.percentage}%)</span>
                             </div>
+                          );
+                        })}
+                    </div>
+                  </div>
+                ) : (
+                  <div className="space-y-2">
+                    {sortedDemographics
+                      .filter(demo => demo.value > 0)
+                      .slice(0, 4) // Show top 4 most significant
+                      .map((demo, index) => {
+                        const Icon = demo.icon;
+                        return (
+                          <div key={index} className="space-y-1">
+                            <div className="flex items-center justify-between text-xs">
+                              <div className="flex items-center gap-1">
+                                <Icon className="h-3 w-3" />
+                                <span className="text-gray-600">{demo.label}</span>
+                              </div>
+                              <div className="flex items-center gap-2">
+                                <span className="font-medium">{formatNumber(demo.value)}</span>
+                                <span className="text-gray-400">{demo.percentage}%</span>
+                              </div>
+                            </div>
+                            <Progress 
+                              value={demo.percentage} 
+                              className="h-1"
+                              // Custom color for each demographic type
+                            />
                           </div>
-                          <Progress 
-                            value={demo.percentage} 
-                            className="h-1"
-                            // Custom color for each demographic type
-                          />
-                        </div>
-                      );
-                    })}
-                </div>
+                        );
+                      })}
+                  </div>
+                )}
               </div>
             )}
 
