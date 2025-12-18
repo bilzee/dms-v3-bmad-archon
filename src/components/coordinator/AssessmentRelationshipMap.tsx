@@ -656,20 +656,66 @@ export function AssessmentRelationshipMap({
                           </div>
                         ) : hoveredEntity ? (
                           <div className="space-y-4">
-                            <div>
+                            {/* Entity Info - same as original view */}
+                            <div className="space-y-2">
                               <h3 className="font-semibold text-lg">{hoveredEntity.name}</h3>
-                              <p className="text-sm text-muted-foreground">{hoveredEntity.type}</p>
-                              {hoveredEntity.location && (
-                                <p className="text-sm text-muted-foreground">
-                                  <MapPin className="h-3 w-3 inline mr-1" />
-                                  {hoveredEntity.location}
-                                </p>
-                              )}
+                              <div className="grid grid-cols-1 gap-2 text-sm">
+                                <div className="flex justify-between">
+                                  <span className="text-muted-foreground">Type:</span>
+                                  <Badge variant="outline">{hoveredEntity.type}</Badge>
+                                </div>
+                                <div className="flex justify-between">
+                                  <span className="text-muted-foreground">Location:</span>
+                                  <span className="font-medium">{hoveredEntity.location || hoveredEntity.area || hoveredEntity.zone || 'Not specified'}</span>
+                                </div>
+                                <div className="flex justify-between">
+                                  <span className="text-muted-foreground">Severity:</span>
+                                  <Badge 
+                                    variant="outline"
+                                    style={{ 
+                                      backgroundColor: hoveredEntity.severity ? ENTITY_SEVERITY_COLORS[hoveredEntity.severity as keyof typeof ENTITY_SEVERITY_COLORS] : '#e5e7eb',
+                                      color: hoveredEntity.severity ? 'white' : '#374151'
+                                    }}
+                                  >
+                                    {hoveredEntity.severity || 'Not Assessed'}
+                                  </Badge>
+                                </div>
+                                <div className="flex justify-between">
+                                  <span className="text-muted-foreground">Affected Date:</span>
+                                  <span className="font-medium">
+                                    {hoveredEntity.affectedAt 
+                                      ? new Date(hoveredEntity.affectedAt).toLocaleDateString()
+                                      : hoveredEntity.lastUpdated 
+                                        ? new Date(hoveredEntity.lastUpdated).toLocaleDateString()
+                                        : hoveredEntity.createdAt 
+                                          ? new Date(hoveredEntity.createdAt).toLocaleDateString()
+                                          : 'Not specified'
+                                    }
+                                  </span>
+                                </div>
+                              </div>
                             </div>
-                            
-                            {/* Assessment details would go here - using same structure as original */}
-                            <div className="text-sm text-muted-foreground">
-                              <p>Entity assessment details available</p>
+
+                            {/* Assessment Types Available - same as original view */}
+                            {entityAssessments?.data?.latestAssessments?.length > 0 && (
+                              <div className="space-y-2">
+                                <h4 className="font-medium text-sm">Available Assessment Types:</h4>
+                                <div className="flex flex-wrap gap-1">
+                                  {entityAssessments.data.latestAssessments.map((assessment: any) => (
+                                    <Badge key={assessment.type} variant="secondary" className="text-xs">
+                                      {assessment.type}
+                                    </Badge>
+                                  ))}
+                                </div>
+                              </div>
+                            )}
+
+                            {/* Verified Responses - same as original view */}
+                            <div className="flex justify-between text-sm">
+                              <span className="text-muted-foreground">Verified Responses:</span>
+                              <span className="font-medium">
+                                {entityAssessments?.data?.entity?.verifiedResponses || entityAssessments?.data?.entity?.responseCount || 0}
+                              </span>
                             </div>
                           </div>
                         ) : (

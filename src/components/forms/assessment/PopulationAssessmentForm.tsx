@@ -34,6 +34,37 @@ const PopulationAssessmentSchema = z.object({
   numberLivesLost: z.number().int().min(0),
   numberInjured: z.number().int().min(0),
   additionalPopulationDetails: z.string().optional()
+}).refine((data) => {
+  // Validation 1: Male + Female should not exceed Total Population
+  const genderTotal = data.populationMale + data.populationFemale;
+  if (genderTotal > data.totalPopulation) {
+    return false;
+  }
+  return true;
+}, {
+  message: "The sum of Male and Female population cannot exceed the Total Population",
+  path: ["populationMale"] // Show error on male field but applies to both
+}).refine((data) => {
+  // Validation 2: Vulnerable groups should not exceed Total Population
+  const vulnerableTotal = data.populationUnder5 + data.pregnantWomen + data.lactatingMothers + 
+                         data.personWithDisability + data.elderlyPersons + data.separatedChildren;
+  if (vulnerableTotal > data.totalPopulation) {
+    return false;
+  }
+  return true;
+}, {
+  message: "The sum of vulnerable groups cannot exceed the Total Population",
+  path: ["populationUnder5"] // Show error on first vulnerable group field
+}).refine((data) => {
+  // Validation 3: Lives Lost + Injured should not exceed Total Population
+  const casualtyTotal = data.numberLivesLost + data.numberInjured;
+  if (casualtyTotal > data.totalPopulation) {
+    return false;
+  }
+  return true;
+}, {
+  message: "The sum of Lives Lost and Injured Persons cannot exceed the Total Population",
+  path: ["numberLivesLost"] // Show error on lives lost field
 })
 
 type FormData = z.infer<typeof PopulationAssessmentSchema>
@@ -139,6 +170,17 @@ export function PopulationAssessmentForm({
     watchedValues.separatedChildren,
     watchedValues.totalPopulation
   )
+
+  // Validation calculations for visual indicators
+  const genderTotal = watchedValues.populationMale + watchedValues.populationFemale
+  const vulnerableTotal = watchedValues.populationUnder5 + watchedValues.pregnantWomen + 
+                         watchedValues.lactatingMothers + watchedValues.personWithDisability + 
+                         watchedValues.elderlyPersons + watchedValues.separatedChildren
+  const casualtyTotal = watchedValues.numberLivesLost + watchedValues.numberInjured
+  
+  const genderExceedsTotal = genderTotal > watchedValues.totalPopulation
+  const vulnerableExceedsTotal = vulnerableTotal > watchedValues.totalPopulation
+  const casualtyExceedsTotal = casualtyTotal > watchedValues.totalPopulation
 
   const handleSubmit = async (data: FormData) => {
     if (!selectedEntity) {
@@ -333,6 +375,16 @@ export function PopulationAssessmentForm({
                   )}
                 />
               </div>
+              
+              {/* Validation Alert for Gender Distribution */}
+              {genderExceedsTotal && watchedValues.totalPopulation > 0 && (
+                <Alert variant="destructive">
+                  <AlertTriangle className="h-4 w-4" />
+                  <AlertDescription>
+                    <strong>Validation Error:</strong> The sum of Male ({watchedValues.populationMale}) and Female ({watchedValues.populationFemale}) population ({genderTotal}) exceeds the Total Population ({watchedValues.totalPopulation}).
+                  </AlertDescription>
+                </Alert>
+              )}
             </CardContent>
           </Card>
 
@@ -520,6 +572,26 @@ export function PopulationAssessmentForm({
                   )}
                 />
               </div>
+              
+              {/* Validation Alert for Vulnerable Groups */}
+              {vulnerableExceedsTotal && watchedValues.totalPopulation > 0 && (
+                <Alert variant="destructive">
+                  <AlertTriangle className="h-4 w-4" />
+                  <AlertDescription>
+                    <strong>Validation Error:</strong> The sum of vulnerable groups ({vulnerableTotal}) exceeds the Total Population ({watchedValues.totalPopulation}). Please verify the numbers.
+                  </AlertDescription>
+                </Alert>
+              )}
+              
+              {/* Warning when vulnerable groups are close to total */}
+              {!vulnerableExceedsTotal && vulnerablePercentage > 80 && watchedValues.totalPopulation > 0 && (
+                <Alert variant="destructive">
+                  <AlertTriangle className="h-4 w-4" />
+                  <AlertDescription>
+                    <strong>High Vulnerability:</strong> {vulnerablePercentage}% of the population belongs to vulnerable groups. This indicates a population requiring significant support.
+                  </AlertDescription>
+                </Alert>
+              )}
             </CardContent>
           </Card>
 
@@ -593,7 +665,18 @@ export function PopulationAssessmentForm({
                 />
               </div>
 
-              {(watchedValues.numberLivesLost > 0 || watchedValues.numberInjured > 0) && (
+              {/* Validation Alert for Casualties */}
+              {casualtyExceedsTotal && watchedValues.totalPopulation > 0 && (
+                <Alert variant="destructive">
+                  <AlertTriangle className="h-4 w-4" />
+                  <AlertDescription>
+                    <strong>Validation Error:</strong> The sum of Lives Lost ({watchedValues.numberLivesLost}) and Injured Persons ({watchedValues.numberInjured}) ({casualtyTotal}) exceeds the Total Population ({watchedValues.totalPopulation}).
+                  </AlertDescription>
+                </Alert>
+              )}
+              
+              {/* Critical impact alert (only when validation passes) */}
+              {!casualtyExceedsTotal && (watchedValues.numberLivesLost > 0 || watchedValues.numberInjured > 0) && (
                 <Alert variant="destructive">
                   <AlertTriangle className="h-4 w-4" />
                   <AlertDescription>
@@ -678,7 +761,14 @@ export function PopulationAssessmentForm({
             </Button>
             <Button
               type="submit"
-              disabled={isSubmitting || disabled || !selectedEntity}
+              disabled={
+                isSubmitting || 
+                disabled || 
+                !selectedEntity || 
+                genderExceedsTotal || 
+                vulnerableExceedsTotal || 
+                casualtyExceedsTotal
+              }
             >
               {isSubmitting ? 'Submitting...' : 'Submit Population Assessment'}
             </Button>
