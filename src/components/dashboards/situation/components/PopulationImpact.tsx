@@ -81,14 +81,6 @@ const calculatePercentage = (value: number, total: number): number => {
 };
 
 /**
- * Calculate percentage
- */
-const calculatePercentage = (value: number, total: number): number => {
-  if (total === 0) return 0;
-  return Math.round((value / total) * 100);
-};
-
-/**
  * Get severity level based on casualty counts
  */
 const getCasualtySeverity = (livesLost: number, injured: number) => {
