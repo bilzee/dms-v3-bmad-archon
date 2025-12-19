@@ -6,14 +6,16 @@ import { cn } from '@/lib/utils';
 import { apiGet } from '@/lib/api';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { 
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
-import { Loader2, AlertCircle, MapPin, Building2, CheckCircle, AlertTriangle, Info } from 'lucide-react';
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList
+} from '@/components/ui/command';
+import { Loader2, AlertCircle, MapPin, Building2, CheckCircle, AlertTriangle, Info, Check, ChevronsUpDown } from 'lucide-react';
 import { useEntitySelection, useEntityActions } from '@/stores/dashboardLayout.store';
 import { useIncidentSelection } from '@/stores/dashboardLayout.store';
 
@@ -159,6 +161,7 @@ export function EntitySelector({
   className
 }: EntitySelectorProps) {
   const [isOpen, setIsOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
   const { entityHistory, includeAllEntities } = useEntitySelection();
   const { setSelectedEntity, setIncludeAllEntities } = useEntityActions();
 
@@ -176,11 +179,25 @@ export function EntitySelector({
     gcTime: 10 * 60 * 1000, // 10 minutes
   });
 
-  // Group entities by type for better organization
+  // Filter entities based on search query
+  const filteredEntities = useMemo(() => {
+    if (!searchQuery.trim()) return entities;
+    
+    const query = searchQuery.toLowerCase();
+    return entities.filter(entity => 
+      entity.name.toLowerCase().includes(query) ||
+      entity.type.toLowerCase().includes(query) ||
+      entity.subType?.toLowerCase().includes(query) ||
+      entity.location?.toLowerCase().includes(query) ||
+      entity.severity.toLowerCase().includes(query)
+    );
+  }, [entities, searchQuery]);
+
+  // Group filtered entities by type for better organization
   const groupedEntities = useMemo(() => {
     const groups: Record<string, EntityOption[]> = {};
     
-    entities.forEach(entity => {
+    filteredEntities.forEach(entity => {
       if (!groups[entity.type]) {
         groups[entity.type] = [];
       }
@@ -193,14 +210,14 @@ export function EntitySelector({
     });
 
     return groups;
-  }, [entities]);
+  }, [filteredEntities]);
 
   // Get recently selected entities from history
   const recentEntities = useMemo(() => {
     return entityHistory
-      .map(id => entities.find(e => e.id === id))
+      .map(id => filteredEntities.find(e => e.id === id))
       .filter(Boolean) as EntityOption[];
-  }, [entityHistory, entities]);
+  }, [entityHistory, filteredEntities]);
 
   // Handle entity selection
   const handleEntityChange = (entityId: string) => {
@@ -269,20 +286,15 @@ export function EntitySelector({
         )}
       </div>
 
-      <Select
-        value={selectedEntityId || (includeAllEntities ? 'all' : '')}
-        onValueChange={(value) => {
-          if (value === 'all') {
-            handleAllEntitiesSelection();
-          } else {
-            handleEntityChange(value);
-          }
-        }}
-        open={isOpen}
-        onOpenChange={setIsOpen}
-        disabled={isLoading}
-      >
-        <SelectTrigger className="w-full">
+      <Popover open={isOpen} onOpenChange={setIsOpen}>
+        <PopoverTrigger asChild>
+          <Button
+            variant="outline"
+            role="combobox"
+            aria-expanded={isOpen}
+            className="w-full justify-between h-auto min-h-[2.5rem] px-3 py-2"
+            disabled={isLoading}
+          >
           {isLoading ? (
             <div className="flex items-center gap-2">
               <Loader2 className="h-4 w-4 animate-spin" />
@@ -310,99 +322,114 @@ export function EntitySelector({
           ) : (
             <span>Select an entity...</span>
           )}
-        </SelectTrigger>
+          <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+        </Button>
+      </PopoverTrigger>
 
-        <SelectContent className="max-h-80">
-          {/* "All Entities" option */}
-          {includeAllOption && (
-            <SelectItem value="all" className="font-medium">
-              <div className="flex items-center gap-2">
-                <Building2 className="h-4 w-4" />
-                <span>All Entities</span>
-                <span className="text-gray-500">({entities.length} total)</span>
-              </div>
-            </SelectItem>
-          )}
-
-          {/* Divider if "All Entities" option is shown */}
-          {includeAllOption && entities.length > 0 && (
-            <div className="border-t my-1" />
-          )}
-
-          {/* Recently selected entities */}
-          {recentEntities.length > 0 && (
-            <div className="border-b pb-1 mb-1">
-              <div className="px-2 py-1.5 text-xs font-medium text-gray-500 flex items-center gap-1">
-                <Building2 className="h-3 w-3" />
-                Recently Selected
-              </div>
-              {recentEntities.map((entity) => (
-                <SelectItem key={entity.id} value={entity.id} className="pl-6">
-                  <div className="flex items-center justify-between w-full">
+        <PopoverContent className="w-full p-0" align="start">
+          <Command>
+            <CommandInput
+              placeholder="Search entities..."
+              value={searchQuery}
+              onValueChange={setSearchQuery}
+            />
+            <CommandList>
+              <CommandEmpty>No entities found matching your search.</CommandEmpty>
+              
+              {/* "All Entities" option */}
+              {includeAllOption && (
+                <CommandGroup>
+                  <CommandItem
+                    value="all"
+                    onSelect={handleAllEntitiesSelection}
+                    className="font-medium"
+                  >
                     <div className="flex items-center gap-2">
-                      {React.createElement(entityTypeConfig[entity.type].icon, {
-                        className: "h-4 w-4"
-                      })}
-                      <span className="font-medium">{entity.name}</span>
-                      <span className="text-gray-500 text-xs">
-                        ({entityTypeConfig[entity.type].label})
-                      </span>
-                    </div>
-                    <EntitySeverityBadge severity={entity.severity} count={entity.severityCount} />
-                  </div>
-                </SelectItem>
-              ))}
-            </div>
-          )}
-
-          {/* Entities grouped by type */}
-          {Object.entries(groupedEntities).map(([type, typeEntities]) => (
-            <div key={type} className="mb-1">
-              <div className="px-2 py-1.5 text-xs font-medium text-gray-600 flex items-center gap-1">
-                {React.createElement(entityTypeConfig[type as keyof typeof entityTypeConfig].icon, {
-                  className: "h-3 w-3"
-                })}
-                {entityTypeConfig[type as keyof typeof entityTypeConfig].label} 
-                ({typeEntities.length})
-              </div>
-              {typeEntities.map((entity) => (
-                <SelectItem key={entity.id} value={entity.id} className="pl-6">
-                  <div className="flex items-center justify-between w-full">
-                    <div className="flex items-center gap-2">
-                      <span className="font-medium">{entity.name}</span>
-                      {entity.location && (
-                        <span className="text-gray-400 text-xs truncate ml-2">
-                          📍 {entity.location}
-                        </span>
+                      <Building2 className="h-4 w-4" />
+                      <span>All Entities</span>
+                      <span className="text-gray-500">({entities.length} total)</span>
+                      {includeAllEntities && (
+                        <Check className="h-4 w-4 ml-auto" />
                       )}
                     </div>
-                    <EntitySeverityBadge severity={entity.severity} count={entity.severityCount} />
-                  </div>
-                </SelectItem>
+                  </CommandItem>
+                </CommandGroup>
+              )}
+
+              {/* Recently selected entities */}
+              {recentEntities.length > 0 && (
+                <CommandGroup heading="Recently Selected">
+                  {recentEntities.map((entity) => (
+                    <CommandItem
+                      key={entity.id}
+                      value={`${entity.name} ${entity.type} ${entity.location} ${entity.id}`}
+                      onSelect={() => handleEntityChange(entity.id)}
+                    >
+                      <div className="flex items-center justify-between w-full">
+                        <div className="flex items-center gap-2">
+                          {React.createElement(entityTypeConfig[entity.type].icon, {
+                            className: "h-4 w-4"
+                          })}
+                          <span className="font-medium">{entity.name}</span>
+                          <span className="text-gray-500 text-xs">
+                            ({entityTypeConfig[entity.type].label})
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-1">
+                          <EntitySeverityBadge severity={entity.severity} count={entity.severityCount} />
+                          {selectedEntityId === entity.id && (
+                            <Check className="h-4 w-4" />
+                          )}
+                        </div>
+                      </div>
+                    </CommandItem>
+                  ))}
+                </CommandGroup>
+              )}
+
+              {/* Entities grouped by type */}
+              {Object.entries(groupedEntities).map(([type, typeEntities]) => (
+                <CommandGroup key={type} heading={`${entityTypeConfig[type as keyof typeof entityTypeConfig].label} (${typeEntities.length})`}>
+                  {typeEntities.map((entity) => (
+                    <CommandItem
+                      key={entity.id}
+                      value={`${entity.name} ${entity.type} ${entity.location} ${entity.id}`}
+                      onSelect={() => handleEntityChange(entity.id)}
+                    >
+                      <div className="flex items-center justify-between w-full">
+                        <div className="flex items-center gap-2">
+                          <span className="font-medium">{entity.name}</span>
+                          {entity.location && (
+                            <span className="text-gray-400 text-xs truncate ml-2">
+                              📍 {entity.location}
+                            </span>
+                          )}
+                        </div>
+                        <div className="flex items-center gap-1">
+                          <EntitySeverityBadge severity={entity.severity} count={entity.severityCount} />
+                          {selectedEntityId === entity.id && (
+                            <Check className="h-4 w-4" />
+                          )}
+                        </div>
+                      </div>
+                    </CommandItem>
+                  ))}
+                </CommandGroup>
               ))}
-            </div>
-          ))}
 
-          {/* No entities found */}
-          {entities.length === 0 && !isLoading && (
-            <div className="px-2 py-4 text-center text-sm text-gray-500">
-              No entities found for this incident
-            </div>
-          )}
-
-          {/* Clear selection option */}
-          {selectedEntityId && (
-            <div className="border-t pt-1 mt-1">
-              <button
-                onClick={handleClearSelection}
-                className="w-full px-2 py-1.5 text-left text-xs text-gray-500 hover:text-gray-700 hover:bg-gray-50 rounded"
-              >
-                Clear Selection
-              </button>
-            </div>
-          )}
-        </SelectContent>
-      </Select>
+              {/* Clear selection option */}
+              {selectedEntityId && (
+                <CommandItem
+                  onSelect={handleClearSelection}
+                  className="text-center text-red-600"
+                >
+                  Clear Selection
+                </CommandItem>
+              )}
+            </CommandList>
+          </Command>
+        </PopoverContent>
+      </Popover>
 
     </div>
   );

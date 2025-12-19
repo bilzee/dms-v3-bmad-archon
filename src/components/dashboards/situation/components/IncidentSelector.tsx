@@ -6,14 +6,16 @@ import { cn } from '@/lib/utils';
 import { apiGet } from '@/lib/api';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { 
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
-import { Loader2, AlertCircle, History } from 'lucide-react';
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList
+} from '@/components/ui/command';
+import { Loader2, AlertCircle, History, Check, ChevronsUpDown } from 'lucide-react';
 import { useIncidentSelection, useIncidentActions } from '@/stores/dashboardLayout.store';
 
 // Types for incident selector
@@ -91,6 +93,7 @@ export function IncidentSelector({
   className
 }: IncidentSelectorProps) {
   const [isOpen, setIsOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
   const { incidentHistory } = useIncidentSelection();
   const { setSelectedIncident } = useIncidentActions();
 
@@ -107,22 +110,37 @@ export function IncidentSelector({
     gcTime: 10 * 60 * 1000, // 10 minutes (formerly cacheTime)
   });
 
-  // Group incidents by status for better organization
+  // Filter incidents based on search query
+  const filteredIncidents = useMemo(() => {
+    if (!searchQuery.trim()) return incidents;
+    
+    const query = searchQuery.toLowerCase();
+    return incidents.filter(incident => 
+      incident.type.toLowerCase().includes(query) ||
+      incident.subType.toLowerCase().includes(query) ||
+      incident.location.toLowerCase().includes(query) ||
+      incident.description.toLowerCase().includes(query) ||
+      incident.status.toLowerCase().includes(query) ||
+      incident.severity.toLowerCase().includes(query)
+    );
+  }, [incidents, searchQuery]);
+
+  // Group filtered incidents by status for better organization
   const groupedIncidents = useMemo(() => {
     const groups = {
-      active: incidents.filter(i => i.status === 'ACTIVE'),
-      contained: incidents.filter(i => i.status === 'CONTAINED'),
-      resolved: incidents.filter(i => i.status === 'RESOLVED')
+      active: filteredIncidents.filter(i => i.status === 'ACTIVE'),
+      contained: filteredIncidents.filter(i => i.status === 'CONTAINED'),
+      resolved: filteredIncidents.filter(i => i.status === 'RESOLVED')
     };
     return groups;
-  }, [incidents]);
+  }, [filteredIncidents]);
 
   // Get recently selected incidents from history
   const recentIncidents = useMemo(() => {
     return incidentHistory
-      .map(id => incidents.find(i => i.id === id))
+      .map(id => filteredIncidents.find(i => i.id === id))
       .filter(Boolean) as IncidentOption[];
-  }, [incidentHistory, incidents]);
+  }, [incidentHistory, filteredIncidents]);
 
   // Handle incident selection
   const handleIncidentChange = (incidentId: string) => {
@@ -172,176 +190,196 @@ export function IncidentSelector({
         )}
       </div>
 
-      <Select
-        value={selectedIncidentId || ''}
-        onValueChange={handleIncidentChange}
-        open={isOpen}
-        onOpenChange={setIsOpen}
-        disabled={isLoading}
-      >
-        <SelectTrigger className="w-full">
-          {isLoading ? (
-            <div className="flex items-center gap-2">
-              <Loader2 className="h-4 w-4 animate-spin" />
-              <span>Loading incidents...</span>
-            </div>
-          ) : selectedIncident ? (
-            <div className="flex items-center justify-between w-full">
+      <Popover open={isOpen} onOpenChange={setIsOpen}>
+        <PopoverTrigger asChild>
+          <Button
+            variant="outline"
+            role="combobox"
+            aria-expanded={isOpen}
+            className="w-full justify-between h-auto min-h-[2.5rem] px-3 py-2"
+            disabled={isLoading}
+          >
+            {isLoading ? (
               <div className="flex items-center gap-2">
-                <span className="font-medium">{selectedIncident.type}</span>
-                {selectedIncident.subType && (
-                  <span className="text-gray-500">- {selectedIncident.subType}</span>
-                )}
+                <Loader2 className="h-4 w-4 animate-spin" />
+                <span>Loading incidents...</span>
               </div>
-              <div className="flex items-center gap-1">
-                <Badge variant={statusVariants[selectedIncident.status]} className="text-xs">
-                  {selectedIncident.status}
-                </Badge>
-                <Badge variant={severityVariants[selectedIncident.severity]} className="text-xs">
-                  {selectedIncident.severity}
-                </Badge>
+            ) : selectedIncident ? (
+              <div className="flex items-center justify-between w-full">
+                <div className="flex items-center gap-2">
+                  <span className="font-medium">{selectedIncident.type}</span>
+                  {selectedIncident.subType && (
+                    <span className="text-gray-500 text-sm">- {selectedIncident.subType}</span>
+                  )}
+                </div>
+                <div className="flex items-center gap-1">
+                  <Badge variant={statusVariants[selectedIncident.status]} className="text-xs">
+                    {selectedIncident.status}
+                  </Badge>
+                  <Badge variant={severityVariants[selectedIncident.severity]} className="text-xs">
+                    {selectedIncident.severity}
+                  </Badge>
+                </div>
               </div>
-            </div>
-          ) : (
-            <span>Select an incident...</span>
-          )}
-        </SelectTrigger>
+            ) : (
+              <span className="text-muted-foreground">Select an incident...</span>
+            )}
+            <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+          </Button>
+        </PopoverTrigger>
 
-        <SelectContent className="max-h-80">
-          {/* Recently selected incidents */}
-          {recentIncidents.length > 0 && (
-            <div className="border-b pb-1 mb-1">
-              <div className="px-2 py-1.5 text-xs font-medium text-gray-500 flex items-center gap-1">
-                <History className="h-3 w-3" />
-                Recently Selected
-              </div>
-              {recentIncidents.map((incident) => (
-                <SelectItem key={incident.id} value={incident.id} className="pl-6">
-                  <div className="flex items-center justify-between w-full">
-                    <div className="flex items-center gap-2">
-                      <span className="font-medium">{incident.type}</span>
-                      {incident.subType && (
-                        <span className="text-gray-500 text-xs">- {incident.subType}</span>
-                      )}
-                    </div>
-                    <div className="flex items-center gap-1">
-                      <Badge variant={statusVariants[incident.status]} className="text-xs">
-                        {incident.status}
-                      </Badge>
-                    </div>
-                  </div>
-                </SelectItem>
-              ))}
-            </div>
-          )}
+        <PopoverContent className="w-full p-0" align="start">
+          <Command>
+            <CommandInput
+              placeholder="Search incidents..."
+              value={searchQuery}
+              onValueChange={setSearchQuery}
+            />
+            <CommandList>
+              <CommandEmpty>No incidents found matching your search.</CommandEmpty>
+              
+              {/* Recently selected incidents */}
+              {recentIncidents.length > 0 && (
+                <CommandGroup heading="Recently Selected">
+                  {recentIncidents.map((incident) => (
+                    <CommandItem
+                      key={incident.id}
+                      value={`${incident.type} ${incident.subType} ${incident.location} ${incident.id}`}
+                      onSelect={() => handleIncidentChange(incident.id)}
+                    >
+                      <div className="flex items-center justify-between w-full">
+                        <div className="flex items-center gap-2">
+                          <span className="font-medium">{incident.type}</span>
+                          {incident.subType && (
+                            <span className="text-gray-500 text-xs">- {incident.subType}</span>
+                          )}
+                        </div>
+                        <div className="flex items-center gap-1">
+                          <Badge variant={statusVariants[incident.status]} className="text-xs">
+                            {incident.status}
+                          </Badge>
+                          {selectedIncidentId === incident.id && (
+                            <Check className="h-4 w-4" />
+                          )}
+                        </div>
+                      </div>
+                    </CommandItem>
+                  ))}
+                </CommandGroup>
+              )}
 
-          {/* Active incidents */}
-          {groupedIncidents.active.length > 0 && (
-            <div className="mb-1">
-              <div className="px-2 py-1.5 text-xs font-medium text-red-600">
-                Active Incidents ({groupedIncidents.active.length})
-              </div>
-              {groupedIncidents.active.map((incident) => (
-                <SelectItem key={incident.id} value={incident.id} className="pl-6">
-                  <div className="flex items-center justify-between w-full">
-                    <div className="flex items-center gap-2">
-                      <span className="font-medium">{incident.type}</span>
-                      {incident.subType && (
-                        <span className="text-gray-500 text-xs">- {incident.subType}</span>
-                      )}
-                      <span className="text-gray-400 text-xs truncate ml-2">
-                        {incident.location}
-                      </span>
-                    </div>
-                    <div className="flex items-center gap-1">
-                      <Badge variant={severityVariants[incident.severity]} className="text-xs">
-                        {incident.severity}
-                      </Badge>
-                    </div>
-                  </div>
-                </SelectItem>
-              ))}
-            </div>
-          )}
+              {/* Active incidents */}
+              {groupedIncidents.active.length > 0 && (
+                <CommandGroup heading={`Active Incidents (${groupedIncidents.active.length})`}>
+                  {groupedIncidents.active.map((incident) => (
+                    <CommandItem
+                      key={incident.id}
+                      value={`${incident.type} ${incident.subType} ${incident.location} ${incident.id}`}
+                      onSelect={() => handleIncidentChange(incident.id)}
+                    >
+                      <div className="flex items-center justify-between w-full">
+                        <div className="flex items-center gap-2">
+                          <span className="font-medium">{incident.type}</span>
+                          {incident.subType && (
+                            <span className="text-gray-500 text-xs">- {incident.subType}</span>
+                          )}
+                          <span className="text-gray-400 text-xs truncate ml-2">
+                            {incident.location}
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-1">
+                          <Badge variant={severityVariants[incident.severity]} className="text-xs">
+                            {incident.severity}
+                          </Badge>
+                          {selectedIncidentId === incident.id && (
+                            <Check className="h-4 w-4" />
+                          )}
+                        </div>
+                      </div>
+                    </CommandItem>
+                  ))}
+                </CommandGroup>
+              )}
 
-          {/* Contained incidents */}
-          {includeHistorical && groupedIncidents.contained.length > 0 && (
-            <div className="mb-1">
-              <div className="px-2 py-1.5 text-xs font-medium text-yellow-600">
-                Contained Incidents ({groupedIncidents.contained.length})
-              </div>
-              {groupedIncidents.contained.map((incident) => (
-                <SelectItem key={incident.id} value={incident.id} className="pl-6">
-                  <div className="flex items-center justify-between w-full">
-                    <div className="flex items-center gap-2">
-                      <span className="font-medium">{incident.type}</span>
-                      {incident.subType && (
-                        <span className="text-gray-500 text-xs">- {incident.subType}</span>
-                      )}
-                      <span className="text-gray-400 text-xs truncate ml-2">
-                        {incident.location}
-                      </span>
-                    </div>
-                    <div className="flex items-center gap-1">
-                      <Badge variant={severityVariants[incident.severity]} className="text-xs">
-                        {incident.severity}
-                      </Badge>
-                    </div>
-                  </div>
-                </SelectItem>
-              ))}
-            </div>
-          )}
+              {/* Contained incidents */}
+              {includeHistorical && groupedIncidents.contained.length > 0 && (
+                <CommandGroup heading={`Contained Incidents (${groupedIncidents.contained.length})`}>
+                  {groupedIncidents.contained.map((incident) => (
+                    <CommandItem
+                      key={incident.id}
+                      value={`${incident.type} ${incident.subType} ${incident.location} ${incident.id}`}
+                      onSelect={() => handleIncidentChange(incident.id)}
+                    >
+                      <div className="flex items-center justify-between w-full">
+                        <div className="flex items-center gap-2">
+                          <span className="font-medium">{incident.type}</span>
+                          {incident.subType && (
+                            <span className="text-gray-500 text-xs">- {incident.subType}</span>
+                          )}
+                          <span className="text-gray-400 text-xs truncate ml-2">
+                            {incident.location}
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-1">
+                          <Badge variant={severityVariants[incident.severity]} className="text-xs">
+                            {incident.severity}
+                          </Badge>
+                          {selectedIncidentId === incident.id && (
+                            <Check className="h-4 w-4" />
+                          )}
+                        </div>
+                      </div>
+                    </CommandItem>
+                  ))}
+                </CommandGroup>
+              )}
 
-          {/* Resolved incidents */}
-          {includeHistorical && groupedIncidents.resolved.length > 0 && (
-            <div className="mb-1">
-              <div className="px-2 py-1.5 text-xs font-medium text-gray-600">
-                Resolved Incidents ({groupedIncidents.resolved.length})
-              </div>
-              {groupedIncidents.resolved.map((incident) => (
-                <SelectItem key={incident.id} value={incident.id} className="pl-6">
-                  <div className="flex items-center justify-between w-full">
-                    <div className="flex items-center gap-2">
-                      <span className="font-medium">{incident.type}</span>
-                      {incident.subType && (
-                        <span className="text-gray-500 text-xs">- {incident.subType}</span>
-                      )}
-                      <span className="text-gray-400 text-xs truncate ml-2">
-                        {incident.location}
-                      </span>
-                    </div>
-                    <div className="flex items-center gap-1">
-                      <Badge variant="outline" className="text-xs">
-                        RESOLVED
-                      </Badge>
-                    </div>
-                  </div>
-                </SelectItem>
-              ))}
-            </div>
-          )}
+              {/* Resolved incidents */}
+              {includeHistorical && groupedIncidents.resolved.length > 0 && (
+                <CommandGroup heading={`Resolved Incidents (${groupedIncidents.resolved.length})`}>
+                  {groupedIncidents.resolved.map((incident) => (
+                    <CommandItem
+                      key={incident.id}
+                      value={`${incident.type} ${incident.subType} ${incident.location} ${incident.id}`}
+                      onSelect={() => handleIncidentChange(incident.id)}
+                    >
+                      <div className="flex items-center justify-between w-full">
+                        <div className="flex items-center gap-2">
+                          <span className="font-medium">{incident.type}</span>
+                          {incident.subType && (
+                            <span className="text-gray-500 text-xs">- {incident.subType}</span>
+                          )}
+                          <span className="text-gray-400 text-xs truncate ml-2">
+                            {incident.location}
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-1">
+                          <Badge variant="outline" className="text-xs">
+                            RESOLVED
+                          </Badge>
+                          {selectedIncidentId === incident.id && (
+                            <Check className="h-4 w-4" />
+                          )}
+                        </div>
+                      </div>
+                    </CommandItem>
+                  ))}
+                </CommandGroup>
+              )}
 
-          {/* No incidents found */}
-          {incidents.length === 0 && !isLoading && (
-            <div className="px-2 py-4 text-center text-sm text-gray-500">
-              No incidents found
-            </div>
-          )}
-
-          {/* Clear selection option */}
-          {selectedIncidentId && (
-            <div className="border-t pt-1 mt-1">
-              <button
-                onClick={handleClearSelection}
-                className="w-full px-2 py-1.5 text-left text-xs text-gray-500 hover:text-gray-700 hover:bg-gray-50 rounded"
-              >
-                Clear Selection
-              </button>
-            </div>
-          )}
-        </SelectContent>
-      </Select>
+              {/* Clear selection option */}
+              {selectedIncidentId && (
+                <CommandItem
+                  onSelect={handleClearSelection}
+                  className="text-center text-red-600"
+                >
+                  Clear Selection
+                </CommandItem>
+              )}
+            </CommandList>
+          </Command>
+        </PopoverContent>
+      </Popover>
 
       {/* Selected incident details */}
       {selectedIncident && (

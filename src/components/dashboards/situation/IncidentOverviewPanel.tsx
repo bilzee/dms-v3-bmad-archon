@@ -14,6 +14,7 @@ import IncidentSelector from './components/IncidentSelector';
 import IncidentSummary from './components/IncidentSummary';
 import PopulationImpact from './components/PopulationImpact';
 import PreliminaryImpact from './components/PreliminaryImpact';
+import IncidentsOverview from './components/IncidentsOverview';
 
 // Types for main panel
 interface IncidentOverviewPanelProps {
@@ -202,6 +203,9 @@ export function IncidentOverviewPanel({
 
   return (
     <div className={cn("space-y-3 h-full overflow-y-auto", className)}> {/* Reduced spacing */}
+      {/* Active Incidents Overview */}
+      <IncidentsOverview className="px-1" />
+      
       {/* Incident Selector */}
       <IncidentSelector
         selectedIncidentId={currentIncidentId}
