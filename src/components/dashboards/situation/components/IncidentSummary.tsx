@@ -148,11 +148,11 @@ export function IncidentSummary({
         </CardTitle>
       </CardHeader>
       
-      <CardContent className="space-y-4">
-        {/* Incident Type and Severity */}
-        <div className="space-y-2">
+      <CardContent className="space-y-3">
+        {/* Incident Type, Status & Severity - Compact Layout */}
+        <div className="space-y-1">
           <div className="flex items-center gap-2">
-            <span className="font-medium text-lg">{incident.type}</span>
+            <span className="font-medium text-base">{incident.type}</span>
             {incident.subType && (
               <span className="text-gray-500 text-sm">- {incident.subType}</span>
             )}
@@ -161,7 +161,7 @@ export function IncidentSummary({
           <div className="flex items-center gap-2">
             <Badge 
               variant={statusInfo.variant}
-              className={cn("gap-1", statusInfo.color)}
+              className={cn("gap-1 text-xs h-5", statusInfo.color)}
             >
               <StatusIcon className="h-3 w-3" />
               {statusInfo.label}
@@ -169,41 +169,11 @@ export function IncidentSummary({
             
             <Badge 
               variant="outline"
-              className={cn("gap-1", severityInfo.color)}
+              className={cn("gap-1 text-xs h-5", severityInfo.color)}
             >
               {severityInfo.label}
             </Badge>
-          </div>
-        </div>
-
-        {/* Declaration Date */}
-        <div className="space-y-1">
-          <div className="flex items-center gap-2 text-sm text-gray-600">
-            <Calendar className="h-4 w-4" />
-            <span>Declared:</span>
-          </div>
-          <div className="ml-6">
-            <div className="font-medium">
-              {new Date(incident.createdAt).toLocaleDateString('en-US', {
-                year: 'numeric',
-                month: 'long',
-                day: 'numeric'
-              })}
-            </div>
-            <div className="text-sm text-gray-500">
-              {new Date(incident.createdAt).toLocaleTimeString('en-US', {
-                hour: '2-digit',
-                minute: '2-digit'
-              })}
-            </div>
-          </div>
-        </div>
-
-        {/* Duration Information */}
-        <div className="space-y-3">
-          <div className="flex items-center gap-2 text-sm text-gray-600">
-            <Clock className="h-4 w-4" />
-            <span>Duration:</span>
+            
             {realTime && (
               <div className="flex items-center gap-1 text-xs text-green-600">
                 <Timer className="h-3 w-3" />
@@ -211,54 +181,71 @@ export function IncidentSummary({
               </div>
             )}
           </div>
-          
-          <div className="ml-6 space-y-2">
-            {/* Total Duration */}
-            <div className="flex items-center justify-between">
-              <span className="text-sm text-gray-600">Total:</span>
-              <span className="font-medium text-sm">
-                {durationInfo.totalDuration}
-              </span>
+        </div>
+
+        {/* Compact Info Grid */}
+        <div className="grid grid-cols-2 gap-3 text-xs">
+          {/* Declaration Date - Compact */}
+          <div className="space-y-1">
+            <div className="flex items-center gap-1 text-gray-600">
+              <Calendar className="h-3 w-3" />
+              <span>Declared</span>
             </div>
-            
-            {/* Time in Current Status */}
-            <div className="flex items-center justify-between">
-              <span className="text-sm text-gray-600">
-                As {statusInfo.label}:
-              </span>
-              <span className="font-medium text-sm">
-                {durationInfo.inCurrentStatus}
-              </span>
-            </div>
-            
-            {/* Progress indicator for duration */}
-            {durationInfo.totalDays > 0 && (
-              <div className="pt-2">
-                <div className="flex items-center gap-2 mb-1">
-                  <span className="text-xs text-gray-500">Duration Progress</span>
-                  <span className="text-xs text-gray-400">({durationInfo.totalDays} days)</span>
-                </div>
-                <div className="w-full bg-gray-200 rounded-full h-2">
-                  <div 
-                    className={cn(
-                      "h-2 rounded-full transition-all duration-500",
-                      incident.status === 'ACTIVE' ? 'bg-red-500' :
-                      incident.status === 'CONTAINED' ? 'bg-yellow-500' : 'bg-green-500'
-                    )}
-                    style={{ 
-                      width: `${Math.min(100, (durationInfo.totalDays / 30) * 100)}%` 
-                    }}
-                  />
-                </div>
-                {durationInfo.totalDays > 30 && (
-                  <div className="text-xs text-gray-400 mt-1">
-                    Long-term incident ({Math.floor(durationInfo.totalDays / 7)} weeks)
-                  </div>
-                )}
+            <div>
+              <div className="font-medium text-xs">
+                {new Date(incident.createdAt).toLocaleDateString('en-US', {
+                  month: 'short',
+                  day: 'numeric',
+                  year: '2-digit'
+                })}
               </div>
-            )}
+              <div className="text-gray-500 text-xs">
+                {new Date(incident.createdAt).toLocaleTimeString('en-US', {
+                  hour: '2-digit',
+                  minute: '2-digit'
+                })}
+              </div>
+            </div>
+          </div>
+
+          {/* Duration - Compact */}
+          <div className="space-y-1">
+            <div className="flex items-center gap-1 text-gray-600">
+              <Clock className="h-3 w-3" />
+              <span>Duration</span>
+            </div>
+            <div>
+              <div className="font-medium text-xs">
+                {durationInfo.totalDuration}
+              </div>
+              <div className="text-gray-500 text-xs">
+                {statusInfo.label}: {durationInfo.inCurrentStatus}
+              </div>
+            </div>
           </div>
         </div>
+
+        {/* Compact Progress Bar - Only for incidents > 7 days */}
+        {durationInfo.totalDays > 7 && (
+          <div className="space-y-1">
+            <div className="flex items-center justify-between">
+              <span className="text-xs text-gray-500">Progress</span>
+              <span className="text-xs text-gray-400">{durationInfo.totalDays} days</span>
+            </div>
+            <div className="w-full bg-gray-200 rounded-full h-1.5">
+              <div 
+                className={cn(
+                  "h-1.5 rounded-full transition-all duration-500",
+                  incident.status === 'ACTIVE' ? 'bg-red-500' :
+                  incident.status === 'CONTAINED' ? 'bg-yellow-500' : 'bg-green-500'
+                )}
+                style={{ 
+                  width: `${Math.min(100, (durationInfo.totalDays / 30) * 100)}%` 
+                }}
+              />
+            </div>
+          </div>
+        )}
 
               {/* Removed duplicated Location, Description, and timestamp information to prevent scrolling */}
         {/* This information is already displayed elsewhere in the dashboard */}

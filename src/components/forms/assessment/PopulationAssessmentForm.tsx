@@ -18,7 +18,7 @@ import { IncidentSelector } from '@/components/shared/IncidentSelector'
 import { PopulationAssessmentFormProps, PopulationAssessment } from '@/types/rapid-assessment'
 import { cn } from '@/lib/utils'
 import { getCurrentUserName, getAssessmentLocationData } from '@/utils/assessment-utils'
-import { Users, Baby, User, UserPlus, AlertTriangle, Heart, BarChart3, PieChart } from 'lucide-react'
+import { Users, Baby, User, UserPlus, AlertTriangle, Heart } from 'lucide-react'
 
 const PopulationAssessmentSchema = z.object({
   totalHouseholds: z.number().int().min(0),
@@ -45,16 +45,54 @@ const PopulationAssessmentSchema = z.object({
   message: "The sum of Male and Female population cannot exceed the Total Population",
   path: ["populationMale"] // Show error on male field but applies to both
 }).refine((data) => {
-  // Validation 2: Vulnerable groups should not exceed Total Population
-  const vulnerableTotal = data.populationUnder5 + data.pregnantWomen + data.lactatingMothers + 
-                         data.personWithDisability + data.elderlyPersons + data.separatedChildren;
-  if (vulnerableTotal > data.totalPopulation) {
+  // Validation 2: Each individual vulnerable group should not exceed Total Population
+  if (data.populationUnder5 > data.totalPopulation) {
     return false;
   }
   return true;
 }, {
-  message: "The sum of vulnerable groups cannot exceed the Total Population",
-  path: ["populationUnder5"] // Show error on first vulnerable group field
+  message: "Children Under 5 cannot exceed the Total Population",
+  path: ["populationUnder5"]
+}).refine((data) => {
+  if (data.pregnantWomen > data.totalPopulation) {
+    return false;
+  }
+  return true;
+}, {
+  message: "Pregnant Women cannot exceed the Total Population",
+  path: ["pregnantWomen"]
+}).refine((data) => {
+  if (data.lactatingMothers > data.totalPopulation) {
+    return false;
+  }
+  return true;
+}, {
+  message: "Lactating Mothers cannot exceed the Total Population",
+  path: ["lactatingMothers"]
+}).refine((data) => {
+  if (data.personWithDisability > data.totalPopulation) {
+    return false;
+  }
+  return true;
+}, {
+  message: "Persons with Disabilities cannot exceed the Total Population",
+  path: ["personWithDisability"]
+}).refine((data) => {
+  if (data.elderlyPersons > data.totalPopulation) {
+    return false;
+  }
+  return true;
+}, {
+  message: "Elderly Persons (60+) cannot exceed the Total Population",
+  path: ["elderlyPersons"]
+}).refine((data) => {
+  if (data.separatedChildren > data.totalPopulation) {
+    return false;
+  }
+  return true;
+}, {
+  message: "Separated Children cannot exceed the Total Population",
+  path: ["separatedChildren"]
 }).refine((data) => {
   // Validation 3: Lives Lost + Injured should not exceed Total Population
   const casualtyTotal = data.numberLivesLost + data.numberInjured;
@@ -83,7 +121,6 @@ export function PopulationAssessmentForm({
   const [selectedEntity, setSelectedEntity] = useState<string>(entityId)
   const [selectedIncident, setSelectedIncident] = useState<string>('')
   const [selectedEntityData, setSelectedEntityData] = useState<any>(null)
-  const [chartType, setChartType] = useState<'bar' | 'pie'>('bar')
 
   // Extract population data from initialData
   const populationData = (initialData as any)?.populationAssessment || (initialData as any);
@@ -441,128 +478,12 @@ export function PopulationAssessmentForm({
               <CardTitle className="flex items-center gap-2">
                 <Heart className="h-5 w-5" />
                 Vulnerable Groups
-                <Badge variant="secondary">
-                  {vulnerablePercentage}% of population
-                </Badge>
               </CardTitle>
               <CardDescription>
                 Identify and count vulnerable population groups requiring special attention
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
-              {/* Chart Type Toggle */}
-              <div className="flex items-center justify-between">
-                <div className="text-sm text-gray-600">
-                  Visualization:
-                </div>
-                <div className="flex items-center gap-2">
-                  <Button
-                    type="button"
-                    size="sm"
-                    variant={chartType === 'bar' ? 'default' : 'outline'}
-                    onClick={() => setChartType('bar')}
-                    className="gap-2"
-                  >
-                    <BarChart3 className="h-4 w-4" />
-                    Bar Chart
-                  </Button>
-                  <Button
-                    type="button"
-                    size="sm"
-                    variant={chartType === 'pie' ? 'default' : 'outline'}
-                    onClick={() => setChartType('pie')}
-                    className="gap-2"
-                  >
-                    <PieChart className="h-4 w-4" />
-                    Pie Chart
-                  </Button>
-                </div>
-              </div>
-
-              {/* Chart Visualization */}
-              {vulnerableTotal > 0 && (
-                <div className="bg-gray-50 rounded-lg p-4">
-                  {chartType === 'bar' ? (
-                    <div className="space-y-3">
-                      <h4 className="text-sm font-medium text-center">Vulnerable Population Distribution</h4>
-                      <div className="space-y-2">
-                        {vulnerableGroupsData.map((group) => (
-                          <div key={group.name} className="flex items-center gap-3">
-                            <div className="w-24 text-xs text-right">{group.name}:</div>
-                            <div className="flex-1 relative h-6 bg-gray-200 rounded">
-                              <div
-                                className="h-full rounded transition-all duration-300"
-                                style={{
-                                  width: `${Math.max(group.percentage, 2)}%`,
-                                  backgroundColor: group.color,
-                                }}
-                              />
-                              <div className="absolute inset-0 flex items-center justify-center text-xs font-medium text-white mix-blend-difference">
-                                {group.value} ({group.percentage}%)
-                              </div>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  ) : (
-                    <div className="space-y-3">
-                      <h4 className="text-sm font-medium text-center">Vulnerable Population Distribution</h4>
-                      <div className="flex items-center justify-center">
-                        <div className="relative w-48 h-48">
-                          <svg viewBox="0 0 100 100" className="w-full h-full transform -rotate-90">
-                            {(() => {
-                              let currentAngle = 0;
-                              return vulnerableGroupsData.map((group) => {
-                                const angle = (group.value / vulnerableTotal) * 360;
-                                const startAngle = currentAngle;
-                                const endAngle = currentAngle + angle;
-                                currentAngle = endAngle;
-                                
-                                const x1 = 50 + 40 * Math.cos((startAngle * Math.PI) / 180);
-                                const y1 = 50 + 40 * Math.sin((startAngle * Math.PI) / 180);
-                                const x2 = 50 + 40 * Math.cos((endAngle * Math.PI) / 180);
-                                const y2 = 50 + 40 * Math.sin((endAngle * Math.PI) / 180);
-                                
-                                const largeArcFlag = angle > 180 ? 1 : 0;
-                                
-                                const pathData = [
-                                  `M 50 50`,
-                                  `L ${x1} ${y1}`,
-                                  `A 40 40 0 ${largeArcFlag} 1 ${x2} ${y2}`,
-                                  'Z'
-                                ].join(' ');
-                                
-                                return (
-                                  <path
-                                    key={group.name}
-                                    d={pathData}
-                                    fill={group.color}
-                                    stroke="white"
-                                    strokeWidth="0.5"
-                                  />
-                                );
-                              });
-                            })()}
-                          </svg>
-                        </div>
-                      </div>
-                      {/* Pie chart legend */}
-                      <div className="grid grid-cols-2 gap-2">
-                        {vulnerableGroupsData.map((group) => (
-                          <div key={group.name} className="flex items-center gap-2 text-xs">
-                            <div 
-                              className="w-3 h-3 rounded"
-                              style={{ backgroundColor: group.color }}
-                            />
-                            <span>{group.name}: {group.value} ({group.percentage}%)</span>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-                </div>
-              )}
 
               {/* Form Fields Grid */}
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
