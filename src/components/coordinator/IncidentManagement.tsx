@@ -696,7 +696,6 @@ export function IncidentManagement({
                   <TableHead>Status</TableHead>
                   <TableHead>Population Impact</TableHead>
                   <TableHead>Linked Assessments</TableHead>
-                  <TableHead>Created</TableHead>
                   <TableHead>Actions</TableHead>
                 </TableRow>
               </TableHeader>
@@ -772,14 +771,6 @@ export function IncidentManagement({
                         </div>
                       </TableCell>
                       <TableCell>
-                        <div className="text-sm">
-                          {new Date(incident.createdAt).toLocaleDateString()}
-                          <div className="text-xs text-gray-500">
-                            {new Date(incident.createdAt).toLocaleTimeString()}
-                          </div>
-                        </div>
-                      </TableCell>
-                      <TableCell>
                         <div className="flex items-center gap-2">
                           <Button
                             variant="outline"
@@ -804,22 +795,6 @@ export function IncidentManagement({
                               <ChevronRight className="h-3 w-3" />
                             )}
                           </Button>
-                          
-                          {/* Status Change Actions */}
-                          <Select
-                            value={incident.status}
-                            onValueChange={(value) => handleStatusChange(incident.id, value, retryIncidents)}
-                            disabled={state.isUpdating}
-                          >
-                            <SelectTrigger className="w-24">
-                              <SelectValue />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="ACTIVE">Active</SelectItem>
-                              <SelectItem value="CONTAINED">Contained</SelectItem>
-                              <SelectItem value="RESOLVED">Resolved</SelectItem>
-                            </SelectContent>
-                          </Select>
                         </div>
                       </TableCell>
                     </TableRow>
@@ -885,16 +860,39 @@ export function IncidentManagement({
                                     <span>{incident.subType || 'N/A'}</span>
                                   </div>
                                   <div className="flex justify-between">
+                                    <span>Created:</span>
+                                    <span className="text-right">
+                                      {new Date(incident.createdAt).toLocaleDateString()} {new Date(incident.createdAt).toLocaleTimeString()}
+                                    </span>
+                                  </div>
+                                  <div className="flex justify-between">
                                     <span>Created By:</span>
-                                    <span>{incident.createdBy}</span>
+                                    <span>{incident.createdByUser?.name || incident.createdByUser?.email || incident.createdBy}</span>
                                   </div>
                                   <div className="flex justify-between">
                                     <span>Rapid Assessments:</span>
                                     <span>{incident.rapidAssessments?.length || 0}</span>
                                   </div>
                                   <div className="flex justify-between">
-                                    <span>Commitments:</span>
-                                    <span>{incident.commitments?.length || 0}</span>
+                                    <span>Response Deliveries:</span>
+                                    <span>{incident.responseDeliveries?.length || 0}</span>
+                                  </div>
+                                  <div className="flex justify-between items-center">
+                                    <span>Status:</span>
+                                    <Select
+                                      value={incident.status}
+                                      onValueChange={(value) => handleStatusChange(incident.id, value, retryIncidents)}
+                                      disabled={state.isUpdating}
+                                    >
+                                      <SelectTrigger className="w-24 h-6 text-xs">
+                                        <SelectValue />
+                                      </SelectTrigger>
+                                      <SelectContent>
+                                        <SelectItem value="ACTIVE">Active</SelectItem>
+                                        <SelectItem value="CONTAINED">Contained</SelectItem>
+                                        <SelectItem value="RESOLVED">Resolved</SelectItem>
+                                      </SelectContent>
+                                    </Select>
                                   </div>
                                 </div>
                               </div>

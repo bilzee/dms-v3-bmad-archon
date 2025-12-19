@@ -109,7 +109,7 @@ const fetchIncidentsData = async (): Promise<DashboardData> => {
  * active or contained incidents.
  */
 export function IncidentsOverview({ className }: IncidentsOverviewProps) {
-  const [isExpanded, setIsExpanded] = React.useState(true);
+  const [isExpanded, setIsExpanded] = React.useState(false);
 
   // Fetch incidents data
   const {
