@@ -4,6 +4,7 @@ import React, { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { cn } from '@/lib/utils';
 import { apiGet } from '@/lib/api';
+import { useSeverityThresholds } from '@/hooks/useSeverityThresholds';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
@@ -83,15 +84,6 @@ const calculatePercentage = (value: number, total: number): number => {
   return Math.round((value / total) * 100);
 };
 
-/**
- * Get severity level based on casualty counts
- */
-const getCasualtySeverity = (livesLost: number, injured: number) => {
-  if (livesLost > 100 || injured > 500) return { level: 'Critical', color: 'text-red-600 bg-red-100' };
-  if (livesLost > 10 || injured > 100) return { level: 'High', color: 'text-orange-600 bg-orange-100' };
-  if (livesLost > 0 || injured > 0) return { level: 'Medium', color: 'text-yellow-600 bg-yellow-100' };
-  return { level: 'Low', color: 'text-green-600 bg-green-100' };
-};
 
 /**
  * Format date to readable string
@@ -188,6 +180,9 @@ const fetchVerifiedPopulationImpact = async (incidentId?: string): Promise<Verif
  * - Latest verified assessment date
  */
 export function PopulationImpact({ incidentId, className }: PopulationImpactProps) {
+  // Use configurable severity thresholds
+  const { calculateSeverity } = useSeverityThresholds('POPULATION');
+  
   // Chart type states for different sections
   const [vulnerableChartType, setVulnerableChartType] = useState<'bar' | 'pie' | 'tiles'>('bar');
   const [casualtyChartType, setCasualtyChartType] = useState<'bar' | 'pie' | 'tiles'>('tiles');
@@ -276,7 +271,7 @@ export function PopulationImpact({ incidentId, className }: PopulationImpactProp
     );
   }
 
-  const casualtySeverity = getCasualtySeverity(populationData.aggregatedLivesLost, populationData.aggregatedInjured);
+  const casualtySeverity = calculateSeverity(populationData.livesLost, populationData.injured);
   const totalVulnerable = populationData.demographicBreakdown.under5 + 
                           populationData.demographicBreakdown.elderly + 
                           populationData.demographicBreakdown.pwd + 

@@ -4,8 +4,10 @@ import React from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { cn } from '@/lib/utils';
 import { apiGet } from '@/lib/api';
+import { useSeverityThresholds } from '@/hooks/useSeverityThresholds';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import {
   AlertTriangle,
   TrendingUp,
@@ -17,7 +19,8 @@ import {
   Calendar,
   FileText,
   Loader2,
-  AlertCircle
+  AlertCircle,
+  Info
 } from 'lucide-react';
 
 // Types for preliminary impact data
@@ -65,15 +68,6 @@ const formatDate = (dateString: string | null): string => {
   }
 };
 
-/**
- * Get severity level based on casualty counts for preliminary assessments
- */
-const getPreliminarySeverity = (livesLost: number, injured: number, displaced: number) => {
-  if (livesLost > 50 || displaced > 1000) return { level: 'Critical', color: 'text-red-600 bg-red-100' };
-  if (livesLost > 10 || injured > 50 || displaced > 500) return { level: 'High', color: 'text-orange-600 bg-orange-100' };
-  if (livesLost > 0 || injured > 0 || displaced > 0) return { level: 'Medium', color: 'text-yellow-600 bg-yellow-100' };
-  return { level: 'Low', color: 'text-green-600 bg-green-100' };
-};
 
 // Fetch preliminary impact from dashboard API
 const fetchPreliminaryImpact = async (incidentId?: string): Promise<PreliminaryImpactData> => {
@@ -125,6 +119,9 @@ const fetchPreliminaryImpact = async (incidentId?: string): Promise<PreliminaryI
  * - Warning about estimates being unverified
  */
 export function PreliminaryImpact({ incidentId, className }: PreliminaryImpactProps) {
+  // Use configurable severity thresholds
+  const { calculateSeverity } = useSeverityThresholds('PRELIMINARY');
+  
   // Fetch preliminary impact data
   const {
     data: preliminaryData,
@@ -208,7 +205,7 @@ export function PreliminaryImpact({ incidentId, className }: PreliminaryImpactPr
     );
   }
 
-  const severity = getPreliminarySeverity(preliminaryData.livesLost, preliminaryData.injured, preliminaryData.displaced);
+  const severity = calculateSeverity(preliminaryData.livesLost, preliminaryData.injured, preliminaryData.displaced);
   const hasData = preliminaryData.assessmentCount > 0;
   const totalInfrastructureAffected = preliminaryData.housesAffected + 
                                     preliminaryData.schoolsAffected + 
@@ -220,10 +217,17 @@ export function PreliminaryImpact({ incidentId, className }: PreliminaryImpactPr
         <CardTitle className="text-lg font-semibold flex items-center gap-2">
           <AlertTriangle className="h-5 w-5 text-orange-500" />
           Preliminary Impact Assessment
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger>
+                <Info className="h-4 w-4 text-gray-400 hover:text-gray-600" />
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>Initial estimated impact (not verified) of the incident can be as high as the following:</p>
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
         </CardTitle>
-        <p className="text-sm text-orange-700 bg-orange-50 px-2 py-1 rounded mt-2">
-          Initial estimated impact (not verified) of the incident can be as high as the following:
-        </p>
       </CardHeader>
       
       <CardContent className="space-y-4">

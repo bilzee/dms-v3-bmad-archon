@@ -179,6 +179,12 @@ const getNavigationItems = (role: string | null): NavItem[] => {
             href: '/coordinator/settings/gap-field-management',
             icon: Settings,
             description: 'Configure gap field severities'
+          },
+          {
+            name: 'Severity Thresholds',
+            href: '/coordinator/settings/severity-thresholds',
+            icon: Settings,
+            description: 'Configure severity thresholds for impact badges'
           }
         ]
       },
