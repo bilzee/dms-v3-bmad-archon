@@ -279,7 +279,7 @@ export class RapidAssessmentService {
     total: number
     totalPages: number
   }> {
-    const { page, limit, userId, entityId, type, status, verificationStatus, priority, startDate, endDate } = query
+    const { page, limit, userId, entityId, incidentId, type, status, verificationStatus, priority, startDate, endDate } = query
     const skip = (page - 1) * limit
 
     // Build where clause
@@ -287,6 +287,7 @@ export class RapidAssessmentService {
 
     if (userId) where.assessorId = userId
     if (entityId) where.entityId = entityId
+    if (incidentId) where.incidentId = incidentId
     if (type) where.rapidAssessmentType = type
     if (status) where.status = status
     if (verificationStatus) where.verificationStatus = verificationStatus

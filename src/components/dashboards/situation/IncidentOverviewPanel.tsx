@@ -21,6 +21,7 @@ interface IncidentOverviewPanelProps {
   incidentId?: string;
   className?: string;
   onIncidentChange?: (incidentId: string) => void;
+  dashboardMode?: 'coordinator' | 'executive';
 }
 
 interface DashboardData {
@@ -150,7 +151,8 @@ function IncidentOverviewError({ error, onRetry }: { error: Error; onRetry: () =
 export function IncidentOverviewPanel({ 
   incidentId, 
   className, 
-  onIncidentChange 
+  onIncidentChange,
+  dashboardMode = 'coordinator' 
 }: IncidentOverviewPanelProps) {
   const { selectedIncidentId } = useIncidentSelection();
   
@@ -203,8 +205,12 @@ export function IncidentOverviewPanel({
 
   return (
     <div className={cn("space-y-3 h-full overflow-y-auto", className)}> {/* Reduced spacing */}
-      {/* Active Incidents Overview */}
-      <IncidentsOverview className="px-1" />
+      {/* Active Incidents Overview - Hidden in Executive mode */}
+      {dashboardMode !== 'executive' && (
+        <div className="animate-fade-in transition-opacity duration-300 ease-in-out">
+          <IncidentsOverview className="px-1" />
+        </div>
+      )}
       
       {/* Incident Selector */}
       <IncidentSelector
@@ -231,11 +237,15 @@ export function IncidentOverviewPanel({
             className="px-1"
           />
 
-          {/* Preliminary Impact Assessment */}
-          <PreliminaryImpact
-            incidentId={currentIncidentId}
-            className="px-1"
-          />
+          {/* Preliminary Impact Assessment - Hidden in Executive mode */}
+          {dashboardMode !== 'executive' && (
+            <div className="animate-fade-in transition-opacity duration-300 ease-in-out">
+              <PreliminaryImpact
+                incidentId={currentIncidentId}
+                className="px-1"
+              />
+            </div>
+          )}
         </>
       ) : (
         /* No Incident Selected State */

@@ -5,20 +5,14 @@ import { useQuery } from '@tanstack/react-query';
 import dynamic from 'next/dynamic';
 import { SituationDashboardLayout } from '@/components/dashboards/situation/SituationDashboardLayout';
 import { IncidentOverviewPanel } from '@/components/dashboards/situation/IncidentOverviewPanel';
-import { EntityAssessmentPanel } from '@/components/dashboards/situation/EntityAssessmentPanel';
+import { CoordinatorPanelLayout } from '@/components/dashboards/situation/layouts/CoordinatorPanelLayout';
+import { ExecutivePanelLayout } from '@/components/dashboards/situation/layouts/ExecutivePanelLayout';
 import { AggregateMetrics } from '@/components/dashboards/situation/components/AggregateMetrics';
 import { TopDonorsSection } from '@/components/dashboards/situation/components/TopDonorsSection';
+import { ModeToggle, type DashboardMode } from '@/components/dashboards/situation/shared/ModeToggle';
 import { useIncidentSelection, useIncidentActions } from '@/stores/dashboardLayout.store';
 import { apiGet } from '@/lib/api';
 
-// Dynamic import for client-side only map component
-const AssessmentRelationshipMap = dynamic(
-  () => import('@/components/coordinator/AssessmentRelationshipMap').then(mod => ({ default: mod.AssessmentRelationshipMap })),
-  { 
-    ssr: false,
-    loading: () => <div className="h-full w-full flex items-center justify-center bg-muted rounded-lg">Loading map...</div>
-  }
-);
 
 // Fetch incident data for dynamic incident name
 const fetchIncidentData = async (incidentId: string) => {
@@ -44,6 +38,9 @@ const fetchIncidentData = async (incidentId: string) => {
  * Map component dynamically imported for client-side rendering (SSR-safe).
  */
 export default function SituationDashboardPage() {
+  // Dashboard mode state management
+  const [dashboardMode, setDashboardMode] = useState<DashboardMode>('coordinator');
+  
   // State management for selected incident
   const { selectedIncidentId } = useIncidentSelection();
   const { setSelectedIncident } = useIncidentActions();
@@ -61,61 +58,57 @@ export default function SituationDashboardPage() {
 
   return (
     <div className="w-full h-screen overflow-hidden pl-4"> {/* Use full screen height with left padding */}
-        {/* Ultra-compact header - minimal spacing optimized for monitors/tablets */}
-        <div className="mb-0 px-1 py-0.5 bg-white border-b border-gray-100">
-          <h1 className="text-base font-semibold text-gray-900">Situation Dashboard</h1>
-          <p className="text-xs text-gray-500">
-            Real-time disaster situation monitoring and analysis
-          </p>
+        {/* Enhanced header with mode toggle */}
+        <div className="mb-2 px-1 py-2 bg-white border-b border-gray-100">
+          <div className="flex items-center justify-between mb-2">
+            <div>
+              <h1 className="text-base font-semibold text-gray-900">Situation Dashboard</h1>
+              <p className="text-xs text-gray-500">
+                Real-time disaster situation monitoring and analysis
+              </p>
+            </div>
+            <ModeToggle 
+              mode={dashboardMode} 
+              onModeChange={setDashboardMode}
+              className="flex-shrink-0"
+            />
+          </div>
         </div>
         
-        {/* Three-panel dashboard layout */}
-        <SituationDashboardLayout>
-          {/* Left Panel: Incident Overview - Story 7.2 IMPLEMENTED */}
+        {/* Dynamic dashboard layout based on mode with smooth transitions */}
+        <div className="transition-all duration-500 ease-in-out">
+          <SituationDashboardLayout>
+          {/* Left Panel: Incident Overview - Always visible */}
           <IncidentOverviewPanel
             incidentId={currentIncidentId}
             onIncidentChange={(incidentId) => {
               console.log('Incident changed to:', incidentId);
               setSelectedIncident(incidentId);
             }}
+            dashboardMode={dashboardMode}
             className="h-full"
           />
 
-          {/* Center Panel: Divided into upper and lower sections (70-30) */}
-          <div className="flex flex-col h-full">
-            {/* Upper Center: Entity Assessment Panel - 70% */}
-            <div className="flex-[7] min-h-0">
-              <EntityAssessmentPanel
-                incidentId={currentIncidentId}
-                onEntityChange={(entityId) => {
-                  console.log('Entity changed to:', entityId);
-                }}
-                className="h-full"
-              />
-            </div>
-            
-            {/* Lower Center: Assessment Relationship Map - 30% */}
-            <div className="flex-[3] min-h-0 mt-2">
-              <AssessmentRelationshipMap
-                incidentId={currentIncidentId}
-                showTimeline={false}
-                priorityFilter={[]}
-                assessmentTypeFilter={[]}
-                onEntitySelect={(entityId) => {
-                  console.log('Map entity selected:', entityId);
-                }}
-                onIncidentSelect={(incidentId) => {
-                  console.log('Map incident selected:', incidentId);
-                }}
-                onAssessmentSelect={(assessmentId) => {
-                  console.log('Map assessment selected:', assessmentId);
-                }}
-                className="h-full"
-              />
-            </div>
-          </div>
+          {/* Dynamic Center Panel based on dashboard mode */}
+          {dashboardMode === 'coordinator' ? (
+            <CoordinatorPanelLayout
+              incidentId={currentIncidentId}
+              onIncidentChange={setSelectedIncident}
+              onEntityChange={(entityId) => {
+                console.log('Entity changed to:', entityId);
+              }}
+            />
+          ) : (
+            <ExecutivePanelLayout
+              incidentId={currentIncidentId}
+              onIncidentChange={setSelectedIncident}
+              onEntityChange={(entityId) => {
+                console.log('Entity changed to:', entityId);
+              }}
+            />
+          )}
 
-          {/* Right Panel: Aggregate Metrics + Top Donors */}
+          {/* Right Panel: Aggregate Metrics + Top Donors - Always visible */}
           <div className="flex flex-col h-full space-y-4">
             <AggregateMetrics
               incidentId={currentIncidentId}
@@ -126,7 +119,8 @@ export default function SituationDashboardPage() {
               className="flex-shrink-0"
             />
           </div>
-        </SituationDashboardLayout>
+          </SituationDashboardLayout>
+        </div>
       </div>
   );
 }

@@ -691,7 +691,7 @@ export function IncidentManagement({
               <TableHeader>
                 <TableRow>
                   <TableHead>Type</TableHead>
-                  <TableHead>Location</TableHead>
+                  <TableHead>Incident Name</TableHead>
                   <TableHead>Severity</TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead>Population Impact</TableHead>
@@ -719,9 +719,8 @@ export function IncidentManagement({
                         </div>
                       </TableCell>
                       <TableCell>
-                        <div className="flex items-center gap-1">
-                          <MapPin className="h-3 w-3 text-gray-400" />
-                          {incident.location}
+                        <div className="font-medium">
+                          {incident.name || `${incident.type} Event ${incident.id.slice(-3)}`}
                         </div>
                       </TableCell>
                       <TableCell>
@@ -854,6 +853,15 @@ export function IncidentManagement({
                                   <div className="flex justify-between">
                                     <span>Description:</span>
                                     <span className="text-right max-w-48 truncate">{incident.description}</span>
+                                  </div>
+                                  <div className="flex justify-between">
+                                    <span>Location:</span>
+                                    <span className="text-right">
+                                      <div className="flex items-center gap-1">
+                                        <MapPin className="h-3 w-3 text-gray-400" />
+                                        {incident.location}
+                                      </div>
+                                    </span>
                                   </div>
                                   <div className="flex justify-between">
                                     <span>Sub Type:</span>
