@@ -103,7 +103,7 @@ export function PreliminaryAssessmentForm({
       numberMedicalFacilitiesAffected: initialData?.numberMedicalFacilitiesAffected || 0,
       schoolsAffected: initialData?.schoolsAffected || '',
       medicalFacilitiesAffected: initialData?.medicalFacilitiesAffected || '',
-      estimatedAgriculturalLandsAffected: initialData?.estimatedAgriculturalLandsAffected ? Number(initialData.estimatedAgriculturalLandsAffected) || 0 : 0,
+      estimatedAgriculturalLandsAffected: initialData?.estimatedAgriculturalLandsAffected || '',
       reportingAgent: (user as any)?.name || '', // Always set to current user
       additionalDetails: initialData?.additionalDetails || '',
       affectedEntityIds: initialData?.affectedEntityIds || []

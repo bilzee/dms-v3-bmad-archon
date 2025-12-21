@@ -72,9 +72,15 @@ describe('PreliminaryAssessmentService', () => {
         data: {
           ...mockInput.data,
           incidentId: undefined,
+          affectedEntities: undefined,
         },
         include: {
           incident: true,
+          affectedEntities: {
+            include: {
+              entity: true,
+            },
+          },
         },
       })
 
@@ -162,9 +168,15 @@ describe('PreliminaryAssessmentService', () => {
         data: {
           ...mockInput.data,
           incidentId: 'incident-id',
+          affectedEntities: undefined,
         },
         include: {
           incident: true,
+          affectedEntities: {
+            include: {
+              entity: true,
+            },
+          },
         },
       })
 
@@ -190,7 +202,14 @@ describe('PreliminaryAssessmentService', () => {
 
       expect(prisma.preliminaryAssessment.findUnique).toHaveBeenCalledWith({
         where: { id: 'test-id' },
-        include: { incident: true },
+        include: {
+          incident: true,
+          affectedEntities: {
+            include: {
+              entity: true,
+            },
+          },
+        },
       })
 
       expect(result).toEqual(mockAssessment)
@@ -229,7 +248,14 @@ describe('PreliminaryAssessmentService', () => {
 
       expect(prisma.preliminaryAssessment.findMany).toHaveBeenCalledWith({
         where: { reportingLGA: 'Lagos Island' },
-        include: { incident: true },
+        include: {
+          incident: true,
+          affectedEntities: {
+            include: {
+              entity: true,
+            },
+          },
+        },
         orderBy: { createdAt: 'desc' },
         skip: 0,
         take: 10,
@@ -257,7 +283,14 @@ describe('PreliminaryAssessmentService', () => {
 
       expect(prisma.preliminaryAssessment.findMany).toHaveBeenCalledWith({
         where: {},
-        include: { incident: true },
+        include: {
+          incident: true,
+          affectedEntities: {
+            include: {
+              entity: true,
+            },
+          },
+        },
         orderBy: { createdAt: 'desc' },
         skip: 20,
         take: 10,
@@ -286,7 +319,14 @@ describe('PreliminaryAssessmentService', () => {
       expect(prisma.preliminaryAssessment.update).toHaveBeenCalledWith({
         where: { id: 'test-id' },
         data: { reportingLGA: 'Updated LGA' },
-        include: { incident: true },
+        include: {
+          incident: true,
+          affectedEntities: {
+            include: {
+              entity: true,
+            },
+          },
+        },
       })
 
       expect(result).toEqual(mockUpdatedAssessment)

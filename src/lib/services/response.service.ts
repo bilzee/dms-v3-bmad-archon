@@ -245,9 +245,9 @@ export class ResponseService {
     // Get existing response and validate access
     const existingResponse = await this.getResponseById(responseId, requesterId)
 
-    // Can only update responses in PLANNED or REJECTED status
-    if (existingResponse.status !== 'PLANNED' && existingResponse.status !== 'REJECTED') {
-      throw new Error('Only planned or rejected responses can be updated')
+    // Can only update responses in PLANNED status or with REJECTED verification status
+    if (existingResponse.status !== 'PLANNED' && existingResponse.verificationStatus !== 'REJECTED') {
+      throw new Error('Only planned responses or rejected deliveries can be updated')
     }
 
     // Update the response
@@ -259,15 +259,17 @@ export class ResponseService {
         items: existingResponse.items
       }
 
-      // If response was rejected, change status back to PLANNED and clear rejection reason
+      // If response was rejected, resubmit for verification and clear rejection reason
       const updateData: any = {
         ...input,
         updatedAt: new Date()
       }
       
-      if (existingResponse.status === 'REJECTED') {
-        updateData.status = 'PLANNED'
-        updateData.rejectionReason = null
+      if (existingResponse.verificationStatus === 'REJECTED') {
+        updateData.status = 'DELIVERED'  // Keep as delivered
+        updateData.verificationStatus = 'SUBMITTED'  // Resubmit for verification
+        updateData.rejectionReason = null  // Clear rejection reason
+        updateData.verifiedAt = null  // Clear previous verification timestamp
       }
 
       const response = await tx.rapidResponse.update({
