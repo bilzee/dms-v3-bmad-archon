@@ -82,7 +82,13 @@ const getTimeSince = (createdAt: string): string => {
   }
   
   const diffWeeks = Math.floor(diffDays / 7);
-  return `${diffWeeks}w`;
+  const remainingDays = diffDays % 7;
+  
+  if (remainingDays === 0) {
+    return `${diffWeeks}w`;
+  } else {
+    return `${diffWeeks}w ${remainingDays}d`;
+  }
 };
 
 /**

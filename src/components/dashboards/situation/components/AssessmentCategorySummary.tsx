@@ -627,7 +627,7 @@ export function AssessmentCategorySummary({
                   <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
                     <h4 className="text-sm font-semibold text-blue-800 mb-3 flex items-center gap-2">
                       <Info className="h-4 w-4" />
-                      Overview
+                      Context
                     </h4>
                     <div className="space-y-1">
                       {nonGapFieldElements}

@@ -339,94 +339,84 @@ export function EntityAssessmentPanel({
         {/* Assessment Categories */}
         <div className="space-y-3 flex-1 overflow-hidden"> {/* Reduced spacing and made scrollable */}
           {includeAllEntities && aggregatedAssessments ? (
-            // Aggregated view - show aggregated data for each category
+            // Aggregated view - show aggregated data for each category, always show all 5 categories
             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3"> {/* 5 columns for better space utilization */}
-              {/* Only show aggregated gap-based assessments */}
-              {aggregatedAssessments.health && (
-                <AssessmentCategorySummary
-                  category="health"
-                  assessment={aggregatedAssessments.health}
-                  gapAnalysis={{
-                    hasGap: aggregatedAssessments.health.entitiesWithGaps > 0,
-                    gapFields: aggregatedAssessments.health.fieldGapAnalysis?.gapFields || [],
-                    severity: aggregatedAssessments.health.fieldGapAnalysis?.overallSeverity || 'MEDIUM',
-                    fieldSeverityMap: aggregatedAssessments.health.fieldGapAnalysis?.fieldSeverityMap || {},
-                    fieldCounts: aggregatedAssessments.health.fieldGapAnalysis?.fieldCounts || {},
-                    recommendations: aggregatedAssessments.health.fieldGapAnalysis?.recommendations || []
-                  }}
-                  layout="full"
-                  showRecommendations={false}
-                  isAggregated={true}
-                />
-              )}
-              {aggregatedAssessments.food && (
-                <AssessmentCategorySummary
-                  category="food"
-                  assessment={aggregatedAssessments.food}
-                  gapAnalysis={{
-                    hasGap: aggregatedAssessments.food.entitiesWithGaps > 0,
-                    gapFields: aggregatedAssessments.food.fieldGapAnalysis?.gapFields || [],
-                    severity: aggregatedAssessments.food.fieldGapAnalysis?.overallSeverity || 'MEDIUM',
-                    fieldSeverityMap: aggregatedAssessments.food.fieldGapAnalysis?.fieldSeverityMap || {},
-                    fieldCounts: aggregatedAssessments.food.fieldGapAnalysis?.fieldCounts || {},
-                    recommendations: aggregatedAssessments.food.fieldGapAnalysis?.recommendations || []
-                  }}
-                  layout="full"
-                  showRecommendations={false}
-                  isAggregated={true}
-                />
-              )}
-              {aggregatedAssessments.wash && (
-                <AssessmentCategorySummary
-                  category="wash"
-                  assessment={aggregatedAssessments.wash}
-                  gapAnalysis={{
-                    hasGap: aggregatedAssessments.wash.entitiesWithGaps > 0,
-                    gapFields: aggregatedAssessments.wash.fieldGapAnalysis?.gapFields || [],
-                    severity: aggregatedAssessments.wash.fieldGapAnalysis?.overallSeverity || 'MEDIUM',
-                    fieldSeverityMap: aggregatedAssessments.wash.fieldGapAnalysis?.fieldSeverityMap || {},
-                    fieldCounts: aggregatedAssessments.wash.fieldGapAnalysis?.fieldCounts || {},
-                    recommendations: aggregatedAssessments.wash.fieldGapAnalysis?.recommendations || []
-                  }}
-                  layout="full"
-                  showRecommendations={false}
-                  isAggregated={true}
-                />
-              )}
-              {aggregatedAssessments.shelter && (
-                <AssessmentCategorySummary
-                  category="shelter"
-                  assessment={aggregatedAssessments.shelter}
-                  gapAnalysis={{
-                    hasGap: aggregatedAssessments.shelter.entitiesWithGaps > 0,
-                    gapFields: aggregatedAssessments.shelter.fieldGapAnalysis?.gapFields || [],
-                    severity: aggregatedAssessments.shelter.fieldGapAnalysis?.overallSeverity || 'MEDIUM',
-                    fieldSeverityMap: aggregatedAssessments.shelter.fieldGapAnalysis?.fieldSeverityMap || {},
-                    fieldCounts: aggregatedAssessments.shelter.fieldGapAnalysis?.fieldCounts || {},
-                    recommendations: aggregatedAssessments.shelter.fieldGapAnalysis?.recommendations || []
-                  }}
-                  layout="full"
-                  showRecommendations={false}
-                  isAggregated={true}
-                />
-              )}
-              {aggregatedAssessments.security && (
-                <AssessmentCategorySummary
-                  category="security"
-                  assessment={aggregatedAssessments.security}
-                  gapAnalysis={{
-                    hasGap: aggregatedAssessments.security.entitiesWithGaps > 0,
-                    gapFields: aggregatedAssessments.security.fieldGapAnalysis?.gapFields || [],
-                    severity: aggregatedAssessments.security.fieldGapAnalysis?.overallSeverity || 'MEDIUM',
-                    fieldSeverityMap: aggregatedAssessments.security.fieldGapAnalysis?.fieldSeverityMap || {},
-                    fieldCounts: aggregatedAssessments.security.fieldGapAnalysis?.fieldCounts || {},
-                    recommendations: aggregatedAssessments.security.fieldGapAnalysis?.recommendations || []
-                  }}
-                  layout="full"
-                  showRecommendations={false}
-                  isAggregated={true}
-                />
-              )}
+              {/* Always show all 5 assessment categories - show aggregated data or empty tiles */}
+              <AssessmentCategorySummary
+                category="health"
+                assessment={aggregatedAssessments.health}
+                gapAnalysis={aggregatedAssessments.health ? {
+                  hasGap: aggregatedAssessments.health.entitiesWithGaps > 0,
+                  gapFields: aggregatedAssessments.health.fieldGapAnalysis?.gapFields || [],
+                  severity: aggregatedAssessments.health.fieldGapAnalysis?.overallSeverity || 'MEDIUM',
+                  fieldSeverityMap: aggregatedAssessments.health.fieldGapAnalysis?.fieldSeverityMap || {},
+                  fieldCounts: aggregatedAssessments.health.fieldGapAnalysis?.fieldCounts || {},
+                  recommendations: aggregatedAssessments.health.fieldGapAnalysis?.recommendations || []
+                } : undefined}
+                layout="full"
+                showRecommendations={false}
+                isAggregated={true}
+              />
+              <AssessmentCategorySummary
+                category="food"
+                assessment={aggregatedAssessments.food}
+                gapAnalysis={aggregatedAssessments.food ? {
+                  hasGap: aggregatedAssessments.food.entitiesWithGaps > 0,
+                  gapFields: aggregatedAssessments.food.fieldGapAnalysis?.gapFields || [],
+                  severity: aggregatedAssessments.food.fieldGapAnalysis?.overallSeverity || 'MEDIUM',
+                  fieldSeverityMap: aggregatedAssessments.food.fieldGapAnalysis?.fieldSeverityMap || {},
+                  fieldCounts: aggregatedAssessments.food.fieldGapAnalysis?.fieldCounts || {},
+                  recommendations: aggregatedAssessments.food.fieldGapAnalysis?.recommendations || []
+                } : undefined}
+                layout="full"
+                showRecommendations={false}
+                isAggregated={true}
+              />
+              <AssessmentCategorySummary
+                category="wash"
+                assessment={aggregatedAssessments.wash}
+                gapAnalysis={aggregatedAssessments.wash ? {
+                  hasGap: aggregatedAssessments.wash.entitiesWithGaps > 0,
+                  gapFields: aggregatedAssessments.wash.fieldGapAnalysis?.gapFields || [],
+                  severity: aggregatedAssessments.wash.fieldGapAnalysis?.overallSeverity || 'MEDIUM',
+                  fieldSeverityMap: aggregatedAssessments.wash.fieldGapAnalysis?.fieldSeverityMap || {},
+                  fieldCounts: aggregatedAssessments.wash.fieldGapAnalysis?.fieldCounts || {},
+                  recommendations: aggregatedAssessments.wash.fieldGapAnalysis?.recommendations || []
+                } : undefined}
+                layout="full"
+                showRecommendations={false}
+                isAggregated={true}
+              />
+              <AssessmentCategorySummary
+                category="shelter"
+                assessment={aggregatedAssessments.shelter}
+                gapAnalysis={aggregatedAssessments.shelter ? {
+                  hasGap: aggregatedAssessments.shelter.entitiesWithGaps > 0,
+                  gapFields: aggregatedAssessments.shelter.fieldGapAnalysis?.gapFields || [],
+                  severity: aggregatedAssessments.shelter.fieldGapAnalysis?.overallSeverity || 'MEDIUM',
+                  fieldSeverityMap: aggregatedAssessments.shelter.fieldGapAnalysis?.fieldSeverityMap || {},
+                  fieldCounts: aggregatedAssessments.shelter.fieldGapAnalysis?.fieldCounts || {},
+                  recommendations: aggregatedAssessments.shelter.fieldGapAnalysis?.recommendations || []
+                } : undefined}
+                layout="full"
+                showRecommendations={false}
+                isAggregated={true}
+              />
+              <AssessmentCategorySummary
+                category="security"
+                assessment={aggregatedAssessments.security}
+                gapAnalysis={aggregatedAssessments.security ? {
+                  hasGap: aggregatedAssessments.security.entitiesWithGaps > 0,
+                  gapFields: aggregatedAssessments.security.fieldGapAnalysis?.gapFields || [],
+                  severity: aggregatedAssessments.security.fieldGapAnalysis?.overallSeverity || 'MEDIUM',
+                  fieldSeverityMap: aggregatedAssessments.security.fieldGapAnalysis?.fieldSeverityMap || {},
+                  fieldCounts: aggregatedAssessments.security.fieldGapAnalysis?.fieldCounts || {},
+                  recommendations: aggregatedAssessments.security.fieldGapAnalysis?.recommendations || []
+                } : undefined}
+                layout="full"
+                showRecommendations={false}
+                isAggregated={true}
+              />
             </div>
           ) : entityAssessments.length > 0 ? (
             // Individual entity view - show detailed assessments for selected entity
