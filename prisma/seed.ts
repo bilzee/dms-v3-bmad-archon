@@ -545,6 +545,7 @@ async function main() {
     update: {},
     create: {
       id: 'incident-flood-001',
+      name: 'Maiduguri Metropolitan Flooding 2025',
       type: 'FLOOD',
       subType: 'SEASONAL_FLOODING',
       severity: 'HIGH',
@@ -561,6 +562,7 @@ async function main() {
     update: {},
     create: {
       id: 'incident-drought-001',
+      name: 'Gwoza Agricultural Drought 2025',
       type: 'DROUGHT',
       subType: 'AGRICULTURAL_DROUGHT',
       severity: 'MEDIUM',

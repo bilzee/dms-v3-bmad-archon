@@ -6,6 +6,7 @@ import { useAuthStore } from '@/stores/auth.store'
 
 export interface Incident {
   id: string
+  name: string
   type: string
   subType: string
   severity: 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL'
