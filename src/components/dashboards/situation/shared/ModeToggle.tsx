@@ -20,17 +20,17 @@ export function ModeToggle({ mode, onModeChange, className }: ModeToggleProps) {
   const isExecutive = mode === 'executive';
 
   return (
-    <div className={cn("flex items-center gap-4 p-3 bg-gray-50 rounded-lg border", className)}>
+    <div className={cn("flex items-center gap-4 p-3 bg-gray-50 rounded-lg border transition-all duration-300 ease-in-out hover:shadow-md", className)}>
       <div className="flex items-center gap-2">
         <Users className={cn(
-          "h-4 w-4 transition-colors",
-          !isExecutive ? "text-blue-600" : "text-gray-400"
+          "h-4 w-4 transition-all duration-300 ease-in-out transform",
+          !isExecutive ? "text-blue-600 scale-110" : "text-gray-400 scale-100"
         )} />
         <Label 
           htmlFor="mode-toggle" 
           className={cn(
-            "text-sm font-medium cursor-pointer transition-colors",
-            !isExecutive ? "text-gray-900" : "text-gray-500"
+            "text-sm font-medium cursor-pointer transition-all duration-300 ease-in-out",
+            !isExecutive ? "text-gray-900 font-semibold" : "text-gray-500 font-medium"
           )}
         >
           Coordinator
@@ -42,13 +42,13 @@ export function ModeToggle({ mode, onModeChange, className }: ModeToggleProps) {
           id="mode-toggle"
           checked={isExecutive}
           onCheckedChange={(checked) => onModeChange(checked ? 'executive' : 'coordinator')}
-          className="data-[state=checked]:bg-amber-600"
+          className="data-[state=checked]:bg-amber-600 transition-all duration-300 ease-in-out"
         />
         <Badge 
           variant={isExecutive ? "default" : "secondary"}
           className={cn(
-            "transition-all duration-200",
-            isExecutive ? "bg-amber-100 text-amber-800 border-amber-200" : ""
+            "transition-all duration-300 ease-in-out transform hover:scale-105",
+            isExecutive ? "bg-amber-100 text-amber-800 border-amber-200 animate-in fade-in-0 slide-in-from-bottom-1" : "animate-in fade-in-0 slide-in-from-bottom-1"
           )}
         >
           {isExecutive ? "Executive" : "Standard"}
@@ -59,15 +59,15 @@ export function ModeToggle({ mode, onModeChange, className }: ModeToggleProps) {
         <Label 
           htmlFor="mode-toggle" 
           className={cn(
-            "text-sm font-medium cursor-pointer transition-colors",
-            isExecutive ? "text-gray-900" : "text-gray-500"
+            "text-sm font-medium cursor-pointer transition-all duration-300 ease-in-out",
+            isExecutive ? "text-gray-900 font-semibold" : "text-gray-500 font-medium"
           )}
         >
           Executive
         </Label>
         <Crown className={cn(
-          "h-4 w-4 transition-colors",
-          isExecutive ? "text-amber-600" : "text-gray-400"
+          "h-4 w-4 transition-all duration-300 ease-in-out transform",
+          isExecutive ? "text-amber-600 scale-110" : "text-gray-400 scale-100"
         )} />
       </div>
 

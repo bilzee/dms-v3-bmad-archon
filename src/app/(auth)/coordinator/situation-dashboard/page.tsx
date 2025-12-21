@@ -75,48 +75,57 @@ export default function SituationDashboardPage() {
           </div>
         </div>
         
-        {/* Dynamic dashboard layout based on mode with smooth transitions */}
-        <div className="transition-all duration-500 ease-in-out">
+        {/* Dynamic dashboard layout with enhanced smooth transitions */}
+        <div className="relative w-full h-full">
           <SituationDashboardLayout>
-          {/* Left Panel: Incident Overview - Always visible */}
-          <IncidentOverviewPanel
-            incidentId={currentIncidentId}
-            onIncidentChange={(incidentId) => {
-              console.log('Incident changed to:', incidentId);
-              setSelectedIncident(incidentId);
-            }}
-            dashboardMode={dashboardMode}
-            className="h-full"
-          />
-
-          {/* Dynamic Center Panel based on dashboard mode */}
-          {dashboardMode === 'coordinator' ? (
-            <CoordinatorPanelLayout
+          {/* Left Panel: Incident Overview - Always visible with subtle transition */}
+          <div className="transition-all duration-300 ease-out">
+            <IncidentOverviewPanel
               incidentId={currentIncidentId}
-              onIncidentChange={setSelectedIncident}
-              onEntityChange={(entityId) => {
-                console.log('Entity changed to:', entityId);
+              onIncidentChange={(incidentId) => {
+                console.log('Incident changed to:', incidentId);
+                setSelectedIncident(incidentId);
               }}
+              dashboardMode={dashboardMode}
+              className="h-full"
             />
-          ) : (
-            <ExecutivePanelLayout
-              incidentId={currentIncidentId}
-              onIncidentChange={setSelectedIncident}
-              onEntityChange={(entityId) => {
-                console.log('Entity changed to:', entityId);
-              }}
-            />
-          )}
+          </div>
 
-          {/* Right Panel: Aggregate Metrics + Top Donors - Always visible */}
-          <div className="flex flex-col h-full space-y-4">
+          {/* Dynamic Center Panel with fade transition */}
+          <div className="relative h-full">
+            <div 
+              key={dashboardMode}
+              className="absolute inset-0 transition-all duration-500 ease-in-out animate-in fade-in-0 slide-in-from-bottom-2"
+            >
+              {dashboardMode === 'coordinator' ? (
+                <CoordinatorPanelLayout
+                  incidentId={currentIncidentId}
+                  onIncidentChange={setSelectedIncident}
+                  onEntityChange={(entityId) => {
+                    console.log('Entity changed to:', entityId);
+                  }}
+                />
+              ) : (
+                <ExecutivePanelLayout
+                  incidentId={currentIncidentId}
+                  onIncidentChange={setSelectedIncident}
+                  onEntityChange={(entityId) => {
+                    console.log('Entity changed to:', entityId);
+                  }}
+                />
+              )}
+            </div>
+          </div>
+
+          {/* Right Panel: Aggregate Metrics + Top Donors with subtle scale transition */}
+          <div className="flex flex-col h-full space-y-4 transition-all duration-300 ease-out">
             <AggregateMetrics
               incidentId={currentIncidentId}
-              className="flex-1"
+              className="flex-1 transition-all duration-300 ease-out"
             />
             <TopDonorsSection
               incidentId={currentIncidentId}
-              className="flex-shrink-0"
+              className="flex-shrink-0 transition-all duration-300 ease-out"
             />
           </div>
           </SituationDashboardLayout>

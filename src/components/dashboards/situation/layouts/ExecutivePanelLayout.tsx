@@ -32,15 +32,21 @@ export function ExecutivePanelLayout({
   return (
     <div className={cn("flex flex-col h-full transition-all duration-300 ease-in-out", className)}>
       {/* Upper Center: Executive Content - 70% */}
-      <div className="flex-[7] min-h-0 space-y-4 overflow-y-auto transition-all duration-300 ease-in-out">
-        {/* Active Incidents Overview - Executive Table Format */}
-        <ExecutiveIncidentsTable />
+      <div className="flex-[7] min-h-0 space-y-4 overflow-y-auto">
+        {/* Active Incidents Overview - Executive Table Format with staggered animation */}
+        <div className="transition-all duration-300 ease-out animate-in fade-in-0 slide-in-from-top-2" style={{ animationDelay: '0ms' }}>
+          <ExecutiveIncidentsTable />
+        </div>
         
-        {/* Grouped Preliminary Impact Assessment */}
-        <GroupedImpactSummary incidentId={incidentId} />
+        {/* Grouped Preliminary Impact Assessment with staggered animation */}
+        <div className="transition-all duration-300 ease-out animate-in fade-in-0 slide-in-from-top-2" style={{ animationDelay: '100ms' }}>
+          <GroupedImpactSummary incidentId={incidentId} />
+        </div>
         
-        {/* Compact Assessment Status Overview */}
-        <CompactAssessmentTile incidentId={incidentId} />
+        {/* Compact Assessment Status Overview with staggered animation */}
+        <div className="transition-all duration-300 ease-out animate-in fade-in-0 slide-in-from-top-2" style={{ animationDelay: '200ms' }}>
+          <CompactAssessmentTile incidentId={incidentId} />
+        </div>
       </div>
       
       {/* Lower Center: Assessment Relationship Map - 30% (unchanged from coordinator) */}

@@ -32,20 +32,23 @@ export function CoordinatorPanelLayout({
   return (
     <div className={cn("flex flex-col h-full transition-all duration-300 ease-in-out", className)}>
       {/* Upper Center: Entity Assessment Panel - 70% */}
-      <div className="flex-[7] min-h-0 transition-all duration-300 ease-in-out">
-        <EntityAssessmentPanel
-          incidentId={incidentId}
-          onEntityChange={(entityId) => {
-            console.log('Entity changed to:', entityId);
-            onEntityChange(entityId);
-          }}
-          className="h-full"
-        />
+      <div className="flex-[7] min-h-0">
+        <div className="transition-all duration-300 ease-out animate-in fade-in-0 slide-in-from-left-2" style={{ animationDelay: '0ms' }}>
+          <EntityAssessmentPanel
+            incidentId={incidentId}
+            onEntityChange={(entityId) => {
+              console.log('Entity changed to:', entityId);
+              onEntityChange(entityId);
+            }}
+            className="h-full"
+          />
+        </div>
       </div>
       
       {/* Lower Center: Assessment Relationship Map - 30% */}
       <div className="flex-[3] min-h-0 mt-2">
-        <AssessmentRelationshipMap
+        <div className="transition-all duration-300 ease-out animate-in fade-in-0 slide-in-from-left-2" style={{ animationDelay: '100ms' }}>
+          <AssessmentRelationshipMap
           incidentId={incidentId}
           showTimeline={false}
           priorityFilter={[]}
@@ -61,7 +64,8 @@ export function CoordinatorPanelLayout({
             console.log('Map assessment selected:', assessmentId);
           }}
           className="h-full"
-        />
+          />
+        </div>
       </div>
     </div>
   );
