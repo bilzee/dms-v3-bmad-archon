@@ -39,21 +39,14 @@ const fetchIncidentData = async (incidentId: string) => {
 export default function SituationDashboardPage() {
   // Dashboard mode state management
   const [dashboardMode, setDashboardMode] = useState<DashboardMode>('coordinator');
-  const [isTransitioning, setIsTransitioning] = useState(false);
   
   // State management for selected incident
   const { selectedIncidentId } = useIncidentSelection();
   const { setSelectedIncident } = useIncidentActions();
 
-  // Handle mode change with transition
+  // Handle mode change
   const handleModeChange = (newMode: DashboardMode) => {
-    if (newMode !== dashboardMode) {
-      setIsTransitioning(true);
-      setTimeout(() => {
-        setDashboardMode(newMode);
-        setTimeout(() => setIsTransitioning(false), 50);
-      }, 250);
-    }
+    setDashboardMode(newMode);
   };
   
   // Default incident if none selected
@@ -86,11 +79,11 @@ export default function SituationDashboardPage() {
           </div>
         </div>
         
-        {/* Dynamic dashboard layout with enhanced smooth transitions */}
+        {/* Dynamic dashboard layout */}
         <div className="relative w-full h-full">
           <SituationDashboardLayout>
-          {/* Left Panel: Incident Overview - Always visible with subtle transition */}
-          <div className="transition-all duration-300 ease-out">
+          {/* Left Panel: Incident Overview */}
+          <div>
             <IncidentOverviewPanel
               incidentId={currentIncidentId}
               onIncidentChange={(incidentId) => {
@@ -102,13 +95,8 @@ export default function SituationDashboardPage() {
             />
           </div>
 
-          {/* Dynamic Center Panel with fade transition */}
+          {/* Dynamic Center Panel */}
           <div className="relative h-full">
-            <div className={`h-full transition-all duration-500 ease-in-out transform ${
-              isTransitioning 
-                ? 'opacity-0 translate-y-4' 
-                : 'opacity-100 translate-y-0'
-            }`}>
               {dashboardMode === 'coordinator' ? (
                 <CoordinatorPanelLayout
                   incidentId={currentIncidentId}
@@ -126,18 +114,17 @@ export default function SituationDashboardPage() {
                   }}
                 />
               )}
-            </div>
           </div>
 
-          {/* Right Panel: Aggregate Metrics + Top Donors with subtle scale transition */}
-          <div className="flex flex-col h-full space-y-4 transition-all duration-300 ease-out">
+          {/* Right Panel: Aggregate Metrics + Top Donors */}
+          <div className="flex flex-col h-full space-y-4 p-4">
             <AggregateMetrics
               incidentId={currentIncidentId}
-              className="flex-1 transition-all duration-300 ease-out"
+              className="flex-shrink-0"
             />
             <TopDonorsSection
               incidentId={currentIncidentId}
-              className="flex-shrink-0 transition-all duration-300 ease-out"
+              className="flex-shrink-0"
             />
           </div>
           </SituationDashboardLayout>

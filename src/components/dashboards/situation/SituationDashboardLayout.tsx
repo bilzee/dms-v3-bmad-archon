@@ -148,11 +148,12 @@ export const SituationDashboardLayout: React.FC<SituationDashboardLayoutProps> =
               position={position}
               className={cn(
                 'bg-white border border-gray-200',
-                'overflow-hidden',
                 'border-r',
                 'last:border-r-0',
                 'h-full',
-                'flex flex-col'
+                'flex flex-col',
+                // Left and right panels need scrolling, center panel keeps overflow-hidden
+                position === 'center' ? 'overflow-hidden' : 'overflow-y-auto'
               )}
             >
               {child}

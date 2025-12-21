@@ -205,12 +205,6 @@ export function IncidentOverviewPanel({
 
   return (
     <div className={cn("space-y-3 h-full overflow-y-auto", className)}> {/* Reduced spacing */}
-      {/* Active Incidents Overview - Hidden in Executive mode */}
-      {dashboardMode !== 'executive' && (
-        <div className="animate-fade-in transition-opacity duration-300 ease-in-out">
-          <IncidentsOverview className="px-1" />
-        </div>
-      )}
       
       {/* Incident Selector */}
       <IncidentSelector
