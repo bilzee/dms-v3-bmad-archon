@@ -542,7 +542,9 @@ async function main() {
   
   const floodIncident = await prisma.incident.upsert({
     where: { id: 'incident-flood-001' },
-    update: {},
+    update: {
+      name: 'Maiduguri Metropolitan Flooding 2025',
+    },
     create: {
       id: 'incident-flood-001',
       name: 'Maiduguri Metropolitan Flooding 2025',
@@ -559,7 +561,9 @@ async function main() {
 
   const droughtIncident = await prisma.incident.upsert({
     where: { id: 'incident-drought-001' },
-    update: {},
+    update: {
+      name: 'Gwoza Agricultural Drought 2025',
+    },
     create: {
       id: 'incident-drought-001',
       name: 'Gwoza Agricultural Drought 2025',
