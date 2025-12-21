@@ -47,8 +47,8 @@ export function ModeToggle({ mode, onModeChange, className }: ModeToggleProps) {
         <Badge 
           variant={isExecutive ? "default" : "secondary"}
           className={cn(
-            "transition-all duration-300 ease-in-out transform hover:scale-105",
-            isExecutive ? "bg-amber-100 text-amber-800 border-amber-200 animate-in fade-in-0 slide-in-from-bottom-1" : "animate-in fade-in-0 slide-in-from-bottom-1"
+            "transition-all duration-300 ease-in-out",
+            isExecutive ? "bg-amber-100 text-amber-800 border-amber-200" : ""
           )}
         >
           {isExecutive ? "Executive" : "Standard"}

@@ -13,7 +13,6 @@ import { ModeToggle, type DashboardMode } from '@/components/dashboards/situatio
 import { useIncidentSelection, useIncidentActions } from '@/stores/dashboardLayout.store';
 import { apiGet } from '@/lib/api';
 
-
 // Fetch incident data for dynamic incident name
 const fetchIncidentData = async (incidentId: string) => {
   const response = await apiGet(`/api/v1/dashboard/situation?incidentId=${incidentId}`);
@@ -40,10 +39,22 @@ const fetchIncidentData = async (incidentId: string) => {
 export default function SituationDashboardPage() {
   // Dashboard mode state management
   const [dashboardMode, setDashboardMode] = useState<DashboardMode>('coordinator');
+  const [isTransitioning, setIsTransitioning] = useState(false);
   
   // State management for selected incident
   const { selectedIncidentId } = useIncidentSelection();
   const { setSelectedIncident } = useIncidentActions();
+
+  // Handle mode change with transition
+  const handleModeChange = (newMode: DashboardMode) => {
+    if (newMode !== dashboardMode) {
+      setIsTransitioning(true);
+      setTimeout(() => {
+        setDashboardMode(newMode);
+        setTimeout(() => setIsTransitioning(false), 50);
+      }, 250);
+    }
+  };
   
   // Default incident if none selected
   const defaultIncidentId = 'incident-flood-001';
@@ -69,7 +80,7 @@ export default function SituationDashboardPage() {
             </div>
             <ModeToggle 
               mode={dashboardMode} 
-              onModeChange={setDashboardMode}
+              onModeChange={handleModeChange}
               className="flex-shrink-0"
             />
           </div>
@@ -93,10 +104,11 @@ export default function SituationDashboardPage() {
 
           {/* Dynamic Center Panel with fade transition */}
           <div className="relative h-full">
-            <div 
-              key={dashboardMode}
-              className="absolute inset-0 transition-all duration-500 ease-in-out animate-in fade-in-0 slide-in-from-bottom-2"
-            >
+            <div className={`h-full transition-all duration-500 ease-in-out transform ${
+              isTransitioning 
+                ? 'opacity-0 translate-y-4' 
+                : 'opacity-100 translate-y-0'
+            }`}>
               {dashboardMode === 'coordinator' ? (
                 <CoordinatorPanelLayout
                   incidentId={currentIncidentId}

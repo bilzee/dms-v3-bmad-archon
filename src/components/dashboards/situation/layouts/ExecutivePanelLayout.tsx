@@ -33,18 +33,18 @@ export function ExecutivePanelLayout({
     <div className={cn("flex flex-col h-full transition-all duration-300 ease-in-out", className)}>
       {/* Upper Center: Executive Content - 70% */}
       <div className="flex-[7] min-h-0 space-y-4 overflow-y-auto">
-        {/* Active Incidents Overview - Executive Table Format with staggered animation */}
-        <div className="transition-all duration-300 ease-out animate-in fade-in-0 slide-in-from-top-2" style={{ animationDelay: '0ms' }}>
+        {/* Active Incidents Overview - Executive Table Format */}
+        <div className="transition-all duration-300 ease-out">
           <ExecutiveIncidentsTable />
         </div>
         
-        {/* Grouped Preliminary Impact Assessment with staggered animation */}
-        <div className="transition-all duration-300 ease-out animate-in fade-in-0 slide-in-from-top-2" style={{ animationDelay: '100ms' }}>
+        {/* Grouped Preliminary Impact Assessment */}
+        <div className="transition-all duration-300 ease-out">
           <GroupedImpactSummary incidentId={incidentId} />
         </div>
         
-        {/* Compact Assessment Status Overview with staggered animation */}
-        <div className="transition-all duration-300 ease-out animate-in fade-in-0 slide-in-from-top-2" style={{ animationDelay: '200ms' }}>
+        {/* Compact Assessment Status Overview */}
+        <div className="transition-all duration-300 ease-out">
           <CompactAssessmentTile incidentId={incidentId} />
         </div>
       </div>
