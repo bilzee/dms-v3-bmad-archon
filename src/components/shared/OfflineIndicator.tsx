@@ -44,8 +44,8 @@ export const OfflineIndicator = () => {
   // Prevent hydration mismatch by showing loading state until client-side
   if (!isClient) {
     return (
-      <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-white shadow-sm border text-gray-600">
-        <div className="w-4 h-4 bg-gray-300 rounded animate-pulse"></div>
+      <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-card shadow-sm border border-border text-muted-foreground">
+        <div className="w-4 h-4 bg-muted rounded animate-pulse"></div>
         <span className="text-sm font-medium">Loading...</span>
       </div>
     );
@@ -94,8 +94,8 @@ export const OfflineIndicator = () => {
   };
 
   const getStatusColor = () => {
-    if (isConnecting) return 'text-yellow-600';
-    return isOnline ? 'text-green-600' : 'text-red-600';
+    if (isConnecting) return 'text-yellow-600 dark:text-yellow-400';
+    return isOnline ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400';
   };
 
   return (
@@ -105,7 +105,7 @@ export const OfflineIndicator = () => {
       onMouseEnter={() => setShowTooltip(true)}
       onMouseLeave={() => setShowTooltip(false)}
     >
-      <div className={`flex items-center gap-2 px-3 py-2 rounded-lg bg-white shadow-sm border ${getStatusColor()}`}>
+      <div className={`flex items-center gap-2 px-3 py-2 rounded-lg bg-card shadow-sm border border-border ${getStatusColor()}`}>
         {getStatusIcon()}
         <span className="text-sm font-medium">
           {getStatusText()}
@@ -113,12 +113,12 @@ export const OfflineIndicator = () => {
       </div>
 
       {showTooltip && (
-        <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-3 py-2 bg-gray-900 text-white text-xs rounded-lg whitespace-nowrap z-50">
+        <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-3 py-2 bg-popover text-popover-foreground text-xs rounded-lg whitespace-nowrap z-50 border border-border shadow-lg">
           {isOnline
             ? 'Connected to internet. Data will sync automatically.'
             : 'No internet connection. Working offline with local data.'
           }
-          <div className="absolute top-full left-1/2 transform -translate-x-1/2 border-4 border-transparent border-t-gray-900"></div>
+          <div className="absolute top-full left-1/2 transform -translate-x-1/2 border-4 border-transparent border-t-popover"></div>
         </div>
       )}
     </div>

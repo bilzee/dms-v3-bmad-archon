@@ -1,0 +1,42 @@
+{
+  "testSession": {
+    "startTime": "",
+    "testRunner": "",
+    "description": ""
+  },
+  "createdData": {
+    "entities": [],
+    "incidents": [],
+    "assessments": [],
+    "responses": [],
+    "commitments": [],
+    "users": []
+  },
+  "workflows": {
+    "assessor": {
+      "status": "pending",
+      "createdData": [],
+      "issues": []
+    },
+    "coordinator": {
+      "status": "pending", 
+      "createdData": [],
+      "issues": []
+    },
+    "responder": {
+      "status": "pending",
+      "createdData": [],
+      "issues": []
+    },
+    "donor": {
+      "status": "pending",
+      "createdData": [],
+      "issues": []
+    },
+    "admin": {
+      "status": "pending",
+      "createdData": [],
+      "issues": []
+    }
+  }
+}

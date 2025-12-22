@@ -42,11 +42,11 @@ const ROLE_DESCRIPTIONS: Record<RoleName, string> = {
 };
 
 const ROLE_COLORS: Record<RoleName, string> = {
-  ASSESSOR: 'bg-blue-100 text-blue-800 hover:bg-blue-200',
-  COORDINATOR: 'bg-green-100 text-green-800 hover:bg-green-200',
-  RESPONDER: 'bg-orange-100 text-orange-800 hover:bg-orange-200',
-  DONOR: 'bg-purple-100 text-purple-800 hover:bg-purple-200',
-  ADMIN: 'bg-red-100 text-red-800 hover:bg-red-200',
+  ASSESSOR: 'bg-blue-500/10 text-blue-600 dark:bg-blue-500/20 dark:text-blue-400 hover:bg-blue-500/20 dark:hover:bg-blue-500/30',
+  COORDINATOR: 'bg-green-500/10 text-green-600 dark:bg-green-500/20 dark:text-green-400 hover:bg-green-500/20 dark:hover:bg-green-500/30',
+  RESPONDER: 'bg-orange-500/10 text-orange-600 dark:bg-orange-500/20 dark:text-orange-400 hover:bg-orange-500/20 dark:hover:bg-orange-500/30',
+  DONOR: 'bg-purple-500/10 text-purple-600 dark:bg-purple-500/20 dark:text-purple-400 hover:bg-purple-500/20 dark:hover:bg-purple-500/30',
+  ADMIN: 'bg-red-500/10 text-red-600 dark:bg-red-500/20 dark:text-red-400 hover:bg-red-500/20 dark:hover:bg-red-500/30',
 };
 
 export const RoleSwitcher = ({ className }: RoleSwitcherProps) => {
@@ -115,16 +115,16 @@ export const RoleSwitcher = ({ className }: RoleSwitcherProps) => {
       // Perform role switch
       switchRole(role);
       
-      // Redirect to role-appropriate dashboard using Next.js router
+      // Redirect to role-appropriate page using Next.js router
       const rolePaths: Record<RoleName, string> = {
-        ASSESSOR: '/dashboard',
+        ASSESSOR: '/assessor/rapid-assessments',
         COORDINATOR: '/dashboard',
-        RESPONDER: '/dashboard', 
+        RESPONDER: '/responder/planning', 
         DONOR: '/dashboard',
         ADMIN: '/dashboard',
       };
       
-      // Navigate to role-appropriate dashboard without full page reload
+      // Navigate to role-appropriate page without full page reload
       router.push(rolePaths[role]);
       
     } catch (error) {
@@ -247,7 +247,7 @@ export const RoleSwitcher = ({ className }: RoleSwitcherProps) => {
       {/* Unsaved Changes Warning Dialog */}
       {showUnsavedWarning && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg p-6 max-w-md mx-4 shadow-lg">
+          <div className="bg-background/90 backdrop-blur-sm rounded-lg p-6 max-w-md mx-4 shadow-lg border border-border">
             <div className="flex items-center gap-3 mb-4">
               <TriangleAlert className="h-5 w-5 text-orange-500" />
               <h3 className="text-lg font-semibold">Unsaved Changes</h3>
@@ -266,7 +266,7 @@ export const RoleSwitcher = ({ className }: RoleSwitcherProps) => {
               </Button>
               <Button
                 onClick={() => confirmRoleSwitch(currentRole)}
-                className="bg-orange-600 hover:bg-orange-700"
+                className="bg-orange-600 hover:bg-orange-700 text-white"
               >
                 Save & Switch
               </Button>

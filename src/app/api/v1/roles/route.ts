@@ -20,6 +20,11 @@ export const GET = withAuth(async (request: NextRequest, context) => {
           include: {
             permission: true
           }
+        },
+        userRoles: {
+          select: {
+            userId: true
+          }
         }
       },
       orderBy: { name: 'asc' }

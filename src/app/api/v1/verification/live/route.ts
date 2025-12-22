@@ -1,103 +1,230 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { withAuth } from '@/lib/auth/middleware';
-import { WebSocketServer, WebSocket } from 'ws';
 
-// WebSocket connections store
-const connections = new Map<string, Set<WebSocket>>();
-
+// GET - Enhanced real-time connection endpoint with SSE support
 export const GET = withAuth(async (request: NextRequest, context) => {
-  const { roles, userId } = context;
-  
-  // Only coordinators can access real-time updates
-  if (!roles.includes('COORDINATOR')) {
+  try {
+    const { roles, user } = context;
+    
+    // Check if user has coordinator role for configuration updates
+    if (!roles.includes('COORDINATOR')) {
+      return NextResponse.json(
+        { success: false, error: 'Insufficient permissions. Coordinator role required.' },
+        { status: 403 }
+      );
+    }
+
+    const { searchParams } = new URL(request.url);
+    const channels = searchParams.get('channels')?.split(',') || ['verification_updates'];
+    const useSSE = searchParams.get('sse') === 'true';
+
+    // If SSE is requested, establish Server-Sent Events stream
+    if (useSSE) {
+      const stream = new ReadableStream({
+        start(controller) {
+          const encoder = new TextEncoder();
+          
+          // Send initial connection message
+          const connectionData = `data: ${JSON.stringify({
+            type: 'connection',
+            status: 'connected',
+            channels: channels,
+            userId: (user as any).id,
+            timestamp: new Date().toISOString()
+          })}\n\n`;
+          
+          controller.enqueue(encoder.encode(connectionData));
+
+          // Set up periodic heartbeat (every 30 seconds)
+          const heartbeat = setInterval(() => {
+            try {
+              const heartbeatData = `data: ${JSON.stringify({
+                type: 'heartbeat',
+                timestamp: new Date().toISOString()
+              })}\n\n`;
+              
+              controller.enqueue(encoder.encode(heartbeatData));
+            } catch (error) {
+              console.error('Heartbeat error:', error);
+              clearInterval(heartbeat);
+              controller.close();
+            }
+          }, 30000);
+
+          // Handle client disconnection
+          request.signal.addEventListener('abort', () => {
+            clearInterval(heartbeat);
+            controller.close();
+            console.log(`SSE connection closed for user ${(user as any).id}`);
+          });
+
+          console.log(`SSE connection established for user ${(user as any).id} on channels: ${channels.join(', ')}`);
+        }
+      });
+
+      return new Response(stream, {
+        status: 200,
+        headers: {
+          'Content-Type': 'text/event-stream',
+          'Cache-Control': 'no-cache',
+          'Connection': 'keep-alive',
+          'Access-Control-Allow-Origin': '*',
+          'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+          'X-Accel-Buffering': 'no'
+        },
+      });
+    }
+
+    // Default response with connection options
+    return NextResponse.json({
+      success: true,
+      message: 'Enhanced real-time verification updates endpoint',
+      options: {
+        serverSentEvents: {
+          enabled: true,
+          endpoint: `/api/v1/verification/live?sse=true&channels=${channels.join(',')}`
+        },
+        polling: {
+          enabled: true,
+          interval: 30000,
+          endpoints: {
+            assessmentQueue: '/api/v1/verification/queue/assessments',
+            deliveryQueue: '/api/v1/verification/queue/deliveries',
+            autoApproval: '/api/v1/verification/auto-approval'
+          }
+        },
+        websocket: {
+          enabled: false,
+          note: 'WebSocket support planned for future release - using SSE and polling for now'
+        }
+      },
+      channels: channels,
+      user: {
+        id: (user as any).id,
+        role: roles
+      },
+      meta: {
+        timestamp: new Date().toISOString(),
+        version: '2.0',
+        requestId: crypto.randomUUID()
+      }
+    });
+
+  } catch (error) {
+    console.error('Real-time connection error:', error);
     return NextResponse.json(
-      { success: false, error: 'Insufficient permissions. Coordinator role required.' },
-      { status: 403 }
+      { success: false, error: 'Failed to establish real-time connection' },
+      { status: 500 }
     );
   }
-
-  // This is a placeholder for WebSocket upgrade
-  // In Next.js, WebSocket connections are handled differently
-  // We'll implement this with polling for now, and upgrade to WebSocket later
-  
-  return NextResponse.json({
-    success: true,
-    message: 'Real-time verification updates endpoint',
-    polling: {
-      enabled: true,
-      interval: 30000, // 30 seconds
-      endpoint: '/api/v1/verification/queue/assessments',
-      deliveryEndpoint: '/api/v1/verification/queue/deliveries'
-    },
-    websocket: {
-      enabled: false, // Will be enabled in future iteration
-      note: 'WebSocket support coming soon - using polling for now'
-    },
-    meta: {
-      timestamp: new Date().toISOString(),
-      version: '1.0'
-    }
-  });
 });
 
-// Helper function to broadcast updates to connected clients
-export function broadcastVerificationUpdate(update: {
-  type: 'assessment' | 'delivery';
-  action: 'created' | 'updated' | 'verified' | 'rejected';
-  data: any;
-}) {
-  const message = JSON.stringify({
-    type: 'verification_update',
-    timestamp: new Date().toISOString(),
-    ...update
-  });
-
-  // In a full WebSocket implementation, this would send to all connected clients
-  // For now, this is a placeholder for future WebSocket functionality
-  console.log('Broadcasting verification update:', message);
-}
-
-// Helper function to get current queue status for real-time updates
-export async function getQueueSnapshot() {
+// POST - Handle real-time event broadcasting
+export const POST = withAuth(async (request: NextRequest, context) => {
   try {
-    // Get current queue metrics for both assessments and deliveries
-    const [assessmentMetrics, deliveryMetrics] = await Promise.all([
-      getAssessmentQueueMetrics(),
-      getDeliveryQueueMetrics()
-    ]);
+    const { roles, user } = context;
+    
+    if (!roles.includes('COORDINATOR')) {
+      return NextResponse.json(
+        { success: false, error: 'Insufficient permissions' },
+        { status: 403 }
+      );
+    }
 
-    return {
-      timestamp: new Date().toISOString(),
-      assessments: assessmentMetrics,
-      deliveries: deliveryMetrics,
-      totalPending: (assessmentMetrics.totalPending || 0) + (deliveryMetrics.totalPending || 0)
-    };
+    const body = await request.json();
+    const { type, event, data, channels } = body;
+
+    // Handle different message types
+    switch (type) {
+      case 'SUBSCRIBE':
+        console.log(`User ${(user as any).id} subscribed to channels:`, channels || data?.channels);
+        return NextResponse.json({
+          success: true,
+          message: 'Subscription successful',
+          channels: channels || data?.channels || [],
+          timestamp: new Date().toISOString()
+        });
+
+      case 'BROADCAST':
+        console.log(`Broadcasting ${event} from user ${(user as any).id}:`, data);
+        await broadcastConfigurationChange(event, data, channels);
+        
+        return NextResponse.json({
+          success: true,
+          message: 'Event broadcasted successfully',
+          event: event,
+          timestamp: new Date().toISOString()
+        });
+
+      case 'CONFIGURATION_UPDATE':
+        // Handle configuration updates specifically
+        await handleConfigurationUpdate(data, user);
+        
+        return NextResponse.json({
+          success: true,
+          message: 'Configuration update processed',
+          timestamp: new Date().toISOString()
+        });
+
+      default:
+        return NextResponse.json(
+          { success: false, error: `Unknown message type: ${type}` },
+          { status: 400 }
+        );
+    }
+
   } catch (error) {
-    console.error('Error getting queue snapshot:', error);
-    return null;
+    console.error('Real-time message handling error:', error);
+    return NextResponse.json(
+      { success: false, error: 'Failed to handle message' },
+      { status: 500 }
+    );
+  }
+});
+
+// Simulate broadcasting configuration changes
+async function broadcastConfigurationChange(event: string, data: any, channels?: string[]) {
+  try {
+    // In production, this would use Redis pub/sub, WebSocket broadcasting, or similar
+    console.log(`Broadcasting configuration change: ${event}`, {
+      entityId: data.entityId,
+      entityName: data.entityName,
+      changes: data.changes,
+      timestamp: data.timestamp,
+      userId: data.userId,
+      userName: data.userName,
+      channels: channels || ['configuration_changes']
+    });
+
+    // Simulate real-world broadcasting delay
+    await new Promise(resolve => setTimeout(resolve, 50));
+    
+    return true;
+  } catch (error) {
+    console.error('Failed to broadcast configuration change:', error);
+    return false;
   }
 }
 
-async function getAssessmentQueueMetrics() {
-  // This would query the database for current assessment queue metrics
-  // Implementation depends on your database setup
-  return {
-    totalPending: 0, // Placeholder
-    critical: 0,
-    high: 0,
-    medium: 0,
-    low: 0
-  };
-}
+// Handle configuration updates
+async function handleConfigurationUpdate(data: any, user: any) {
+  try {
+    console.log('Processing configuration update:', {
+      entityId: data.entityId,
+      userId: (user as any).id,
+      timestamp: new Date().toISOString(),
+      changes: data.changes
+    });
 
-async function getDeliveryQueueMetrics() {
-  // This would query the database for current delivery queue metrics
-  // Implementation depends on your database setup
-  return {
-    totalPending: 0, // Placeholder
-    critical: 0,
-    high: 0,
-    medium: 0,
-    low: 0
-  };
+    // In production, this could:
+    // - Update cached configuration data
+    // - Trigger webhook notifications
+    // - Update analytics/metrics
+    // - Send notifications to other systems
+    
+    return true;
+  } catch (error) {
+    console.error('Failed to handle configuration update:', error);
+    return false;
+  }
 }

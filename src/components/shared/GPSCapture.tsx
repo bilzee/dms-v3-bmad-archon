@@ -157,6 +157,7 @@ export function GPSCapture({
 
         <div className="flex gap-2">
           <Button
+            type="button"
             onClick={captureGPS}
             disabled={disabled || isCapturing}
             variant="default"
@@ -167,6 +168,7 @@ export function GPSCapture({
           </Button>
           
           <Button
+            type="button"
             onClick={() => setManualMode(!manualMode)}
             variant="outline"
             disabled={disabled}
@@ -207,6 +209,7 @@ export function GPSCapture({
             
             <div className="flex gap-2">
               <Button
+                type="button"
                 onClick={handleManualSubmit}
                 disabled={disabled || !manualLat || !manualLng}
                 className="flex-1"
@@ -216,6 +219,7 @@ export function GPSCapture({
               
               {location && (
                 <Button
+                  type="button"
                   onClick={handleClear}
                   variant="outline"
                   disabled={disabled}

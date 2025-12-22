@@ -18,7 +18,7 @@ export const CreatePlannedResponseSchema = z.object({
   timeline: z.record(z.any()).optional(),
   // Commitment import fields
   commitmentId: z.string().uuid().optional(),
-  donorId: z.string().uuid().optional()
+  donorId: z.string().optional()
 })
 
 export const UpdatePlannedResponseSchema = z.object({
@@ -27,6 +27,20 @@ export const UpdatePlannedResponseSchema = z.object({
   description: z.string().optional(),
   items: z.array(ResponseItemSchema).optional(),
   timeline: z.record(z.any()).optional()
+})
+
+export const CreateDeliveredResponseSchema = z.object({
+  assessmentId: z.string().min(1, 'Assessment ID is required'),
+  entityId: z.string().min(1, 'Entity ID is required'),
+  type: z.enum(['HEALTH', 'WASH', 'SHELTER', 'FOOD', 'SECURITY', 'POPULATION', 'LOGISTICS']),
+  priority: z.enum(['CRITICAL', 'HIGH', 'MEDIUM', 'LOW']).default('MEDIUM'),
+  description: z.string().optional(),
+  items: z.array(ResponseItemSchema).min(1, 'At least one item is required'),
+  timeline: z.record(z.any()).optional(),
+  deliveryNotes: z.string().optional(),
+  // Commitment import fields
+  commitmentId: z.string().uuid().optional(),
+  donorId: z.string().optional()
 })
 
 export const ResponseQuerySchema = z.object({
@@ -51,6 +65,7 @@ export const ConfirmDeliverySchema = z.object({
 
 export type CreatePlannedResponseInput = z.infer<typeof CreatePlannedResponseSchema>
 export type UpdatePlannedResponseInput = z.infer<typeof UpdatePlannedResponseSchema>
+export type CreateDeliveredResponseInput = z.infer<typeof CreateDeliveredResponseSchema>
 export type ResponseQueryInput = z.infer<typeof ResponseQuerySchema>
 export type ConfirmDeliveryInput = z.infer<typeof ConfirmDeliverySchema>
 export type ResponseItem = z.infer<typeof ResponseItemSchema>

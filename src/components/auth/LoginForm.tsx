@@ -47,7 +47,7 @@ const DEV_TEST_USERS = [
     id: 'assessor',
     name: 'Field Assessor',
     email: 'assessor@test.com',
-    password: 'test-password',
+    password: 'testpassword123',
     roles: ['Assessor'],
     icon: Heart,
     description: 'Conducts rapid assessments in the field'
@@ -124,7 +124,7 @@ export function LoginForm() {
           return
         }
         if (roles.includes('ASSESSOR')) {
-          router.push('/assessor/dashboard') 
+          router.push('/assessor/rapid-assessments') 
           return
         }
         if (roles.includes('COORDINATOR')) {
@@ -132,7 +132,7 @@ export function LoginForm() {
           return
         }
         if (roles.includes('RESPONDER')) {
-          router.push('/responder/dashboard')
+          router.push('/responder/planning')
           return
         }
         

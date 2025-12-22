@@ -53,7 +53,7 @@ export class ResponseOfflineService {
         uuid: crypto.randomUUID(),
         type: 'response',
         action: 'create',
-        entityUuid: responseId,
+        entityUuid: data.entityId,
         data: offlineResponse.data,
         priority: 5,
         attempts: 0,
@@ -95,12 +95,16 @@ export class ResponseOfflineService {
       
       await offlineDB.updateResponse(id, offlineUpdate)
       
+      // Get the existing response to extract the entityId
+      const existingResponse = await offlineDB.getResponse(id)
+      const entityId = data.entityId || existingResponse?.data?.entityId
+      
       // Add to sync queue
       await offlineDB.addToSyncQueue({
         uuid: crypto.randomUUID(),
         type: 'response',
         action: 'update',
-        entityUuid: id,
+        entityUuid: entityId || id, // Fallback to id if entityId not found
         data: offlineUpdate.data,
         priority: 5,
         attempts: 0,

@@ -2,7 +2,6 @@
 
 import React from 'react'
 import { useState, useEffect } from 'react'
-import { useQuery } from '@tanstack/react-query'
 import { useRouter } from 'next/navigation'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
@@ -10,6 +9,10 @@ import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Alert, AlertDescription } from '@/components/ui/alert'
+
+// New error handling components
+import { SafeDataLoader } from '@/components/shared/SafeDataLoader'
+import { EmptyState, EmptyEntities } from '@/components/shared/EmptyState'
 import { 
   Search, 
   MapPin, 
@@ -27,6 +30,9 @@ import {
 
 import { useAuthStore } from '@/stores/auth.store'
 import { cn } from '@/lib/utils'
+
+// Token utilities
+import { getAuthToken } from '@/lib/auth/token-utils'
 
 interface Entity {
   id: string
@@ -57,36 +63,29 @@ export function EntitySelector({ onEntitySelect, showStats = true }: EntitySelec
   const [selectedEntity, setSelectedEntity] = useState<Entity | null>(null)
 
   // Fetch assigned entities
-  const { 
-    data: entitiesData, 
-    isLoading, 
-    error, 
-    refetch 
-  } = useQuery({
-    queryKey: ['donor-entities', search, typeFilter],
-    queryFn: async () => {
-      const params = new URLSearchParams()
-      if (search) params.append('search', search)
-      if (typeFilter && typeFilter !== 'all') params.append('type', typeFilter)
-      
-      const response = await fetch(`/api/v1/donors/entities?${params}`, {
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('auth_token')}`
-        }
-      })
-      
-      if (!response.ok) {
-        throw new Error('Failed to fetch entities')
+  const fetchEntities = async () => {
+    if (!user) throw new Error('User not authenticated')
+    
+    const token = getAuthToken()
+    if (!token) throw new Error('No authentication token available')
+    
+    const params = new URLSearchParams()
+    if (search) params.append('search', search)
+    if (typeFilter && typeFilter !== 'all') params.append('type', typeFilter)
+    
+    const response = await fetch(`/api/v1/donors/entities?${params}`, {
+      headers: {
+        'Authorization': `Bearer ${token}`
       }
-      
-      const result = await response.json()
-      return result.data
-    },
-    enabled: !!user
-  })
-
-  const entities = entitiesData?.entities || []
-  const summary = entitiesData?.summary || {}
+    })
+    
+    if (!response.ok) {
+      throw new Error('Failed to fetch entities')
+    }
+    
+    const result = await response.json()
+    return result.data
+  }
 
   const handleEntityClick = (entity: Entity) => {
     setSelectedEntity(entity)
@@ -128,56 +127,69 @@ export function EntitySelector({ onEntitySelect, showStats = true }: EntitySelec
 
   return (
     <div className="space-y-6" data-testid="entity-selector-container">
-      {/* Header and Controls */}
-      <div className="flex items-center justify-between" data-testid="entity-selector-header">
-        <div>
-          <h2 className="text-2xl font-bold" data-testid="entity-selector-title">Assigned Entities</h2>
-          <p className="text-gray-600" data-testid="entity-selector-description">
-            Entities where you can provide support and make commitments
-          </p>
-        </div>
-        
-        <Button 
-          variant="outline" 
-          onClick={() => refetch()}
-          disabled={isLoading}
-        >
-          <RefreshCw className={cn('h-4 w-4 mr-2', isLoading && 'animate-spin')} />
-          Refresh
-        </Button>
-      </div>
+      <SafeDataLoader
+        queryFn={fetchEntities}
+        enabled={!!user}
+        fallbackData={{ entities: [], summary: { totalAssigned: 0, totalWithResponses: 0, totalWithCommitments: 0 } }}
+        loadingMessage="Loading assigned entities..."
+        errorTitle="Failed to load entities"
+      >
+        {(entitiesData, isLoading, error, retry) => {
+          const entities = entitiesData?.entities || []
+          const summary = entitiesData?.summary || {}
 
-      {/* Summary Stats */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4" data-testid="entity-summary-stats">
-        <StatCard
-          title="Total Assigned"
-          value={summary.totalAssigned || 0}
-          icon={MapPin}
-          iconColor="text-blue-600"
-          data-testid="total-assigned-stat"
-        />
-        <StatCard
-          title="With Responses"
-          value={summary.totalWithResponses || 0}
-          icon={Package}
-          iconColor="text-green-600"
-          data-testid="with-responses-stat"
-        />
-        <StatCard
-          title="With Commitments"
-          value={summary.totalWithCommitments || 0}
-          icon={CheckCircle}
-          iconColor="text-purple-600"
-          data-testid="with-commitments-stat"
-        />
-        <StatCard
-          title="Available Now"
-          value={entities.filter((e: any) => e.isActive).length}
-          icon={Activity}
-          iconColor="text-orange-600"
-          data-testid="available-now-stat"
-        />
-      </div>
+          return (
+            <>
+              {/* Header and Controls */}
+              <div className="flex items-center justify-between" data-testid="entity-selector-header">
+                <div>
+                  <h2 className="text-2xl font-bold" data-testid="entity-selector-title">Assigned Entities</h2>
+                  <p className="text-gray-600" data-testid="entity-selector-description">
+                    Entities where you can provide support and make commitments
+                  </p>
+                </div>
+                
+                <Button 
+                  variant="outline" 
+                  onClick={retry}
+                  disabled={isLoading}
+                >
+                  <RefreshCw className={cn('h-4 w-4 mr-2', isLoading && 'animate-spin')} />
+                  Refresh
+                </Button>
+              </div>
+
+              {/* Summary Stats */}
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-4" data-testid="entity-summary-stats">
+                <StatCard
+                  title="Total Assigned"
+                  value={summary.totalAssigned || 0}
+                  icon={MapPin}
+                  iconColor="text-blue-600"
+                  data-testid="total-assigned-stat"
+                />
+                <StatCard
+                  title="With Responses"
+                  value={summary.totalWithResponses || 0}
+                  icon={Package}
+                  iconColor="text-green-600"
+                  data-testid="with-responses-stat"
+                />
+                <StatCard
+                  title="With Commitments"
+                  value={summary.totalWithCommitments || 0}
+                  icon={CheckCircle}
+                  iconColor="text-purple-600"
+                  data-testid="with-commitments-stat"
+                />
+                <StatCard
+                  title="Available Now"
+                  value={entities.filter((e: any) => e.isActive).length}
+                  icon={Activity}
+                  iconColor="text-orange-600"
+                  data-testid="available-now-stat"
+                />
+              </div>
 
       {/* Filters */}
       <Card>
@@ -227,16 +239,7 @@ export function EntitySelector({ onEntitySelect, showStats = true }: EntitySelec
         </CardContent>
       </Card>
 
-      {/* Error State */}
-      {error && (
-        <Alert variant="destructive">
-          <AlertTriangle className="h-4 w-4" />
-          <AlertDescription>
-            Failed to load entities. Please try again later.
-          </AlertDescription>
-        </Alert>
-      )}
-
+  
       {/* Entities Grid */}
       <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
         {isLoading ? (
@@ -257,25 +260,24 @@ export function EntitySelector({ onEntitySelect, showStats = true }: EntitySelec
           ))
         ) : entities.length === 0 ? (
           <div className="col-span-full">
-            <Card>
-              <CardContent className="p-12 text-center">
-                <MapPin className="h-12 w-12 mx-auto mb-4 text-gray-400" />
-                <h3 className="text-lg font-semibold text-gray-900 mb-2">
-                  No entities found
-                </h3>
-                <p className="text-gray-600 mb-4">
-                  {search || typeFilter 
-                    ? 'No entities match your search criteria. Try adjusting your filters.'
-                    : 'You haven\'t been assigned to any entities yet.'
-                  }
-                </p>
-                {!(search || typeFilter) && (
-                  <p className="text-sm text-gray-500">
-                    Contact your coordinator to get assigned to entities where you can provide support.
-                  </p>
-                )}
-              </CardContent>
-            </Card>
+            {search || typeFilter ? (
+              <EmptyState
+                type="search"
+                title="No entities found"
+                description="No entities match your search criteria. Try adjusting your filters."
+                action={{
+                  label: "Clear Filters",
+                  onClick: () => {
+                    setSearch('')
+                    setTypeFilter('')
+                  },
+                  variant: "outline"
+                }}
+                icon={MapPin}
+              />
+            ) : (
+              <EmptyEntities onRefresh={retry} />
+            )}
           </div>
         ) : (
           entities.map((entity: Entity) => {
@@ -485,6 +487,10 @@ export function EntitySelector({ onEntitySelect, showStats = true }: EntitySelec
           </CardContent>
         </Card>
       )}
+            </>
+          )
+        }}
+      </SafeDataLoader>
     </div>
   )
 }

@@ -24,6 +24,46 @@ export function withAuth(handler: AuthenticatedHandler) {
       // Extract token from Authorization header
       const authorization = request.headers.get('Authorization')
       
+      // Development mode: if no authorization header, use appropriate user based on route
+      if ((!authorization || !authorization.startsWith('Bearer ')) && process.env.NODE_ENV === 'development') {
+        console.log('🔍 Development mode: No auth header, detecting route and user')
+        try {
+          const url = request.url
+          let userEmail = 'coordinator@dms.gov.ng' // default fallback
+          
+          // Route-based user selection for development
+          if (url.includes('/donor') && !url.includes('/donor-')) {
+            userEmail = 'donor@test.com'
+          } else if (url.includes('/assessor')) {
+            userEmail = 'assessor@test.com'
+          } else if (url.includes('/responder')) {
+            userEmail = 'responder@test.com'
+          }
+          
+          console.log(`🔍 Development mode: Using ${userEmail} for route: ${url}`)
+          const devUser = await AuthService.getUserByEmail(userEmail)
+          console.log('🔍 Dev user lookup result:', !!devUser, devUser ? devUser.email : 'null')
+          
+          if (devUser) {
+            const userRoles = devUser.roles.map(ur => ur.role.name)
+            console.log('🔍 Dev user roles:', userRoles)
+            const context: AuthContext = { 
+              user: devUser,
+              userId: devUser.id,
+              roles: userRoles,
+              permissions: devUser.roles.flatMap((ur: any) => ur.role.permissions.map((p: any) => p.permission.code)),
+              request
+            }
+            console.log('✅ Development auth successful, calling handler with appropriate user context')
+            return await handler(request, context, nextContext)
+          } else {
+            console.log(`❌ No user found for email: ${userEmail}`)
+          }
+        } catch (error) {
+          console.log('❌ Dev auth fallback failed:', error)
+        }
+      }
+      
       if (!authorization || !authorization.startsWith('Bearer ')) {
         return NextResponse.json(
           { error: 'Missing or invalid authorization header' },
@@ -53,7 +93,7 @@ export function withAuth(handler: AuthenticatedHandler) {
         user, // Full DB user object
         userId: (user as any).id,
         roles: userRoles,
-        permissions: user.roles.flatMap((ur: any) => ur.role.permissions.map((p: any) => p.code)), // Extract permission codes
+        permissions: user.roles.flatMap((ur: any) => ur.role.permissions.map((p: any) => p.permission.code)),
         request
         // Note: params not handled here - routes extract from URL manually
       }

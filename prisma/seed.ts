@@ -181,7 +181,6 @@ async function main() {
   
   // Delete existing entities to avoid conflicts (in order of dependency)
   await prisma.donorCommitment.deleteMany({})
-  await prisma.incidentEntity.deleteMany({})
   await prisma.entityAssignment.deleteMany({})
   await prisma.rapidResponse.deleteMany({})
   await prisma.rapidAssessment.deleteMany({})
@@ -538,6 +537,47 @@ async function main() {
     })
   }
 
+  // Create sample incidents first
+  console.log('🚨 Creating sample incidents...')
+  
+  const floodIncident = await prisma.incident.upsert({
+    where: { id: 'incident-flood-001' },
+    update: {
+      name: 'Maiduguri Metropolitan Flooding 2025',
+    },
+    create: {
+      id: 'incident-flood-001',
+      name: 'Maiduguri Metropolitan Flooding 2025',
+      type: 'FLOOD',
+      subType: 'SEASONAL_FLOODING',
+      severity: 'HIGH',
+      status: 'ACTIVE',
+      description: 'Severe flooding in Maiduguri metropolitan area affecting multiple neighborhoods',
+      location: 'Maiduguri Metropolitan Area, Borno State',
+      coordinates: { latitude: 11.8311, longitude: 13.1566 },
+      createdBy: coordinatorUser.id,
+    },
+  })
+
+  const droughtIncident = await prisma.incident.upsert({
+    where: { id: 'incident-drought-001' },
+    update: {
+      name: 'Gwoza Agricultural Drought 2025',
+    },
+    create: {
+      id: 'incident-drought-001',
+      name: 'Gwoza Agricultural Drought 2025',
+      type: 'DROUGHT',
+      subType: 'AGRICULTURAL_DROUGHT',
+      severity: 'MEDIUM',
+      status: 'ACTIVE', 
+      description: 'Agricultural drought affecting crop production in Gwoza area',
+      location: 'Gwoza Local Government Area, Borno State',
+      coordinates: { latitude: 11.0544, longitude: 13.7839 },
+      createdBy: coordinatorUser.id,
+    },
+  })
+
   // Create sample rapid assessments for verification workflow testing
   console.log('📋 Creating sample rapid assessments for verification testing...')
   
@@ -547,11 +587,12 @@ async function main() {
       rapidAssessmentDate: new Date('2025-10-15'),
       assessorId: assessorUser.id,
       entityId: 'entity-1', // Maiduguri Metropolitan
+      incidentId: 'incident-flood-001',
       assessorName: 'Field Assessor',
       location: 'Maiduguri Metropolitan',
-      status: 'SUBMITTED',
+      status: 'PUBLISHED',
       priority: 'HIGH',
-      verificationStatus: 'SUBMITTED',
+      verificationStatus: 'VERIFIED',
       coordinates: { latitude: 11.8311, longitude: 13.1511, accuracy: 10, timestamp: new Date().toISOString(), captureMethod: 'GPS' }
     },
     {
@@ -559,11 +600,12 @@ async function main() {
       rapidAssessmentDate: new Date('2025-10-16'),
       assessorId: assessorUser.id,
       entityId: 'entity-2', // Jere Local Government
+      incidentId: 'incident-flood-001',
       assessorName: 'Field Assessor',
       location: 'Jere Local Government',
       status: 'SUBMITTED',
       priority: 'CRITICAL',
-      verificationStatus: 'SUBMITTED',
+      verificationStatus: 'VERIFIED',
       coordinates: { latitude: 11.8822, longitude: 13.2143, accuracy: 8, timestamp: new Date().toISOString(), captureMethod: 'GPS' }
     },
     {
@@ -571,11 +613,12 @@ async function main() {
       rapidAssessmentDate: new Date('2025-10-16'),
       assessorId: multiRoleUser.id,
       entityId: 'entity-5', // IDP Camp Dalori
+      incidentId: 'incident-flood-001',
       assessorName: 'Multi Role Test User',
       location: 'IDP Camp Dalori',
       status: 'SUBMITTED',
       priority: 'MEDIUM',
-      verificationStatus: 'SUBMITTED',
+      verificationStatus: 'VERIFIED',
       coordinates: { latitude: 11.7833, longitude: 13.2167, accuracy: 12, timestamp: new Date().toISOString(), captureMethod: 'GPS' }
     },
     {
@@ -583,11 +626,12 @@ async function main() {
       rapidAssessmentDate: new Date('2025-10-17'),
       assessorId: assessorUser.id,
       entityId: 'entity-3', // Gwoza Local Government
+      incidentId: 'incident-drought-001',
       assessorName: 'Field Assessor',
       location: 'Gwoza Local Government',
-      status: 'SUBMITTED',
+      status: 'PUBLISHED',
       priority: 'HIGH',
-      verificationStatus: 'SUBMITTED',
+      verificationStatus: 'VERIFIED',
       coordinates: { latitude: 11.0417, longitude: 13.6875, accuracy: 15, timestamp: new Date().toISOString(), captureMethod: 'GPS' }
     },
     {
@@ -595,19 +639,90 @@ async function main() {
       rapidAssessmentDate: new Date('2025-10-17'),
       assessorId: multiRoleUser.id,
       entityId: 'entity-4', // Primary Health Center Maiduguri
+      incidentId: 'incident-flood-001',
       assessorName: 'Multi Role Test User',
       location: 'Primary Health Center Maiduguri',
       status: 'SUBMITTED',
       priority: 'LOW',
-      verificationStatus: 'SUBMITTED',
+      verificationStatus: 'VERIFIED',
       coordinates: { latitude: 11.8467, longitude: 13.1569, accuracy: 5, timestamp: new Date().toISOString(), captureMethod: 'GPS' }
     }
   ]
 
   for (const assessment of sampleAssessments) {
-    await prisma.rapidAssessment.create({
+    const createdAssessment = await prisma.rapidAssessment.create({
       data: assessment as any
     })
+
+    // Create corresponding assessment detail records with gap-relevant fields
+    if (assessment.rapidAssessmentType === 'HEALTH') {
+      await prisma.healthAssessment.create({
+        data: {
+          rapidAssessmentId: createdAssessment.id,
+          hasFunctionalClinic: Math.random() > 0.5, // Random gap-indicating values
+          hasEmergencyServices: Math.random() > 0.6,
+          numberHealthFacilities: Math.floor(Math.random() * 5) + 1,
+          healthFacilityType: 'Primary Health Center',
+          qualifiedHealthWorkers: Math.floor(Math.random() * 10) + 1,
+          hasTrainedStaff: Math.random() > 0.4,
+          hasMedicineSupply: Math.random() > 0.3,
+          hasMedicalSupplies: Math.random() > 0.4,
+          hasMaternalChildServices: Math.random() > 0.5,
+          commonHealthIssues: JSON.stringify(['Malaria', 'Diarrhea', 'Respiratory infections'])
+        }
+      })
+    } else if (assessment.rapidAssessmentType === 'FOOD') {
+      await prisma.foodAssessment.create({
+        data: {
+          rapidAssessmentId: createdAssessment.id,
+          isFoodSufficient: Math.random() > 0.6,
+          hasRegularMealAccess: Math.random() > 0.5,
+          hasInfantNutrition: Math.random() > 0.4,
+          foodSource: JSON.stringify(['Market', 'Food aid', 'Local farming']),
+          availableFoodDurationDays: Math.floor(Math.random() * 30) + 1,
+          additionalFoodRequiredPersons: Math.floor(Math.random() * 100) + 10,
+          additionalFoodRequiredHouseholds: Math.floor(Math.random() * 20) + 2
+        }
+      })
+    } else if (assessment.rapidAssessmentType === 'WASH') {
+      await prisma.wASHAssessment.create({
+        data: {
+          rapidAssessmentId: createdAssessment.id,
+          waterSource: JSON.stringify(['Well', 'Borehole', 'River']),
+          isWaterSufficient: Math.random() > 0.5,
+          hasCleanWaterAccess: Math.random() > 0.4,
+          functionalLatrinesAvailable: Math.floor(Math.random() * 10) + 1,
+          areLatrinesSufficient: Math.random() > 0.6,
+          hasHandwashingFacilities: Math.random() > 0.5,
+          hasOpenDefecationConcerns: Math.random() > 0.3
+        }
+      })
+    } else if (assessment.rapidAssessmentType === 'SHELTER') {
+      await prisma.shelterAssessment.create({
+        data: {
+          rapidAssessmentId: createdAssessment.id,
+          areSheltersSufficient: Math.random() > 0.6,
+          hasSafeStructures: Math.random() > 0.5,
+          shelterTypes: JSON.stringify(['Tents', 'Temporary shelters', 'Public buildings']),
+          requiredShelterType: JSON.stringify(['Tents', 'Emergency shelters']),
+          numberSheltersRequired: Math.floor(Math.random() * 50) + 5,
+          areOvercrowded: Math.random() > 0.4,
+          provideWeatherProtection: Math.random() > 0.6
+        }
+      })
+    } else if (assessment.rapidAssessmentType === 'SECURITY') {
+      await prisma.securityAssessment.create({
+        data: {
+          rapidAssessmentId: createdAssessment.id,
+          isSafeFromViolence: Math.random() > 0.7,
+          gbvCasesReported: Math.random() > 0.8,
+          hasSecurityPresence: Math.random() > 0.5,
+          hasProtectionReportingMechanism: Math.random() > 0.6,
+          vulnerableGroupsHaveAccess: Math.random() > 0.4,
+          hasLighting: Math.random() > 0.5
+        }
+      })
+    }
   }
 
   // Create sample donor commitments for testing Story 4.3
@@ -615,101 +730,6 @@ async function main() {
   
   // Create sample commitments using hardcoded entity IDs to avoid variable conflicts
   console.log('💰 Creating sample commitments using entity-1 and entity-2...')
-    // Create sample incidents first
-    const floodIncident = await prisma.incident.upsert({
-      where: { id: 'incident-flood-001' },
-      update: {},
-      create: {
-        id: 'incident-flood-001',
-        type: 'FLOOD',
-        subType: 'SEASONAL_FLOODING',
-        severity: 'HIGH',
-        status: 'ACTIVE',
-        description: 'Severe flooding in Maiduguri metropolitan area affecting multiple neighborhoods',
-        location: 'Maiduguri Metropolitan Area, Borno State',
-        coordinates: { latitude: 11.8311, longitude: 13.1566 },
-        createdBy: coordinatorUser.id,
-      },
-    })
-
-    const droughtIncident = await prisma.incident.upsert({
-      where: { id: 'incident-drought-001' },
-      update: {},
-      create: {
-        id: 'incident-drought-001',
-        type: 'DROUGHT',
-        subType: 'AGRICULTURAL_DROUGHT',
-        severity: 'MEDIUM',
-        status: 'ACTIVE', 
-        description: 'Agricultural drought affecting crop production in Gwoza area',
-        location: 'Gwoza Local Government Area, Borno State',
-        coordinates: { latitude: 11.0544, longitude: 13.7839 },
-        createdBy: coordinatorUser.id,
-      },
-    })
-
-    // Create IncidentEntity relationships
-    await prisma.incidentEntity.upsert({
-      where: {
-        incidentId_entityId: {
-          incidentId: floodIncident.id,
-          entityId: 'entity-1'
-        }
-      },
-      update: {},
-      create: {
-        incidentId: floodIncident.id,
-        entityId: 'entity-1',
-        severity: 'HIGH'
-      }
-    })
-
-    await prisma.incidentEntity.upsert({
-      where: {
-        incidentId_entityId: {
-          incidentId: droughtIncident.id,
-          entityId: 'entity-3'
-        }
-      },
-      update: {},
-      create: {
-        incidentId: droughtIncident.id,
-        entityId: 'entity-3',
-        severity: 'MEDIUM'
-      }
-    })
-
-    // Add flood incident to Jere Local Government (entity-2)
-    await prisma.incidentEntity.upsert({
-      where: {
-        incidentId_entityId: {
-          incidentId: floodIncident.id,
-          entityId: 'entity-2'
-        }
-      },
-      update: {},
-      create: {
-        incidentId: floodIncident.id,
-        entityId: 'entity-2',
-        severity: 'MEDIUM'
-      }
-    })
-
-    // Add flood incident to Primary Health Center (entity-4) 
-    await prisma.incidentEntity.upsert({
-      where: {
-        incidentId_entityId: {
-          incidentId: floodIncident.id,
-          entityId: 'entity-4'
-        }
-      },
-      update: {},
-      create: {
-        incidentId: floodIncident.id,
-        entityId: 'entity-4',
-        severity: 'HIGH'
-      }
-    })
 
     // Create sample donor
     const unDonor = await prisma.donor.upsert({
@@ -887,6 +907,68 @@ async function main() {
   console.log('📋 Created 5 sample assessments for verification workflow testing')
   console.log('💰 Created 4 sample donor commitments for testing Story 4.3')
   console.log('🏢 Created donor organization for testing Story 5.1')
+
+  // Create Gap Field Severities - all start as MEDIUM
+  console.log('🎯 Creating gap field severities...')
+  
+  const gapFieldSeverities = [
+    // Health Assessment Fields
+    { fieldName: 'hasFunctionalClinic', assessmentType: 'HEALTH', displayName: 'Functional Clinic', description: 'Availability of functional medical clinic' },
+    { fieldName: 'hasEmergencyServices', assessmentType: 'HEALTH', displayName: 'Emergency Services', description: 'Emergency medical response capability' },
+    { fieldName: 'hasTrainedStaff', assessmentType: 'HEALTH', displayName: 'Trained Medical Staff', description: 'Availability of trained medical personnel' },
+    { fieldName: 'hasMedicineSupply', assessmentType: 'HEALTH', displayName: 'Medicine Supply', description: 'Adequate supply of essential medicines' },
+    { fieldName: 'hasMedicalSupplies', assessmentType: 'HEALTH', displayName: 'Medical Supplies', description: 'Availability of medical equipment and supplies' },
+    { fieldName: 'hasMaternalChildServices', assessmentType: 'HEALTH', displayName: 'Maternal & Child Services', description: 'Specialized maternal and child health services' },
+
+    // Food Security Assessment Fields  
+    { fieldName: 'isFoodSufficient', assessmentType: 'FOOD', displayName: 'Food Sufficiency', description: 'Adequate food supply for population needs' },
+    { fieldName: 'hasRegularMealAccess', assessmentType: 'FOOD', displayName: 'Regular Meal Access', description: 'Consistent access to regular meals' },
+    { fieldName: 'hasInfantNutrition', assessmentType: 'FOOD', displayName: 'Infant Nutrition', description: 'Specialized nutrition for infants and children' },
+
+    // WASH Assessment Fields
+    { fieldName: 'isWaterSufficient', assessmentType: 'WASH', displayName: 'Water Sufficiency', description: 'Adequate water supply for basic needs' },
+    { fieldName: 'hasCleanWaterAccess', assessmentType: 'WASH', displayName: 'Clean Water Access', description: 'Access to safe, clean drinking water' },
+    { fieldName: 'areLatrinesSufficient', assessmentType: 'WASH', displayName: 'Latrine Sufficiency', description: 'Adequate sanitation facilities' },
+    { fieldName: 'hasHandwashingFacilities', assessmentType: 'WASH', displayName: 'Handwashing Facilities', description: 'Available handwashing stations with soap' },
+    { fieldName: 'hasOpenDefecationConcerns', assessmentType: 'WASH', displayName: 'Open Defecation Concerns', description: 'Issues with open defecation practices' },
+
+    // Shelter Assessment Fields
+    { fieldName: 'areSheltersSufficient', assessmentType: 'SHELTER', displayName: 'Shelter Sufficiency', description: 'Adequate shelter capacity for displaced population' },
+    { fieldName: 'hasSafeStructures', assessmentType: 'SHELTER', displayName: 'Safe Structures', description: 'Structurally safe and secure shelter buildings' },
+    { fieldName: 'areOvercrowded', assessmentType: 'SHELTER', displayName: 'Overcrowding Issues', description: 'Overcrowding in available shelters' },
+    { fieldName: 'provideWeatherProtection', assessmentType: 'SHELTER', displayName: 'Weather Protection', description: 'Adequate protection from weather conditions' },
+
+    // Security Assessment Fields
+    { fieldName: 'isSafeFromViolence', assessmentType: 'SECURITY', displayName: 'Safety from Violence', description: 'Protection from violence and conflict' },
+    { fieldName: 'gbvCasesReported', assessmentType: 'SECURITY', displayName: 'GBV Cases Reported', description: 'Reports of gender-based violence cases' },
+    { fieldName: 'hasSecurityPresence', assessmentType: 'SECURITY', displayName: 'Security Presence', description: 'Adequate security personnel deployment' },
+    { fieldName: 'hasProtectionReportingMechanism', assessmentType: 'SECURITY', displayName: 'Protection Reporting', description: 'Mechanisms for reporting protection concerns' },
+    { fieldName: 'vulnerableGroupsHaveAccess', assessmentType: 'SECURITY', displayName: 'Vulnerable Groups Access', description: 'Priority access for vulnerable populations' },
+    { fieldName: 'hasLighting', assessmentType: 'SECURITY', displayName: 'Adequate Lighting', description: 'Sufficient lighting in high-risk areas' }
+  ] as const
+
+  for (const field of gapFieldSeverities) {
+    await prisma.gapFieldSeverity.upsert({
+      where: {
+        unique_field_assessment: {
+          fieldName: field.fieldName,
+          assessmentType: field.assessmentType
+        }
+      },
+      update: {},
+      create: {
+        fieldName: field.fieldName,
+        assessmentType: field.assessmentType,
+        severity: 'MEDIUM', // All start as MEDIUM per requirements
+        displayName: field.displayName,
+        description: field.description,
+        isActive: true,
+        createdBy: coordinatorUser.id
+      }
+    })
+  }
+
+  console.log('✅ Created gap field severities (all set to MEDIUM)')
 }
 
 main()

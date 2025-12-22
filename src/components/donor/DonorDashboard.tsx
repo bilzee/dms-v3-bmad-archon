@@ -2,15 +2,19 @@
 
 import React from 'react'
 import { useState, useEffect } from 'react'
-import { useQuery } from '@tanstack/react-query'
 import { useSearchParams } from 'next/navigation'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Progress } from '@/components/ui/progress'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
+import { Alert, AlertDescription } from '@/components/ui/alert'
+
+// New error handling components
+import { SafeDataLoader } from '@/components/shared/SafeDataLoader'
+import { EmptyState } from '@/components/shared/EmptyState'
+
 import { 
   Building, 
   User, 
@@ -40,11 +44,17 @@ import { CommitmentDashboard } from './CommitmentDashboard'
 import { DonorPerformanceDashboard } from './DonorPerformanceDashboard'
 import { LeaderboardDisplay } from './LeaderboardDisplay'
 import { GameBadgeSystem, BadgeProgress } from './GameBadgeSystem'
-import { useAuthStore } from '@/stores/auth.store'
+import { useAuth } from '@/hooks/useAuth'
 import { cn } from '@/lib/utils'
 
+// Role-based access
+import { RoleBasedRoute } from '@/components/shared/RoleBasedRoute'
+
+// Token utilities
+import { getAuthToken } from '@/lib/auth/token-utils'
+
 export function DonorDashboard() {
-  const { user } = useAuthStore()
+  const { user } = useAuth()
   const searchParams = useSearchParams()
   const [activeTab, setActiveTab] = useState('overview')
 
@@ -56,594 +66,646 @@ export function DonorDashboard() {
     }
   }, [searchParams])
 
-  // Fetch donor profile with metrics
-  const { 
-    data: donorData, 
-    isLoading, 
-    error, 
-    refetch 
-  } = useQuery({
-    queryKey: ['donor-profile'],
-    queryFn: async () => {
-      const response = await fetch('/api/v1/donors/profile', {
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('auth_token')}`
-        }
-      })
-      
-      if (!response.ok) {
-        throw new Error('Failed to fetch donor profile')
+  // Data fetching functions
+  const fetchDonorProfile = async () => {
+    if (!user) throw new Error('User not authenticated')
+    
+    const token = getAuthToken()
+    if (!token) throw new Error('No authentication token available')
+    
+    const response = await fetch('/api/v1/donors/profile', {
+      headers: {
+        'Authorization': `Bearer ${token}`
       }
-      
-      const result = await response.json()
-      return result.data
-    },
-    enabled: !!user
-  })
-
-  // Fetch assigned entities
-  const { 
-    data: entitiesData, 
-    isLoading: entitiesLoading 
-  } = useQuery({
-    queryKey: ['donor-entities'],
-    queryFn: async () => {
-      const response = await fetch('/api/v1/donors/entities', {
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('auth_token')}`
-        }
-      })
-      
-      if (!response.ok) {
-        throw new Error('Failed to fetch entities')
-      }
-      
-      const result = await response.json()
-      return result.data
-    },
-    enabled: !!user
-  })
-
-  // Fetch gamification metrics
-  const { 
-    data: gamificationData, 
-    isLoading: gamificationLoading 
-  } = useQuery({
-    queryKey: ['donor-gamification-metrics'],
-    queryFn: async () => {
-      const response = await fetch('/api/v1/donors/metrics?timeframe=30d', {
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('auth_token')}`
-        }
-      })
-      
-      if (!response.ok) {
-        throw new Error('Failed to fetch gamification metrics')
-      }
-      
-      const result = await response.json()
-      return result.data
-    },
-    enabled: !!user
-  })
-
-  // Fetch leaderboard position
-  const { 
-    data: leaderboardData 
-  } = useQuery({
-    queryKey: ['donor-leaderboard-position'],
-    queryFn: async () => {
-      const response = await fetch('/api/v1/leaderboard?limit=100&sortBy=overall')
-      if (!response.ok) {
-        throw new Error('Failed to fetch leaderboard')
-      }
-      const result = await response.json()
-      const userPosition = result.data.rankings.find((r: any) => r.donor.id === user?.id)
-      return userPosition
-    },
-    enabled: !!user
-  })
-
-  const handleRefresh = () => {
-    refetch()
+    })
+    
+    if (!response.ok) {
+      throw new Error('Failed to fetch donor profile')
+    }
+    
+    const result = await response.json()
+    return result.data
   }
 
-  if (isLoading) {
-    return (
-      <div className="space-y-6">
-        <div className="animate-pulse">
-          <div className="h-8 bg-gray-200 rounded w-1/3 mb-2"></div>
-          <div className="h-4 bg-gray-200 rounded w-1/2"></div>
-        </div>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-          {[...Array(4)].map((_, i) => (
-            <Card key={i}>
-              <CardContent className="p-6">
-                <div className="animate-pulse">
-                  <div className="h-4 bg-gray-200 rounded w-1/2 mb-2"></div>
-                  <div className="h-8 bg-gray-200 rounded w-3/4"></div>
-                </div>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
-      </div>
-    )
+  const fetchEntities = async () => {
+    const token = getAuthToken()
+    if (!token) throw new Error('No authentication token available')
+    
+    const response = await fetch('/api/v1/donors/entities', {
+      headers: {
+        'Authorization': `Bearer ${token}`
+      }
+    })
+    
+    if (!response.ok) {
+      throw new Error('Failed to fetch entities')
+    }
+    
+    const result = await response.json()
+    return result.data
   }
 
-  if (error) {
-    return (
-      <Alert variant="destructive">
-        <AlertTriangle className="h-4 w-4" />
-        <AlertDescription>
-          Failed to load dashboard data. Please try again later.
-        </AlertDescription>
-      </Alert>
-    )
+  const fetchGamificationMetrics = async () => {
+    const token = getAuthToken()
+    if (!token) throw new Error('No authentication token available')
+    
+    const response = await fetch('/api/v1/donors/metrics?timeframe=30d', {
+      headers: {
+        'Authorization': `Bearer ${token}`
+      }
+    })
+    
+    if (!response.ok) {
+      throw new Error('Failed to fetch gamification metrics')
+    }
+    
+    const result = await response.json()
+    return result.data
   }
 
-  const donor = donorData?.donor
-  const entities = entitiesData?.entities || []
+  const fetchLeaderboardPosition = async () => {
+    // First get the donor profile to find the donor ID
+    const token = getAuthToken()
+    if (!token) return null
+    
+    const profileResponse = await fetch('/api/v1/donors/profile', {
+      headers: {
+        'Authorization': `Bearer ${token}`
+      }
+    })
+    
+    if (!profileResponse.ok) return null
+    
+    const profileResult = await profileResponse.json()
+    const donorId = profileResult.data?.donor?.id
+    
+    if (!donorId) return null
+    
+    const response = await fetch('/api/v1/leaderboard?limit=100&sortBy=overall')
+    if (!response.ok) {
+      throw new Error('Failed to fetch leaderboard')
+    }
+    const result = await response.json()
+    
+    // Find position by donor ID, not user ID
+    const rankings = result.data?.rankings || []
+    const userPosition = rankings.find((r: any) => r.donor.id === donorId)
+    
+    if (userPosition) {
+      const rank = rankings.indexOf(userPosition) + 1
+      return {
+        ...userPosition,
+        rank,
+        trend: userPosition.previousRank ? (
+          userPosition.previousRank > rank ? 'up' :
+          userPosition.previousRank < rank ? 'down' : 'stable'
+        ) : null,
+        previousRank: userPosition.previousRank
+      }
+    }
+    
+    return null
+  }
 
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between" data-testid="dashboard-header">
-        <div className="flex items-center space-x-4">
-          <Avatar className="h-12 w-12" data-testid="dashboard-avatar">
-            <AvatarImage src="" />
-            <AvatarFallback className="text-lg">
-              {donor?.name?.charAt(0) || 'D'}
-            </AvatarFallback>
-          </Avatar>
-          <div>
-            <h1 className="text-2xl font-bold" data-testid="dashboard-title">{donor?.name}</h1>
-            <p className="text-gray-600" data-testid="dashboard-subtitle">Donor Dashboard</p>
-          </div>
-        </div>
+    <SafeDataLoader
+      queryFn={fetchDonorProfile}
+      enabled={!!user}
+      fallbackData={{ donor: null, metrics: { commitments: { total: 0, delivered: 0, deliveryRate: 0 }, responses: { total: 0 }, combined: { totalActivities: 0 } }}}
+      loadingMessage="Loading donor dashboard..."
+      errorTitle="Failed to load dashboard data"
+      showError={true}
+      showEmptyState={false}
+    >
+            {(donorData, isLoading, error, retry) => {
+        const donor = donorData?.donor
+
         
-        <Button 
-          data-testid="dashboard-refresh-button"
-          variant="outline" 
-          onClick={handleRefresh}
-          disabled={isLoading}
-        >
-          <RefreshCw className={cn('h-4 w-4 mr-2', isLoading && 'animate-spin')} />
-          Refresh
-        </Button>
-      </div>
+        // Fetch other data sources using nested SafeDataLoaders
+        return (
+          <SafeDataLoader
+            queryFn={fetchEntities}
+            enabled={!!user}
+            fallbackData={{ entities: [], summary: { totalAssigned: 0 } }}
+            loadingMessage="Loading assigned entities..."
+            errorTitle="Failed to load entities"
+            showError={false} // Don't show this error in the main component
+          >
+            {(entitiesData, entitiesLoading) => {
+              const entities = entitiesData?.entities || []
 
-      {/* Quick Stats */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4" data-testid="dashboard-metrics-grid">
-        <MetricCard
-          title="Assigned Entities"
-          value={entitiesData?.summary?.totalAssigned || 0}
-          icon={MapPin}
-          iconColor="text-blue-600"
-          description="Entities you can support"
-          data-testid="assigned-entities-metric"
-        />
-        
-        <MetricCard
-          title="Total Commitments"
-          value={donor?.metrics?.commitments?.total || 0}
-          icon={Package}
-          iconColor="text-green-600"
-          description="Active commitments"
-          data-testid="total-commitments-metric"
-        />
-        
-        <MetricCard
-          title="Delivery Rate"
-          value={`${donor?.metrics?.commitments?.deliveryRate || 0}%`}
-          icon={TrendingUp}
-          iconColor="text-purple-600"
-          description="Fulfillment performance"
-          data-testid="delivery-rate-metric"
-        />
-        
-        <MetricCard
-          title="Total Responses"
-          value={donor?.metrics?.responses?.total || 0}
-          icon={Truck}
-          iconColor="text-orange-600"
-          description="Deliveries made"
-          data-testid="total-responses-metric"
-        />
-        
-        <MetricCard
-          title="Leaderboard Rank"
-          value={`#${leaderboardData?.rank || 'N/A'}`}
-          icon={Trophy}
-          iconColor="text-yellow-600"
-          description={
-            leaderboardData?.trend === 'up' ? '📈 Rising' :
-            leaderboardData?.trend === 'down' ? '📉 Declining' :
-            leaderboardData?.trend === 'stable' ? '➡️ Stable' : 'Ranking'
-          }
-          data-testid="leaderboard-rank-metric"
-        />
-      </div>
+              return (
+                <SafeDataLoader
+                  queryFn={fetchGamificationMetrics}
+                  enabled={!!user}
+                  fallbackData={null}
+                  loadingMessage="Loading gamification data..."
+                  errorTitle="Failed to load gamification data"
+                  showError={false}
+                >
+                  {(gamificationData, gamificationLoading) => {
+                    return (
+                      <SafeDataLoader
+                        queryFn={fetchLeaderboardPosition}
+                        enabled={!!user}
+                        fallbackData={null}
+                        loadingMessage="Loading leaderboard data..."
+                        errorTitle="Failed to load leaderboard data"
+                        showError={false}
+                      >
+                        {(leaderboardData) => {
+                          return (
+                            <div className="space-y-6">
+                              {/* Donor Profile Warning */}
+                              {!donor && (
+                                <Alert className="border-orange-200 bg-orange-50">
+                                  <AlertTriangle className="h-4 w-4 text-orange-600" />
+                                  <div className="ml-2">
+                                    <h3 className="text-sm font-medium text-orange-800">Donor Profile Not Found</h3>
+                                    <p className="text-sm text-orange-700 mt-1">
+                                      Your donor profile could not be loaded. Some features may be limited until your donor account is set up.
+                                      <Button variant="link" onClick={retry} className="p-0 h-auto text-orange-700 underline ml-1">
+                                        Try again
+                                      </Button>
+                                    </p>
+                                  </div>
+                                </Alert>
+                              )}
 
-      {/* Main Content Tabs */}
-      <Tabs value={activeTab} onValueChange={setActiveTab} data-testid="dashboard-tabs">
-        <TabsList className="grid w-full grid-cols-6">
-          <TabsTrigger value="overview" data-testid="dashboard-overview-tab">Overview</TabsTrigger>
-          <TabsTrigger value="entities" data-testid="dashboard-entities-tab">Entities</TabsTrigger>
-          <TabsTrigger value="commitments" data-testid="dashboard-commitments-tab">Commitments</TabsTrigger>
-          <TabsTrigger value="gamification" data-testid="dashboard-gamification-tab">
-            <Trophy className="w-4 h-4 mr-1" />
-            Gamification
-          </TabsTrigger>
-          <TabsTrigger value="profile" data-testid="dashboard-profile-tab">Profile</TabsTrigger>
-          <TabsTrigger value="analytics" data-testid="dashboard-analytics-tab">Analytics</TabsTrigger>
-        </TabsList>
+                              {/* Header */}
+                              <div className="flex items-center justify-between" data-testid="dashboard-header">
+                                <div className="flex items-center space-x-4">
+                                  <Avatar className="h-12 w-12" data-testid="dashboard-avatar">
+                                    <AvatarImage src="" />
+                                    <AvatarFallback className="text-lg">
+                                      {donor?.name?.charAt(0) || 'D'}
+                                    </AvatarFallback>
+                                  </Avatar>
+                                  <div>
+                                    <h1 className="text-2xl font-bold" data-testid="dashboard-title">{donor?.name || 'Donor Dashboard'}</h1>
+                                    <p className="text-gray-600" data-testid="dashboard-subtitle">Donor Dashboard</p>
+                                  </div>
+                                </div>
+                                
+                                <Button 
+                                  data-testid="dashboard-refresh-button"
+                                  variant="outline" 
+                                  onClick={retry}
+                                  disabled={isLoading}
+                                >
+                                  <RefreshCw className={cn('h-4 w-4 mr-2', isLoading && 'animate-spin')} />
+                                  Refresh
+                                </Button>
+                              </div>
 
-        <TabsContent value="overview" className="space-y-6">
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            {/* Recent Entities */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center">
-                  <MapPin className="mr-2 h-5 w-5" />
-                  Assigned Entities
-                </CardTitle>
-                <CardDescription>
-                  Entities where you can provide support
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                {entitiesLoading ? (
-                  <div className="space-y-3 animate-pulse">
-                    {[...Array(3)].map((_, i) => (
-                      <div key={i} className="flex items-center justify-between p-3 border rounded">
-                        <div className="h-4 bg-gray-200 rounded w-2/3"></div>
-                        <div className="h-4 bg-gray-200 rounded w-1/4"></div>
-                      </div>
-                    ))}
-                  </div>
-                ) : entities.length === 0 ? (
-                  <div className="text-center py-6 text-gray-500">
-                    <MapPin className="h-8 w-8 mx-auto mb-2 opacity-50" />
-                    <p>No entities assigned yet</p>
-                    <p className="text-sm">Contact coordinators to get assigned to entities</p>
-                  </div>
-                ) : (
-                  <div className="space-y-3">
-                    {entities.slice(0, 5).map((entity: any) => (
-                      <div key={entity.id} className="flex items-center justify-between p-3 border rounded">
-                        <div>
-                          <p className="font-medium">{entity.name}</p>
-                          <p className="text-sm text-gray-600">{entity.type}</p>
-                        </div>
-                        <div className="text-right">
-                          <Badge variant="outline">
-                            {entity.stats?.responses || 0} responses
-                          </Badge>
-                        </div>
-                      </div>
-                    ))}
-                    {entities.length > 5 && (
-                      <div className="text-center pt-2">
-                        <Button variant="outline" size="sm">
-                          View All ({entities.length})
-                        </Button>
-                      </div>
-                    )}
-                  </div>
-                )}
-              </CardContent>
-            </Card>
+                              {/* Quick Stats */}
+                              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4" data-testid="dashboard-metrics-grid">
+                                <MetricCard
+                                  title="Assigned Entities"
+                                  value={entitiesData?.summary?.totalAssigned || 0}
+                                  icon={MapPin}
+                                  iconColor="text-blue-600"
+                                  description="Entities you can support"
+                                  data-testid="assigned-entities-metric"
+                                />
+                                
+                                <MetricCard
+                                  title="Total Commitments"
+                                  value={donor?.metrics?.commitments?.total || 0}
+                                  icon={Package}
+                                  iconColor="text-green-600"
+                                  description="Active commitments"
+                                  data-testid="total-commitments-metric"
+                                />
+                                
+                                <MetricCard
+                                  title="Delivery Rate"
+                                  value={`${donor?.metrics?.commitments?.deliveryRate || 0}%`}
+                                  icon={TrendingUp}
+                                  iconColor="text-purple-600"
+                                  description="Fulfillment performance"
+                                  data-testid="delivery-rate-metric"
+                                />
+                                
+                                <MetricCard
+                                  title="Total Responses"
+                                  value={donor?.metrics?.responses?.total || 0}
+                                  icon={Truck}
+                                  iconColor="text-orange-600"
+                                  description="Deliveries made"
+                                  data-testid="total-responses-metric"
+                                />
+                                
+                                <MetricCard
+                                  title="Leaderboard Rank"
+                                  value={`#${leaderboardData?.rank || 'N/A'}`}
+                                  icon={Trophy}
+                                  iconColor="text-yellow-600"
+                                  description={
+                                    leaderboardData?.trend === 'up' ? '📈 Rising' :
+                                    leaderboardData?.trend === 'down' ? '📉 Declining' :
+                                    leaderboardData?.trend === 'stable' ? '➡️ Stable' : 'Ranking'
+                                  }
+                                  data-testid="leaderboard-rank-metric"
+                                />
+                              </div>
 
-            {/* Performance Summary */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center">
-                  <BarChart3 className="mr-2 h-5 w-5" />
-                  Performance Summary
-                </CardTitle>
-                <CardDescription>
-                  Your contribution impact metrics
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="text-center p-4 border rounded">
-                      <div className="text-2xl font-bold text-blue-600">
-                        {donor?.metrics?.commitments?.total || 0}
-                      </div>
-                      <div className="text-sm text-gray-600">Commitments</div>
-                    </div>
-                    <div className="text-center p-4 border rounded">
-                      <div className="text-2xl font-bold text-green-600">
-                        {donor?.metrics?.commitments?.delivered || 0}
-                      </div>
-                      <div className="text-sm text-gray-600">Delivered</div>
-                    </div>
-                  </div>
+                              {/* Main Content Tabs */}
+                              <Tabs value={activeTab} onValueChange={setActiveTab} data-testid="dashboard-tabs">
+                                <TabsList className="grid w-full grid-cols-6">
+                                  <TabsTrigger value="overview" data-testid="dashboard-overview-tab">Overview</TabsTrigger>
+                                  <TabsTrigger value="entities" data-testid="dashboard-entities-tab">Entities</TabsTrigger>
+                                  <TabsTrigger value="commitments" data-testid="dashboard-commitments-tab">Commitments</TabsTrigger>
+                                  <TabsTrigger value="gamification" data-testid="dashboard-gamification-tab">
+                                    <Trophy className="w-4 h-4 mr-1" />
+                                    Gamification
+                                  </TabsTrigger>
+                                  <TabsTrigger value="profile" data-testid="dashboard-profile-tab">Profile</TabsTrigger>
+                                  <TabsTrigger value="analytics" data-testid="dashboard-analytics-tab">Analytics</TabsTrigger>
+                                </TabsList>
 
-                  <div className="space-y-2">
-                    <div className="flex justify-between text-sm">
-                      <span>Delivery Rate</span>
-                      <span className="font-medium">
-                        {donor?.metrics?.commitments?.deliveryRate || 0}%
-                      </span>
-                    </div>
-                    <Progress 
-                      value={donor?.metrics?.commitments?.deliveryRate || 0} 
-                      className="h-2"
-                    />
-                  </div>
+                                <TabsContent value="overview" className="space-y-6">
+                                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                                    {/* Recent Entities */}
+                                    <Card>
+                                      <CardHeader>
+                                        <CardTitle className="flex items-center">
+                                          <MapPin className="mr-2 h-5 w-5" />
+                                          Assigned Entities
+                                        </CardTitle>
+                                        <CardDescription>
+                                          Entities where you can provide support
+                                        </CardDescription>
+                                      </CardHeader>
+                                      <CardContent>
+                                        {entitiesLoading ? (
+                                          <div className="space-y-3 animate-pulse">
+                                            {[...Array(3)].map((_, i) => (
+                                              <div key={i} className="flex items-center justify-between p-3 border rounded">
+                                                <div className="h-4 bg-gray-200 rounded w-2/3"></div>
+                                                <div className="h-4 bg-gray-200 rounded w-1/4"></div>
+                                              </div>
+                                            ))}
+                                          </div>
+                                        ) : entities.length === 0 ? (
+                                          <EmptyState
+                                            type="data"
+                                            title="No Entities Assigned"
+                                            description="No entities have been assigned to you yet. Contact coordinators to get assigned."
+                                            icon={MapPin}
+                                          />
+                                        ) : (
+                                          <div className="space-y-3">
+                                            {entities.slice(0, 5).map((entity: any) => (
+                                              <div key={entity.id} className="flex items-center justify-between p-3 border rounded">
+                                                <div>
+                                                  <p className="font-medium">{entity.name}</p>
+                                                  <p className="text-sm text-gray-600">{entity.type}</p>
+                                                </div>
+                                                <div className="text-right">
+                                                  <Badge variant="outline">
+                                                    {entity.stats?.responses || 0} responses
+                                                  </Badge>
+                                                </div>
+                                              </div>
+                                            ))}
+                                            {entities.length > 5 && (
+                                              <div className="text-center pt-2">
+                                                <Button variant="outline" size="sm">
+                                                  View All ({entities.length})
+                                                </Button>
+                                              </div>
+                                            )}
+                                          </div>
+                                        )}
+                                      </CardContent>
+                                    </Card>
 
-                  <div className="grid grid-cols-2 gap-4 pt-4 border-t">
-                    <div className="text-center">
-                      <div className="text-lg font-semibold text-purple-600">
-                        {donor?.metrics?.responses?.total || 0}
-                      </div>
-                      <div className="text-xs text-gray-600">Total Responses</div>
-                    </div>
-                    <div className="text-center">
-                      <div className="text-lg font-semibold text-orange-600">
-                        {donor?.metrics?.combined?.totalActivities || 0}
-                      </div>
-                      <div className="text-xs text-gray-600">Total Activities</div>
-                    </div>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
+                                    {/* Performance Summary */}
+                                    <Card>
+                                      <CardHeader>
+                                        <CardTitle className="flex items-center">
+                                          <BarChart3 className="mr-2 h-5 w-5" />
+                                          Performance Summary
+                                        </CardTitle>
+                                        <CardDescription>
+                                          Your contribution impact metrics
+                                        </CardDescription>
+                                      </CardHeader>
+                                      <CardContent>
+                                        <div className="space-y-4">
+                                          <div className="grid grid-cols-2 gap-4">
+                                            <div className="text-center p-4 border rounded">
+                                              <div className="text-2xl font-bold text-blue-600">
+                                                {donor?.metrics?.commitments?.total || 0}
+                                              </div>
+                                              <div className="text-sm text-gray-600">Commitments</div>
+                                            </div>
+                                            <div className="text-center p-4 border rounded">
+                                              <div className="text-2xl font-bold text-green-600">
+                                                {donor?.metrics?.commitments?.delivered || 0}
+                                              </div>
+                                              <div className="text-sm text-gray-600">Delivered</div>
+                                            </div>
+                                          </div>
 
-          {/* Recent Activity */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center">
-                <Activity className="mr-2 h-5 w-5" />
-                Recent Activity
-              </CardTitle>
-              <CardDescription>
-                Your latest contributions and responses
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="text-center py-8 text-gray-500">
-                <Clock className="h-8 w-8 mx-auto mb-2 opacity-50" />
-                <p>No recent activity</p>
-                <p className="text-sm">Your activities will appear here once you start making commitments and deliveries</p>
-              </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
+                                          <div className="space-y-2">
+                                            <div className="flex justify-between text-sm">
+                                              <span>Delivery Rate</span>
+                                              <span className="font-medium">
+                                                {donor?.metrics?.commitments?.deliveryRate || 0}%
+                                              </span>
+                                            </div>
+                                            <Progress 
+                                              value={donor?.metrics?.commitments?.deliveryRate || 0} 
+                                              className="h-2"
+                                            />
+                                          </div>
 
-        <TabsContent value="entities" className="space-y-6">
-          <EntitySelector />
-        </TabsContent>
+                                          <div className="grid grid-cols-2 gap-4 pt-4 border-t">
+                                            <div className="text-center">
+                                              <div className="text-lg font-semibold text-purple-600">
+                                                {donor?.metrics?.responses?.total || 0}
+                                              </div>
+                                              <div className="text-xs text-gray-600">Total Responses</div>
+                                            </div>
+                                            <div className="text-center">
+                                              <div className="text-lg font-semibold text-orange-600">
+                                                {donor?.metrics?.combined?.totalActivities || 0}
+                                              </div>
+                                              <div className="text-xs text-gray-600">Total Activities</div>
+                                            </div>
+                                          </div>
+                                        </div>
+                                      </CardContent>
+                                    </Card>
+                                  </div>
 
-        <TabsContent value="commitments" className="space-y-6">
-          {donor ? (
-            <CommitmentDashboard 
-              donorId={donor.id}
-              preSelectedEntityId={searchParams.get('entityId') || undefined}
-            />
-          ) : (
-            <div className="text-center py-8 text-gray-500">
-              <Package className="h-8 w-8 mx-auto mb-2 opacity-50" />
-              <p>Loading donor information...</p>
-            </div>
-          )}
-        </TabsContent>
+                                  {/* Recent Activity */}
+                                  <Card>
+                                    <CardHeader>
+                                      <CardTitle className="flex items-center">
+                                        <Activity className="mr-2 h-5 w-5" />
+                                        Recent Activity
+                                      </CardTitle>
+                                      <CardDescription>
+                                        Your latest contributions and responses
+                                      </CardDescription>
+                                    </CardHeader>
+                                    <CardContent>
+                                      <div className="text-center py-8 text-gray-500">
+                                        <Clock className="h-8 w-8 mx-auto mb-2 opacity-50" />
+                                        <p>No recent activity</p>
+                                        <p className="text-sm">Your activities will appear here once you start making commitments and deliveries</p>
+                                      </div>
+                                    </CardContent>
+                                  </Card>
+                                </TabsContent>
 
-        <TabsContent value="gamification" className="space-y-6">
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            {/* Achievements & Badges */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center">
-                  <Award className="mr-2 h-5 w-5" />
-                  Achievements & Badges
-                </CardTitle>
-                <CardDescription>
-                  Your earned achievements and current progress
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                {gamificationLoading ? (
-                  <div className="animate-pulse space-y-2">
-                    <div className="h-4 bg-gray-200 rounded w-3/4"></div>
-                    <div className="h-4 bg-gray-200 rounded w-1/2"></div>
-                    <div className="h-4 bg-gray-200 rounded w-2/3"></div>
-                  </div>
-                ) : gamificationData?.donors?.[0]?.badges ? (
-                  <div className="space-y-4">
-                    <GameBadgeSystem 
-                      badges={gamificationData.donors[0].badges}
-                      showProgress={true}
-                      size="md"
-                    />
-                    <BadgeProgress 
-                      currentBadges={gamificationData.donors[0].badges}
-                      totalPossibleBadges={14}
-                    />
-                  </div>
-                ) : (
-                  <div className="text-center py-4 text-gray-500">
-                    <Award className="h-8 w-8 mx-auto mb-2 opacity-50" />
-                    <p>No achievements yet</p>
-                    <p className="text-sm">Start making commitments to earn badges!</p>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
+                                <TabsContent value="entities" className="space-y-6">
+                                  <EntitySelector />
+                                </TabsContent>
 
-            {/* Performance Overview */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center">
-                  <TrendingUp className="mr-2 h-5 w-5" />
-                  Performance Overview
-                </CardTitle>
-                <CardDescription>
-                  Your gamification metrics and ranking
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                {gamificationLoading ? (
-                  <div className="animate-pulse space-y-4">
-                    <div className="h-4 bg-gray-200 rounded"></div>
-                    <div className="h-8 bg-gray-200 rounded"></div>
-                    <div className="h-4 bg-gray-200 rounded w-2/3"></div>
-                  </div>
-                ) : gamificationData?.donors?.[0] ? (
-                  <div className="space-y-4">
-                    <div className="grid grid-cols-2 gap-4">
-                      <div className="text-center p-3 bg-blue-50 rounded">
-                        <div className="text-lg font-bold text-blue-700">
-                          {gamificationData.donors[0].metrics?.deliveryRate?.toFixed(1) || '0'}%
-                        </div>
-                        <div className="text-xs text-gray-600">Delivery Rate</div>
-                      </div>
-                      <div className="text-center p-3 bg-green-50 rounded">
-                        <div className="text-lg font-bold text-green-700">
-                          {gamificationData.donors[0].metrics?.commitments?.total || 0}
-                        </div>
-                        <div className="text-xs text-gray-600">Total Activities</div>
-                      </div>
-                    </div>
-                    
-                    <div className="pt-4 border-t">
-                      <div className="flex items-center justify-between mb-2">
-                        <span className="text-sm font-medium">Current Ranking</span>
-                        <Badge variant="secondary">
-                          #{leaderboardData?.rank || 'N/A'}
-                        </Badge>
-                      </div>
-                      {leaderboardData && (
-                        <div className="flex items-center gap-2 text-xs text-gray-600">
-                          {leaderboardData.trend === 'up' && <TrendingUp className="w-3 h-3 text-green-500" />}
-                          {leaderboardData.trend === 'down' && <TrendingDown className="w-3 h-3 text-red-500" />}
-                          <span>
-                            {leaderboardData.previousRank 
-                              ? `#${leaderboardData.previousRank} → #${leaderboardData.rank}`
-                              : 'New to leaderboard'
-                            }
-                          </span>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                ) : (
-                  <div className="text-center py-4 text-gray-500">
-                    <TrendingUp className="h-8 w-8 mx-auto mb-2 opacity-50" />
-                    <p>No performance data available</p>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-          </div>
+                                <TabsContent value="commitments" className="space-y-6">
+                                  {donor ? (
+                                    <CommitmentDashboard 
+                                      donorId={donor.id}
+                                      preSelectedEntityId={searchParams.get('entityId') || undefined}
+                                    />
+                                  ) : (
+                                    <EmptyState
+                                      type="data"
+                                      title="Loading donor information..."
+                                      description="Please wait while we load your donor profile."
+                                    />
+                                  )}
+                                </TabsContent>
 
-          {/* Leaderboard Preview */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center justify-between">
-                <div className="flex items-center">
-                  <Trophy className="mr-2 h-5 w-5" />
-                  Leaderboard
-                </div>
-                <Button variant="outline" size="sm" asChild>
-                  <a href="/donor/leaderboard">View Full Leaderboard</a>
-                </Button>
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <LeaderboardDisplay 
-                limit={5}
-                showFilters={false}
-                timeframe="30d"
-                sortBy="overall"
-              />
-            </CardContent>
-          </Card>
-        </TabsContent>
+                                <TabsContent value="gamification" className="space-y-6">
+                                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                                    {/* Achievements & Badges */}
+                                    <Card>
+                                      <CardHeader>
+                                        <CardTitle className="flex items-center">
+                                          <Award className="mr-2 h-5 w-5" />
+                                          Achievements & Badges
+                                        </CardTitle>
+                                        <CardDescription>
+                                          Your earned achievements and current progress
+                                        </CardDescription>
+                                      </CardHeader>
+                                      <CardContent className="space-y-4">
+                                        {gamificationLoading ? (
+                                          <div className="animate-pulse space-y-2">
+                                            <div className="h-4 bg-gray-200 rounded w-3/4"></div>
+                                            <div className="h-4 bg-gray-200 rounded w-1/2"></div>
+                                            <div className="h-4 bg-gray-200 rounded w-2/3"></div>
+                                          </div>
+                                        ) : gamificationData?.donors?.[0]?.badges ? (
+                                          <div className="space-y-4">
+                                            <GameBadgeSystem 
+                                              badges={gamificationData.donors[0].badges}
+                                              showProgress={true}
+                                              size="md"
+                                            />
+                                            <BadgeProgress 
+                                              currentBadges={gamificationData.donors[0].badges}
+                                              totalPossibleBadges={14}
+                                            />
+                                          </div>
+                                        ) : (
+                                          <EmptyState
+                                            type="data"
+                                            title="No Achievements Yet"
+                                            description="Start making commitments to earn badges!"
+                                            icon={Award}
+                                          />
+                                        )}
+                                      </CardContent>
+                                    </Card>
 
-        <TabsContent value="profile" className="space-y-6">
-          <DonorProfile />
-        </TabsContent>
+                                    {/* Performance Overview */}
+                                    <Card>
+                                      <CardHeader>
+                                        <CardTitle className="flex items-center">
+                                          <TrendingUp className="mr-2 h-5 w-5" />
+                                          Performance Overview
+                                        </CardTitle>
+                                        <CardDescription>
+                                          Your gamification metrics and ranking
+                                        </CardDescription>
+                                      </CardHeader>
+                                      <CardContent>
+                                        {gamificationLoading ? (
+                                          <div className="animate-pulse space-y-4">
+                                            <div className="h-4 bg-gray-200 rounded"></div>
+                                            <div className="h-8 bg-gray-200 rounded"></div>
+                                            <div className="h-4 bg-gray-200 rounded w-2/3"></div>
+                                          </div>
+                                        ) : gamificationData?.donors?.[0] ? (
+                                          <div className="space-y-4">
+                                            <div className="grid grid-cols-2 gap-4">
+                                              <div className="text-center p-3 bg-blue-50 rounded">
+                                                <div className="text-lg font-bold text-blue-700">
+                                                  {gamificationData.donors[0].metrics?.deliveryRate?.toFixed(1) || '0'}%
+                                                </div>
+                                                <div className="text-xs text-gray-600">Delivery Rate</div>
+                                              </div>
+                                              <div className="text-center p-3 bg-green-50 rounded">
+                                                <div className="text-lg font-bold text-green-700">
+                                                  {gamificationData.donors[0].metrics?.commitments?.total || 0}
+                                                </div>
+                                                <div className="text-xs text-gray-600">Total Activities</div>
+                                              </div>
+                                            </div>
+                                            
+                                            <div className="pt-4 border-t">
+                                              <div className="flex items-center justify-between mb-2">
+                                                <span className="text-sm font-medium">Current Ranking</span>
+                                                <Badge variant="secondary">
+                                                  #{leaderboardData?.rank || 'N/A'}
+                                                </Badge>
+                                              </div>
+                                              {leaderboardData && (
+                                                <div className="flex items-center gap-2 text-xs text-gray-600">
+                                                  {leaderboardData.trend === 'up' && <TrendingUp className="w-3 h-3 text-green-500" />}
+                                                  {leaderboardData.trend === 'down' && <TrendingDown className="w-3 h-3 text-red-500" />}
+                                                  <span>
+                                                    {leaderboardData.previousRank 
+                                                      ? `#${leaderboardData.previousRank} → #${leaderboardData.rank}`
+                                                      : 'New to leaderboard'
+                                                    }
+                                                  </span>
+                                                </div>
+                                              )}
+                                            </div>
+                                          </div>
+                                        ) : (
+                                          <EmptyState
+                                            type="data"
+                                            title="No Performance Data Available"
+                                            description="Performance tracking will be available once you start contributing."
+                                            icon={TrendingUp}
+                                          />
+                                        )}
+                                      </CardContent>
+                                    </Card>
+                                  </div>
 
-        <TabsContent value="analytics" className="space-y-6">
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center">
-                  <Target className="mr-2 h-5 w-5" />
-                  Commitment Analytics
-                </CardTitle>
-                <CardDescription>
-                  Track your commitment trends and patterns
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="text-center py-8 text-gray-500">
-                  <BarChart3 className="h-8 w-8 mx-auto mb-2 opacity-50" />
-                  <p>Analytics coming soon</p>
-                  <p className="text-sm">Detailed commitment analytics will be available here</p>
-                </div>
-              </CardContent>
-            </Card>
+                                  {/* Leaderboard Preview */}
+                                  <Card>
+                                    <CardHeader>
+                                      <CardTitle className="flex items-center justify-between">
+                                        <div className="flex items-center">
+                                          <Trophy className="mr-2 h-5 w-5" />
+                                          Leaderboard
+                                        </div>
+                                        <Button variant="outline" size="sm" asChild>
+                                          <a href="/donor/leaderboard">View Full Leaderboard</a>
+                                        </Button>
+                                      </CardTitle>
+                                    </CardHeader>
+                                    <CardContent>
+                                      <LeaderboardDisplay 
+                                        limit={5}
+                                        showFilters={false}
+                                        timeframe="30d"
+                                        sortBy="overall"
+                                      />
+                                    </CardContent>
+                                  </Card>
+                                </TabsContent>
 
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center">
-                  <TrendingUp className="mr-2 h-5 w-5" />
-                  Performance Trends
-                </CardTitle>
-                <CardDescription>
-                  Historical performance data and insights
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="text-center py-8 text-gray-500">
-                  <TrendingUp className="h-8 w-8 mx-auto mb-2 opacity-50" />
-                  <p>Performance tracking coming soon</p>
-                  <p className="text-sm">Historical performance data will be displayed here</p>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
+                                <TabsContent value="profile" className="space-y-6">
+                                  <DonorProfile />
+                                </TabsContent>
 
-          {/* Full Performance Dashboard */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center justify-between">
-                <div className="flex items-center">
-                  <Star className="mr-2 h-5 w-5" />
-                  Comprehensive Performance Dashboard
-                </div>
-                <Button variant="outline" size="sm" asChild>
-                  <a href="/donor/performance">Full Dashboard</a>
-                </Button>
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              {user ? (
-                <DonorPerformanceDashboard 
-                  donorId={user.id}
-                  donorName={user.name || user.organization}
-                  showRanking={true}
-                  showBadges={true}
-                  showTrends={true}
-                  compact={true}
-                />
-              ) : (
-                <div className="text-center py-8 text-gray-500">
-                  <p>Please log in to view your performance dashboard</p>
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        </TabsContent>
-      </Tabs>
-    </div>
+                                <TabsContent value="analytics" className="space-y-6">
+                                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                                    <Card>
+                                      <CardHeader>
+                                        <CardTitle className="flex items-center">
+                                          <Target className="mr-2 h-5 w-5" />
+                                          Commitment Analytics
+                                        </CardTitle>
+                                        <CardDescription>
+                                          Track your commitment trends and patterns
+                                        </CardDescription>
+                                      </CardHeader>
+                                      <CardContent>
+                                        <div className="text-center py-8 text-gray-500">
+                                          <BarChart3 className="h-8 w-8 mx-auto mb-2 opacity-50" />
+                                          <p>Analytics coming soon</p>
+                                          <p className="text-sm">Detailed commitment analytics will be available here</p>
+                                        </div>
+                                      </CardContent>
+                                    </Card>
+
+                                    <Card>
+                                      <CardHeader>
+                                        <CardTitle className="flex items-center">
+                                          <TrendingUp className="mr-2 h-5 w-5" />
+                                          Performance Trends
+                                        </CardTitle>
+                                        <CardDescription>
+                                          Historical performance data and insights
+                                        </CardDescription>
+                                      </CardHeader>
+                                      <CardContent>
+                                        <div className="text-center py-8 text-gray-500">
+                                          <TrendingUp className="h-8 w-8 mx-auto mb-2 opacity-50" />
+                                          <p>Performance tracking coming soon</p>
+                                          <p className="text-sm">Historical performance data will be displayed here</p>
+                                        </div>
+                                      </CardContent>
+                                    </Card>
+                                  </div>
+
+                                  {/* Full Performance Dashboard */}
+                                  <Card>
+                                    <CardHeader>
+                                      <CardTitle className="flex items-center justify-between">
+                                        <div className="flex items-center">
+                                          <Star className="mr-2 h-5 w-5" />
+                                          Comprehensive Performance Dashboard
+                                        </div>
+                                        <Button variant="outline" size="sm" asChild>
+                                          <a href="/donor/performance">Full Dashboard</a>
+                                        </Button>
+                                      </CardTitle>
+                                    </CardHeader>
+                                    <CardContent>
+                                      {user ? (
+                                        <DonorPerformanceDashboard 
+                                          donorId={user.id}
+                                          donorName={user.name || user.organization}
+                                          showRanking={true}
+                                          showBadges={true}
+                                          showTrends={true}
+                                          compact={true}
+                                        />
+                                      ) : (
+                                        <div className="text-center py-8 text-gray-500">
+                                          <p>Please log in to view your performance dashboard</p>
+                                        </div>
+                                      )}
+                                    </CardContent>
+                                  </Card>
+                                </TabsContent>
+                              </Tabs>
+                            </div>
+                          )
+                        }}
+                      </SafeDataLoader>
+                    )
+                  }}
+                </SafeDataLoader>
+              )
+            }}
+          </SafeDataLoader>
+        )
+      }}
+    </SafeDataLoader>
   )
 }
 
@@ -674,3 +736,13 @@ function MetricCard({ title, value, icon: Icon, iconColor = "text-gray-600", des
     </Card>
   )
 }
+
+function DonorDashboardPage() {
+  return (
+    <RoleBasedRoute requiredRole="DONOR" fallbackPath="/dashboard">
+      <DonorDashboard />
+    </RoleBasedRoute>
+  )
+}
+
+export default DonorDashboardPage

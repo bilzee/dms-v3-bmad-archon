@@ -13,6 +13,7 @@ export class PreliminaryAssessmentService {
     createdBy: string
   ): Promise<PreliminaryAssessment & { incident?: Incident }> {
     const { data, createIncident, incidentData } = input
+    const { affectedEntityIds, ...assessmentData } = data
 
     let incident: Incident | undefined
 
@@ -34,14 +35,24 @@ export class PreliminaryAssessmentService {
       })
     }
 
-    // Create preliminary assessment
+    // Create preliminary assessment with entity relationships
     const assessment = await prisma.preliminaryAssessment.create({
       data: {
-        ...data,
+        ...assessmentData,
         incidentId: incident?.id || data.incidentId,
+        affectedEntities: affectedEntityIds && affectedEntityIds.length > 0 ? {
+          create: affectedEntityIds.map((entityId: string) => ({
+            entityId
+          }))
+        } : undefined
       },
       include: {
-        incident: true
+        incident: true,
+        affectedEntities: {
+          include: {
+            entity: true
+          }
+        }
       }
     })
 
@@ -52,7 +63,12 @@ export class PreliminaryAssessmentService {
     return await prisma.preliminaryAssessment.findUnique({
       where: { id },
       include: {
-        incident: true
+        incident: true,
+        affectedEntities: {
+          include: {
+            entity: true
+          }
+        }
       }
     }) as any
   }
@@ -90,7 +106,12 @@ export class PreliminaryAssessmentService {
     const assessments = await prisma.preliminaryAssessment.findMany({
       where,
       include: {
-        incident: true
+        incident: true,
+        affectedEntities: {
+          include: {
+            entity: true
+          }
+        }
       },
       orderBy: {
         createdAt: 'desc'
@@ -143,7 +164,12 @@ export class PreliminaryAssessmentService {
     const assessments = await prisma.preliminaryAssessment.findMany({
       where,
       include: {
-        incident: true
+        incident: true,
+        affectedEntities: {
+          include: {
+            entity: true
+          }
+        }
       },
       orderBy: {
         createdAt: 'desc'
@@ -163,11 +189,36 @@ export class PreliminaryAssessmentService {
     id: string,
     input: UpdatePreliminaryAssessmentInput
   ): Promise<PreliminaryAssessment & { incident?: Incident }> {
+    const { affectedEntityIds, ...updateData } = input.data
+
+    // Handle entity relationships separately if provided
+    if (affectedEntityIds !== undefined) {
+      // First, remove existing relationships
+      await prisma.preliminaryAssessmentEntity.deleteMany({
+        where: { preliminaryAssessmentId: id }
+      })
+      
+      // Then create new relationships
+      if (affectedEntityIds.length > 0) {
+        await prisma.preliminaryAssessmentEntity.createMany({
+          data: affectedEntityIds.map((entityId: string) => ({
+            preliminaryAssessmentId: id,
+            entityId
+          }))
+        })
+      }
+    }
+
     const assessment = await prisma.preliminaryAssessment.update({
       where: { id },
-      data: input.data,
+      data: updateData,
       include: {
-        incident: true
+        incident: true,
+        affectedEntities: {
+          include: {
+            entity: true
+          }
+        }
       }
     })
 

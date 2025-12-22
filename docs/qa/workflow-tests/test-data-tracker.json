@@ -1,0 +1,144 @@
+{
+  "testSession": {
+    "startTime": "2025-01-08 16:30:00",
+    "testRunner": "Claude Code QA Assistant",
+    "description": "Complete workflow testing session with Chrome DevTools - Coordinator Foundation First"
+  },
+  "createdData": {
+    "entities": [
+      {
+        "id": "entity-3",
+        "name": "Gwoza Local Government",
+        "type": "LGA",
+        "location": "Borno State",
+        "source": "existing-seeded-data"
+      },
+      {
+        "id": "entity-5", 
+        "name": "IDP Camp Dalori",
+        "type": "CAMP",
+        "location": "Maiduguri",
+        "source": "existing-seeded-data"
+      },
+      {
+        "id": "entity-4",
+        "name": "Primary Health Center Maiduguri", 
+        "type": "FACILITY",
+        "location": "Maiduguri",
+        "source": "existing-seeded-data"
+      },
+      {
+        "id": "entity-1",
+        "name": "Maiduguri Metropolitan",
+        "type": "LGA", 
+        "location": "Borno State",
+        "source": "existing-seeded-data"
+      }
+    ],
+    "incidents": [
+      {
+        "id": "test-flood-emergency-workflow-testing",
+        "title": "Test Flood Emergency - Workflow Testing",
+        "type": "FLOOD",
+        "severity": "HIGH",
+        "location": "Maiduguri Test Area",
+        "source": "created-by-coordinator-workflow"
+      },
+      {
+        "id": "test-health-crisis-workflow-testing", 
+        "title": "Test Health Crisis - Workflow Testing",
+        "type": "EPIDEMIC",
+        "severity": "CRITICAL",
+        "location": "Gwoza Test Area",
+        "source": "created-by-coordinator-workflow"
+      }
+    ],
+    "assessments": [
+      {
+        "id": "1e36f15f-90ff-4331-ab63-58b5fbdefb86",
+        "type": "HEALTH",
+        "title": "Health Assessment - Primary Health Center Maiduguri",
+        "entity": "Primary Health Center Maiduguri",
+        "incident": "test-health-crisis-workflow-testing",
+        "status": "Verified",
+        "created": "2025-12-08 12:27:06",
+        "gaps_identified": 4,
+        "gaps": ["Functional Clinic", "Emergency Services", "Trained Staff", "Maternal/Child Services"],
+        "health_issues": ["Malaria", "Diarrhea"],
+        "source": "created-by-assessor-workflow"
+      }
+    ],
+    "responses": [],
+    "commitments": [],
+    "users": []
+  },
+  "issues": [
+    {
+      "severity": "medium",
+      "description": "Responder workflow navigation issue",
+      "details": "Responder-specific pages redirect to login page despite user being authenticated with responder role",
+      "affected_urls": [
+        "http://localhost:3000/responder/planning/new",
+        "http://localhost:3000/responder/dashboard"
+      ],
+      "workaround": "Access responder functionality through main dashboard buttons",
+      "timestamp": "2025-12-08 12:45:00",
+      "workflow": "responder",
+      "impact": "Cannot directly access responder workflow pages, but responder functionality appears available through dashboard"
+    }
+  ],
+  "workflows": {
+    "assessor": {
+      "status": "completed",
+      "createdData": [
+        {
+          "id": "1e36f15f-90ff-4331-ab63-58b5fbdefb86",
+          "type": "HEALTH Assessment",
+          "entity": "Primary Health Center Maiduguri",
+          "incident": "Test Health Crisis - Workflow Testing",
+          "timestamp": "2025-12-08 12:27:06"
+        }
+      ],
+      "issues": [],
+      "resolution": "Used Multi Role Test User (multirole@dms.gov.ng) with assessor role successfully"
+    },
+    "coordinator": {
+      "status": "completed", 
+      "createdData": [
+        {
+          "foundation_incidents": [
+            "test-flood-emergency-workflow-testing",
+            "test-health-crisis-workflow-testing"
+          ],
+          "verified_assessments": [
+            "1e36f15f-90ff-4331-ab63-58b5fbdefb86"
+          ],
+          "verification_notes": "Assessment verified for workflow testing with 4 critical gaps identified"
+        }
+      ],
+      "issues": []
+    },
+    "responder": {
+      "status": "partially_tested",
+      "createdData": [],
+      "issues": [
+        {
+          "severity": "medium",
+          "description": "Navigation redirect issues to responder-specific pages",
+          "impact": "Cannot access dedicated responder workflow pages directly"
+        }
+      ],
+      "workaround": "Responder functionality accessible through main dashboard"
+    },
+    "donor": {
+      "status": "pending",
+      "createdData": [],
+      "issues": []
+    },
+    "admin": {
+      "status": "pending",
+      "createdData": [],
+      "issues": []
+    }
+  }
+}

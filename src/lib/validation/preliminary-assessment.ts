@@ -17,7 +17,8 @@ export const PreliminaryAssessmentSchema = z.object({
   estimatedAgriculturalLandsAffected: z.string().optional(),
   reportingAgent: z.string().min(1, 'Reporting agent is required'),
   additionalDetails: z.any().optional(),
-  incidentId: z.string().optional()
+  incidentId: z.string().nullable().optional(),
+  affectedEntityIds: z.array(z.string()).optional().default([])
 })
 
 export const CreatePreliminaryAssessmentSchema = z.object({
@@ -40,7 +41,7 @@ export const QueryPreliminaryAssessmentSchema = z.object({
   page: z.coerce.number().int().min(1).default(1),
   limit: z.coerce.number().int().min(1).max(100).default(10),
   userId: z.string().optional(),
-  incidentId: z.string().optional(),
+  incidentId: z.string().nullable().optional(),
   lga: z.string().optional(),
   ward: z.string().optional()
 })

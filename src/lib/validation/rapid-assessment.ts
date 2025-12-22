@@ -14,7 +14,8 @@ const BaseRapidAssessmentSchema = z.object({
   }).optional(),
   mediaAttachments: z.array(z.string()).optional(),
   priority: z.enum(['CRITICAL', 'HIGH', 'MEDIUM', 'LOW']).default('MEDIUM'),
-  entityId: z.string().min(1, 'Entity is required')
+  entityId: z.string().min(1, 'Entity is required'),
+  incidentId: z.string().min(1, 'Incident is required')
 })
 
 // Health Assessment Schema
@@ -154,8 +155,10 @@ export const QueryRapidAssessmentSchema = z.object({
   limit: z.coerce.number().int().min(1).max(100).default(10),
   userId: z.string().optional(),
   entityId: z.string().optional(),
+  incidentId: z.string().optional(),
   type: z.enum(['HEALTH', 'WASH', 'SHELTER', 'FOOD', 'SECURITY', 'POPULATION']).optional(),
-  status: z.enum(['DRAFT', 'SUBMITTED', 'VERIFIED', 'REJECTED']).optional(),
+  status: z.enum(['DRAFT', 'SUBMITTED', 'VERIFIED']).optional(),
+  verificationStatus: z.enum(['DRAFT', 'SUBMITTED', 'VERIFIED', 'AUTO_VERIFIED', 'REJECTED']).optional(),
   priority: z.enum(['CRITICAL', 'HIGH', 'MEDIUM', 'LOW']).optional(),
   startDate: z.coerce.date().optional(),
   endDate: z.coerce.date().optional()

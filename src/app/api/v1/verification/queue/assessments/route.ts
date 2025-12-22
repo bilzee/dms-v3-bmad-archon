@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { withAuth } from '@/lib/auth/middleware';
-import { prisma } from '@/lib/db/client';
+import { db } from '@/lib/db/client';
 
 export const GET = withAuth(async (request, context) => {
   try {
@@ -68,21 +68,21 @@ export const GET = withAuth(async (request, context) => {
     }
 
     // Build order by clause
-    const orderBy: any = {};
-    orderBy[sortBy] = sortOrder;
+    const orderBy: any[] = [];
+    orderBy.push({ [sortBy]: sortOrder });
     
     // Add secondary sort by priority for stable ordering
     if (sortBy !== 'priority') {
-      orderBy.priority = 'desc';
+      orderBy.push({ priority: 'desc' });
     }
 
     // Get total count for pagination
-    const total = await prisma.rapidAssessment.count({
+    const total = await db.rapidAssessment.count({
       where: whereClause
     });
 
     // Get paginated verification queue with enhanced includes
-    const assessments = await prisma.rapidAssessment.findMany({
+    const assessments = await db.rapidAssessment.findMany({
       where: whereClause,
       include: {
         entity: {
@@ -102,7 +102,7 @@ export const GET = withAuth(async (request, context) => {
           }
         }
       },
-      orderBy: [orderBy],
+      orderBy: orderBy,
       skip: (page - 1) * limit,
       take: limit
     });
@@ -112,7 +112,7 @@ export const GET = withAuth(async (request, context) => {
     // Calculate queue depth indicators
     const queueDepth = {
       total: total,
-      critical: await prisma.rapidAssessment.count({
+      critical: await db.rapidAssessment.count({
         where: { 
           verificationStatus: { in: status },
           priority: 'CRITICAL',
@@ -120,7 +120,7 @@ export const GET = withAuth(async (request, context) => {
           ...(assessmentType && { rapidAssessmentType: { in: assessmentType } })
         }
       }),
-      high: await prisma.rapidAssessment.count({
+      high: await db.rapidAssessment.count({
         where: { 
           verificationStatus: { in: status },
           priority: 'HIGH',
@@ -128,7 +128,7 @@ export const GET = withAuth(async (request, context) => {
           ...(assessmentType && { rapidAssessmentType: { in: assessmentType } })
         }
       }),
-      medium: await prisma.rapidAssessment.count({
+      medium: await db.rapidAssessment.count({
         where: { 
           verificationStatus: { in: status },
           priority: 'MEDIUM',
@@ -136,7 +136,7 @@ export const GET = withAuth(async (request, context) => {
           ...(assessmentType && { rapidAssessmentType: { in: assessmentType } })
         }
       }),
-      low: await prisma.rapidAssessment.count({
+      low: await db.rapidAssessment.count({
         where: { 
           verificationStatus: { in: status },
           priority: 'LOW',
@@ -185,7 +185,7 @@ export const GET = withAuth(async (request, context) => {
 // Helper functions for metrics calculation
 async function calculateAverageWaitTime(whereClause: any): Promise<number> {
   try {
-    const pendingAssessments = await prisma.rapidAssessment.findMany({
+    const pendingAssessments = await db.rapidAssessment.findMany({
       where: {
         ...whereClause,
         verificationStatus: { in: ['SUBMITTED', 'DRAFT'] }
@@ -214,12 +214,12 @@ async function calculateVerificationRate(): Promise<number> {
     const last24Hours = new Date(Date.now() - 24 * 60 * 60 * 1000);
     
     const [submitted, verified] = await Promise.all([
-      prisma.rapidAssessment.count({
+      db.rapidAssessment.count({
         where: {
           createdAt: { gte: last24Hours }
         }
       }),
-      prisma.rapidAssessment.count({
+      db.rapidAssessment.count({
         where: {
           createdAt: { gte: last24Hours },
           verificationStatus: { in: ['VERIFIED', 'AUTO_VERIFIED'] }
@@ -237,7 +237,7 @@ async function calculateVerificationRate(): Promise<number> {
 
 async function getOldestPendingAssessment(whereClause: any): Promise<string | null> {
   try {
-    const oldest = await prisma.rapidAssessment.findFirst({
+    const oldest = await db.rapidAssessment.findFirst({
       where: {
         ...whereClause,
         verificationStatus: { in: ['SUBMITTED', 'DRAFT'] }

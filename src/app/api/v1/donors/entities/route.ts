@@ -68,7 +68,7 @@ export const GET = withAuth(async (request: NextRequest, context) => {
     // Get assessment and response data for each entity
     const entitiesWithDetails = await Promise.all(
       paginatedEntities.map(async (entity) => {
-        const [assessments, responses, commitments] = await Promise.all([
+        const [assessments, responses, commitments, latestPopulationAssessment] = await Promise.all([
           prisma.rapidAssessment.count({
             where: { 
               entityId: entity.id,
@@ -83,11 +83,37 @@ export const GET = withAuth(async (request: NextRequest, context) => {
           }),
           prisma.donorCommitment.count({
             where: { entityId: entity.id }
+          }),
+          prisma.rapidAssessment.findFirst({
+            where: {
+              entityId: entity.id,
+              rapidAssessmentType: 'POPULATION',
+              verificationStatus: 'VERIFIED'
+            },
+            include: {
+              populationAssessment: true
+            },
+            orderBy: {
+              rapidAssessmentDate: 'desc'
+            }
           })
         ]);
 
+        // Extract population data from latest population assessment
+        const population = latestPopulationAssessment?.populationAssessment?.totalPopulation || 
+                          latestPopulationAssessment?.populationAssessment?.numberDisplaced || 0;
+
         return {
           ...entity,
+          demographics: {
+            population: population,
+            vulnerableCount: latestPopulationAssessment?.populationAssessment?.vulnerablePopulation || 0,
+            lga: entity.metadata?.lga || null,
+            ward: entity.metadata?.ward || null,
+            campDetails: entity.type === 'CAMP' ? entity.metadata : null,
+            communityDetails: entity.type === 'COMMUNITY' ? entity.metadata : null,
+            facilityDetails: entity.type === 'FACILITY' ? entity.metadata : null
+          },
           stats: {
             verifiedAssessments: assessments,
             responses: responses,

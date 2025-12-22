@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
@@ -14,6 +14,7 @@ import { Badge } from '@/components/ui/badge'
 import { GPSCapture } from '@/components/shared/GPSCapture'
 import { MediaField } from '@/components/shared/MediaField'
 import { EntitySelector } from '@/components/shared/EntitySelector'
+import { IncidentSelector } from '@/components/shared/IncidentSelector'
 import { SecurityAssessmentFormProps, SecurityAssessment } from '@/types/rapid-assessment'
 import { getCurrentUserName, getAssessmentLocationData } from '@/utils/assessment-utils'
 import { Shield, AlertTriangle, Users, Lightbulb, Phone } from 'lucide-react'
@@ -36,25 +37,69 @@ export function SecurityAssessmentForm({
   onSubmit, 
   onCancel, 
   isSubmitting = false,
-  disabled = false 
+  disabled = false,
+  onIncidentEntityChange
 }: SecurityAssessmentFormProps) {
   const [gpsCoordinates, setGpsCoordinates] = useState<{ lat: number; lng: number } | null>(null)
   const [mediaFiles, setMediaFiles] = useState<string[]>((initialData as any)?.mediaAttachments || [])
   const [selectedEntity, setSelectedEntity] = useState<string>(entityId)
+  const [selectedIncident, setSelectedIncident] = useState<string>('')
   const [selectedEntityData, setSelectedEntityData] = useState<any>(null)
+
+  // Extract security data from initialData
+  const securityData = (initialData as any)?.securityAssessment || (initialData as any);
+  
+  // Debug logging
+  console.log('SecurityAssessmentForm - initialData:', initialData);
+  console.log('SecurityAssessmentForm - securityData:', securityData);
 
   const form = useForm<FormData>({
     resolver: zodResolver(SecurityAssessmentSchema),
     defaultValues: {
-      isSafeFromViolence: initialData?.isSafeFromViolence || false,
-      gbvCasesReported: initialData?.gbvCasesReported || false,
-      hasSecurityPresence: initialData?.hasSecurityPresence || false,
-      hasProtectionReportingMechanism: initialData?.hasProtectionReportingMechanism || false,
-      vulnerableGroupsHaveAccess: initialData?.vulnerableGroupsHaveAccess || false,
-      hasLighting: initialData?.hasLighting || false,
-      additionalSecurityDetails: initialData?.additionalSecurityDetails || ''
+      isSafeFromViolence: securityData?.isSafeFromViolence || false,
+      gbvCasesReported: securityData?.gbvCasesReported || false,
+      hasSecurityPresence: securityData?.hasSecurityPresence || false,
+      hasProtectionReportingMechanism: securityData?.hasProtectionReportingMechanism || false,
+      vulnerableGroupsHaveAccess: securityData?.vulnerableGroupsHaveAccess || false,
+      hasLighting: securityData?.hasLighting || false,
+      additionalSecurityDetails: securityData?.additionalSecurityDetails || ''
     }
   })
+
+  // Track when initialData changes and update form
+  useEffect(() => {
+    console.log('SecurityAssessmentForm - initialData changed:', initialData);
+    
+    if (securityData) {
+      const newValues = {
+        isSafeFromViolence: securityData?.isSafeFromViolence || false,
+        gbvCasesReported: securityData?.gbvCasesReported || false,
+        hasSecurityPresence: securityData?.hasSecurityPresence || false,
+        hasProtectionReportingMechanism: securityData?.hasProtectionReportingMechanism || false,
+        vulnerableGroupsHaveAccess: securityData?.vulnerableGroupsHaveAccess || false,
+        hasLighting: securityData?.hasLighting || false,
+        additionalSecurityDetails: securityData?.additionalSecurityDetails || ''
+      };
+      
+      console.log('SecurityAssessmentForm - updating form with values:', newValues);
+      form.reset(newValues);
+    }
+  }, [initialData, securityData]);
+
+  // Handle incident and entity changes
+  const handleIncidentChange = (incidentId: string) => {
+    setSelectedIncident(incidentId);
+    if (selectedEntity && onIncidentEntityChange) {
+      onIncidentEntityChange(incidentId, selectedEntity);
+    }
+  };
+
+  const handleEntityChange = (entityId: string) => {
+    setSelectedEntity(entityId);
+    if (selectedIncident && onIncidentEntityChange) {
+      onIncidentEntityChange(selectedIncident, entityId);
+    }
+  };
 
   const watchedValues = form.watch()
 
@@ -84,12 +129,17 @@ export function SecurityAssessmentForm({
     if (!selectedEntity) {
       return
     }
+    
+    if (!selectedIncident) {
+      throw new Error('Please select an incident for this assessment')
+    }
 
     const assessmentData = {
       type: 'SECURITY' as const,
       rapidAssessmentDate: new Date(),
       assessorName: getCurrentUserName(),
       entityId: selectedEntity,
+      incidentId: selectedIncident,
       ...getAssessmentLocationData(selectedEntityData, gpsCoordinates ? { latitude: gpsCoordinates.lat, longitude: gpsCoordinates.lng } : undefined),
       mediaAttachments: mediaFiles,
       securityData: data
@@ -145,16 +195,37 @@ export function SecurityAssessmentForm({
 
       <Form {...form}>
         <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-6">
+          {/* Incident Selection */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Incident Information</CardTitle>
+              <CardDescription>
+                Select the incident this assessment is related to
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <IncidentSelector
+                value={selectedIncident}
+                onValueChange={handleIncidentChange}
+                disabled={disabled}
+                required
+              />
+            </CardContent>
+          </Card>
+
           {/* Entity Selection */}
           <Card>
             <CardHeader>
               <CardTitle>Assessment Location</CardTitle>
+              <CardDescription>
+                Select the entity being assessed
+              </CardDescription>
             </CardHeader>
             <CardContent>
               <EntitySelector
                 value={selectedEntity}
                 onValueChange={(value) => {
-                  setSelectedEntity(value)
+                  handleEntityChange(value)
                   setSelectedEntityData(null)
                 }}
                 disabled={disabled}

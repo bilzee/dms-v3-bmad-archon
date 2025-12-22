@@ -3,6 +3,42 @@ import { withAuth } from '@/lib/auth/middleware';
 import { z } from 'zod';
 import { prisma } from '@/lib/db/client';
 
+interface AuthContext {
+  roles: string[];
+  user: {
+    id: string;
+    name?: string;
+    email?: string;
+  };
+  userId: string;
+}
+
+interface EntityWithCounts {
+  id: string;
+  name: string;
+  type: string;
+  location: string | null;
+  autoApproveEnabled: boolean;
+  metadata: any;
+  updatedAt: Date;
+  _count: {
+    rapidAssessments: number;
+    responses: number;
+  };
+}
+
+interface AutoApprovalMetadata {
+  autoApproval?: {
+    scope?: 'assessments' | 'responses' | 'both';
+    assessmentTypes?: string[];
+    responseTypes?: string[];
+    maxPriority?: 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL';
+    requiresDocumentation?: boolean;
+    lastModifiedBy?: string;
+    lastModifiedAt?: string;
+  };
+}
+
 const bulkUpdateSchema = z.object({
   entityIds: z.array(z.string()),
   enabled: z.boolean(),
@@ -16,7 +52,7 @@ const bulkUpdateSchema = z.object({
 });
 
 // GET - Get all auto-approval configurations
-export const GET = withAuth(async (request: NextRequest, context) => {
+export const GET = withAuth(async (request: NextRequest, context: AuthContext) => {
   try {
     const { roles } = context;
     
@@ -32,7 +68,11 @@ export const GET = withAuth(async (request: NextRequest, context) => {
     const enabledOnly = searchParams.get('enabledOnly') === 'true';
 
     // Build where clause
-    const whereClause: any = {
+    const whereClause: {
+      isActive: boolean;
+      type?: string;
+      autoApproveEnabled?: boolean;
+    } = {
       isActive: true
     };
 
@@ -77,8 +117,8 @@ export const GET = withAuth(async (request: NextRequest, context) => {
     });
 
     // Format response with auto-approval configs
-    const configurations = entities.map((entity: any) => {
-      const metadata = entity.metadata as any;
+    const configurations = entities.map((entity: EntityWithCounts) => {
+      const metadata = entity.metadata as AutoApprovalMetadata;
       const autoApprovalConfig = metadata?.autoApproval || {};
       
       return {
@@ -106,11 +146,11 @@ export const GET = withAuth(async (request: NextRequest, context) => {
     // Calculate summary statistics
     const summary = {
       totalEntities: entities.length,
-      enabledCount: entities.filter((e: any) => e.autoApproveEnabled).length,
-      disabledCount: entities.filter((e: any) => !e.autoApproveEnabled).length,
-      totalAutoVerifiedAssessments: entities.reduce((sum: any, e: any) => sum + e._count.rapidAssessments, 0),
-      totalAutoVerifiedResponses: entities.reduce((sum: any, e: any) => sum + e._count.responses, 0),
-      totalAutoVerified: entities.reduce((sum: any, e: any) => sum + e._count.rapidAssessments + e._count.responses, 0)
+      enabledCount: entities.filter((e: EntityWithCounts) => e.autoApproveEnabled).length,
+      disabledCount: entities.filter((e: EntityWithCounts) => !e.autoApproveEnabled).length,
+      totalAutoVerifiedAssessments: entities.reduce((sum: number, e: EntityWithCounts) => sum + e._count.rapidAssessments, 0),
+      totalAutoVerifiedResponses: entities.reduce((sum: number, e: EntityWithCounts) => sum + e._count.responses, 0),
+      totalAutoVerified: entities.reduce((sum: number, e: EntityWithCounts) => sum + e._count.rapidAssessments + e._count.responses, 0)
     };
 
     return NextResponse.json({
@@ -134,7 +174,7 @@ export const GET = withAuth(async (request: NextRequest, context) => {
 });
 
 // PUT - Bulk update auto-approval configurations
-export const PUT = withAuth(async (request: NextRequest, context) => {
+export const PUT = withAuth(async (request: NextRequest, context: AuthContext) => {
   try {
     const { roles, user } = context;
     
@@ -156,7 +196,7 @@ export const PUT = withAuth(async (request: NextRequest, context) => {
     }
 
     // Start transaction for bulk auto-approval configuration update
-    const result = await prisma.$transaction(async (tx: any) => {
+    const result = await prisma.$transaction(async (tx) => {
       // Get entities to update
       const entities = await tx.entity.findMany({
         where: {
@@ -173,10 +213,10 @@ export const PUT = withAuth(async (request: NextRequest, context) => {
 
       // Update each entity
       for (const entity of entities) {
-        const currentMetadata = (entity.metadata as any) || {};
+        const currentMetadata = (entity.metadata as AutoApprovalMetadata) || {};
         
         // Update metadata with auto-approval conditions
-        const updatedMetadata = {
+        const updatedMetadata: AutoApprovalMetadata = {
           ...currentMetadata,
           autoApproval: {
             scope: validatedData.scope || 'assessments',
@@ -184,7 +224,7 @@ export const PUT = withAuth(async (request: NextRequest, context) => {
             responseTypes: validatedData.conditions?.responseTypes || [],
             maxPriority: validatedData.conditions?.maxPriority || 'MEDIUM',
             requiresDocumentation: validatedData.conditions?.requiresDocumentation || false,
-            lastModifiedBy: (user as any).id,
+            lastModifiedBy: user.id,
             lastModifiedAt: new Date().toISOString(),
           }
         };
@@ -211,7 +251,7 @@ export const PUT = withAuth(async (request: NextRequest, context) => {
         // Create audit log entry for each entity
         await tx.auditLog.create({
           data: {
-            userId: (user as any).id,
+            userId: user.id,
             action: 'BULK_AUTO_APPROVAL_CONFIG_UPDATED',
             resource: 'Entity',
             resourceId: entity.id,
@@ -223,7 +263,7 @@ export const PUT = withAuth(async (request: NextRequest, context) => {
               conditions: validatedData.conditions,
               bulkUpdate: true,
               totalEntitiesUpdated: entities.length,
-              configuredBy: (user as any).name || (user as any).id
+              configuredBy: user.name || user.id
             }
           }
         });
@@ -233,8 +273,8 @@ export const PUT = withAuth(async (request: NextRequest, context) => {
     });
 
     // Format response
-    const configurations = result.map((entity: any) => {
-      const metadata = entity.metadata as any;
+    const configurations = result.map((entity: EntityWithCounts) => {
+      const metadata = entity.metadata as AutoApprovalMetadata;
       const autoApprovalConfig = metadata?.autoApproval || {};
       
       return {

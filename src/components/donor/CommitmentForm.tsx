@@ -128,14 +128,14 @@ export function CommitmentForm({ donorId, onSuccess, onCancel, initialData, preS
       // Clear incident selection when entity changes
       form.setValue('incidentId', '')
     }
-  }, [preSelectedEntityId])
+  }, [preSelectedEntityId, form])
 
   // Clear incident selection when entity changes
   React.useEffect(() => {
     if (selectedEntityId) {
       form.setValue('incidentId', '')
     }
-  }, [selectedEntityId])
+  }, [selectedEntityId, form])
 
   const { fields, append, remove } = useFieldArray({
     control: form.control,

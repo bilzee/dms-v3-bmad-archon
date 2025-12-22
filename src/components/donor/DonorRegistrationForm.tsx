@@ -58,6 +58,7 @@ export function DonorRegistrationForm({ onSuccess, onCancel }: DonorRegistration
   const [showPassword, setShowPassword] = useState(false)
   const [showConfirmPassword, setShowConfirmPassword] = useState(false)
   const [currentStep, setCurrentStep] = useState(1)
+  const [errorMessage, setErrorMessage] = useState<string | null>(null)
   const totalSteps = 2
 
   const form = useForm<DonorRegistrationFormData>({
@@ -90,12 +91,20 @@ export function DonorRegistrationForm({ onSuccess, onCancel }: DonorRegistration
       
       if (!response.ok) {
         const error = await response.json()
-        throw new Error(error.error || 'Registration failed')
+        const errorData = {
+          status: response.status,
+          message: error.error || 'Registration failed',
+          details: error.details || null
+        }
+        throw errorData
       }
       
       return response.json()
     },
     onSuccess: (data) => {
+      // Clear any previous errors
+      setErrorMessage(null)
+      
       // Store auth token
       localStorage.setItem('auth_token', data.data.token)
       localStorage.setItem('user_data', JSON.stringify(data.data.user))
@@ -111,8 +120,28 @@ export function DonorRegistrationForm({ onSuccess, onCancel }: DonorRegistration
         }, 2000)
       }
     },
-    onError: (error) => {
-      toast.error(error.message || 'Registration failed. Please try again.')
+    onError: (error: any) => {
+      let errorMsg = 'Registration failed. Please try again.'
+      
+      if (error.status === 409) {
+        // Conflict error - organization or user already exists
+        if (error.message.toLowerCase().includes('organization')) {
+          errorMsg = 'An organization with this name or email already exists. Please choose a different name or contact email.'
+        } else if (error.message.toLowerCase().includes('user')) {
+          errorMsg = 'A user with this email or username already exists. Please choose a different email or username.'
+        } else {
+          errorMsg = 'The organization name, email, or username you provided is already in use. Please check your entries and try again.'
+        }
+      } else if (error.status === 400) {
+        errorMsg = 'Please check your information and ensure all required fields are filled correctly.'
+      } else if (error.status === 500) {
+        errorMsg = 'We encountered a server error. Please try again in a moment.'
+      } else {
+        errorMsg = error.message || errorMsg
+      }
+      
+      setErrorMessage(errorMsg)
+      toast.error(errorMsg)
     }
   })
 
@@ -184,6 +213,9 @@ export function DonorRegistrationForm({ onSuccess, onCancel }: DonorRegistration
   }
 
   const handleSubmit = () => {
+    // Clear any previous error messages
+    setErrorMessage(null)
+    
     const formData = form.getValues()
     
     // Remove confirmPassword field
@@ -239,6 +271,16 @@ export function DonorRegistrationForm({ onSuccess, onCancel }: DonorRegistration
           </CardDescription>
         </CardHeader>
         <CardContent>
+          {/* Error Alert */}
+          {errorMessage && (
+            <Alert variant="destructive" className="mb-6" data-testid="registration-error-alert">
+              <AlertCircle className="h-4 w-4" />
+              <AlertDescription>
+                {errorMessage}
+              </AlertDescription>
+            </Alert>
+          )}
+          
           <Form {...form}>
             <div className="space-y-6">
               {/* Step 1: Organization Information */}

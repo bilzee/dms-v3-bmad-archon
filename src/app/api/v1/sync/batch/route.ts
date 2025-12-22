@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
+import { withAuth, AuthContext } from '@/lib/auth/middleware';
+import { entityAssignmentService } from '@/lib/services/entity-assignment.service';
 
 // Define the sync change schema
 const SyncChangeSchema = z.object({
@@ -24,18 +26,23 @@ const SyncResultSchema = z.object({
   conflictData: z.any().optional()
 });
 
-export async function POST(request: NextRequest) {
+export const POST = withAuth(async (
+  request: NextRequest,
+  context: AuthContext
+) => {
   try {
     console.log('Batch sync endpoint called');
     
-    // Validate user authorization first
-    const userContext = await validateUserAuthorization(request);
-    if (!userContext) {
-      return NextResponse.json(
-        { error: 'Unauthorized access' },
-        { status: 401 }
-      );
-    }
+    // Get user's assigned entities from database
+    const assignedEntities = await entityAssignmentService.getAssignedEntities(context.userId);
+    const entityIds = assignedEntities.map(entity => entity.id);
+    
+    const userContext = {
+      userId: context.userId,
+      entityIds
+    };
+    
+    console.log(`User ${userContext.userId} authorized with ${userContext.entityIds.length} entities`);
     
     // Check rate limiting
     const clientId = request.headers.get('x-client-id') || userContext.userId;
@@ -100,7 +107,7 @@ export async function POST(request: NextRequest) {
       { status: 500 }
     );
   }
-}
+})
 
 async function processBatchChanges(changes: z.infer<typeof SyncChangeSchema>[]) {
   const results = [];
@@ -267,52 +274,6 @@ function generateServerId(): string {
   return `srv_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
 }
 
-// Validate user authorization with improved JWT handling
-async function validateUserAuthorization(request: NextRequest): Promise<{ userId: string; entityIds: string[] } | null> {
-  try {
-    const authHeader = request.headers.get('authorization');
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
-      console.log('Missing or invalid authorization header');
-      return null;
-    }
-    
-    const token = authHeader.substring(7); // Remove 'Bearer ' prefix
-    
-    // In a production implementation, this would:
-    // 1. Validate JWT signature using your secret key
-    // 2. Check token expiration
-    // 3. Extract user ID and roles from token
-    // 4. Query database for user's assigned entities
-    
-    // Enhanced mock implementation with better validation
-    if (!token || token.length < 10) {
-      console.log('Invalid token format');
-      return null;
-    }
-    
-    // Simulate JWT validation
-    if (token === 'invalid-token') {
-      return null;
-    }
-    
-    // Mock user context with realistic entity assignment
-    const mockUserContext = {
-      userId: `user_${token.slice(-6)}`,
-      entityIds: [
-        'entity_1', 'entity_2', 'entity_3', // Standard entities
-        'test_entity_1', 'test_entity_2',   // Test entities
-        'conflicting_entity', 'failing_entity' // Special test cases
-      ]
-    };
-    
-    console.log(`User ${mockUserContext.userId} authorized with ${mockUserContext.entityIds.length} entities`);
-    return mockUserContext;
-    
-  } catch (error) {
-    console.error('Authorization validation failed:', error);
-    return null;
-  }
-}
 
 // Validate user has permission for specific entities
 async function validateEntityPermissions(

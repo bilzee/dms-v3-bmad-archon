@@ -22,6 +22,13 @@ export interface RapidAssessmentWithData extends RapidAssessment {
     type: string
     location: string
   }
+  incident?: {
+    id: string
+    type: string
+    subType?: string
+    createdAt: Date
+    severity: string
+  }
 }
 
 // Health Assessment
@@ -142,6 +149,7 @@ export interface BaseAssessmentFormProps {
   onCancel: () => void
   isSubmitting?: boolean
   disabled?: boolean
+  onIncidentEntityChange?: (incidentId: string, entityId: string) => void
 }
 
 export interface HealthAssessmentFormProps extends BaseAssessmentFormProps {

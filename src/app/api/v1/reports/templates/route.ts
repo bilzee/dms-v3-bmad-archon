@@ -1,0 +1,271 @@
+/**
+ * Report Template API Routes
+ * GET - List available report templates
+ * POST - Create new report template
+ */
+
+import { NextRequest, NextResponse } from 'next/server';
+import { getServerSession } from 'next-auth';
+import { z } from 'zod';
+import { db } from '@/lib/db/client';
+import { ReportTemplateEngine, DEFAULT_TEMPLATES } from '@/lib/reports/template-engine';
+import { ApiResponse } from '@/types/api';
+
+// Validation schemas
+const CreateTemplateSchema = z.object({
+  name: z.string().min(1, 'Template name is required'),
+  description: z.string().optional(),
+  type: z.enum(['ASSESSMENT', 'RESPONSE', 'ENTITY', 'DONOR', 'CUSTOM']),
+  layout: z.array(z.any()).min(1, 'Template must have at least one layout element'),
+  isPublic: z.boolean().default(false)
+});
+
+const ListTemplatesSchema = z.object({
+  type: z.enum(['ASSESSMENT', 'RESPONSE', 'ENTITY', 'DONOR', 'CUSTOM']).optional(),
+  public: z.boolean().optional(),
+  search: z.string().optional(),
+  page: z.number().min(1).default(1),
+  limit: z.number().min(1).max(100).default(20)
+});
+
+/**
+ * GET /api/v1/reports/templates
+ * List available report templates with filtering and pagination
+ */
+export async function GET(request: NextRequest) {
+  try {
+    const session = await getServerSession();
+    if (!session?.user) {
+      return NextResponse.json(
+        new ApiResponse(false, null, 'Unauthorized'),
+        { status: 401 }
+      );
+    }
+
+    const { searchParams } = new URL(request.url);
+    const params = ListTemplatesSchema.parse({
+      type: searchParams.get('type') || undefined,
+      public: searchParams.get('public') === 'true' ? true : searchParams.get('public') === 'false' ? false : undefined,
+      search: searchParams.get('search') || undefined,
+      page: parseInt(searchParams.get('page') || '1'),
+      limit: parseInt(searchParams.get('limit') || '20')
+    });
+
+    const skip = (params.page - 1) * params.limit;
+
+    // Build where clause
+    const where: any = {};
+    
+    if (params.type) {
+      where.type = params.type;
+    }
+    
+    if (params.public !== undefined) {
+      if (params.public) {
+        where.isPublic = true;
+      } else {
+        // User's own templates + public templates
+        where.OR = [
+          { createdById: session.user.id },
+          { isPublic: true }
+        ];
+      }
+    } else {
+      // Default: user's templates + public templates
+      where.OR = [
+        { createdById: session.user.id },
+        { isPublic: true }
+      ];
+    }
+    
+    if (params.search) {
+      where.AND = [
+        ...(where.AND || []),
+        {
+          OR: [
+            { name: { contains: params.search, mode: 'insensitive' } },
+            { description: { contains: params.search, mode: 'insensitive' } }
+          ]
+        }
+      ];
+    }
+
+    // Get total count
+    const total = await db.reportTemplate.count({ where });
+
+    // Get templates
+    const templates = await db.reportTemplate.findMany({
+      where,
+      skip,
+      take: params.limit,
+      orderBy: [
+        { isPublic: 'desc' }, // Public templates first
+        { updatedAt: 'desc' }   // Most recent first
+      ],
+      include: {
+        createdBy: {
+          select: {
+            id: true,
+            name: true,
+            email: true
+          }
+        },
+        _count: {
+          select: {
+            configurations: true
+          }
+        }
+      }
+    });
+
+    // Add default templates for first page or when no filters
+    let defaultTemplates: any[] = [];
+    if (params.page === 1 && !params.search) {
+      const applicableDefaults = DEFAULT_TEMPLATES.filter(template => 
+        !params.type || template.type === params.type
+      );
+      
+      defaultTemplates = applicableDefaults.map(template => ({
+        ...template,
+        id: `default_${template.name.toLowerCase().replace(/\s+/g, '_')}`,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+        createdBy: {
+          id: 'system',
+          name: 'System',
+          email: 'system@disaster-management.com'
+        },
+        _count: {
+          configurations: 0
+        }
+      }));
+    }
+
+    const allTemplates = [...defaultTemplates, ...templates];
+
+    return NextResponse.json(
+      new ApiResponse(true, {
+        templates: allTemplates,
+        pagination: {
+          page: params.page,
+          limit: params.limit,
+          total,
+          pages: Math.ceil(total / params.limit)
+        }
+      }, 'Report templates retrieved successfully'),
+      { status: 200 }
+    );
+
+  } catch (error) {
+    console.error('Error listing report templates:', error);
+    
+    if (error instanceof z.ZodError) {
+      return NextResponse.json(
+        new ApiResponse(false, null, 'Invalid request parameters', error.errors),
+        { status: 400 }
+      );
+    }
+
+    return NextResponse.json(
+      new ApiResponse(false, null, 'Failed to retrieve report templates'),
+      { status: 500 }
+    );
+  }
+}
+
+/**
+ * POST /api/v1/reports/templates
+ * Create a new report template
+ */
+export async function POST(request: NextRequest) {
+  try {
+    const session = await getServerSession();
+    if (!session?.user) {
+      return NextResponse.json(
+        new ApiResponse(false, null, 'Unauthorized'),
+        { status: 401 }
+      );
+    }
+
+    // Check user permissions (coordinator or above)
+    const userRoles = await db.userRole.findMany({
+      where: { userId: session.user.id },
+      include: {
+        role: {
+          include: {
+            permissions: {
+              include: { permission: true }
+            }
+          }
+        }
+      }
+    });
+
+    const hasPermission = userRoles.some(userRole =>
+      userRole.role.permissions.some(rolePermission =>
+        rolePermission.permission.code === 'REPORT_CREATE' ||
+        rolePermission.permission.code === 'ADMIN'
+      )
+    );
+
+    if (!hasPermission) {
+      return NextResponse.json(
+        new ApiResponse(false, null, 'Insufficient permissions to create report templates'),
+        { status: 403 }
+      );
+    }
+
+    const body = await request.json();
+    const validatedData = CreateTemplateSchema.parse(body);
+
+    // Validate template structure
+    const templateValidation = ReportTemplateEngine.validateTemplate(validatedData);
+    if (!templateValidation.valid) {
+      return NextResponse.json(
+        new ApiResponse(false, null, 'Template validation failed', templateValidation.errors),
+        { status: 400 }
+      );
+    }
+
+    // Create template
+    const template = await db.reportTemplate.create({
+      data: {
+        name: validatedData.name,
+        description: validatedData.description,
+        type: validatedData.type,
+        layout: validatedData.layout,
+        isPublic: validatedData.isPublic,
+        createdById: session.user.id
+      },
+      include: {
+        createdBy: {
+          select: {
+            id: true,
+            name: true,
+            email: true
+          }
+        }
+      }
+    });
+
+    return NextResponse.json(
+      new ApiResponse(true, template, 'Report template created successfully'),
+      { status: 201 }
+    );
+
+  } catch (error) {
+    console.error('Error creating report template:', error);
+    
+    if (error instanceof z.ZodError) {
+      return NextResponse.json(
+        new ApiResponse(false, null, 'Invalid request data', error.errors),
+        { status: 400 }
+      );
+    }
+
+    return NextResponse.json(
+      new ApiResponse(false, null, 'Failed to create report template'),
+      { status: 500 }
+    );
+  }
+}

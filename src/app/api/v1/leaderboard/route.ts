@@ -154,23 +154,15 @@ export const GET = withAuth(async (request: NextRequest, context) => {
           }, 0) / donor.responses.length
         : 24; // Default to 24h if no responses
 
-      // Calculate composite score based on weightings from story requirements
-      const deliveryWeight = 0.4;  // 40% - Primary importance
-      const valueWeight = 0.3;     // 30% - Secondary importance  
-      const consistencyWeight = 0.2; // 20% - Tertiary importance
-      const speedWeight = 0.1;     // 10% - Quaternary importance
+      // Calculate composite score using new simple formula: (responseVerificationRate * 100) + totalCommitments
+      // This matches the updated donor metrics API and situation dashboard formula
+      const overallScore = (responseVerificationRate * 100) + totalCommitments;
 
-      // Normalize metrics for scoring (0-100 scale)
+      // Keep normalized scores for backward compatibility with UI components
       const normalizedDeliveryScore = Math.min(100, verifiedDeliveryRate);
-      const normalizedValueScore = Math.min(100, (totalCommitmentValue / 10000) * 100); // Scale based on $10k units
-      const normalizedConsistencyScore = Math.min(100, activityFrequency * 1000); // Scale activity frequency
-      const normalizedSpeedScore = Math.max(0, 100 - (avgResponseTime / 24) * 20); // Lower time = higher score
-
-      const overallScore = 
-        (normalizedDeliveryScore * deliveryWeight) +
-        (normalizedValueScore * valueWeight) +
-        (normalizedConsistencyScore * consistencyWeight) +
-        (normalizedSpeedScore * speedWeight);
+      const normalizedValueScore = Math.min(100, (totalCommitmentValue / 10000) * 100);
+      const normalizedConsistencyScore = Math.min(100, activityFrequency * 1000);
+      const normalizedSpeedScore = Math.max(0, 100 - (avgResponseTime / 24) * 20);
 
       // Achievement badges
       const badges: string[] = [];

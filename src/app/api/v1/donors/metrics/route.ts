@@ -2,6 +2,24 @@ import { NextRequest, NextResponse } from 'next/server';
 import { withAuth } from '@/lib/auth/middleware';
 import { prisma } from '@/lib/db/client';
 
+// Helper function to safely convert BigInt to Number
+const safeJsonParse = (data: any): any => {
+  if (typeof data === 'bigint') {
+    return Number(data);
+  }
+  if (Array.isArray(data)) {
+    return data.map(safeJsonParse);
+  }
+  if (data && typeof data === 'object') {
+    const result: any = {};
+    for (const [key, value] of Object.entries(data)) {
+      result[key] = safeJsonParse(value);
+    }
+    return result;
+  }
+  return data;
+};
+
 export const GET = withAuth(async (request: NextRequest, context) => {
   try {
     const { roles } = context;
@@ -67,7 +85,13 @@ export const GET = withAuth(async (request: NextRequest, context) => {
             _count: 'desc'
           }
         }
-      }),
+      }).then(donors => donors.map(donor => ({
+        ...donor,
+        id: String(donor.id), // Convert BigInt to string
+        _count: {
+          commitments: Number(donor._count.commitments)
+        }
+      }))),
 
       // Donor trends over time
       (prisma.$queryRaw`
@@ -99,7 +123,12 @@ export const GET = withAuth(async (request: NextRequest, context) => {
         _count: {
           id: true
         }
-      })
+      }).then(results => results.map(item => ({
+        donorId: String(item.donorId), // Convert BigInt to string
+        _count: {
+          id: Number(item._count.id)
+        }
+      })))
     ]);
 
     // Get detailed donor metrics with response verification data
@@ -138,38 +167,38 @@ export const GET = withAuth(async (request: NextRequest, context) => {
 
     // Calculate verification metrics for each donor
     const donorMetrics = donorsWithVerificationData.map(donor => {
-      const totalResponses = donor.responses.length;
-      const verifiedResponses = donor.responses.filter(r => 
+      const totalResponses = Number(donor.responses.length);
+      const verifiedResponses = Number(donor.responses.filter(r => 
         r.verificationStatus === 'VERIFIED' || r.verificationStatus === 'AUTO_VERIFIED'
-      ).length;
-      const rejectedResponses = donor.responses.filter(r => 
+      ).length);
+      const rejectedResponses = Number(donor.responses.filter(r => 
         r.verificationStatus === 'REJECTED'
-      ).length;
-      const pendingResponses = donor.responses.filter(r => 
+      ).length);
+      const pendingResponses = Number(donor.responses.filter(r => 
         r.verificationStatus === 'SUBMITTED'
-      ).length;
+      ).length);
 
-      const totalCommitments = donor.commitments.length;
-      const availableCommitments = donor.commitments.filter(c => 
+      const totalCommitments = Number(donor.commitments.length);
+      const availableCommitments = Number(donor.commitments.filter(c => 
         c.status === 'PLANNED'
-      ).length;
-      const totalCommittedItems = donor.commitments.reduce((sum, c) => 
-        sum + c.totalCommittedQuantity, 0
-      );
+      ).length);
+      const totalCommittedItems = Number(donor.commitments.reduce((sum, c) => 
+        sum + Number(c.totalCommittedQuantity || 0), 0
+      ));
 
       const verificationRate = totalResponses > 0 ? verifiedResponses / totalResponses : 0;
       const commitmentFulfillmentRate = totalCommitments > 0 ? (totalCommitments - availableCommitments) / totalCommitments : 0;
 
       return {
-        donorId: donor.id,
+        donorId: String(donor.id), // Convert BigInt to string
         donorName: donor.name,
         donorEmail: donor.contactEmail,
-        donorSince: donor.createdAt,
+        donorSince: new Date(donor.createdAt),
         metrics: {
           commitments: {
             total: totalCommitments,
             available: availableCommitments,
-            fulfilled: totalCommitments - availableCommitments,
+            fulfilled: Number(totalCommitments - availableCommitments),
             totalItems: totalCommittedItems,
             fulfillmentRate: commitmentFulfillmentRate
           },
@@ -178,41 +207,49 @@ export const GET = withAuth(async (request: NextRequest, context) => {
             verified: verifiedResponses,
             rejected: rejectedResponses,
             pending: pendingResponses,
-            autoVerified: donor.responses.filter(r => r.verificationStatus === 'AUTO_VERIFIED').length,
+            autoVerified: Number(donor.responses.filter(r => r.verificationStatus === 'AUTO_VERIFIED').length),
             verificationRate: verificationRate
           },
           combined: {
-            totalActivities: totalCommitments + totalResponses,
-            verifiedActivities: (totalCommitments - availableCommitments) + verifiedResponses,
+            totalActivities: Number(totalCommitments + totalResponses),
+            verifiedActivities: Number((totalCommitments - availableCommitments) + verifiedResponses),
             overallSuccessRate: totalCommitments + totalResponses > 0 
-              ? ((totalCommitments - availableCommitments) + verifiedResponses) / (totalCommitments + totalResponses)
+              ? Number(((totalCommitments - availableCommitments) + verifiedResponses) / (totalCommitments + totalResponses))
               : 0
           }
         }
       };
     });
 
-    // Calculate overall statistics
+    // Calculate overall statistics - convert BigInt to Number
     const overallStats = {
-      totalDonors: donorStats._count.id,
-      totalCommitments: donorMetrics.reduce((sum, d) => sum + d.metrics.commitments.total, 0),
-      totalResponses: donorMetrics.reduce((sum, d) => sum + d.metrics.responses.total, 0),
+      totalDonors: Number(donorStats._count.id),
+      totalCommitments: donorMetrics.reduce((sum, d) => sum + Number(d.metrics.commitments.total || 0), 0),
+      totalResponses: donorMetrics.reduce((sum, d) => sum + Number(d.metrics.responses.total || 0), 0),
       averageVerificationRate: donorMetrics.length > 0 
         ? donorMetrics.reduce((sum, d) => sum + d.metrics.responses.verificationRate, 0) / donorMetrics.length
         : 0,
-      totalVerifiedResponses: donorMetrics.reduce((sum, d) => sum + d.metrics.responses.verified, 0),
+      totalVerifiedResponses: donorMetrics.reduce((sum, d) => sum + Number(d.metrics.responses.verified || 0), 0),
       topPerformers: donorMetrics
-        .sort((a, b) => b.metrics.combined.overallSuccessRate - a.metrics.combined.overallSuccessRate)
+        .sort((a, b) => {
+          // New formula: (responseVerificationRate * 100) + totalCommitments
+          const scoreA = (a.metrics.responses.verificationRate * 100) + a.metrics.commitments.total;
+          const scoreB = (b.metrics.responses.verificationRate * 100) + b.metrics.commitments.total;
+          return scoreB - scoreA;
+        })
         .slice(0, 5)
         .map(d => ({
           donorName: d.donorName,
-          successRate: d.metrics.combined.overallSuccessRate,
-          verifiedActivities: d.metrics.combined.verifiedActivities,
-          totalActivities: d.metrics.combined.totalActivities
+          successRate: Number((d.metrics.responses.verificationRate * 100) + d.metrics.commitments.total),
+          verifiedActivities: Number(d.metrics.combined.verifiedActivities),
+          totalActivities: Number(d.metrics.combined.totalActivities),
+          responseVerificationRate: Number(d.metrics.responses.verificationRate * 100),
+          totalCommitments: Number(d.metrics.commitments.total)
         }))
     };
 
-    return NextResponse.json({
+    // Create JSON-safe response to prevent BigInt serialization
+    const responseData = {
       success: true,
       data: {
         overall: overallStats,
@@ -220,7 +257,7 @@ export const GET = withAuth(async (request: NextRequest, context) => {
         trends: donorTrends,
         topDonors: topDonors,
         responseVerificationStats: responseVerificationStats.reduce((acc, item) => {
-          acc[item.donorId || 'unknown'] = item._count.id;
+          acc[item.donorId || 'unknown'] = Number(item._count.id);
           return acc;
         }, {} as Record<string, number>)
       },
@@ -233,13 +270,32 @@ export const GET = withAuth(async (request: NextRequest, context) => {
         endDate: now.toISOString(),
         totalDonors: donorMetrics.length
       }
-    });
+    };
+
+    // Use JSON.parse(JSON.stringify()) to convert any remaining BigInt values
+    const safeResponse = JSON.parse(JSON.stringify(responseData, (key, value) => 
+      typeof value === 'bigint' ? Number(value) : value
+    ));
+
+    return NextResponse.json(safeResponse);
 
   } catch (error) {
     console.error('Donor metrics error:', error);
-    return NextResponse.json(
-      { success: false, error: 'Internal server error' },
-      { status: 500 }
-    );
+    
+    // Handle BigInt serialization errors
+    if (error instanceof Error && error.message.includes('BigInt')) {
+      return new NextResponse(JSON.stringify({ 
+        success: false, 
+        error: 'Data serialization error - please try again' 
+      }), {
+        status: 500,
+        headers: { 'Content-Type': 'application/json' }
+      });
+    }
+    
+    return new NextResponse(JSON.stringify({ success: false, error: 'Internal server error' }), {
+      status: 500,
+      headers: { 'Content-Type': 'application/json' }
+    });
   }
 });

@@ -7,6 +7,7 @@ import {
 } from '@prisma/client'
 import { 
   CreatePlannedResponseInput,
+  CreateDeliveredResponseInput,
   UpdatePlannedResponseInput,
   ResponseQueryInput,
   ResponseItem,
@@ -116,6 +117,62 @@ export class ResponseService {
     return result
   }
 
+  static async createDeliveredResponse(
+    input: CreateDeliveredResponseInput,
+    responderId: string
+  ): Promise<RapidResponseWithData> {
+    const { assessmentId, entityId, items, deliveryNotes, ...baseData } = input
+
+    // Validate responder has assignment to this entity
+    await this.validateEntityAssignment(responderId, entityId)
+    
+    // Validate assessment exists and is verified
+    const assessment = await this.validateAssessmentAccess(assessmentId, entityId)
+
+    // Create the delivered response
+    const result = await prisma.$transaction(async (tx) => {
+      const response = await tx.rapidResponse.create({
+        data: {
+          ...baseData,
+          responderId,
+          assessmentId,
+          entityId,
+          status: 'DELIVERED',
+          verificationStatus: 'SUBMITTED', // Delivered responses go straight to verification queue
+          verifiedAt: new Date(), // Mark as verified for delivery timestamp
+          items: items,
+          resources: deliveryNotes ? { deliveryNotes } : null,
+          versionNumber: 1,
+          isOfflineCreated: false,
+          syncStatus: 'SYNCED'
+        }
+      })
+
+      // Create audit log
+      await this.createAuditLog(
+        tx,
+        responderId,
+        'CREATE',
+        'response',
+        response.id,
+        null,
+        {
+          assessmentId,
+          entityId,
+          type: baseData.type,
+          priority: baseData.priority,
+          status: 'DELIVERED',
+          itemsCount: items.length,
+          deliveryNotes
+        }
+      )
+
+      return response
+    })
+
+    return result
+  }
+
   static async getResponseById(
     responseId: string,
     requesterId: string
@@ -130,11 +187,15 @@ export class ResponseService {
             rapidAssessmentDate: true,
             status: true,
             verificationStatus: true,
+            location: true,
+            coordinates: true,
             entity: {
               select: {
                 id: true,
                 name: true,
-                type: true
+                type: true,
+                location: true,
+                coordinates: true
               }
             }
           }
@@ -143,7 +204,9 @@ export class ResponseService {
           select: {
             id: true,
             name: true,
-            type: true
+            type: true,
+            location: true,
+            coordinates: true
           }
         },
         responder: {
@@ -182,9 +245,9 @@ export class ResponseService {
     // Get existing response and validate access
     const existingResponse = await this.getResponseById(responseId, requesterId)
 
-    // Can only update responses in PLANNED status
-    if (existingResponse.status !== 'PLANNED') {
-      throw new Error('Only planned responses can be updated')
+    // Can only update responses in PLANNED status or with REJECTED verification status
+    if (existingResponse.status !== 'PLANNED' && existingResponse.verificationStatus !== 'REJECTED') {
+      throw new Error('Only planned responses or rejected deliveries can be updated')
     }
 
     // Update the response
@@ -196,12 +259,22 @@ export class ResponseService {
         items: existingResponse.items
       }
 
+      // If response was rejected, resubmit for verification and clear rejection reason
+      const updateData: any = {
+        ...input,
+        updatedAt: new Date()
+      }
+      
+      if (existingResponse.verificationStatus === 'REJECTED') {
+        updateData.status = 'DELIVERED'  // Keep as delivered
+        updateData.verificationStatus = 'SUBMITTED'  // Resubmit for verification
+        updateData.rejectionReason = null  // Clear rejection reason
+        updateData.verifiedAt = null  // Clear previous verification timestamp
+      }
+
       const response = await tx.rapidResponse.update({
         where: { id: responseId },
-        data: {
-          ...input,
-          updatedAt: new Date()
-        },
+        data: updateData,
         include: {
           assessment: {
             select: {

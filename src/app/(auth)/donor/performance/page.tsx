@@ -2,36 +2,42 @@
 
 import React, { Suspense } from 'react';
 import { useAuth } from '@/hooks/useAuth';
-import { useQuery } from '@tanstack/react-query';
 import { DonorPerformanceDashboard } from '@/components/donor/DonorPerformanceDashboard';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { User, AlertCircle } from 'lucide-react';
 
+// New error handling components
+import { SafeDataLoader } from '@/components/shared/SafeDataLoader';
+import { EmptyState } from '@/components/shared/EmptyState';
+
+// Token utilities
+import { getAuthToken } from '@/lib/auth/token-utils';
+
 // Component to fetch and display performance data
 function PerformanceDashboardContent() {
-  const { user, isAuthenticated, token } = useAuth();
+  const { user, isAuthenticated } = useAuth();
   
   // Fetch donor ID for the current user
-  const { data: donorData, isLoading: isDonorLoading, error: donorError } = useQuery({
-    queryKey: ['user-donor'],
-    queryFn: async () => {
-      const response = await fetch('/api/v1/users/me/donor', {
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
-      });
-      
-      if (!response.ok) {
-        throw new Error('Failed to fetch donor information');
+  const fetchDonorData = async () => {
+    if (!user) throw new Error('User not authenticated')
+    
+    const token = getAuthToken()
+    if (!token) throw new Error('No authentication token available')
+    
+    const response = await fetch('/api/v1/users/me/donor', {
+      headers: {
+        'Authorization': `Bearer ${token}`
       }
-      
-      return response.json();
-    },
-    enabled: !!token,
-    retry: 1
-  });
+    });
+    
+    if (!response.ok) {
+      throw new Error('Failed to fetch donor information');
+    }
+    
+    return response.json();
+  };
 
   if (!isAuthenticated) {
     return (
@@ -58,45 +64,43 @@ function PerformanceDashboardContent() {
     );
   }
 
-  if (isDonorLoading) {
-    return (
-      <div className="container mx-auto px-4 py-8 space-y-6">
-        <div className="text-center space-y-4">
-          <Skeleton className="h-8 w-64 mx-auto" />
-          <Skeleton className="h-4 w-96 mx-auto" />
-        </div>
-        <Skeleton className="h-96 w-full" />
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-          {Array.from({ length: 4 }).map((_, i) => (
-            <Skeleton key={i} className="h-32 w-full" />
-          ))}
-        </div>
-      </div>
-    );
-  }
-
-  if (donorError || !donorData?.success) {
-    return (
-      <div className="container mx-auto px-4 py-8">
-        <Alert>
-          <AlertCircle className="h-4 w-4" />
-          <AlertDescription>
-            {donorData?.error || 'Failed to load donor information. Please ensure you have a donor role assigned.'}
-          </AlertDescription>
-        </Alert>
-      </div>
-    );
-  }
-
   return (
-    <DonorPerformanceDashboard
-      donorId={donorData.data.donorId}
-      donorName={donorData.data.donor.name || donorData.data.donor.organization || 'Your Organization'}
-      showRanking={true}
-      showBadges={true}
-      showTrends={true}
-      compact={false}
-    />
+    <SafeDataLoader
+      queryFn={fetchDonorData}
+      enabled={!!user && isAuthenticated}
+      fallbackData={null}
+      loadingMessage="Loading donor information..."
+      errorTitle="Failed to load donor information"
+    >
+      {(donorData, isLoading, error, retry) => {
+        if (!donorData?.success) {
+          return (
+            <EmptyState
+              type="error"
+              title="Donor role required"
+              description="Please ensure you have a donor role assigned to view the performance dashboard."
+              action={{
+                label: "Retry",
+                onClick: retry,
+                variant: "outline"
+              }}
+              icon={AlertCircle}
+            />
+          )
+        }
+
+        return (
+          <DonorPerformanceDashboard
+            donorId={donorData.data.donorId}
+            donorName={donorData.data.donor.name || donorData.data.donor.organization || 'Your Organization'}
+            showRanking={true}
+            showBadges={true}
+            showTrends={true}
+            compact={false}
+          />
+        );
+      }}
+    </SafeDataLoader>
   );
 }
 

@@ -20,7 +20,8 @@ import {
   Download,
   RefreshCw
 } from 'lucide-react';
-import { useVerificationMetrics, useAssessmentQueue, useDeliveryQueue } from '@/hooks/useRealTimeVerification';
+import { useVerificationMetrics } from '@/hooks/useRealTimeVerification';
+import { useVerificationStore } from '@/stores/verification.store';
 import { cn } from '@/lib/utils';
 import { format, subDays, startOfDay, endOfDay } from 'date-fns';
 
@@ -33,8 +34,12 @@ export function VerificationAnalytics({ className }: VerificationAnalyticsProps)
   const [isLoading, setIsLoading] = useState(false);
   
   const { combined: metrics, assessmentQueueDepth, deliveryQueueDepth } = useVerificationMetrics();
-  const { assessments, refresh: refreshAssessments } = useAssessmentQueue();
-  const { deliveries, refresh: refreshDeliveries } = useDeliveryQueue();
+  const { 
+    assessmentQueue: assessments, 
+    deliveryQueue: deliveries,
+    refreshAssessments,
+    refreshDeliveries 
+  } = useVerificationStore();
 
   // Time range options
   const timeRanges = [
@@ -337,7 +342,7 @@ function KpiCard({ title, value, icon: Icon, trend, format, unit }: KpiCardProps
           <Icon className="h-8 w-8 text-muted-foreground" />
         </div>
         
-        {trend.trend !== 'neutral' && (
+        {trend && trend.trend !== 'neutral' && (
           <div className="flex items-center gap-1 mt-2">
             {trend.trend === 'up' ? (
               <TrendingUp className="h-4 w-4 text-green-500" />

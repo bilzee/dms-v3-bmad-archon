@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
@@ -15,6 +15,7 @@ import { Badge } from '@/components/ui/badge'
 import { GPSCapture } from '@/components/shared/GPSCapture'
 import { MediaField } from '@/components/shared/MediaField'
 import { EntitySelector } from '@/components/shared/EntitySelector'
+import { IncidentSelector } from '@/components/shared/IncidentSelector'
 import { FoodAssessmentFormProps, FoodAssessment } from '@/types/rapid-assessment'
 import { getCurrentUserName, getAssessmentLocationData } from '@/utils/assessment-utils'
 import { cn } from '@/lib/utils'
@@ -73,24 +74,79 @@ export function FoodAssessmentForm({
   onSubmit, 
   onCancel, 
   isSubmitting = false,
-  disabled = false 
+  disabled = false,
+  onIncidentEntityChange
 }: FoodAssessmentFormProps) {
   const [gpsCoordinates, setGpsCoordinates] = useState<{ lat: number; lng: number } | null>(null)
   const [mediaFiles, setMediaFiles] = useState<string[]>((initialData as any)?.mediaAttachments || [])
   const [selectedEntity, setSelectedEntity] = useState<string>(entityId)
+  const [selectedIncident, setSelectedIncident] = useState<string>('')
   const [selectedEntityData, setSelectedEntityData] = useState<any>(null)
+
+  // Extract food data from initialData
+  const foodData = (initialData as any)?.foodAssessment || (initialData as any);
+  
+  // Parse foodSource from JSON string if needed
+  const parseFoodSource = (source: any): string[] => {
+    if (Array.isArray(source)) return source;
+    if (typeof source === 'string') {
+      try {
+        const parsed = JSON.parse(source);
+        return Array.isArray(parsed) ? parsed : [];
+      } catch {
+        return [];
+      }
+    }
+    return [];
+  };
+
+  // Track when initialData changes and update form
+  useEffect(() => {
+    console.log('FoodAssessmentForm - initialData changed:', initialData);
+    
+    if (foodData) {
+      const newValues = {
+        isFoodSufficient: foodData?.isFoodSufficient || false,
+        hasRegularMealAccess: foodData?.hasRegularMealAccess || false,
+        hasInfantNutrition: foodData?.hasInfantNutrition || false,
+        foodSource: parseFoodSource(foodData?.foodSource),
+        availableFoodDurationDays: foodData?.availableFoodDurationDays || 0,
+        additionalFoodRequiredPersons: foodData?.additionalFoodRequiredPersons || 0,
+        additionalFoodRequiredHouseholds: foodData?.additionalFoodRequiredHouseholds || 0,
+        additionalFoodDetails: foodData?.additionalFoodDetails || ''
+      };
+      
+      console.log('FoodAssessmentForm - updating form with values:', newValues);
+      form.reset(newValues);
+    }
+  }, [initialData, foodData]);
+
+  // Handle incident and entity changes
+  const handleIncidentChange = (incidentId: string) => {
+    setSelectedIncident(incidentId);
+    if (selectedEntity && onIncidentEntityChange) {
+      onIncidentEntityChange(incidentId, selectedEntity);
+    }
+  };
+
+  const handleEntityChange = (entityId: string) => {
+    setSelectedEntity(entityId);
+    if (selectedIncident && onIncidentEntityChange) {
+      onIncidentEntityChange(selectedIncident, entityId);
+    }
+  };
 
   const form = useForm<FormData>({
     resolver: zodResolver(FoodAssessmentSchema),
     defaultValues: {
-      isFoodSufficient: initialData?.isFoodSufficient || false,
-      hasRegularMealAccess: initialData?.hasRegularMealAccess || false,
-      hasInfantNutrition: initialData?.hasInfantNutrition || false,
-      foodSource: initialData?.foodSource || [],
-      availableFoodDurationDays: initialData?.availableFoodDurationDays || 0,
-      additionalFoodRequiredPersons: initialData?.additionalFoodRequiredPersons || 0,
-      additionalFoodRequiredHouseholds: initialData?.additionalFoodRequiredHouseholds || 0,
-      additionalFoodDetails: initialData?.additionalFoodDetails || ''
+      isFoodSufficient: foodData?.isFoodSufficient || false,
+      hasRegularMealAccess: foodData?.hasRegularMealAccess || false,
+      hasInfantNutrition: foodData?.hasInfantNutrition || false,
+      foodSource: parseFoodSource(foodData?.foodSource),
+      availableFoodDurationDays: foodData?.availableFoodDurationDays || 0,
+      additionalFoodRequiredPersons: foodData?.additionalFoodRequiredPersons || 0,
+      additionalFoodRequiredHouseholds: foodData?.additionalFoodRequiredHouseholds || 0,
+      additionalFoodDetails: foodData?.additionalFoodDetails || ''
     }
   })
 
@@ -114,6 +170,10 @@ export function FoodAssessmentForm({
     if (!selectedEntity) {
       return
     }
+    
+    if (!selectedIncident) {
+      throw new Error('Please select an incident for this assessment')
+    }
 
     // Get current user name from auth context
     const currentUserName = getCurrentUserName()
@@ -132,6 +192,7 @@ export function FoodAssessmentForm({
       rapidAssessmentDate: new Date(),
       assessorName: currentUserName,
       entityId: selectedEntity,
+      incidentId: selectedIncident,
       ...locationData,
       mediaAttachments: mediaFiles,
       foodData: data
@@ -186,16 +247,37 @@ export function FoodAssessmentForm({
 
       <Form {...form}>
         <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-6">
+          {/* Incident Selection */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Incident Information</CardTitle>
+              <CardDescription>
+                Select the incident this assessment is related to
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <IncidentSelector
+                value={selectedIncident}
+                onValueChange={handleIncidentChange}
+                disabled={disabled}
+                required
+              />
+            </CardContent>
+          </Card>
+
           {/* Entity Selection */}
           <Card>
             <CardHeader>
               <CardTitle>Assessment Location</CardTitle>
+              <CardDescription>
+                Select the entity being assessed
+              </CardDescription>
             </CardHeader>
             <CardContent>
               <EntitySelector
                 value={selectedEntity}
                 onValueChange={(entityId) => {
-                  setSelectedEntity(entityId)
+                  handleEntityChange(entityId)
                   // Reset entity data when selection changes
                   setSelectedEntityData(null)
                 }}

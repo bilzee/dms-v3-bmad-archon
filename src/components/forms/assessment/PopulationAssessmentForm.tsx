@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
@@ -14,6 +14,7 @@ import { Badge } from '@/components/ui/badge'
 import { GPSCapture } from '@/components/shared/GPSCapture'
 import { MediaField } from '@/components/shared/MediaField'
 import { EntitySelector } from '@/components/shared/EntitySelector'
+import { IncidentSelector } from '@/components/shared/IncidentSelector'
 import { PopulationAssessmentFormProps, PopulationAssessment } from '@/types/rapid-assessment'
 import { cn } from '@/lib/utils'
 import { getCurrentUserName, getAssessmentLocationData } from '@/utils/assessment-utils'
@@ -33,6 +34,75 @@ const PopulationAssessmentSchema = z.object({
   numberLivesLost: z.number().int().min(0),
   numberInjured: z.number().int().min(0),
   additionalPopulationDetails: z.string().optional()
+}).refine((data) => {
+  // Validation 1: Male + Female should not exceed Total Population
+  const genderTotal = data.populationMale + data.populationFemale;
+  if (genderTotal > data.totalPopulation) {
+    return false;
+  }
+  return true;
+}, {
+  message: "The sum of Male and Female population cannot exceed the Total Population",
+  path: ["populationMale"] // Show error on male field but applies to both
+}).refine((data) => {
+  // Validation 2: Each individual vulnerable group should not exceed Total Population
+  if (data.populationUnder5 > data.totalPopulation) {
+    return false;
+  }
+  return true;
+}, {
+  message: "Children Under 5 cannot exceed the Total Population",
+  path: ["populationUnder5"]
+}).refine((data) => {
+  if (data.pregnantWomen > data.totalPopulation) {
+    return false;
+  }
+  return true;
+}, {
+  message: "Pregnant Women cannot exceed the Total Population",
+  path: ["pregnantWomen"]
+}).refine((data) => {
+  if (data.lactatingMothers > data.totalPopulation) {
+    return false;
+  }
+  return true;
+}, {
+  message: "Lactating Mothers cannot exceed the Total Population",
+  path: ["lactatingMothers"]
+}).refine((data) => {
+  if (data.personWithDisability > data.totalPopulation) {
+    return false;
+  }
+  return true;
+}, {
+  message: "Persons with Disabilities cannot exceed the Total Population",
+  path: ["personWithDisability"]
+}).refine((data) => {
+  if (data.elderlyPersons > data.totalPopulation) {
+    return false;
+  }
+  return true;
+}, {
+  message: "Elderly Persons (60+) cannot exceed the Total Population",
+  path: ["elderlyPersons"]
+}).refine((data) => {
+  if (data.separatedChildren > data.totalPopulation) {
+    return false;
+  }
+  return true;
+}, {
+  message: "Separated Children cannot exceed the Total Population",
+  path: ["separatedChildren"]
+}).refine((data) => {
+  // Validation 3: Lives Lost + Injured should not exceed Total Population
+  const casualtyTotal = data.numberLivesLost + data.numberInjured;
+  if (casualtyTotal > data.totalPopulation) {
+    return false;
+  }
+  return true;
+}, {
+  message: "The sum of Lives Lost and Injured Persons cannot exceed the Total Population",
+  path: ["numberLivesLost"] // Show error on lives lost field
 })
 
 type FormData = z.infer<typeof PopulationAssessmentSchema>
@@ -43,31 +113,81 @@ export function PopulationAssessmentForm({
   onSubmit, 
   onCancel, 
   isSubmitting = false,
-  disabled = false 
+  disabled = false,
+  onIncidentEntityChange
 }: PopulationAssessmentFormProps) {
   const [gpsCoordinates, setGpsCoordinates] = useState<{ lat: number; lng: number } | null>(null)
   const [mediaFiles, setMediaFiles] = useState<string[]>((initialData as any)?.mediaAttachments || [])
   const [selectedEntity, setSelectedEntity] = useState<string>(entityId)
+  const [selectedIncident, setSelectedIncident] = useState<string>('')
   const [selectedEntityData, setSelectedEntityData] = useState<any>(null)
+
+  // Extract population data from initialData
+  const populationData = (initialData as any)?.populationAssessment || (initialData as any);
+  
+  // Debug logging
+  console.log('PopulationAssessmentForm - initialData:', initialData);
+  console.log('PopulationAssessmentForm - populationData:', populationData);
 
   const form = useForm<FormData>({
     resolver: zodResolver(PopulationAssessmentSchema),
     defaultValues: {
-      totalHouseholds: initialData?.totalHouseholds || 0,
-      totalPopulation: initialData?.totalPopulation || 0,
-      populationMale: initialData?.populationMale || 0,
-      populationFemale: initialData?.populationFemale || 0,
-      populationUnder5: initialData?.populationUnder5 || 0,
-      pregnantWomen: initialData?.pregnantWomen || 0,
-      lactatingMothers: initialData?.lactatingMothers || 0,
-      personWithDisability: initialData?.personWithDisability || 0,
-      elderlyPersons: initialData?.elderlyPersons || 0,
-      separatedChildren: initialData?.separatedChildren || 0,
-      numberLivesLost: initialData?.numberLivesLost || 0,
-      numberInjured: initialData?.numberInjured || 0,
-      additionalPopulationDetails: initialData?.additionalPopulationDetails || ''
+      totalHouseholds: populationData?.totalHouseholds || 0,
+      totalPopulation: populationData?.totalPopulation || 0,
+      populationMale: populationData?.populationMale || 0,
+      populationFemale: populationData?.populationFemale || 0,
+      populationUnder5: populationData?.populationUnder5 || 0,
+      pregnantWomen: populationData?.pregnantWomen || 0,
+      lactatingMothers: populationData?.lactatingMothers || 0,
+      personWithDisability: populationData?.personWithDisability || 0,
+      elderlyPersons: populationData?.elderlyPersons || 0,
+      separatedChildren: populationData?.separatedChildren || 0,
+      numberLivesLost: populationData?.numberLivesLost || 0,
+      numberInjured: populationData?.numberInjured || 0,
+      additionalPopulationDetails: populationData?.additionalPopulationDetails || ''
     }
   })
+
+  // Track when initialData changes and update form
+  useEffect(() => {
+    console.log('PopulationAssessmentForm - initialData changed:', initialData);
+    
+    if (populationData) {
+      const newValues = {
+        totalHouseholds: populationData?.totalHouseholds || 0,
+        totalPopulation: populationData?.totalPopulation || 0,
+        populationMale: populationData?.populationMale || 0,
+        populationFemale: populationData?.populationFemale || 0,
+        populationUnder5: populationData?.populationUnder5 || 0,
+        pregnantWomen: populationData?.pregnantWomen || 0,
+        lactatingMothers: populationData?.lactatingMothers || 0,
+        personWithDisability: populationData?.personWithDisability || 0,
+        elderlyPersons: populationData?.elderlyPersons || 0,
+        separatedChildren: populationData?.separatedChildren || 0,
+        numberLivesLost: populationData?.numberLivesLost || 0,
+        numberInjured: populationData?.numberInjured || 0,
+        additionalPopulationDetails: populationData?.additionalPopulationDetails || ''
+      };
+      
+      console.log('PopulationAssessmentForm - updating form with values:', newValues);
+      form.reset(newValues);
+    }
+  }, [initialData, populationData]);
+
+  // Handle incident and entity changes
+  const handleIncidentChange = (incidentId: string) => {
+    setSelectedIncident(incidentId);
+    if (selectedEntity && onIncidentEntityChange) {
+      onIncidentEntityChange(incidentId, selectedEntity);
+    }
+  };
+
+  const handleEntityChange = (entityId: string) => {
+    setSelectedEntity(entityId);
+    if (selectedIncident && onIncidentEntityChange) {
+      onIncidentEntityChange(selectedIncident, entityId);
+    }
+  };
 
   const watchedValues = form.watch()
 
@@ -89,9 +209,70 @@ export function PopulationAssessmentForm({
     watchedValues.totalPopulation
   )
 
+  // Validation calculations for visual indicators
+  const genderTotal = watchedValues.populationMale + watchedValues.populationFemale
+  const vulnerableTotal = watchedValues.populationUnder5 + watchedValues.pregnantWomen + 
+                         watchedValues.lactatingMothers + watchedValues.personWithDisability + 
+                         watchedValues.elderlyPersons + watchedValues.separatedChildren
+  const casualtyTotal = watchedValues.numberLivesLost + watchedValues.numberInjured
+  
+  const genderExceedsTotal = genderTotal > watchedValues.totalPopulation
+  const vulnerableExceedsTotal = vulnerableTotal > watchedValues.totalPopulation
+  const casualtyExceedsTotal = casualtyTotal > watchedValues.totalPopulation
+  
+  // Vulnerable groups data for charts
+  const vulnerableGroupsData = [
+    {
+      name: 'Children Under 5',
+      value: watchedValues.populationUnder5,
+      percentage: calculatePercentage(watchedValues.populationUnder5, watchedValues.totalPopulation),
+      color: '#3b82f6', // blue
+      icon: Baby
+    },
+    {
+      name: 'Pregnant Women',
+      value: watchedValues.pregnantWomen,
+      percentage: calculatePercentage(watchedValues.pregnantWomen, watchedValues.totalPopulation),
+      color: '#ec4899', // pink
+      icon: User
+    },
+    {
+      name: 'Lactating Mothers',
+      value: watchedValues.lactatingMothers,
+      percentage: calculatePercentage(watchedValues.lactatingMothers, watchedValues.totalPopulation),
+      color: '#f59e0b', // amber
+      icon: Baby
+    },
+    {
+      name: 'Persons with Disabilities',
+      value: watchedValues.personWithDisability,
+      percentage: calculatePercentage(watchedValues.personWithDisability, watchedValues.totalPopulation),
+      color: '#8b5cf6', // violet
+      icon: User
+    },
+    {
+      name: 'Elderly Persons (60+)',
+      value: watchedValues.elderlyPersons,
+      percentage: calculatePercentage(watchedValues.elderlyPersons, watchedValues.totalPopulation),
+      color: '#10b981', // emerald
+      icon: User
+    },
+    {
+      name: 'Separated Children',
+      value: watchedValues.separatedChildren,
+      percentage: calculatePercentage(watchedValues.separatedChildren, watchedValues.totalPopulation),
+      color: '#f97316', // orange
+      icon: UserPlus
+    }
+  ].filter(group => group.value > 0) // Only show groups with values
+
   const handleSubmit = async (data: FormData) => {
     if (!selectedEntity) {
       return
+    }
+    
+    if (!selectedIncident) {
+      throw new Error('Please select an incident for this assessment')
     }
 
     const assessmentData = {
@@ -99,6 +280,7 @@ export function PopulationAssessmentForm({
       rapidAssessmentDate: new Date(),
       assessorName: getCurrentUserName(),
       entityId: selectedEntity,
+      incidentId: selectedIncident,
       ...getAssessmentLocationData(selectedEntityData, gpsCoordinates ? { latitude: gpsCoordinates.lat, longitude: gpsCoordinates.lng } : undefined),
       mediaAttachments: mediaFiles,
       populationData: data
@@ -124,16 +306,37 @@ export function PopulationAssessmentForm({
 
       <Form {...form}>
         <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-6">
+          {/* Incident Selection */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Incident Information</CardTitle>
+              <CardDescription>
+                Select the incident this assessment is related to
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <IncidentSelector
+                value={selectedIncident}
+                onValueChange={handleIncidentChange}
+                disabled={disabled}
+                required
+              />
+            </CardContent>
+          </Card>
+
           {/* Entity Selection */}
           <Card>
             <CardHeader>
               <CardTitle>Assessment Location</CardTitle>
+              <CardDescription>
+                Select the entity being assessed
+              </CardDescription>
             </CardHeader>
             <CardContent>
               <EntitySelector
                 value={selectedEntity}
                 onValueChange={(value) => {
-                  setSelectedEntity(value)
+                  handleEntityChange(value)
                   setSelectedEntityData(null)
                 }}
                 disabled={disabled}
@@ -256,6 +459,16 @@ export function PopulationAssessmentForm({
                   )}
                 />
               </div>
+              
+              {/* Validation Alert for Gender Distribution */}
+              {genderExceedsTotal && watchedValues.totalPopulation > 0 && (
+                <Alert variant="destructive">
+                  <AlertTriangle className="h-4 w-4" />
+                  <AlertDescription>
+                    <strong>Validation Error:</strong> The sum of Male ({watchedValues.populationMale}) and Female ({watchedValues.populationFemale}) population ({genderTotal}) exceeds the Total Population ({watchedValues.totalPopulation}).
+                  </AlertDescription>
+                </Alert>
+              )}
             </CardContent>
           </Card>
 
@@ -265,15 +478,14 @@ export function PopulationAssessmentForm({
               <CardTitle className="flex items-center gap-2">
                 <Heart className="h-5 w-5" />
                 Vulnerable Groups
-                <Badge variant="secondary">
-                  {vulnerablePercentage}% of population
-                </Badge>
               </CardTitle>
               <CardDescription>
                 Identify and count vulnerable population groups requiring special attention
               </CardDescription>
             </CardHeader>
-            <CardContent className="space-y-4">
+            <CardContent className="space-y-6">
+
+              {/* Form Fields Grid */}
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                 <FormField
                   control={form.control}
@@ -295,9 +507,7 @@ export function PopulationAssessmentForm({
                           disabled={disabled}
                         />
                       </FormControl>
-                      <FormDescription>
-                        Children under 5 years old
-                      </FormDescription>
+                      <FormDescription>Children under 5 years old</FormDescription>
                       <FormMessage />
                     </FormItem>
                   )}
@@ -323,9 +533,7 @@ export function PopulationAssessmentForm({
                           disabled={disabled}
                         />
                       </FormControl>
-                      <FormDescription>
-                        Pregnant women requiring care
-                      </FormDescription>
+                      <FormDescription>Pregnant women requiring care</FormDescription>
                       <FormMessage />
                     </FormItem>
                   )}
@@ -351,9 +559,7 @@ export function PopulationAssessmentForm({
                           disabled={disabled}
                         />
                       </FormControl>
-                      <FormDescription>
-                        Lactating mothers with infants
-                      </FormDescription>
+                      <FormDescription>Lactating mothers with infants</FormDescription>
                       <FormMessage />
                     </FormItem>
                   )}
@@ -379,9 +585,7 @@ export function PopulationAssessmentForm({
                           disabled={disabled}
                         />
                       </FormControl>
-                      <FormDescription>
-                        People with disabilities
-                      </FormDescription>
+                      <FormDescription>People with disabilities</FormDescription>
                       <FormMessage />
                     </FormItem>
                   )}
@@ -407,9 +611,7 @@ export function PopulationAssessmentForm({
                           disabled={disabled}
                         />
                       </FormControl>
-                      <FormDescription>
-                        Elderly persons over 60 years
-                      </FormDescription>
+                      <FormDescription>Elderly persons over 60 years</FormDescription>
                       <FormMessage />
                     </FormItem>
                   )}
@@ -435,14 +637,32 @@ export function PopulationAssessmentForm({
                           disabled={disabled}
                         />
                       </FormControl>
-                      <FormDescription>
-                        Unaccompanied or separated children
-                      </FormDescription>
+                      <FormDescription>Unaccompanied or separated children</FormDescription>
                       <FormMessage />
                     </FormItem>
                   )}
                 />
               </div>
+              
+              {/* Validation Alert for Vulnerable Groups */}
+              {vulnerableExceedsTotal && watchedValues.totalPopulation > 0 && (
+                <Alert variant="destructive">
+                  <AlertTriangle className="h-4 w-4" />
+                  <AlertDescription>
+                    <strong>Validation Error:</strong> The sum of vulnerable groups ({vulnerableTotal}) exceeds the Total Population ({watchedValues.totalPopulation}). Please verify the numbers.
+                  </AlertDescription>
+                </Alert>
+              )}
+              
+              {/* Warning when vulnerable groups are close to total */}
+              {!vulnerableExceedsTotal && vulnerablePercentage > 80 && watchedValues.totalPopulation > 0 && (
+                <Alert variant="destructive">
+                  <AlertTriangle className="h-4 w-4" />
+                  <AlertDescription>
+                    <strong>High Vulnerability:</strong> {vulnerablePercentage}% of the population belongs to vulnerable groups. This indicates a population requiring significant support.
+                  </AlertDescription>
+                </Alert>
+              )}
             </CardContent>
           </Card>
 
@@ -466,7 +686,7 @@ export function PopulationAssessmentForm({
                     <FormItem>
                       <FormLabel className="flex items-center gap-2 text-red-600">
                         Lives Lost
-                        {field.value > 0 && <Badge variant="destructive">{field.value}</Badge>}
+                        <Badge variant="outline">{calculatePercentage(field.value, watchedValues.totalPopulation)}%</Badge>
                       </FormLabel>
                       <FormControl>
                         <Input
@@ -494,7 +714,7 @@ export function PopulationAssessmentForm({
                     <FormItem>
                       <FormLabel className="flex items-center gap-2 text-orange-600">
                         Injured Persons
-                        {field.value > 0 && <Badge variant="secondary">{field.value}</Badge>}
+                        <Badge variant="outline">{calculatePercentage(field.value, watchedValues.totalPopulation)}%</Badge>
                       </FormLabel>
                       <FormControl>
                         <Input
@@ -516,7 +736,18 @@ export function PopulationAssessmentForm({
                 />
               </div>
 
-              {(watchedValues.numberLivesLost > 0 || watchedValues.numberInjured > 0) && (
+              {/* Validation Alert for Casualties */}
+              {casualtyExceedsTotal && watchedValues.totalPopulation > 0 && (
+                <Alert variant="destructive">
+                  <AlertTriangle className="h-4 w-4" />
+                  <AlertDescription>
+                    <strong>Validation Error:</strong> The sum of Lives Lost ({watchedValues.numberLivesLost}) and Injured Persons ({watchedValues.numberInjured}) ({casualtyTotal}) exceeds the Total Population ({watchedValues.totalPopulation}).
+                  </AlertDescription>
+                </Alert>
+              )}
+              
+              {/* Critical impact alert (only when validation passes) */}
+              {!casualtyExceedsTotal && (watchedValues.numberLivesLost > 0 || watchedValues.numberInjured > 0) && (
                 <Alert variant="destructive">
                   <AlertTriangle className="h-4 w-4" />
                   <AlertDescription>
@@ -601,7 +832,14 @@ export function PopulationAssessmentForm({
             </Button>
             <Button
               type="submit"
-              disabled={isSubmitting || disabled || !selectedEntity}
+              disabled={
+                isSubmitting || 
+                disabled || 
+                !selectedEntity || 
+                genderExceedsTotal || 
+                vulnerableExceedsTotal || 
+                casualtyExceedsTotal
+              }
             >
               {isSubmitting ? 'Submitting...' : 'Submit Population Assessment'}
             </Button>

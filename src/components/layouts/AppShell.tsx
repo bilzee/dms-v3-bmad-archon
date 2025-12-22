@@ -4,25 +4,33 @@ import { useState } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { Header } from '@/components/shared/Header';
 import { Navigation } from '@/components/layouts/Navigation';
-import { RoleSwitcher } from '@/components/layouts/RoleSwitcher';
 import { SyncIndicator } from '@/components/shared/SyncIndicator';
 import { OfflineIndicator } from '@/components/shared/OfflineIndicator';
+import { Breadcrumbs } from '@/components/shared/Breadcrumbs';
 import { Button } from '@/components/ui/button';
 import { Menu, X } from 'lucide-react';
+import { cn } from '@/lib/utils';
 
 interface AppShellProps {
   children: React.ReactNode;
   showNavigation?: boolean;
+  isDashboard?: boolean;
+  showBreadcrumbs?: boolean;
 }
 
-export const AppShell = ({ children, showNavigation = true }: AppShellProps) => {
+export const AppShell = ({ 
+  children, 
+  showNavigation = true, 
+  isDashboard = false, 
+  showBreadcrumbs = true 
+}: AppShellProps) => {
   const { isAuthenticated } = useAuth();
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
   if (!isAuthenticated) {
     return (
       <div className="min-h-screen bg-gray-50">
-        <Header />
+        <Header fullWidth={isDashboard} />
         <main className="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
           {children}
         </main>
@@ -63,10 +71,8 @@ export const AppShell = ({ children, showNavigation = true }: AppShellProps) => 
       {/* Desktop sidebar */}
       <div className="hidden lg:fixed lg:inset-y-0 lg:left-0 lg:z-50 lg:block lg:w-64 lg:overflow-y-auto lg:bg-white lg:border-r lg:border-gray-200">
         <div className="flex h-full flex-col">
-          {/* Logo and role switcher */}
-          <div className="flex items-center justify-between p-4 border-b">
-            <h1 className="text-lg font-semibold text-gray-900">DMS Borno</h1>
-            <RoleSwitcher />
+          {/* Role information */}
+          <div className="flex h-16 items-center justify-center px-4 border-b">
           </div>
           
           {/* Navigation */}
@@ -96,7 +102,6 @@ export const AppShell = ({ children, showNavigation = true }: AppShellProps) => 
           
           <div className="flex flex-1 gap-x-4 self-stretch lg:gap-x-6">
             <div className="flex flex-1 items-center">
-              <h1 className="text-lg font-semibold text-gray-900">DMS Borno</h1>
             </div>
             
             <div className="flex items-center gap-x-4 lg:gap-x-6">
@@ -104,14 +109,28 @@ export const AppShell = ({ children, showNavigation = true }: AppShellProps) => 
                 <SyncIndicator />
               </div>
               <OfflineIndicator />
-              <RoleSwitcher />
             </div>
           </div>
         </div>
 
         {/* Main content */}
-        <main className="py-6">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <main className={cn(
+          // Remove all padding for dashboard pages to maximize viewport usage
+          isDashboard ? 'py-0' : 'py-6'
+        )}>
+          {/* Breadcrumbs - shown on all pages except dashboard root */}
+          {!isDashboard && showBreadcrumbs && (
+            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mb-4">
+              <Breadcrumbs />
+            </div>
+          )}
+          
+          <div className={cn(
+            // Small left padding for visual separation on dashboard pages
+            isDashboard 
+              ? 'pl-4 pr-0 w-full' 
+              : 'max-w-7xl mx-auto px-4 sm:px-6 lg:px-8'
+          )}>
             {children}
           </div>
         </main>

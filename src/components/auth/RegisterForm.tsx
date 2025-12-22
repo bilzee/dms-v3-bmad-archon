@@ -66,7 +66,10 @@ export function RegisterForm({ onSuccess }: RegisterFormProps) {
 
   useEffect(() => {
     const fetchRoles = async () => {
-      if (!token) return
+      if (!token) {
+        setLoadingRoles(false)
+        return
+      }
       
       try {
         setLoadingRoles(true)
@@ -80,7 +83,9 @@ export function RegisterForm({ onSuccess }: RegisterFormProps) {
           const data = await response.json()
           setAvailableRoles(data.data.roles || [])
         } else {
-          console.error('Failed to fetch roles')
+          console.error('Failed to fetch roles:', response.status, response.statusText)
+          const errorData = await response.json().catch(() => ({}))
+          console.error('Role fetch error details:', errorData)
         }
       } catch (err) {
         console.error('Error fetching roles:', err)
@@ -244,29 +249,40 @@ export function RegisterForm({ onSuccess }: RegisterFormProps) {
             <p className="text-sm text-gray-600">Select the roles for this user:</p>
             {loadingRoles ? (
               <div className="text-sm text-gray-500">Loading roles...</div>
+            ) : availableRoles.length === 0 ? (
+              <div className="text-sm text-amber-600">
+                Unable to load roles. Please check console for details or contact system administrator.
+              </div>
             ) : (
               <div className="space-y-2">
-                {availableRoles.map((role) => (
-                  <div key={role.id} className="flex items-start space-x-3">
-                    <Checkbox
-                      id={`role-${role.id}`}
-                      value={role.id}
-                      checked={watchedRoles?.includes(role.id) || false}
-                      onCheckedChange={(checked) => handleRoleChange(role.id, !!checked)}
-                    />
-                    <div className="space-y-1">
-                      <Label 
-                        htmlFor={`role-${role.id}`}
-                        className="text-sm font-medium leading-none cursor-pointer"
-                      >
-                        {role.name}
-                      </Label>
-                      <p className="text-xs text-gray-500">
-                        {roleDescriptions[role.name] || 'Role for system operations'}
-                      </p>
+                {availableRoles.map((role) => {
+                  const isDonorRole = role.name === 'DONOR'
+                  return (
+                    <div key={role.id} className="flex items-start space-x-3">
+                      <Checkbox
+                        id={`role-${role.id}`}
+                        value={role.id}
+                        checked={watchedRoles?.includes(role.id) || false}
+                        onCheckedChange={(checked) => handleRoleChange(role.id, !!checked)}
+                        disabled={isDonorRole}
+                      />
+                      <div className="space-y-1">
+                        <Label 
+                          htmlFor={`role-${role.id}`}
+                          className={`text-sm font-medium leading-none ${isDonorRole ? 'text-gray-400 cursor-not-allowed' : 'cursor-pointer'}`}
+                        >
+                          {role.name}
+                        </Label>
+                        <p className={`text-xs ${isDonorRole ? 'text-amber-600' : 'text-gray-500'}`}>
+                          {isDonorRole ? 
+                            'DONOR users can only be created via the Donor Registration Form (together with a Donor Organization). Use "Register New Donor" to create donor users.' : 
+                            (roleDescriptions[role.name] || 'Role for system operations')
+                          }
+                        </p>
+                      </div>
                     </div>
-                  </div>
-                ))}
+                  )
+                })}
               </div>
             )}
             {errors.roles && (

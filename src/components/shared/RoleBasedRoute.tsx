@@ -11,6 +11,7 @@ interface RoleBasedRouteProps {
   requiredRoles?: RoleName[];
   fallbackPath?: string;
   loadingComponent?: React.ReactNode;
+  errorComponent?: React.ReactNode;
 }
 
 export const RoleBasedRoute = ({ 
@@ -18,7 +19,8 @@ export const RoleBasedRoute = ({
   requiredRole,
   requiredRoles = [],
   fallbackPath,
-  loadingComponent 
+  loadingComponent,
+  errorComponent
 }: RoleBasedRouteProps) => {
   const { isAuthenticated, currentRole, availableRoles } = useAuth();
   const router = useRouter();
@@ -54,6 +56,11 @@ export const RoleBasedRoute = ({
 
       // Check if user has required role
       if (requiredRole && currentRole !== requiredRole) {
+        // If custom error component provided, don't redirect, show error instead
+        if (errorComponent) {
+          setIsChecking(false);
+          return;
+        }
         const fallback = fallbackPath || getDefaultPath(currentRole);
         router.push(fallback);
         return;
@@ -61,6 +68,11 @@ export const RoleBasedRoute = ({
 
       // Check if user has any of the required roles
       if (requiredRoles.length > 0 && !requiredRoles.includes(currentRole)) {
+        // If custom error component provided, don't redirect, show error instead
+        if (errorComponent) {
+          setIsChecking(false);
+          return;
+        }
         const fallback = fallbackPath || getDefaultPath(currentRole);
         router.push(fallback);
         return;
@@ -70,10 +82,19 @@ export const RoleBasedRoute = ({
     };
 
     checkAccess();
-  }, [isAuthenticated, currentRole, availableRoles, router, requiredRole, requiredRoles, fallbackPath, pathname]);
+  }, [isAuthenticated, currentRole, availableRoles, router, requiredRole, requiredRoles, fallbackPath, pathname, errorComponent]);
 
   if (isChecking) {
     return loadingComponent || <div className="flex items-center justify-center min-h-screen">Loading...</div>;
+  }
+
+  // Check access again and show error component if provided and access is denied
+  if (requiredRole && currentRole !== requiredRole) {
+    return errorComponent || <>{children}</>;
+  }
+
+  if (requiredRoles.length > 0 && !requiredRoles.includes(currentRole)) {
+    return errorComponent || <>{children}</>;
   }
 
   return <>{children}</>;

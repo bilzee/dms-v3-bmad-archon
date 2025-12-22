@@ -1,6 +1,50 @@
 # Prisma Schema Reference
 
-_Auto-generated on 2025-11-16T00:00:44.807Z_
+_Auto-generated on 2025-12-16T14:25:55.022Z_
+
+## ReportTemplate
+
+**Fields:**
+- `id`
+- `name`
+- `description`
+- `type`
+- `layout`
+- `createdById`
+- `isPublic`
+- `createdAt`
+- `updatedAt`
+- `configurations`
+- `createdBy`
+
+## ReportConfiguration
+
+**Fields:**
+- `id`
+- `templateId`
+- `name`
+- `filters`
+- `aggregations`
+- `visualizations`
+- `schedule`
+- `createdBy`
+- `createdAt`
+- `creator`
+- `template`
+- `executions`
+
+## ReportExecution
+
+**Fields:**
+- `id`
+- `configurationId`
+- `status`
+- `format`
+- `filePath`
+- `generatedAt`
+- `error`
+- `createdAt`
+- `configuration`
 
 ## User
 
@@ -19,8 +63,12 @@ _Auto-generated on 2025-11-16T00:00:44.807Z_
 - `updatedAt`
 - `auditLogs`
 - `entityAssignments`
+- `gapFieldSeveritiesCreated`
+- `gapFieldSeveritiesUpdated`
 - `assessments`
 - `responses`
+- `reportConfigurations`
+- `reportTemplates`
 - `roles`
 
 ## Role
@@ -77,11 +125,11 @@ _Auto-generated on 2025-11-16T00:00:44.807Z_
 - `autoApproveEnabled`
 - `createdAt`
 - `updatedAt`
+- `commitments`
 - `assignments`
 - `rapidAssessments`
 - `responses`
-- `incidents`
-- `commitments`
+- `preliminaryAssessments`
 
 ## EntityAssignment
 
@@ -98,6 +146,7 @@ _Auto-generated on 2025-11-16T00:00:44.807Z_
 
 **Fields:**
 - `id`
+- `name`
 - `type`
 - `subType`
 - `severity`
@@ -108,9 +157,9 @@ _Auto-generated on 2025-11-16T00:00:44.807Z_
 - `createdBy`
 - `createdAt`
 - `updatedAt`
-- `preliminaryAssessments`
-- `entities`
 - `commitments`
+- `preliminaryAssessments`
+- `rapidAssessments`
 
 ## PreliminaryAssessment
 
@@ -136,16 +185,16 @@ _Auto-generated on 2025-11-16T00:00:44.807Z_
 - `createdAt`
 - `updatedAt`
 - `incident`
+- `affectedEntities`
 
-## IncidentEntity
+## PreliminaryAssessmentEntity
 
 **Fields:**
 - `id`
-- `incidentId`
+- `preliminaryAssessmentId`
 - `entityId`
-- `affectedAt`
-- `severity`
-- `incident`
+- `createdAt`
+- `preliminaryAssessment`
 - `entity`
 
 ## RapidAssessment
@@ -172,11 +221,14 @@ _Auto-generated on 2025-11-16T00:00:44.807Z_
 - `mediaAttachments`
 - `createdAt`
 - `updatedAt`
+- `gapAnalysis`
+- `incidentId`
 - `foodAssessment`
 - `healthAssessment`
 - `populationAssessment`
 - `assessor`
 - `entity`
+- `incident`
 - `responses`
 - `securityAssessment`
 - `shelterAssessment`
@@ -304,8 +356,8 @@ _Auto-generated on 2025-11-16T00:00:44.807Z_
 - `syncStatus`
 - `mediaAttachments`
 - `assessment`
-- `donor`
 - `commitment`
+- `donor`
 - `entity`
 - `responder`
 - `conflicts`
@@ -320,13 +372,13 @@ _Auto-generated on 2025-11-16T00:00:44.807Z_
 - `contactPhone`
 - `organization`
 - `isActive`
-- `selfReportedDeliveryRate`
-- `verifiedDeliveryRate`
-- `leaderboardRank`
 - `createdAt`
 - `updatedAt`
-- `responses`
+- `leaderboardRank`
+- `selfReportedDeliveryRate`
+- `verifiedDeliveryRate`
 - `commitments`
+- `responses`
 
 ## DonorCommitment
 
@@ -337,6 +389,17 @@ _Auto-generated on 2025-11-16T00:00:44.807Z_
 - `incidentId`
 - `status`
 - `items`
+- `totalCommittedQuantity`
+- `deliveredQuantity`
+- `verifiedDeliveredQuantity`
+- `commitmentDate`
+- `lastUpdated`
+- `notes`
+- `totalValueEstimated`
+- `donor`
+- `entity`
+- `incident`
+- `responses`
 
 ## MediaAttachment
 
@@ -383,4 +446,21 @@ _Auto-generated on 2025-11-16T00:00:44.807Z_
 - `ipAddress`
 - `userAgent`
 - `user`
+
+## GapFieldSeverity
+
+**Fields:**
+- `id`
+- `fieldName`
+- `assessmentType`
+- `severity`
+- `displayName`
+- `description`
+- `isActive`
+- `createdAt`
+- `updatedAt`
+- `createdBy`
+- `updatedBy`
+- `createdByUser`
+- `updatedByUser`
 

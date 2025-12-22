@@ -1,309 +1,302 @@
 'use client'
 
-import React, { useState } from 'react'
+import { useState, useEffect } from 'react'
+import { useRouter } from 'next/navigation'
+
+// UI components
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { 
-  Package, 
-  Plus, 
-  Search, 
-  Filter,
-  Clock,
-  CheckCircle,
-  AlertTriangle,
-  BarChart3,
-  Wifi,
-  WifiOff
-} from 'lucide-react'
+import { Button } from '@/components/ui/button'
+import { Alert, AlertDescription } from '@/components/ui/alert'
 
-import { useBackgroundSyncContext } from '@/providers/BackgroundSyncProvider'
-import { OfflineSyncDashboard } from '@/components/delivery/OfflineSyncDashboard'
-import { DeliveryConfirmationForm } from '@/components/forms/delivery/DeliveryConfirmationForm'
+// New error handling components
+import { SafeDataLoader } from '@/components/shared/SafeDataLoader'
+import { EmptyState } from '@/components/shared/EmptyState'
+
+// Icons
+import { Plus, Edit, Package, CheckCircle, User, Shield, RefreshCw, AlertTriangle } from 'lucide-react'
+
+// Forms and components
+import { RoleBasedRoute } from '@/components/shared/RoleBasedRoute'
+import { useAuth } from '@/hooks/useAuth'
+import { ResponsePlanningForm } from '@/components/forms/response'
+import { ResponsePlanningDashboard } from '@/components/response/ResponsePlanningDashboard'
+
+// Hooks and utilities
 import { useAuthStore } from '@/stores/auth.store'
+import { getAuthToken } from '@/lib/auth/token-utils'
 
-export default function ResponderDashboardPage() {
-  const [selectedResponseId, setSelectedResponseId] = useState<string | null>(null)
-  const [showDeliveryForm, setShowDeliveryForm] = useState(false)
-  const { isOnline, isSyncing, pendingCount } = useBackgroundSyncContext()
-  const { user } = useAuthStore()
+function ResponderDashboardContent() {
+  const { user, token } = useAuthStore()
+  const router = useRouter()
+  const [showCreateForm, setShowCreateForm] = useState(false)
+  const [editingResponse, setEditingResponse] = useState<string | null>(null)
+  const [isClient, setIsClient] = useState(false)
 
-  const mockPlannedResponses = [
-    {
-      id: 'resp-1',
-      entityName: 'Central Shelter',
-      plannedDate: '2024-01-15',
-      items: ['Blankets', 'Water', 'Food'],
-      status: 'PLANNED'
-    },
-    {
-      id: 'resp-2', 
-      entityName: 'East Zone Medical Center',
-      plannedDate: '2024-01-15',
-      items: ['Medical Supplies', 'PPE'],
-      status: 'PLANNED'
+  // Prevent hydration mismatch
+  useEffect(() => {
+    setIsClient(true)
+  }, [])
+
+  // Get assigned planned responses for this responder
+  const getPlannedResponses = async () => {
+    if (!user) throw new Error('User not authenticated')
+    
+    const token = getAuthToken()
+    if (!token) throw new Error('No authentication token available')
+    
+    const response = await fetch(`/api/v1/responses/planned/assigned?page=1&limit=50`, {
+      headers: {
+        'Authorization': `Bearer ${token}`
+      }
+    })
+    
+    if (!response.ok) {
+      throw new Error('Failed to fetch planned responses')
     }
-  ]
-
-  const handleConfirmDelivery = (responseId: string) => {
-    setSelectedResponseId(responseId)
-    setShowDeliveryForm(true)
+    
+    const result = await response.json()
+    return {
+      responses: result.data || [],
+      total: result.meta?.total || 0
+    }
   }
 
-  const handleDeliveryComplete = () => {
-    setShowDeliveryForm(false)
-    setSelectedResponseId(null)
+  // Get editing response data
+  const getEditingResponse = async () => {
+    if (!editingResponse) return null
+    
+    const token = getAuthToken()
+    if (!token) throw new Error('No authentication token available')
+    
+    const response = await fetch(`/api/v1/responses/${editingResponse}`, {
+      headers: {
+        'Authorization': `Bearer ${token}`
+      }
+    })
+    
+    if (!response.ok) {
+      if (response.status === 401) {
+        throw new Error('Authentication failed - please log in again')
+      } else if (response.status === 403) {
+        throw new Error('You do not have permission to access this response')
+      } else if (response.status === 404) {
+        throw new Error('Response not found')
+      } else {
+        throw new Error('Failed to fetch response')
+      }
+    }
+    
+    const result = await response.json()
+    return result.data
   }
 
-  return (
-    <div className="container mx-auto p-6 space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold">Responder Dashboard</h1>
-          <p className="text-muted-foreground">
-            Manage aid deliveries and track response activities
-          </p>
-        </div>
-        
-        <div className="flex items-center gap-4">
-          {/* Connection Status */}
-          <div className="flex items-center gap-2">
-            {isOnline ? (
-              <Badge variant="default" className="flex items-center gap-1">
-                <Wifi className="h-3 w-3" />
-                Online
-              </Badge>
-            ) : (
-              <Badge variant="secondary" className="flex items-center gap-1">
-                <WifiOff className="h-3 w-3" />
-                Offline
-              </Badge>
-            )}
-            
-            {pendingCount > 0 && (
-              <Badge variant="outline" className="flex items-center gap-1">
-                <Clock className="h-3 w-3" />
-                {pendingCount} pending
-              </Badge>
-            )}
-          </div>
-          
-          <Button>
-            <Plus className="h-4 w-4 mr-2" />
-            New Response
-          </Button>
-        </div>
-      </div>
+  const handleCreateResponse = () => {
+    setShowCreateForm(true)
+  }
 
-      <Tabs defaultValue="planned" className="space-y-6">
-        <TabsList>
-          <TabsTrigger value="planned">Planned Deliveries</TabsTrigger>
-          <TabsTrigger value="offline">Offline Sync</TabsTrigger>
-          <TabsTrigger value="stats">Statistics</TabsTrigger>
-        </TabsList>
+  const handleEditResponse = (responseId: string) => {
+    setEditingResponse(responseId)
+  }
 
-        <TabsContent value="planned" className="space-y-6">
-          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Planned</CardTitle>
-                <Clock className="h-4 w-4 text-muted-foreground" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">{mockPlannedResponses.length}</div>
-                <p className="text-xs text-muted-foreground">Awaiting delivery</p>
-              </CardContent>
-            </Card>
-            
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Delivered Today</CardTitle>
-                <CheckCircle className="h-4 w-4 text-muted-foreground" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">3</div>
-                <p className="text-xs text-muted-foreground">Successfully delivered</p>
-              </CardContent>
-            </Card>
-            
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Pending Sync</CardTitle>
-                <AlertTriangle className="h-4 w-4 text-muted-foreground" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">{pendingCount}</div>
-                <p className="text-xs text-muted-foreground">Waiting for connection</p>
-              </CardContent>
-            </Card>
-            
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Sync Status</CardTitle>
-                <BarChart3 className="h-4 w-4 text-muted-foreground" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">
-                  {isSyncing ? 'Active' : 'Idle'}
-                </div>
-                <p className="text-xs text-muted-foreground">
-                  {isOnline ? 'Connected' : 'Offline mode'}
-                </p>
-              </CardContent>
-            </Card>
-          </div>
+  const handleBackToList = () => {
+    setShowCreateForm(false)
+    setEditingResponse(null)
+  }
 
-          {/* Planned Deliveries List */}
-          <Card>
-            <CardHeader>
-              <div className="flex items-center justify-between">
-                <div>
-                  <CardTitle>Planned Deliveries</CardTitle>
-                  <CardDescription>
-                    Aid deliveries that need to be confirmed
-                  </CardDescription>
-                </div>
-                <div className="flex items-center gap-2">
-                  <Button variant="outline" size="sm">
-                    <Search className="h-4 w-4 mr-2" />
-                    Search
-                  </Button>
-                  <Button variant="outline" size="sm">
-                    <Filter className="h-4 w-4 mr-2" />
-                    Filter
-                  </Button>
-                </div>
+  // Show create/edit form
+  if (showCreateForm || editingResponse) {
+    return (
+      <SafeDataLoader
+        queryFn={getEditingResponse}
+        enabled={!!editingResponse && !!user && isClient}
+        fallbackData={null}
+        loadingMessage="Loading response plan..."
+        errorTitle="Failed to load response plan"
+      >
+        {(editingResponseData, isLoading, error, retry) => {
+          if (isLoading) {
+            return (
+              <Card>
+                <CardHeader>
+                  <CardTitle>Loading Response Plan...</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="flex items-center justify-center py-8">
+                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+                  </div>
+                </CardContent>
+              </Card>
+            )
+          }
+
+          return (
+            <div className="space-y-6">
+              <div className="flex items-center gap-4">
+                <Button
+                  variant="outline"
+                  onClick={handleBackToList}
+                  className="flex items-center gap-2"
+                >
+                  <Package className="h-4 w-4" />
+                  Back to Response Plans
+                </Button>
+                <Badge variant="outline">
+                  {showCreateForm ? 'NEW RESPONSE PLAN' : 'EDITING RESPONSE PLAN'}
+                </Badge>
               </div>
-            </CardHeader>
-            <CardContent>
-              {mockPlannedResponses.length === 0 ? (
-                <div className="text-center py-8">
-                  <Package className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-                  <h3 className="text-lg font-medium">No planned deliveries</h3>
-                  <p className="text-muted-foreground">
-                    You don&apos;t have any planned deliveries waiting for confirmation.
-                  </p>
-                </div>
-              ) : (
-                <div className="space-y-4">
-                  {mockPlannedResponses.map((response) => (
-                    <div
-                      key={response.id}
-                      className="flex items-center justify-between p-4 border rounded-lg"
-                    >
-                      <div className="space-y-1">
-                        <div className="flex items-center gap-2">
-                          <h4 className="font-medium">{response.entityName}</h4>
-                          <Badge variant="outline">{response.status}</Badge>
-                        </div>
-                        <p className="text-sm text-muted-foreground">
-                          Planned for {new Date(response.plannedDate).toLocaleDateString()}
-                        </p>
-                        <div className="flex flex-wrap gap-1">
-                          {response.items.map((item, index) => (
-                            <Badge key={index} variant="secondary" className="text-xs">
-                              {item}
-                            </Badge>
-                          ))}
-                        </div>
-                      </div>
-                      
-                      <Button
-                        onClick={() => handleConfirmDelivery(response.id)}
-                        disabled={!isOnline}
-                      >
-                        <Package className="h-4 w-4 mr-2" />
-                        Confirm Delivery
-                      </Button>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        </TabsContent>
+              
+              <ResponsePlanningForm
+                mode={editingResponse ? 'edit' : 'create'}
+                initialData={editingResponse ? {
+                  id: editingResponse,
+                  assessmentId: editingResponseData?.assessmentId || '',
+                  entityId: editingResponseData?.entityId || '',
+                  type: editingResponseData?.type || 'HEALTH',
+                  priority: editingResponseData?.priority || 'MEDIUM',
+                  description: editingResponseData?.description || '',
+                  assessment: editingResponseData?.assessment,
+                  items: editingResponseData?.items?.map((item: any) => ({
+                    ...item,
+                    // Remove category from display since it's auto-assigned
+                    name: item.name,
+                    unit: item.unit,
+                    quantity: item.quantity,
+                    notes: item.notes
+                  })) || [{ name: '', unit: '', quantity: 1 }]
+                } : undefined}
+                onCancel={handleBackToList}
+                onSuccess={handleBackToList}
+              />
+            </div>
+          )
+        }}
+      </SafeDataLoader>
+    )
+  }
 
-        <TabsContent value="offline">
-          <OfflineSyncDashboard />
-        </TabsContent>
+  // Show response plans dashboard
+  return (
+    <SafeDataLoader
+      queryFn={getPlannedResponses}
+      enabled={!!user && isClient}
+      fallbackData={{ responses: [], total: 0 }}
+      loadingMessage="Loading response plans..."
+      errorTitle="Failed to load response plans"
+    >
+      {(data, isLoading, error, retry) => {
+        const responses = data?.responses || []
+        const total = data?.total || 0
 
-        <TabsContent value="stats">
-          <div className="grid gap-6 md:grid-cols-2">
-            <Card>
-              <CardHeader>
-                <CardTitle>Delivery Statistics</CardTitle>
-                <CardDescription>
-                  Your delivery performance metrics
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
-                  <div className="flex items-center justify-between">
-                    <span>Total Deliveries</span>
-                    <span className="font-medium">24</span>
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <span>This Week</span>
-                    <span className="font-medium">8</span>
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <span>Average Time</span>
-                    <span className="font-medium">2.5 hours</span>
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <span>Success Rate</span>
-                    <span className="font-medium">98%</span>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader>
-                <CardTitle>Offline Activity</CardTitle>
-                <CardDescription>
-                  Offline operations and sync status
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
-                  <div className="flex items-center justify-between">
-                    <span>Offline Confirmations</span>
-                    <span className="font-medium">{pendingCount}</span>
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <span>Last Sync</span>
-                    <span className="font-medium">2 hours ago</span>
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <span>Failed Syncs</span>
-                    <span className="font-medium">0</span>
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <span>Data Usage</span>
-                    <span className="font-medium">124 MB</span>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-        </TabsContent>
-      </Tabs>
-
-      {/* Delivery Confirmation Modal */}
-      {showDeliveryForm && selectedResponseId && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
-          <div className="bg-background rounded-lg w-full max-w-4xl max-h-[90vh] overflow-y-auto">
-            <DeliveryConfirmationForm
-              responseId={selectedResponseId}
-              onSuccess={handleDeliveryComplete}
-              onCancel={handleDeliveryComplete}
+        return (
+          <div className="space-y-6">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-4">
+                <Badge variant="outline">
+                  RESPONDER DASHBOARD
+                </Badge>
+                <span className="text-sm text-muted-foreground">
+                  {new Date().toLocaleDateString()}
+                </span>
+              </div>
+              
+              <Button
+                variant="default"
+                size="lg"
+                onClick={() => router.push('/responder/responses')}
+                className="flex items-center gap-2 bg-green-600 hover:bg-green-700 text-white font-semibold px-6 py-3 shadow-lg"
+              >
+                <CheckCircle className="h-5 w-5" />
+                View Response Deliveries
+              </Button>
+            </div>
+            
+            <ResponsePlanningDashboard
+              responses={responses}
+              onCreateResponse={handleCreateResponse}
+              onEditResponse={handleEditResponse}
+              onRefresh={retry}
             />
           </div>
+        )
+      }}
+    </SafeDataLoader>
+  )
+}
+
+export default function ResponderDashboard() {
+  const { availableRoles } = useAuth()
+
+  // Custom error message for multi-role users who haven't selected RESPONDER role
+  const RoleAccessError = () => {
+    const hasResponderRole = availableRoles.includes('RESPONDER');
+    
+    if (!hasResponderRole) {
+      return (
+        <div className="container mx-auto p-6">
+          <Card>
+            <CardContent className="p-6">
+              <Alert variant="destructive" className="mb-4">
+                <AlertTriangle className="h-4 w-4" />
+                <AlertDescription className="flex items-center gap-2">
+                  <Shield className="h-4 w-4" />
+                  You do not have permission to access this page. Responder role is required for response planning.
+                </AlertDescription>
+              </Alert>
+              <div className="text-center text-muted-foreground">
+                This page is only available to users with the Responder role for planning and managing response operations.
+              </div>
+            </CardContent>
+          </Card>
         </div>
-      )}
-    </div>
+      );
+    }
+
+    return (
+      <div className="container mx-auto p-6">
+        <div className="max-w-2xl mx-auto space-y-6">
+          <Alert variant="destructive">
+            <AlertTriangle className="h-4 w-4" />
+            <AlertDescription className="flex items-center gap-2">
+              <User className="h-4 w-4" />
+              You need to select the <strong>Responder</strong> role to access this page.
+            </AlertDescription>
+          </Alert>
+          
+          <div className="bg-blue-50 border border-blue-200 rounded-lg p-6 text-center">
+            <div className="mb-4">
+              <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                <User className="h-8 w-8 text-blue-600" />
+              </div>
+              <h3 className="text-lg font-semibold text-blue-900 mb-2">
+                Role Selection Required
+              </h3>
+              <p className="text-blue-700 mb-4">
+                You have the Responder role assigned, but you need to actively select it to access response planning features.
+              </p>
+              <p className="text-sm text-blue-600 mb-6">
+                Switch to the Responder role using the role selector in the top-right corner of the page.
+              </p>
+              <Button 
+                onClick={() => window.location.reload()}
+                className="bg-blue-600 hover:bg-blue-700"
+              >
+                Refresh Page After Selecting Role
+              </Button>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
+  return (
+    <RoleBasedRoute 
+      requiredRole="RESPONDER" 
+      fallbackPath="/dashboard"
+      errorComponent={<RoleAccessError />}
+    >
+      <ResponderDashboardContent />
+    </RoleBasedRoute>
   )
 }

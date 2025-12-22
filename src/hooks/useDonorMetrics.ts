@@ -41,6 +41,8 @@ export interface DonorMetricsResponse {
       successRate: number;
       verifiedActivities: number;
       totalActivities: number;
+      responseVerificationRate: number;
+      totalCommitments: number;
     }>;
   };
   donors: DonorMetrics[];

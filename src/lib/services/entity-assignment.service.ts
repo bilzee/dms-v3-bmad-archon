@@ -453,6 +453,7 @@ export class EntityAssignmentServiceImpl implements EntityAssignmentService {
           verificationStatus: true,
           verifiedAt: true,
           verifiedBy: true,
+          priority: true,
           entity: {
             select: {
               id: true,

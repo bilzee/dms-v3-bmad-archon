@@ -11,6 +11,13 @@ import {
   ShelterAssessmentInput,
   SecurityAssessmentInput
 } from '@/lib/validation/rapid-assessment'
+import { 
+  analyzeHealthGaps, 
+  analyzeFoodGaps, 
+  analyzeWASHGaps, 
+  analyzeShelterGaps, 
+  analyzeSecurityGaps 
+} from '@/lib/services/gap-analysis.service'
 
 // Type for returned assessments with their specific data
 export type RapidAssessmentWithData = RapidAssessment & {
@@ -55,6 +62,7 @@ export class RapidAssessmentService {
           assessorId: createdBy,
           assessorName: input.assessorName,
           entityId: input.entityId,
+          incidentId: input.incidentId,
           location: input.location,
           coordinates: input.coordinates,
           status: 'SUBMITTED',
@@ -108,7 +116,7 @@ export class RapidAssessmentService {
           if (!washData) {
             throw new Error('WASH assessment data (washData) is required but missing from input')
           }
-          typeSpecificAssessment = await tx.wASHAssessment.create({
+          typeSpecificAssessment = await tx.washAssessment.create({
             data: {
               rapidAssessmentId: rapidAssessment.id,
               ...washData,
@@ -146,6 +154,9 @@ export class RapidAssessmentService {
       return { rapidAssessment, typeSpecificAssessment }
     })
 
+    // Automatically trigger gap analysis calculation after successful creation
+    await this.triggerGapAnalysis(result.rapidAssessment.id)
+
     // Return the combined assessment
     return {
       ...result.rapidAssessment,
@@ -177,11 +188,20 @@ export class RapidAssessmentService {
             type: true,
             location: true
           }
+        },
+        incident: {
+          select: {
+            id: true,
+            type: true,
+            subType: true,
+            createdAt: true,
+            severity: true
+          }
         }
       }
     })
 
-    return assessment
+    return assessment as RapidAssessmentWithData
   }
 
   static async findByUserId(
@@ -192,7 +212,7 @@ export class RapidAssessmentService {
     total: number
     totalPages: number
   }> {
-    const { page, limit, entityId, type, status, priority, startDate, endDate } = query
+    const { page, limit, entityId, type, status, verificationStatus, priority, startDate, endDate } = query
     const skip = (page - 1) * limit
 
     // Build where clause
@@ -201,6 +221,7 @@ export class RapidAssessmentService {
     if (entityId) where.entityId = entityId
     if (type) where.rapidAssessmentType = type
     if (status) where.status = status
+    if (verificationStatus) where.verificationStatus = verificationStatus
     if (priority) where.priority = priority
     if (startDate || endDate) {
       where.rapidAssessmentDate = {}
@@ -228,6 +249,15 @@ export class RapidAssessmentService {
             type: true,
             location: true
           }
+        },
+        incident: {
+          select: {
+            id: true,
+            type: true,
+            subType: true,
+            createdAt: true,
+            severity: true
+          }
         }
       },
       orderBy: { createdAt: 'desc' },
@@ -249,7 +279,7 @@ export class RapidAssessmentService {
     total: number
     totalPages: number
   }> {
-    const { page, limit, userId, entityId, type, status, priority, startDate, endDate } = query
+    const { page, limit, userId, entityId, incidentId, type, status, verificationStatus, priority, startDate, endDate } = query
     const skip = (page - 1) * limit
 
     // Build where clause
@@ -257,8 +287,10 @@ export class RapidAssessmentService {
 
     if (userId) where.assessorId = userId
     if (entityId) where.entityId = entityId
+    if (incidentId) where.incidentId = incidentId
     if (type) where.rapidAssessmentType = type
     if (status) where.status = status
+    if (verificationStatus) where.verificationStatus = verificationStatus
     if (priority) where.priority = priority
     if (startDate || endDate) {
       where.rapidAssessmentDate = {}
@@ -292,6 +324,15 @@ export class RapidAssessmentService {
             name: true,
             type: true,
             location: true
+          }
+        },
+        incident: {
+          select: {
+            id: true,
+            type: true,
+            subType: true,
+            createdAt: true,
+            severity: true
           }
         }
       },
@@ -391,7 +432,180 @@ export class RapidAssessmentService {
       }
     })
 
+    // Automatically trigger gap analysis calculation after successful submission
+    await this.triggerGapAnalysis(id)
+
     return updatedAssessment
+  }
+
+  /**
+   * Calculate and trigger gap analysis for a submitted assessment
+   * This should be called after successful assessment submission
+   */
+  static async triggerGapAnalysis(assessmentId: string): Promise<void> {
+    try {
+      const assessment = await this.findById(assessmentId)
+      if (!assessment) {
+        console.warn(`Assessment ${assessmentId} not found for gap analysis`)
+        return
+      }
+
+      // Calculate gap analysis based on assessment type and data
+      const gapAnalysisData: any = {}
+      let calculatedSeverity: any = null
+
+      switch (assessment.rapidAssessmentType) {
+        case 'HEALTH':
+          if (assessment.healthAssessment) {
+            gapAnalysisData.gapAnalysis = await analyzeHealthGaps(assessment.healthAssessment)
+            calculatedSeverity = gapAnalysisData.gapAnalysis.severity
+          }
+          break
+        case 'FOOD':
+          if (assessment.foodAssessment) {
+            gapAnalysisData.gapAnalysis = await analyzeFoodGaps(assessment.foodAssessment)
+            calculatedSeverity = gapAnalysisData.gapAnalysis.severity
+          }
+          break
+        case 'WASH':
+          if (assessment.washAssessment) {
+            gapAnalysisData.gapAnalysis = await analyzeWASHGaps(assessment.washAssessment)
+            calculatedSeverity = gapAnalysisData.gapAnalysis.severity
+          }
+          break
+        case 'SHELTER':
+          if (assessment.shelterAssessment) {
+            gapAnalysisData.gapAnalysis = await analyzeShelterGaps(assessment.shelterAssessment)
+            calculatedSeverity = gapAnalysisData.gapAnalysis.severity
+          }
+          break
+        case 'SECURITY':
+          if (assessment.securityAssessment) {
+            gapAnalysisData.gapAnalysis = await analyzeSecurityGaps(assessment.securityAssessment)
+            calculatedSeverity = gapAnalysisData.gapAnalysis.severity
+          }
+          break
+      }
+
+      // Update the assessment with gap analysis data AND priority based on calculated severity
+      if (Object.keys(gapAnalysisData).length > 0 && calculatedSeverity) {
+        await prisma.rapidAssessment.update({
+          where: { id: assessmentId },
+          data: {
+            ...gapAnalysisData,
+            priority: calculatedSeverity // Set priority to match severity from gap analysis
+          }
+        })
+      } else if (Object.keys(gapAnalysisData).length > 0) {
+        // Fallback: update without priority change if severity calculation failed
+        await prisma.rapidAssessment.update({
+          where: { id: assessmentId },
+          data: gapAnalysisData
+        })
+      }
+
+      console.log(`Gap analysis calculated for assessment ${assessmentId} (${assessment.rapidAssessmentType})`)
+    } catch (error) {
+      console.error('Error calculating gap analysis:', error)
+      // Don't throw error to avoid breaking submission workflow
+    }
+  }
+
+  /**
+   * Updates all historical assessments to have correct priorities based on gap analysis severity
+   * This method should be called once to migrate existing assessments to the new priority system
+   */
+  static async updateAllHistoricalAssessmentPriorities(): Promise<{ updated: number; failed: number; total: number }> {
+    try {
+      console.log('Starting historical assessment priority update...')
+
+      // Fetch all assessments that need priority updates
+      const allAssessments = await prisma.rapidAssessment.findMany({
+        include: {
+          healthAssessment: true,
+          populationAssessment: true,
+          foodAssessment: true,
+          washAssessment: true,
+          shelterAssessment: true,
+          securityAssessment: true
+        }
+      })
+
+      console.log(`Found ${allAssessments.length} assessments to process`)
+
+      let updatedCount = 0
+      let failedCount = 0
+
+      for (const assessment of allAssessments) {
+        try {
+          // Calculate gap analysis based on assessment type and data
+          const gapAnalysisData: any = {}
+          let calculatedSeverity: any = null
+
+          switch (assessment.rapidAssessmentType) {
+            case 'HEALTH':
+              if (assessment.healthAssessment) {
+                gapAnalysisData.gapAnalysis = await analyzeHealthGaps(assessment.healthAssessment)
+                calculatedSeverity = gapAnalysisData.gapAnalysis.severity
+              }
+              break
+            case 'FOOD':
+              if (assessment.foodAssessment) {
+                gapAnalysisData.gapAnalysis = await analyzeFoodGaps(assessment.foodAssessment)
+                calculatedSeverity = gapAnalysisData.gapAnalysis.severity
+              }
+              break
+            case 'WASH':
+              if (assessment.washAssessment) {
+                gapAnalysisData.gapAnalysis = await analyzeWASHGaps(assessment.washAssessment)
+                calculatedSeverity = gapAnalysisData.gapAnalysis.severity
+              }
+              break
+            case 'SHELTER':
+              if (assessment.shelterAssessment) {
+                gapAnalysisData.gapAnalysis = await analyzeShelterGaps(assessment.shelterAssessment)
+                calculatedSeverity = gapAnalysisData.gapAnalysis.severity
+              }
+              break
+            case 'SECURITY':
+              if (assessment.securityAssessment) {
+                gapAnalysisData.gapAnalysis = await analyzeSecurityGaps(assessment.securityAssessment)
+                calculatedSeverity = gapAnalysisData.gapAnalysis.severity
+              }
+              break
+          }
+
+          // Update the assessment with gap analysis data AND priority based on calculated severity
+          if (Object.keys(gapAnalysisData).length > 0 && calculatedSeverity) {
+            await prisma.rapidAssessment.update({
+              where: { id: assessment.id },
+              data: {
+                ...gapAnalysisData,
+                priority: calculatedSeverity // Set priority to match severity from gap analysis
+              }
+            })
+            console.log(`Updated assessment ${assessment.id} (${assessment.rapidAssessmentType}) - Priority: ${calculatedSeverity}`)
+            updatedCount++
+          } else {
+            console.log(`No gap analysis data for assessment ${assessment.id} (${assessment.rapidAssessmentType})`)
+          }
+        } catch (error) {
+          console.error(`Failed to update assessment ${assessment.id}:`, error)
+          failedCount++
+        }
+      }
+
+      console.log(`Historical assessment priority update completed. Updated: ${updatedCount}, Failed: ${failedCount}, Total: ${allAssessments.length}`)
+
+      return {
+        updated: updatedCount,
+        failed: failedCount,
+        total: allAssessments.length
+      }
+    } catch (error) {
+      console.error('Error updating historical assessment priorities:', error)
+      throw error
+    }
   }
 
   private static async validateEntityAssignment(userId: string, entityId: string): Promise<void> {
@@ -405,6 +619,38 @@ export class RapidAssessmentService {
 
     if (!assignment) {
       throw new Error('User is not assigned to this entity')
+    }
+  }
+
+  static async findLatestByIncidentEntityAndType(
+    incidentId: string,
+    entityId: string,
+    type: AssessmentType
+  ): Promise<RapidAssessmentWithData | null> {
+    try {
+      const typeFieldName = this.getTypeSpecificFieldName(type)
+      
+      const assessment = await prisma.rapidAssessment.findFirst({
+        where: {
+          incidentId,
+          entityId,
+          rapidAssessmentType: type,
+          status: {
+            not: 'DRAFT' // Exclude drafts
+          }
+        },
+        include: {
+          [typeFieldName]: true
+        },
+        orderBy: {
+          rapidAssessmentDate: 'desc'
+        }
+      })
+
+      return assessment as RapidAssessmentWithData
+    } catch (error) {
+      console.error('Error finding latest assessment:', error)
+      throw new Error('Failed to find latest assessment')
     }
   }
 

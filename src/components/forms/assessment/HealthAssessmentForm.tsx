@@ -15,6 +15,7 @@ import { Alert, AlertDescription } from '@/components/ui/alert'
 import { GPSCapture } from '@/components/shared/GPSCapture'
 import { MediaField } from '@/components/shared/MediaField'
 import { EntitySelector } from '@/components/shared/EntitySelector'
+import { IncidentSelector } from '@/components/shared/IncidentSelector'
 import { HealthAssessmentFormProps, HealthAssessment } from '@/types/rapid-assessment'
 import { getCurrentUserName, getAssessmentLocationData } from '@/utils/assessment-utils'
 import { cn } from '@/lib/utils'
@@ -92,29 +93,91 @@ export function HealthAssessmentForm({
   onSubmit, 
   onCancel, 
   isSubmitting = false,
-  disabled = false 
+  disabled = false,
+  onIncidentEntityChange
 }: HealthAssessmentFormProps) {
   const [gpsCoordinates, setGpsCoordinates] = useState<{ lat: number; lng: number } | null>(null)
   const [mediaFiles, setMediaFiles] = useState<string[]>((initialData as any)?.mediaAttachments || [])
   const [selectedEntity, setSelectedEntity] = useState<string>(entityId)
+  const [selectedIncident, setSelectedIncident] = useState<string>(initialData?.incidentId || '')
   const [selectedEntityData, setSelectedEntityData] = useState<any>(null)
+
+  // Extract health data from initialData
+  const healthData = (initialData as any)?.healthAssessment || (initialData as any);
+  
+  // Debug logging
+  console.log('HealthAssessmentForm - initialData:', initialData);
+  console.log('HealthAssessmentForm - healthData:', healthData);
+  
+  // Track when initialData changes and update form
+  useEffect(() => {
+    console.log('HealthAssessmentForm - initialData changed:', initialData);
+    
+    if (healthData) {
+      const newValues = {
+        hasFunctionalClinic: healthData?.hasFunctionalClinic || false,
+        hasEmergencyServices: healthData?.hasEmergencyServices || false,
+        numberHealthFacilities: healthData?.numberHealthFacilities || 0,
+        healthFacilityType: healthData?.healthFacilityType || '',
+        qualifiedHealthWorkers: healthData?.qualifiedHealthWorkers || 0,
+        hasTrainedStaff: healthData?.hasTrainedStaff || false,
+        hasMedicineSupply: healthData?.hasMedicineSupply || false,
+        hasMedicalSupplies: healthData?.hasMedicalSupplies || false,
+        hasMaternalChildServices: healthData?.hasMaternalChildServices || false,
+        commonHealthIssues: parseHealthIssues(healthData?.commonHealthIssues),
+        additionalHealthDetails: healthData?.additionalHealthDetails || ''
+      };
+      
+      console.log('HealthAssessmentForm - updating form with values:', newValues);
+      form.reset(newValues);
+    }
+  }, [initialData, healthData]);
+  
+  // Parse commonHealthIssues from JSON string if needed
+  const parseHealthIssues = (issues: any): string[] => {
+    if (Array.isArray(issues)) return issues;
+    if (typeof issues === 'string') {
+      try {
+        const parsed = JSON.parse(issues);
+        return Array.isArray(parsed) ? parsed : [];
+      } catch {
+        return [];
+      }
+    }
+    return [];
+  };
 
   const form = useForm<FormData>({
     resolver: zodResolver(HealthAssessmentSchema),
     defaultValues: {
-      hasFunctionalClinic: initialData?.hasFunctionalClinic || false,
-      hasEmergencyServices: initialData?.hasEmergencyServices || false,
-      numberHealthFacilities: initialData?.numberHealthFacilities || 0,
-      healthFacilityType: initialData?.healthFacilityType || '',
-      qualifiedHealthWorkers: initialData?.qualifiedHealthWorkers || 0,
-      hasTrainedStaff: initialData?.hasTrainedStaff || false,
-      hasMedicineSupply: initialData?.hasMedicineSupply || false,
-      hasMedicalSupplies: initialData?.hasMedicalSupplies || false,
-      hasMaternalChildServices: initialData?.hasMaternalChildServices || false,
-      commonHealthIssues: initialData?.commonHealthIssues || [],
-      additionalHealthDetails: initialData?.additionalHealthDetails || ''
+      hasFunctionalClinic: healthData?.hasFunctionalClinic || false,
+      hasEmergencyServices: healthData?.hasEmergencyServices || false,
+      numberHealthFacilities: healthData?.numberHealthFacilities || 0,
+      healthFacilityType: healthData?.healthFacilityType || '',
+      qualifiedHealthWorkers: healthData?.qualifiedHealthWorkers || 0,
+      hasTrainedStaff: healthData?.hasTrainedStaff || false,
+      hasMedicineSupply: healthData?.hasMedicineSupply || false,
+      hasMedicalSupplies: healthData?.hasMedicalSupplies || false,
+      hasMaternalChildServices: healthData?.hasMaternalChildServices || false,
+      commonHealthIssues: parseHealthIssues(healthData?.commonHealthIssues),
+      additionalHealthDetails: healthData?.additionalHealthDetails || ''
     }
   })
+
+  // Handle incident and entity changes
+  const handleIncidentChange = (incidentId: string) => {
+    setSelectedIncident(incidentId);
+    if (selectedEntity && onIncidentEntityChange) {
+      onIncidentEntityChange(incidentId, selectedEntity);
+    }
+  };
+
+  const handleEntityChange = (entityId: string) => {
+    setSelectedEntity(entityId);
+    if (selectedIncident && onIncidentEntityChange) {
+      onIncidentEntityChange(selectedIncident, entityId);
+    }
+  };
 
   const watchedValues = form.watch()
 
@@ -135,6 +198,10 @@ export function HealthAssessmentForm({
     if (!selectedEntity) {
       return
     }
+    
+    if (!selectedIncident) {
+      throw new Error('Please select an incident for this assessment')
+    }
 
     // Get current user name from auth context
     const currentUserName = getCurrentUserName()
@@ -153,6 +220,7 @@ export function HealthAssessmentForm({
       rapidAssessmentDate: new Date(),
       assessorName: currentUserName,
       entityId: selectedEntity,
+      incidentId: selectedIncident,
       ...locationData,
       mediaAttachments: mediaFiles,
       healthData: data
@@ -202,6 +270,24 @@ export function HealthAssessmentForm({
 
       <Form {...form}>
         <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-6">
+          {/* Incident Selection */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Incident Information</CardTitle>
+              <CardDescription>
+                Select the incident this assessment is related to
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <IncidentSelector
+                value={selectedIncident}
+                onValueChange={handleIncidentChange}
+                disabled={disabled}
+                required
+              />
+            </CardContent>
+          </Card>
+
           {/* Entity Selection */}
           <Card>
             <CardHeader>
@@ -213,11 +299,7 @@ export function HealthAssessmentForm({
             <CardContent>
               <EntitySelector
                 value={selectedEntity}
-                onValueChange={(entityId) => {
-                  setSelectedEntity(entityId)
-                  // Reset entity data when selection changes
-                  setSelectedEntityData(null)
-                }}
+                onValueChange={handleEntityChange}
                 disabled={disabled}
                 data-testid="entity-select"
               />

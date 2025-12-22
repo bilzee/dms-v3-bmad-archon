@@ -1,0 +1,672 @@
+'use client';
+
+import React, { useMemo, useState, useEffect } from 'react';
+import { cn, formatNumber, formatArrayValue } from '@/lib/utils';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import { Separator } from '@/components/ui/separator';
+import { Calendar, User, AlertTriangle, CheckCircle, Info, AlertCircle } from 'lucide-react';
+import { GapIndicator } from './GapIndicator';
+import type { 
+  HealthAssessmentData, 
+  FoodAssessmentData, 
+  WASHAssessmentData,
+  ShelterAssessmentData,
+  SecurityAssessmentData,
+  PopulationAssessmentData
+} from '@/app/api/v1/dashboard/situation/route';
+
+interface AssessmentCategorySummaryProps {
+  category: 'health' | 'food' | 'wash' | 'shelter' | 'security' | 'population';
+  assessment: any;
+  gapAnalysis?: any;
+  layout: 'split' | 'full';
+  className?: string;
+  showRecommendations?: boolean;
+  isAggregated?: boolean; // New prop to indicate this is aggregated data
+}
+
+// Category configuration
+const categoryConfig = {
+  health: {
+    title: 'Health Assessment',
+    icon: '🏥',
+    color: 'text-red-600',
+    bgColor: 'bg-red-50',
+    borderColor: 'border-red-200'
+  },
+  food: {
+    title: 'Food Security',
+    icon: '🍲',
+    color: 'text-orange-600',
+    bgColor: 'bg-orange-50',
+    borderColor: 'border-orange-200'
+  },
+  wash: {
+    title: 'WASH (Water & Sanitation)',
+    icon: '💧',
+    color: 'text-blue-600',
+    bgColor: 'bg-blue-50',
+    borderColor: 'border-blue-200'
+  },
+  shelter: {
+    title: 'Shelter & Housing',
+    icon: '🏠',
+    color: 'text-purple-600',
+    bgColor: 'bg-purple-50',
+    borderColor: 'border-purple-200'
+  },
+  security: {
+    title: 'Security & Protection',
+    icon: '🛡️',
+    color: 'text-green-600',
+    bgColor: 'bg-green-50',
+    borderColor: 'border-green-200'
+  },
+  population: {
+    title: 'Population Overview',
+    icon: '👥',
+    color: 'text-gray-600',
+    bgColor: 'bg-gray-50',
+    borderColor: 'border-gray-200'
+  }
+} as const;
+
+// Units mapping for numeric fields
+const fieldUnits = {
+  // Health
+  numberHealthFacilities: 'facilities',
+  qualifiedHealthWorkers: 'workers',
+  
+  // Food
+  availableFoodDurationDays: 'days',
+  additionalFoodRequiredPersons: 'persons',
+  additionalFoodRequiredHouseholds: 'households',
+  
+  // WASH
+  functionalLatrinesAvailable: 'latrines',
+  
+  // Shelter
+  numberSheltersRequired: 'shelters',
+  
+  // Population
+  totalPopulation: 'people',
+  totalHouseholds: 'households',
+  populationMale: 'people',
+  populationFemale: 'people',
+  populationUnder5: 'children',
+  pregnantWomen: 'women',
+  lactatingMothers: 'mothers',
+  personWithDisability: 'people',
+  elderlyPersons: 'people',
+  separatedChildren: 'children',
+  numberLivesLost: 'lives',
+  numberInjured: 'people'
+} as const;
+
+// Field definitions for gap vs non-gap indicating fields
+const fieldDefinitions = {
+  health: {
+    gapIndicators: [
+      { key: 'hasFunctionalClinic', label: 'Functional Clinic', boolean: true },
+      { key: 'hasEmergencyServices', label: 'Emergency Services', boolean: true },
+      { key: 'hasTrainedStaff', label: 'Trained Staff', boolean: true },
+      { key: 'hasMedicineSupply', label: 'Medicine Supply', boolean: true },
+      { key: 'hasMedicalSupplies', label: 'Medical Supplies', boolean: true },
+      { key: 'hasMaternalChildServices', label: 'Maternal/Child Services', boolean: true }
+    ],
+    nonGapIndicators: [
+      { key: 'numberHealthFacilities', label: 'Health Facilities', boolean: false },
+      { key: 'healthFacilityType', label: 'Facility Type', boolean: false },
+      { key: 'qualifiedHealthWorkers', label: 'Qualified Workers', boolean: false },
+      { key: 'commonHealthIssues', label: 'Common Issues', boolean: false }
+    ]
+  },
+  food: {
+    gapIndicators: [
+      { key: 'isFoodSufficient', label: 'Food Sufficiency', boolean: true },
+      { key: 'hasRegularMealAccess', label: 'Regular Meal Access', boolean: true },
+      { key: 'hasInfantNutrition', label: 'Infant Nutrition', boolean: true }
+    ],
+    nonGapIndicators: [
+      { key: 'foodSource', label: 'Food Source', boolean: false },
+      { key: 'availableFoodDurationDays', label: 'Food Duration (Days)', boolean: false },
+      { key: 'additionalFoodRequiredPersons', label: 'Additional Food Needed (Persons)', boolean: false },
+      { key: 'additionalFoodRequiredHouseholds', label: 'Additional Food Needed (Households)', boolean: false }
+    ]
+  },
+  wash: {
+    gapIndicators: [
+      { key: 'isWaterSufficient', label: 'Water Sufficiency', boolean: true },
+      { key: 'hasCleanWaterAccess', label: 'Clean Water Access', boolean: true },
+      { key: 'areLatrinesSufficient', label: 'Sufficient Latrines', boolean: true },
+      { key: 'hasHandwashingFacilities', label: 'Handwashing Facilities', boolean: true },
+      { key: 'hasOpenDefecationConcerns', label: 'Open Defecation Concerns', boolean: true, invert: true }
+    ],
+    nonGapIndicators: [
+      { key: 'waterSource', label: 'Water Source', boolean: false },
+      { key: 'functionalLatrinesAvailable', label: 'Functional Latrines', boolean: false }
+    ]
+  },
+  shelter: {
+    gapIndicators: [
+      { key: 'areSheltersSufficient', label: 'Sufficient Shelters', boolean: true },
+      { key: 'hasSafeStructures', label: 'Safe Structures', boolean: true },
+      { key: 'areOvercrowded', label: 'Overcrowding', boolean: true, invert: true },
+      { key: 'provideWeatherProtection', label: 'Weather Protection', boolean: true }
+    ],
+    nonGapIndicators: [
+      { key: 'shelterTypes', label: 'Shelter Types', boolean: false },
+      { key: 'requiredShelterType', label: 'Required Shelter Type', boolean: false },
+      { key: 'numberSheltersRequired', label: 'Shelters Required', boolean: false }
+    ]
+  },
+  security: {
+    gapIndicators: [
+      { key: 'isSafeFromViolence', label: 'Safe from Violence', boolean: true },
+      { key: 'gbvCasesReported', label: 'GBV Cases', boolean: true, invert: true },
+      { key: 'hasSecurityPresence', label: 'Security Presence', boolean: true },
+      { key: 'hasProtectionReportingMechanism', label: 'Protection Reporting', boolean: true },
+      { key: 'vulnerableGroupsHaveAccess', label: 'Vulnerable Groups Access', boolean: true },
+      { key: 'hasLighting', label: 'Lighting', boolean: true }
+    ],
+    nonGapIndicators: []
+  },
+  population: {
+    gapIndicators: [], // Population doesn't have gap indicators
+    nonGapIndicators: [
+      { key: 'totalPopulation', label: 'Total Population', boolean: false },
+      { key: 'totalHouseholds', label: 'Total Households', boolean: false },
+      { key: 'populationMale', label: 'Male Population', boolean: false },
+      { key: 'populationFemale', label: 'Female Population', boolean: false },
+      { key: 'populationUnder5', label: 'Children Under 5', boolean: false },
+      { key: 'pregnantWomen', label: 'Pregnant Women', boolean: false },
+      { key: 'lactatingMothers', label: 'Lactating Mothers', boolean: false },
+      { key: 'personWithDisability', label: 'Persons with Disability', boolean: false },
+      { key: 'elderlyPersons', label: 'Elderly Persons', boolean: false },
+      { key: 'separatedChildren', label: 'Separated Children', boolean: false },
+      { key: 'numberLivesLost', label: 'Lives Lost', boolean: false },
+      { key: 'numberInjured', label: 'Injured', boolean: false }
+    ]
+  }
+} as const;
+
+/**
+ * AssessmentCategorySummary Component
+ * 
+ * Displays assessment data for a specific category with:
+ * - Split layout: Non-gap indicators on left, gap indicators on right
+ * - Gap analysis with visual indicators
+ * - Assessment metadata (date, assessor)
+ * - No data state when assessment is missing
+ */
+
+// Severity configuration for assessment-level badges (matches GapIndicator component)
+const getSeverityConfig = (severity: string) => {
+  switch (severity) {
+    case 'CRITICAL':
+      return {
+        badgeClass: 'bg-red-600 text-white border-2 border-red-300 animate-pulse',
+        icon: AlertTriangle,
+        iconClass: 'text-white'
+      };
+    case 'HIGH':
+      return {
+        badgeClass: 'bg-orange-600 text-white border-2 border-orange-300 animate-pulse',
+        icon: AlertCircle,
+        iconClass: 'text-white'
+      };
+    case 'MEDIUM':
+      return {
+        badgeClass: 'bg-yellow-600 text-white border-2 border-yellow-300',
+        icon: Info,
+        iconClass: 'text-white'
+      };
+    case 'LOW':
+      return {
+        badgeClass: 'bg-blue-600 text-white border-2 border-blue-300',
+        icon: Info,
+        iconClass: 'text-white'
+      };
+    default:
+      return {
+        badgeClass: 'bg-gray-600 text-white border-2 border-gray-300',
+        icon: Info,
+        iconClass: 'text-white'
+      };
+  }
+};
+export function AssessmentCategorySummary({
+  category,
+  assessment,
+  gapAnalysis,
+  layout = 'split',
+  className,
+  showRecommendations = false,
+  isAggregated = false
+}: AssessmentCategorySummaryProps) {
+  const config = categoryConfig[category];
+  const fieldConfig = fieldDefinitions[category];
+  
+  // State for dynamic field severities
+  const [fieldSeverities, setFieldSeverities] = useState<Record<string, 'CRITICAL' | 'HIGH' | 'MEDIUM' | 'LOW'>>({});
+
+  // Use the gap fields and severity mapping from gapAnalysis if available
+  const gapFields = gapAnalysis?.gapFields || [];
+  const fieldSeverityMap = gapAnalysis?.fieldSeverityMap || {};
+  
+  // Fetch individual field severities when component mounts
+  useEffect(() => {
+    const fetchFieldSeverities = async () => {
+      const severities: Record<string, 'CRITICAL' | 'HIGH' | 'MEDIUM' | 'LOW'> = {};
+      
+      // Only fetch severities for fields that are actually in the gap analysis
+      for (const field of fieldConfig.gapIndicators) {
+        if (gapFields.includes(field.key)) {
+          try {
+            const severity = await getFieldSeverity(field.key);
+            severities[field.key] = severity;
+          } catch (error) {
+            console.warn(`Failed to fetch severity for ${field.key}:`, error);
+            severities[field.key] = getFieldSeveritySync(field.key);
+          }
+        }
+      }
+      
+      setFieldSeverities(severities);
+    };
+    
+    if (gapFields.length > 0) {
+      fetchFieldSeverities();
+    }
+  }, [gapFields, category]);
+
+  // Function to get field severity using the API
+  const getFieldSeverity = async (fieldName: string): Promise<'CRITICAL' | 'HIGH' | 'MEDIUM' | 'LOW'> => {
+    // If we have field severity mapping from aggregated analysis, use it
+    if (fieldSeverityMap[fieldName]) {
+      return fieldSeverityMap[fieldName];
+    }
+
+    // If this field is not in the gap fields, no gap
+    if (!gapFields.includes(fieldName)) {
+      return 'LOW'; // No gap
+    }
+
+    // Get assessment type for this category
+    const assessmentTypeMap = {
+      health: 'HEALTH',
+      food: 'FOOD',
+      wash: 'WASH',
+      shelter: 'SHELTER',
+      security: 'SECURITY',
+      population: 'POPULATION'
+    };
+
+    const assessmentType = assessmentTypeMap[category];
+    
+    try {
+      // Call the API to get field severity
+      const response = await fetch(
+        `/api/v1/gap-field-severities?assessmentType=${assessmentType}&fieldName=${fieldName}`
+      );
+      
+      if (!response.ok) {
+        throw new Error(`API request failed: ${response.status}`);
+      }
+      
+      const result = await response.json();
+      
+      if (result.success && result.data?.severity) {
+        return result.data.severity;
+      } else {
+        console.warn('API returned error for field severity:', result.error);
+        throw new Error(result.error || 'API error');
+      }
+    } catch (error) {
+      console.warn('Failed to fetch field severity from API, using fallback logic:', error);
+    }
+
+    // Fallback: Use hardcoded field importance logic
+    const criticalFields = [
+      'hasEmergencyServices', 'hasFunctionalClinic', 'isWaterSufficient', 
+      'areSheltersSufficient', 'hasSafetyConcerns', 'hasImmediateThreats'
+    ];
+    
+    const highFields = [
+      'hasCleanWaterAccess', 'hasTrainedStaff', 'hasMedicineSupply',
+      'isFoodSufficient', 'hasRegularMealAccess', 'hasSafeStructures'
+    ];
+    
+    const mediumFields = [
+      'hasHandwashingFacilities', 'areLatrinesSufficient', 'hasMedicalSupplies',
+      'hasInfantNutrition', 'areOvercrowded', 'provideWeatherProtection'
+    ];
+
+    if (criticalFields.includes(fieldName)) {
+      return 'CRITICAL';
+    } else if (highFields.includes(fieldName)) {
+      return 'HIGH';
+    } else if (mediumFields.includes(fieldName)) {
+      return 'MEDIUM';
+    }
+    
+    // Default to HIGH for any other gap fields not explicitly categorized
+    return 'HIGH';
+  };
+
+  // Synchronous version using cached/fallback data for immediate rendering
+  const getFieldSeveritySync = (fieldName: string): 'CRITICAL' | 'HIGH' | 'MEDIUM' | 'LOW' => {
+    // If we have field severity mapping from aggregated analysis, use it
+    if (fieldSeverityMap[fieldName]) {
+      return fieldSeverityMap[fieldName];
+    }
+
+    // If this field is not in the gap fields, no gap
+    if (!gapFields.includes(fieldName)) {
+      return 'LOW'; // No gap
+    }
+
+    // Fallback logic for immediate rendering
+    const criticalFields = [
+      'hasEmergencyServices', 'hasFunctionalClinic', 'isWaterSufficient', 
+      'areSheltersSufficient', 'hasSafetyConcerns', 'hasImmediateThreats'
+    ];
+    
+    const highFields = [
+      'hasCleanWaterAccess', 'hasTrainedStaff', 'hasMedicineSupply',
+      'isFoodSufficient', 'hasRegularMealAccess', 'hasSafeStructures'
+    ];
+    
+    const mediumFields = [
+      'hasHandwashingFacilities', 'areLatrinesSufficient', 'hasMedicalSupplies',
+      'hasInfantNutrition', 'areOvercrowded', 'provideWeatherProtection'
+    ];
+
+    if (criticalFields.includes(fieldName)) {
+      return 'CRITICAL';
+    } else if (highFields.includes(fieldName)) {
+      return 'HIGH';
+    } else if (mediumFields.includes(fieldName)) {
+      return 'MEDIUM';
+    }
+    
+    // Default to HIGH for any other gap fields not explicitly categorized
+    return 'HIGH';
+  };
+
+  if (!assessment) {
+    return (
+      <Card className={cn("opacity-60 border-dashed border-2", config.borderColor, className)}>
+        <CardHeader className="pb-3">
+          <CardTitle className="flex items-center gap-2 text-base text-muted-foreground">
+            <span className="opacity-50">{config.icon}</span>
+            {config.title}
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="text-center py-8 text-muted-foreground">
+            <div className="text-2xl mb-2 opacity-50">📋</div>
+            <p className="text-sm font-medium">Assessment Missing</p>
+            <p className="text-xs mt-1">This assessment hasn't been completed yet</p>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  const renderField = (key: string, label: string, boolean: boolean, invert = false) => {
+    const value = assessment[key];
+    
+    if (boolean) {
+      if (isAggregated && gapAnalysis?.fieldCounts?.[key]) {
+        // For aggregated data, show count of entities with gaps
+        const fieldCount = gapAnalysis.fieldCounts[key];
+        const severity = fieldCount.gaps > 0 ? (gapAnalysis.fieldSeverityMap[key] || 'HIGH') : 'LOW';
+        const hasGap = fieldCount.gaps > 0;
+        
+        return (
+          <div key={key} className="flex items-center justify-between py-1">
+            <span className="text-sm text-gray-600">{label}</span>
+            <div className="flex items-center gap-2">
+              {hasGap ? (
+                <>
+                  <GapIndicator hasGap={true} severity={severity} size="sm" />
+                  <span className="text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded">
+                    {fieldCount.gaps} of {fieldCount.total}
+                  </span>
+                </>
+              ) : (
+                <>
+                  <GapIndicator hasGap={false} severity="LOW" size="sm" />
+                  <span className="text-xs text-green-600 bg-green-100 px-2 py-1 rounded">
+                    No gaps
+                  </span>
+                </>
+              )}
+            </div>
+          </div>
+        );
+      } else {
+        // Individual entity data (original logic)
+        const hasGap = invert ? value : !value;
+        const severity = hasGap ? (fieldSeverities[key] || getFieldSeveritySync(key)) : 'LOW';
+        return (
+          <div key={key} className="flex items-center justify-between py-1">
+            <span className="text-sm text-gray-600">{label}</span>
+            <GapIndicator hasGap={hasGap} severity={severity} size="sm" />
+          </div>
+        );
+      }
+    }
+
+    // Format non-boolean values with improved styling
+    let displayValue: string;
+    let unit: string = '';
+    
+    if (typeof value === 'number') {
+      displayValue = formatNumber(value);
+      // Add unit if available
+      const fieldKey = key as keyof typeof fieldUnits;
+      if (fieldUnits[fieldKey]) {
+        unit = fieldUnits[fieldKey];
+      }
+    } else if (typeof value === 'object' && value !== null) {
+      displayValue = formatArrayValue(value);
+    } else if (typeof value === 'string' && (value.startsWith('[') || value.includes(','))) {
+      // Handle string arrays
+      displayValue = formatArrayValue(value);
+    } else {
+      displayValue = value ? String(value) : 'N/A';
+    }
+
+    // Check if this is being rendered in the Overview section (non-gap fields)
+    const isOverviewField = fieldConfig.nonGapIndicators.some(field => field.key === key);
+
+    if (isOverviewField) {
+      // Overview layout: variable name and value on same row, minimizing vertical space
+      return (
+        <div key={key} className="flex items-center justify-between py-0.5">
+          <div className="text-gray-500 font-medium uppercase tracking-wide leading-tight" style={{fontSize: '8px'}}>
+            {label}
+          </div>
+          <div className="text-sm font-medium text-gray-900">
+            {displayValue}
+            {unit && <span className="text-xs text-gray-600 ml-1">{unit}</span>}
+          </div>
+        </div>
+      );
+    }
+
+    // Gap analysis layout: regular row format
+    return (
+      <div key={key} className="flex items-center justify-between py-1">
+        <span className="text-sm text-gray-600 flex-1">{label}</span>
+        <span className="text-sm font-semibold text-gray-900 bg-gray-50 px-2 py-1 rounded text-right min-w-0 flex-shrink-0">
+          {displayValue}
+          {unit && <span className="text-xs text-gray-600 ml-1">{unit}</span>}
+        </span>
+      </div>
+    );
+  };
+
+  const gapFieldElements = fieldConfig.gapIndicators.map(field => 
+    renderField(field.key, field.label, field.boolean, field.invert)
+  );
+  
+  const nonGapFieldElements = fieldConfig.nonGapIndicators.map(field => 
+    renderField(field.key, field.label, field.boolean)
+  );
+
+  return (
+    <Card className={cn(className)}>
+      <CardHeader className="pb-3">
+        <div className="flex items-center justify-between">
+          <CardTitle className="flex items-center gap-2 text-base">
+            <span>{config.icon}</span>
+            {config.title}
+          </CardTitle>
+          {gapAnalysis && (
+            <div className="flex items-center gap-2">
+              {gapAnalysis.hasGap ? (
+                (() => {
+                  const severityConfig = getSeverityConfig(gapAnalysis.severity);
+                  const IconComponent = severityConfig.icon;
+                  return (
+                    <Badge 
+                      variant="default" 
+                      className={cn("text-xs font-bold", severityConfig.badgeClass)}
+                    >
+                      <IconComponent className={cn("h-3 w-3 mr-1", severityConfig.iconClass)} />
+                      {gapAnalysis.severity}
+                    </Badge>
+                  );
+                })()
+              ) : (
+                <Badge 
+                  variant="default" 
+                  className="text-xs font-bold bg-green-600 text-white border-2 border-green-300"
+                >
+                  <CheckCircle className="h-3 w-3 mr-1" />
+                  No Gaps
+                </Badge>
+              )}
+            </div>
+          )}
+        </div>
+        
+        {/* Assessment metadata */}
+        <div className="flex items-center gap-4 text-xs text-gray-500">
+          {assessment.rapidAssessmentDate && (
+            <div className="flex items-center gap-1">
+              <Calendar className="h-3 w-3" />
+              {new Date(assessment.rapidAssessmentDate).toLocaleDateString()}
+            </div>
+          )}
+          {assessment.assessorName && (
+            <div className="flex items-center gap-1">
+              <User className="h-3 w-3" />
+              {assessment.assessorName}
+            </div>
+          )}
+          {assessment.verificationStatus && (
+            <Badge variant="outline" className="text-xs">
+              {assessment.verificationStatus}
+            </Badge>
+          )}
+        </div>
+      </CardHeader>
+
+      <CardContent className="pt-0">
+        {isAggregated ? (
+          // Aggregated view - show only gap indicators
+          <div className="space-y-2">
+            {gapFieldElements.length > 0 ? (
+              <>
+                <div className="flex items-center justify-between mb-2">
+                  <h4 className="text-sm font-medium text-gray-700">Gap Analysis (All Entities)</h4>
+                  <span className="text-xs text-gray-500">Select entity for details</span>
+                </div>
+                {gapFieldElements}
+              </>
+            ) : (
+              <div className="text-center py-4 text-gray-500">
+                <CheckCircle className="h-6 w-6 mx-auto mb-2 text-green-500" />
+                <p className="text-xs">No gap indicators across all entities</p>
+              </div>
+            )}
+          </div>
+        ) : layout === 'split' && gapFieldElements.length > 0 ? (
+          <div className="space-y-4">
+            {/* Gap indicators (top section) */}
+            <div className="space-y-2">
+              {gapFieldElements.length > 0 ? (
+                <>
+                  <div className="border border-gray-200 rounded-lg p-3">
+                    <h4 className="text-sm font-semibold text-gray-800 mb-3 flex items-center gap-2">
+                      <AlertTriangle className="h-4 w-4" />
+                      Gap Analysis
+                    </h4>
+                    <div className="space-y-2">
+                      {gapFieldElements}
+                    </div>
+                  </div>
+                </>
+              ) : (
+                <div className="text-center py-4 text-gray-500 bg-green-50 rounded-lg border border-green-200">
+                  <CheckCircle className="h-6 w-6 mx-auto mb-2 text-green-500" />
+                  <p className="text-xs text-green-700">No gap indicators</p>
+                </div>
+              )}
+            </div>
+
+            {/* Non-gap indicators (bottom section) */}
+            <div className="space-y-2">
+              {nonGapFieldElements.length > 0 ? (
+                <>
+                  <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+                    <h4 className="text-sm font-semibold text-blue-800 mb-3 flex items-center gap-2">
+                      <Info className="h-4 w-4" />
+                      Context
+                    </h4>
+                    <div className="space-y-1">
+                      {nonGapFieldElements}
+                    </div>
+                  </div>
+                </>
+              ) : (
+                <div className="text-center py-4 text-gray-500 bg-gray-50 rounded-lg">
+                  <Info className="h-6 w-6 mx-auto mb-2 opacity-50" />
+                  <p className="text-xs">No overview data</p>
+                </div>
+              )}
+            </div>
+          </div>
+        ) : (
+          // Full layout - all fields together
+          <div className="space-y-2">
+            <h4 className="text-sm font-medium text-gray-700 mb-2">Assessment Details</h4>
+            {[...nonGapFieldElements, ...gapFieldElements]}
+          </div>
+        )}
+
+        {/* Recommendations - only show if enabled */}
+        {showRecommendations && gapAnalysis?.recommendations && gapAnalysis.recommendations.length > 0 && (
+          <div className="mt-4 pt-4 border-t">
+            <h4 className="text-sm font-medium text-gray-700 mb-2">Recommendations</h4>
+            <ul className="space-y-1">
+              {gapAnalysis.recommendations.map((recommendation: string, index: number) => (
+                <li key={index} className="text-xs text-gray-600 flex items-start gap-1">
+                  <span className="text-blue-500 mt-0.5">•</span>
+                  {recommendation}
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
+export default AssessmentCategorySummary;

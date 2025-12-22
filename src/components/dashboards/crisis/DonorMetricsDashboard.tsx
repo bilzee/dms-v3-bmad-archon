@@ -129,90 +129,123 @@ export function DonorMetricsDashboard() {
         </div>
       )}
 
-      {/* Top Performers */}
-      {donorMetrics?.overall.topPerformers && donorMetrics.overall.topPerformers.length > 0 && (
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Star className="h-5 w-5" />
-              Top Performing Donors
-            </CardTitle>
-            <CardDescription>
-              Donors with the highest success rates across commitments and responses
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
-              {donorMetrics.overall.topPerformers.map((donor, index) => (
-                <div key={donor.donorName} className="flex items-center justify-between p-3 border rounded-lg">
-                  <div className="flex items-center gap-3">
-                    <div className="flex items-center justify-center w-8 h-8 rounded-full bg-gradient-to-r from-blue-500 to-purple-500 text-white text-sm font-bold">
-                      {index + 1}
-                    </div>
-                    <div>
-                      <p className="font-medium">{donor.donorName}</p>
-                      <p className="text-sm text-muted-foreground">
-                        {donor.verifiedActivities} / {donor.totalActivities} activities
-                      </p>
-                    </div>
-                  </div>
-                  
-                  <div className="text-right">
-                    <div className="font-semibold text-lg">
-                      {(donor.successRate * 100).toFixed(1)}%
-                    </div>
-                    <div className="text-sm text-muted-foreground">
-                      success rate
-                    </div>
-                  </div>
+      {/* Main Content: Side by Side Layout */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {/* Left Panel: Top Performing Donors */}
+        <div className="lg:col-span-1">
+          {donorMetrics?.overall.topPerformers && donorMetrics.overall.topPerformers.length > 0 && (
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Star className="h-5 w-5" />
+                  Top Performing Donors
+                </CardTitle>
+                <CardDescription>
+                  Click on a donor to view their detailed metrics
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-3">
+                  {donorMetrics.overall.topPerformers.map((donor, index) => (
+                    <button
+                      key={donor.donorName}
+                      onClick={() => {
+                        // Find the actual donor by name since topPerformers only has donorName
+                        const actualDonor = donorMetrics?.donors.find(d => d.donorName === donor.donorName);
+                        const donorId = actualDonor?.donorId;
+                        setSelectedDonor(
+                          selectedDonor === donorId ? null : donorId || null
+                        );
+                      }}
+                      className={cn(
+                        "w-full text-left p-3 border rounded-lg transition-all duration-200",
+                        (() => {
+                          const actualDonor = donorMetrics?.donors.find(d => d.donorName === donor.donorName);
+                          const donorId = actualDonor?.donorId;
+                          return selectedDonor === donorId
+                            ? "border-blue-500 bg-blue-50 shadow-md"
+                            : "border-gray-200 hover:border-gray-300 hover:shadow-sm";
+                        })()
+                      )}
+                    >
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-3">
+                          <div className="flex items-center justify-center w-8 h-8 rounded-full bg-gradient-to-r from-blue-500 to-purple-500 text-white text-sm font-bold">
+                            {index + 1}
+                          </div>
+                          <div>
+                            <p className="font-medium">{donor.donorName}</p>
+                            <p className="text-sm text-muted-foreground">
+                              {donor.verifiedActivities} / {donor.totalActivities} activities
+                            </p>
+                          </div>
+                        </div>
+                        
+                        <div className="text-right">
+                          <div className="font-semibold text-lg">
+                            {donor.successRate.toFixed(2)}
+                          </div>
+                          <div className="text-sm text-muted-foreground">
+                            performance score
+                          </div>
+                          <div className="text-xs text-gray-400">
+                            Rate: {(donor.responseVerificationRate * 100).toFixed(1)}% + {donor.totalCommitments} commits
+                          </div>
+                        </div>
+                      </div>
+                    </button>
+                  ))}
                 </div>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
-      )}
-
-      {/* Detailed Donor Metrics */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Activity className="h-5 w-5" />
-            Donor Performance Details
-          </CardTitle>
-          <CardDescription>
-            Detailed breakdown of each donor&apos;s commitment fulfillment and response verification metrics
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          {isLoading ? (
-            <div className="space-y-4">
-              {[...Array(5)].map((_, i) => (
-                <div key={i} className="p-4 border rounded-lg animate-pulse">
-                  <div className="h-4 bg-gray-200 rounded w-48 mb-2"></div>
-                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                    <div className="h-3 bg-gray-200 rounded"></div>
-                    <div className="h-3 bg-gray-200 rounded"></div>
-                    <div className="h-3 bg-gray-200 rounded"></div>
-                    <div className="h-3 bg-gray-200 rounded"></div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          ) : filteredDonors.length === 0 ? (
-            <div className="text-center py-12 text-muted-foreground">
-              <Users className="h-12 w-12 mx-auto mb-4 opacity-50" />
-              <h3 className="text-lg font-semibold mb-2">No donors found</h3>
-              <p>No donor data available for the selected criteria</p>
-            </div>
-          ) : (
-            <div className="space-y-4">
-              {filteredDonors.map((donor) => (
-                <DonorRow key={donor.donorId} donor={donor} />
-              ))}
-            </div>
+              </CardContent>
+            </Card>
           )}
-        </CardContent>
-      </Card>
+        </div>
+
+        {/* Right Panel: Donor Details */}
+        <div className="lg:col-span-2">
+          {selectedDonor ? (
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Activity className="h-5 w-5" />
+                  Donor Performance Details
+                </CardTitle>
+                <CardDescription>
+                  Detailed breakdown of the selected donor&apos;s metrics
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                {isLoading ? (
+                  <div className="p-4 border rounded-lg animate-pulse">
+                    <div className="h-4 bg-gray-200 rounded w-48 mb-2"></div>
+                    <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                      <div className="h-3 bg-gray-200 rounded"></div>
+                      <div className="h-3 bg-gray-200 rounded"></div>
+                      <div className="h-3 bg-gray-200 rounded"></div>
+                    </div>
+                  </div>
+                ) : (
+                  <div>
+                    {filteredDonors.map((donor) => (
+                      <DonorRow key={donor.donorId} donor={donor} />
+                    ))}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          ) : (
+            <Card>
+              <CardContent className="p-12">
+                <div className="text-center text-muted-foreground">
+                  <Users className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                  <h3 className="text-lg font-semibold mb-2">Select a Donor</h3>
+                  <p>Click on a donor from the left panel to view their detailed performance metrics</p>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+        </div>
+      </div>
     </div>
   );
 }

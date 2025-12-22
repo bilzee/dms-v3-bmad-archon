@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
@@ -15,6 +15,7 @@ import { Badge } from '@/components/ui/badge'
 import { GPSCapture } from '@/components/shared/GPSCapture'
 import { MediaField } from '@/components/shared/MediaField'
 import { EntitySelector } from '@/components/shared/EntitySelector'
+import { IncidentSelector } from '@/components/shared/IncidentSelector'
 import { WASHAssessmentFormProps, WASHAssessment } from '@/types/rapid-assessment'
 import { getCurrentUserName, getAssessmentLocationData } from '@/utils/assessment-utils'
 import { cn } from '@/lib/utils'
@@ -79,24 +80,79 @@ export function WASHAssessmentForm({
   onSubmit, 
   onCancel, 
   isSubmitting = false,
-  disabled = false 
+  disabled = false,
+  onIncidentEntityChange
 }: WASHAssessmentFormProps) {
   const [gpsCoordinates, setGpsCoordinates] = useState<{ lat: number; lng: number } | null>(null)
   const [mediaFiles, setMediaFiles] = useState<string[]>((initialData as any)?.mediaAttachments || [])
   const [selectedEntity, setSelectedEntity] = useState<string>(entityId)
+  const [selectedIncident, setSelectedIncident] = useState<string>('')
   const [selectedEntityData, setSelectedEntityData] = useState<any>(null)
+
+  // Extract WASH data from initialData
+  const washData = (initialData as any)?.washAssessment || (initialData as any);
+  
+  // Parse waterSource from JSON string if needed
+  const parseWaterSource = (source: any): string[] => {
+    if (Array.isArray(source)) return source;
+    if (typeof source === 'string') {
+      try {
+        const parsed = JSON.parse(source);
+        return Array.isArray(parsed) ? parsed : [];
+      } catch {
+        return [];
+      }
+    }
+    return [];
+  };
+
+  // Track when initialData changes and update form
+  useEffect(() => {
+    console.log('WASHAssessmentForm - initialData changed:', initialData);
+    
+    if (washData) {
+      const newValues = {
+        waterSource: parseWaterSource(washData?.waterSource),
+        isWaterSufficient: washData?.isWaterSufficient || false,
+        hasCleanWaterAccess: washData?.hasCleanWaterAccess || false,
+        functionalLatrinesAvailable: washData?.functionalLatrinesAvailable || 0,
+        areLatrinesSufficient: washData?.areLatrinesSufficient || false,
+        hasHandwashingFacilities: washData?.hasHandwashingFacilities || false,
+        hasOpenDefecationConcerns: washData?.hasOpenDefecationConcerns || false,
+        additionalWashDetails: washData?.additionalWashDetails || ''
+      };
+      
+      console.log('WASHAssessmentForm - updating form with values:', newValues);
+      form.reset(newValues);
+    }
+  }, [initialData, washData]);
+
+  // Handle incident and entity changes
+  const handleIncidentChange = (incidentId: string) => {
+    setSelectedIncident(incidentId);
+    if (selectedEntity && onIncidentEntityChange) {
+      onIncidentEntityChange(incidentId, selectedEntity);
+    }
+  };
+
+  const handleEntityChange = (entityId: string) => {
+    setSelectedEntity(entityId);
+    if (selectedIncident && onIncidentEntityChange) {
+      onIncidentEntityChange(selectedIncident, entityId);
+    }
+  };
 
   const form = useForm<FormData>({
     resolver: zodResolver(WASHAssessmentSchema),
     defaultValues: {
-      waterSource: initialData?.waterSource || [],
-      isWaterSufficient: initialData?.isWaterSufficient || false,
-      hasCleanWaterAccess: initialData?.hasCleanWaterAccess || false,
-      functionalLatrinesAvailable: initialData?.functionalLatrinesAvailable || 0,
-      areLatrinesSufficient: initialData?.areLatrinesSufficient || false,
-      hasHandwashingFacilities: initialData?.hasHandwashingFacilities || false,
-      hasOpenDefecationConcerns: initialData?.hasOpenDefecationConcerns || false,
-      additionalWashDetails: initialData?.additionalWashDetails || ''
+      waterSource: parseWaterSource(washData?.waterSource),
+      isWaterSufficient: washData?.isWaterSufficient || false,
+      hasCleanWaterAccess: washData?.hasCleanWaterAccess || false,
+      functionalLatrinesAvailable: washData?.functionalLatrinesAvailable || 0,
+      areLatrinesSufficient: washData?.areLatrinesSufficient || false,
+      hasHandwashingFacilities: washData?.hasHandwashingFacilities || false,
+      hasOpenDefecationConcerns: washData?.hasOpenDefecationConcerns || false,
+      additionalWashDetails: washData?.additionalWashDetails || ''
     }
   })
 
@@ -130,12 +186,17 @@ export function WASHAssessmentForm({
     if (!selectedEntity) {
       return
     }
+    
+    if (!selectedIncident) {
+      throw new Error('Please select an incident for this assessment')
+    }
 
     const assessmentData = {
       type: 'WASH' as const,
       rapidAssessmentDate: new Date(),
       assessorName: getCurrentUserName(),
       entityId: selectedEntity,
+      incidentId: selectedIncident,
       ...getAssessmentLocationData(
         selectedEntityData,
         gpsCoordinates ? {
@@ -196,16 +257,37 @@ export function WASHAssessmentForm({
 
       <Form {...form}>
         <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-6">
+          {/* Incident Selection */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Incident Information</CardTitle>
+              <CardDescription>
+                Select the incident this assessment is related to
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <IncidentSelector
+                value={selectedIncident}
+                onValueChange={handleIncidentChange}
+                disabled={disabled}
+                required
+              />
+            </CardContent>
+          </Card>
+
           {/* Entity Selection */}
           <Card>
             <CardHeader>
               <CardTitle>Assessment Location</CardTitle>
+              <CardDescription>
+                Select the entity being assessed
+              </CardDescription>
             </CardHeader>
             <CardContent>
               <EntitySelector
                 value={selectedEntity}
                 onValueChange={(entityId) => {
-                  setSelectedEntity(entityId)
+                  handleEntityChange(entityId)
                   // Reset entity data when selection changes
                   setSelectedEntityData(null)
                 }}

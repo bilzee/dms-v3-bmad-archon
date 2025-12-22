@@ -1,6 +1,7 @@
 'use client'
 
-import { useState } from 'react'
+import React from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { Button } from '@/components/ui/button'
@@ -19,7 +20,7 @@ import {
 import { useIncident } from '@/hooks/useIncident'
 import { IncidentSchema } from '@/lib/validation/incidents'
 import { IncidentData } from '@/types/incidents'
-import { AlertTriangle, Plus, Zap } from 'lucide-react'
+import { AlertTriangle, Plus, Zap, MapPin, Loader2 } from 'lucide-react'
 import { z } from 'zod'
 
 type FormData = z.infer<typeof IncidentSchema>
@@ -31,6 +32,8 @@ interface IncidentCreationFormProps {
   disabled?: boolean
   assessmentId?: string
   showAssessmentLink?: boolean
+  autoSave?: boolean
+  gpsEnabled?: boolean
 }
 
 const severityOptions = [
@@ -52,7 +55,9 @@ export function IncidentCreationForm({
   initialData,
   disabled = false,
   assessmentId,
-  showAssessmentLink = false
+  showAssessmentLink = false,
+  autoSave = false,
+  gpsEnabled = false
 }: IncidentCreationFormProps) {
   const { 
     createIncident, 
@@ -65,6 +70,14 @@ export function IncidentCreationForm({
 
   const [customType, setCustomType] = useState('')
   const [showCustomType, setShowCustomType] = useState(false)
+  const [isDraft, setIsDraft] = useState(false)
+  const [lastSaved, setLastSaved] = useState<Date | null>(null)
+  const [gpsLocation, setGpsLocation] = useState<{lat: number, lng: number} | null>(null)
+  const [isGettingLocation, setIsGettingLocation] = useState(false)
+  const [preliminaryAssessments, setPreliminaryAssessments] = useState<Array<{id: string, reportingLGA: string, reportingWard: string, reportingDate: string}>>([])
+  const [selectedAssessmentId, setSelectedAssessmentId] = useState<string>('')
+  const autoSaveIntervalRef = useRef<NodeJS.Timeout | null>(null)
+  const draftIdRef = useRef<string>(`draft-${Date.now()}`)
 
   const {
     register,
@@ -86,27 +99,114 @@ export function IncidentCreationForm({
   })
 
   const selectedSeverity = watch('severity')
+  const watchedValues = watch()
+
+  // Auto-save functionality
+  useEffect(() => {
+    if (!autoSave) return
+
+    const saveDraft = () => {
+      const draftData = {
+        ...watchedValues,
+        type: showCustomType ? customType : watchedValues.type,
+        savedAt: new Date().toISOString()
+      }
+      
+      localStorage.setItem(`incident-draft-${draftIdRef.current}`, JSON.stringify(draftData))
+      setLastSaved(new Date())
+      setIsDraft(true)
+    }
+
+    // Save draft immediately when form changes
+    const saveTimer = setTimeout(saveDraft, 2000)
+    
+    // Set up auto-save interval
+    if (!autoSaveIntervalRef.current) {
+      autoSaveIntervalRef.current = setInterval(saveDraft, 30000)
+    }
+
+    return () => {
+      clearTimeout(saveTimer)
+    }
+  }, [watchedValues, showCustomType, customType, autoSave])
+
+  // Load draft on mount
+  useEffect(() => {
+    if (!autoSave) return
+    
+    const savedDraft = localStorage.getItem(`incident-draft-${draftIdRef.current}`)
+    if (savedDraft) {
+      try {
+        const draft = JSON.parse(savedDraft)
+        Object.entries(draft).forEach(([key, value]) => {
+          if (key !== 'savedAt') {
+            setValue(key as any, value)
+          }
+        })
+        setLastSaved(new Date(draft.savedAt))
+        setIsDraft(true)
+      } catch (error) {
+        console.warn('Failed to load draft:', error)
+      }
+    }
+  }, [autoSave, setValue])
+
+  // Fetch available preliminary assessments
+  useEffect(() => {
+    const fetchPreliminaryAssessments = async () => {
+      try {
+        const response = await fetch('/api/v1/preliminary-assessments')
+        if (response.ok) {
+          const data = await response.json()
+          // Filter for assessments that don't have an incident linked (unlinked)
+          const unlinkedAssessments = (data.data || []).filter((assessment: any) => !assessment.incidentId)
+          setPreliminaryAssessments(unlinkedAssessments)
+        }
+      } catch (error) {
+        console.error('Failed to fetch preliminary assessments:', error)
+      }
+    }
+    
+    fetchPreliminaryAssessments()
+  }, [])
+
+  // Cleanup on unmount
+  useEffect(() => {
+    return () => {
+      if (autoSaveIntervalRef.current) {
+        clearInterval(autoSaveIntervalRef.current)
+        autoSaveIntervalRef.current = null
+      }
+    }
+  }, [])
 
   const handleFormSubmit = async (data: FormData) => {
     try {
       clearError()
       
-      // Use custom type if selected
+      // Use custom type if selected and include GPS coordinates
       const incidentData = {
         ...data,
-        type: showCustomType ? customType : data.type
+        type: showCustomType ? customType : data.type,
+        coordinates: gpsLocation || data.coordinates,
+        preliminaryAssessmentId: selectedAssessmentId || undefined
       }
 
-      if (onSubmit) {
-        await onSubmit(incidentData)
-      } else if (assessmentId) {
+      if (assessmentId) {
         await createIncidentFromAssessment(assessmentId, incidentData)
       } else {
         await createIncident({ data: incidentData })
       }
       
-      // Reset form after successful submission
-      if (!onSubmit) {
+      // Clear draft and reset form after successful submission
+      if (autoSave) {
+        localStorage.removeItem(`incident-draft-${draftIdRef.current}`)
+      }
+      
+      // Call the onSubmit callback if provided (will close the modal)
+      if (onSubmit) {
+        await onSubmit(incidentData)
+      } else {
         onCancel?.()
       }
     } catch (error) {
@@ -124,6 +224,33 @@ export function IncidentCreationForm({
     }
   }
 
+  const handleGetLocation = async () => {
+    if (!gpsEnabled || !navigator.geolocation) {
+      alert('GPS is not available or not enabled')
+      return
+    }
+
+    setIsGettingLocation(true)
+    try {
+      const position = await new Promise<GeolocationPosition>((resolve, reject) => {
+        navigator.geolocation.getCurrentPosition(resolve, reject, {
+          enableHighAccuracy: true,
+          timeout: 10000,
+          maximumAge: 60000
+        })
+      })
+
+      const { latitude, longitude } = position.coords
+      setGpsLocation({ lat: latitude, lng: longitude })
+      setValue('coordinates', { lat: latitude, lng: longitude })
+    } catch (error) {
+      console.error('GPS Error:', error)
+      alert('Failed to get GPS location. Please check your location permissions.')
+    } finally {
+      setIsGettingLocation(false)
+    }
+  }
+
   return (
     <Card className="w-full max-w-2xl">
       <CardHeader>
@@ -133,16 +260,24 @@ export function IncidentCreationForm({
           {showAssessmentLink && assessmentId && (
             <span className="text-sm text-gray-500">(from assessment)</span>
           )}
+          {isDraft && (
+            <span className="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded">
+              Draft (Auto-saved: {lastSaved?.toLocaleTimeString()})
+            </span>
+          )}
         </CardTitle>
         <CardDescription>
           Create a new incident record for disaster response coordination
+          {autoSave && " • Auto-save enabled"}
         </CardDescription>
       </CardHeader>
       <CardContent>
         {error && (
           <Alert variant="destructive" className="mb-4">
             <AlertTriangle className="h-4 w-4" />
-            <AlertDescription>{error}</AlertDescription>
+            <AlertDescription>
+              {error instanceof Error ? error.message : String(error)}
+            </AlertDescription>
           </Alert>
         )}
 
@@ -244,19 +379,83 @@ export function IncidentCreationForm({
             </div>
           </div>
 
+          {/* Link to Preliminary Assessment (Optional) */}
+          <div className="space-y-2">
+            <Label htmlFor="preliminaryAssessment">
+              Link to Preliminary Assessment <span className="text-gray-400">(Optional)</span>
+            </Label>
+            <Select 
+              value={selectedAssessmentId} 
+              onValueChange={setSelectedAssessmentId}
+              disabled={disabled}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Select an existing assessment to link (optional)" />
+              </SelectTrigger>
+              <SelectContent>
+                {preliminaryAssessments.map((assessment) => (
+                  <SelectItem key={assessment.id} value={assessment.id}>
+                    <div className="flex flex-col text-left">
+                      <span className="font-medium">
+                        {assessment.reportingLGA}, {assessment.reportingWard}
+                      </span>
+                      <span className="text-xs text-gray-500">
+                        {new Date(assessment.reportingDate).toLocaleDateString()}
+                      </span>
+                    </div>
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <p className="text-xs text-gray-500">
+              You can link this incident to an existing preliminary assessment for better data integration
+            </p>
+          </div>
+
           {/* Location */}
           <div className="space-y-2">
             <Label htmlFor="location">
               Location <span className="text-red-500">*</span>
             </Label>
-            <Input
-              id="location"
-              {...register('location')}
-              disabled={disabled}
-              placeholder="e.g., Lagos Island, Lagos State"
-            />
+            <div className="flex gap-2">
+              <Input
+                id="location"
+                {...register('location')}
+                disabled={disabled}
+                placeholder="e.g., Lagos Island, Lagos State"
+                className="flex-1"
+              />
+              {gpsEnabled && (
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="icon"
+                  onClick={handleGetLocation}
+                  disabled={disabled || isGettingLocation}
+                  title={gpsLocation ? "GPS coordinates captured" : "Get GPS location"}
+                  className={gpsLocation ? "bg-green-50 border-green-200" : ""}
+                >
+                  {isGettingLocation ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <MapPin className="h-4 w-4" />
+                  )}
+                </Button>
+              )}
+            </div>
             {errors.location && (
               <p className="text-sm text-red-600">{errors.location.message}</p>
+            )}
+            {gpsLocation && (
+              <p className="text-xs text-green-600 flex items-center gap-1">
+                <MapPin className="h-3 w-3" />
+                GPS: {gpsLocation.lat.toFixed(6)}, {gpsLocation.lng.toFixed(6)}
+              </p>
+            )}
+            {gpsEnabled && !gpsLocation && (
+              <p className="text-xs text-gray-500">
+                GPS capture enabled - click the location pin to get coordinates
+              </p>
             )}
           </div>
 

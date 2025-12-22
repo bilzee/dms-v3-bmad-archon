@@ -1,0 +1,513 @@
+'use client';
+
+import React, { useState, useEffect } from 'react';
+import { useQuery } from '@tanstack/react-query';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
+import { Progress } from '@/components/ui/progress';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Input } from '@/components/ui/input';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Skeleton } from '@/components/ui/skeleton';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import {
+  Users,
+  Package,
+  TrendingUp,
+  DollarSign,
+  Clock,
+  CheckCircle2,
+  Truck,
+  XCircle,
+  AlertTriangle,
+  Search,
+  Filter,
+  RefreshCw,
+  BarChart3,
+  Target,
+  ArrowUpRight,
+  ArrowDownRight,
+  Eye,
+  Edit
+} from 'lucide-react';
+import { useAuth } from '@/hooks/useAuth';
+import { ResourceGapAnalysis } from './ResourceGapAnalysis';
+import { DonorCommitment, Donor, Entity, Incident } from '@/types/entities';
+
+interface ResourceManagementProps {
+  className?: string;
+}
+
+interface CommitmentStats {
+  totalCommitments: number;
+  totalValue: number;
+  totalCommittedQuantity: number;
+  totalDeliveredQuantity: number;
+  averageDeliveryRate: number;
+  byStatus: Record<string, number>;
+  criticalGaps: number;
+}
+
+const STATUS_COLORS = {
+  PLANNED: 'bg-blue-100 text-blue-800 border-blue-200',
+  PARTIAL: 'bg-amber-100 text-amber-800 border-amber-200',
+  COMPLETE: 'bg-green-100 text-green-800 border-green-200',
+  CANCELLED: 'bg-red-100 text-red-800 border-red-200'
+};
+
+const STATUS_ICONS = {
+  PLANNED: Clock,
+  PARTIAL: Truck,
+  COMPLETE: CheckCircle2,
+  CANCELLED: XCircle
+};
+
+export function ResourceManagement({ className }: ResourceManagementProps) {
+  const { token, isAuthenticated } = useAuth();
+  const [activeTab, setActiveTab] = useState('overview');
+  const [searchTerm, setSearchTerm] = useState('');
+  const [filters, setFilters] = useState({
+    status: 'all',
+    donorId: 'all',
+    entityId: 'all',
+    incidentId: 'all'
+  });
+
+  // Fetch resource management statistics
+  const { data: stats, isLoading: statsLoading, error: statsError, refetch: refetchStats } = useQuery<CommitmentStats>({
+    queryKey: ['resource-management-stats', filters, token],
+    enabled: isAuthenticated && !!token && token.length > 10, // More robust token validation
+    queryFn: async () => {
+      const params = new URLSearchParams();
+      Object.entries(filters).forEach(([key, value]) => {
+        if (value && value !== 'all') params.append(key, value);
+      });
+
+      const response = await fetch(`/api/v1/dashboard/resource-management/stats?${params}`, {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+      if (!response.ok) throw new Error('Failed to fetch resource management stats');
+      const data = await response.json();
+      return data.success ? data.data : {};
+    },
+    refetchInterval: 30000 // Auto-refresh every 30 seconds
+  });
+
+  // Fetch active commitments for overview
+  const { data: commitmentsData, isLoading: commitmentsLoading, refetch: refetchCommitments } = useQuery<{
+    data: DonorCommitment[];
+    pagination: any;
+  }>({
+    queryKey: ['active-commitments', filters, searchTerm, token],
+    enabled: isAuthenticated && !!token && token.length > 10, // More robust token validation
+    queryFn: async () => {
+      const params = new URLSearchParams();
+      Object.entries(filters).forEach(([key, value]) => {
+        if (value && value !== 'all') params.append(key, value);
+      });
+      if (searchTerm) params.append('search', searchTerm);
+
+      const response = await fetch(`/api/v1/dashboard/resource-management/commitments?${params}`, {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+      if (!response.ok) throw new Error('Failed to fetch commitments');
+      const data = await response.json();
+      return data.success ? data.data : { data: [], pagination: {} };
+    },
+    refetchInterval: 30000
+  });
+
+  // Fetch critical gaps for alerts
+  const { data: criticalGaps, isLoading: gapsLoading, refetch: refetchGaps } = useQuery<{
+    criticalGaps: Array<{
+      entity: Entity;
+      resource: string;
+      unmetNeed: number;
+      severity: 'HIGH' | 'MEDIUM' | 'LOW';
+    }>;
+  }>({
+    queryKey: ['critical-gaps', token],
+    enabled: isAuthenticated && !!token && token.length > 10, // More robust token validation
+    queryFn: async () => {
+      const response = await fetch('/api/v1/dashboard/resource-management/critical-gaps', {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+      if (!response.ok) throw new Error('Failed to fetch critical gaps');
+      const data = await response.json();
+      return data.success ? data.data : { criticalGaps: [] };
+    },
+    refetchInterval: 60000 // Check gaps every minute
+  });
+
+  const handleRefresh = () => {
+    refetchStats();
+    refetchCommitments();
+    refetchGaps();
+  };
+
+  const handleFilterChange = (key: string, value: string) => {
+    setFilters(prev => ({ ...prev, [key]: value }));
+  };
+
+  const getStatusBadge = (status: string) => {
+    const Icon = STATUS_ICONS[status as keyof typeof STATUS_ICONS] || Clock;
+    return (
+      <Badge 
+        variant="outline" 
+        className={`${STATUS_COLORS[status as keyof typeof STATUS_COLORS]} flex items-center gap-1`}
+      >
+        <Icon className="h-3 w-3" />
+        {status}
+      </Badge>
+    );
+  };
+
+  const calculateDeliveryProgress = (committed: number, delivered: number) => {
+    if (committed === 0) return 0;
+    return Math.round((delivered / committed) * 100);
+  };
+
+  const formatDate = (dateString: string) => {
+    return new Date(dateString).toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    });
+  };
+
+  // Handle errors gracefully - don't block the entire UI
+  const hasAuthError = statsError?.message?.includes('401') || statsError?.message?.includes('Unauthorized');
+  
+  // Provide fallback data when there are errors or no data
+  const fallbackStats = {
+    totalCommitments: 0,
+    totalValue: 0,
+    totalCommittedQuantity: 0,
+    totalDeliveredQuantity: 0,
+    averageDeliveryRate: 0,
+    byStatus: {},
+    criticalGaps: 0
+  };
+  
+  const displayStats = stats || fallbackStats;
+  const displayCommitments = commitmentsData?.data || [];
+  const displayCriticalGaps = criticalGaps?.criticalGaps || [];
+
+  // Wait for authentication to be ready
+  if (!isAuthenticated || !token || token.length < 10) {
+    return (
+      <div className={className}>
+        <Card>
+          <CardContent className="p-6">
+            <div className="flex items-center justify-center space-x-2">
+              <RefreshCw className="h-4 w-4 animate-spin" />
+              <span>Loading resource management data...</span>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
+  return (
+    <div className={className}>
+      {/* Header with Controls */}
+      <div className="flex items-center justify-between mb-6">
+        <div className="flex items-center gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleRefresh}
+            disabled={statsLoading || commitmentsLoading}
+          >
+            <RefreshCw className={`h-4 w-4 mr-2 ${statsLoading ? 'animate-spin' : ''}`} />
+            Refresh
+          </Button>
+          {hasAuthError && (
+            <div className="text-amber-600 text-sm flex items-center gap-1">
+              <AlertTriangle className="h-3 w-3" />
+              Data loading in progress...
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Statistics Cards */}
+      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4 mb-6">
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Total Commitments</CardTitle>
+              <Package className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">{displayStats.totalCommitments || 0}</div>
+              <p className="text-xs text-muted-foreground">
+                ${(displayStats.totalValue || 0).toLocaleString()} estimated value
+              </p>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Delivery Progress</CardTitle>
+              <Target className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold text-blue-600">
+                {calculateDeliveryProgress(displayStats.totalCommittedQuantity || 0, displayStats.totalDeliveredQuantity || 0)}%
+              </div>
+              <p className="text-xs text-muted-foreground">
+                {displayStats.totalDeliveredQuantity || 0} / {displayStats.totalCommittedQuantity || 0} units delivered
+              </p>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Active Donors</CardTitle>
+              <Users className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold text-green-600">
+                {displayStats.byStatus?.PLANNED || 0} planned
+              </div>
+              <p className="text-xs text-muted-foreground">
+                {displayStats.byStatus?.PARTIAL || 0} in progress
+              </p>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Critical Gaps</CardTitle>
+              <AlertTriangle className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold text-red-600">
+                {displayCriticalGaps.length || 0}
+              </div>
+              <p className="text-xs text-muted-foreground">
+                Resources urgently needed
+              </p>
+            </CardContent>
+          </Card>
+        </div>
+
+      {/* Critical Gaps Alert */}
+      {displayCriticalGaps.length > 0 && (
+        <Alert className="mb-6 border-orange-200 bg-orange-50">
+          <AlertTriangle className="h-4 w-4 text-orange-600" />
+          <AlertDescription className="text-orange-800">
+            <strong>{displayCriticalGaps.length} critical resource gap(s) identified.</strong> Review the Gap Analysis tab for details and recommended actions.
+          </AlertDescription>
+        </Alert>
+      )}
+
+      {/* Main Content Tabs */}
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
+        <TabsList className="grid w-full grid-cols-2">
+          <TabsTrigger value="overview" className="flex items-center gap-2">
+            <Package className="h-4 w-4" />
+            Donation Overview
+          </TabsTrigger>
+          <TabsTrigger value="gaps" className="flex items-center gap-2">
+            <Target className="h-4 w-4" />
+            Gap Analysis
+          </TabsTrigger>
+        </TabsList>
+
+        {/* Donation Overview Tab */}
+        <TabsContent value="overview" className="space-y-6">
+          {/* Filters */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2 text-lg">
+                <Filter className="h-5 w-5" />
+                Filters
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="grid gap-4 md:grid-cols-5">
+                <div className="relative">
+                  <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    placeholder="Search commitments..."
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    className="pl-10"
+                  />
+                </div>
+
+                <Select value={filters.status} onValueChange={(value) => handleFilterChange('status', value)}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="All Status" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Status</SelectItem>
+                    <SelectItem value="PLANNED">Planned</SelectItem>
+                    <SelectItem value="PARTIAL">In Progress</SelectItem>
+                    <SelectItem value="COMPLETE">Complete</SelectItem>
+                    <SelectItem value="CANCELLED">Cancelled</SelectItem>
+                  </SelectContent>
+                </Select>
+
+                <Select value={filters.entityId} onValueChange={(value) => handleFilterChange('entityId', value)}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="All Entities" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Entities</SelectItem>
+                    {/* Will be populated from API */}
+                  </SelectContent>
+                </Select>
+
+                <Select value={filters.incidentId} onValueChange={(value) => handleFilterChange('incidentId', value)}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="All Incidents" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Incidents</SelectItem>
+                    {/* Will be populated from API */}
+                  </SelectContent>
+                </Select>
+
+                <Button 
+                  variant="outline" 
+                  onClick={() => setFilters({ status: 'all', donorId: 'all', entityId: 'all', incidentId: 'all' })}
+                >
+                  Clear Filters
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Commitments List */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Active Commitments</CardTitle>
+              <CardDescription>
+                {commitmentsData?.pagination ? 
+                  `Showing ${commitmentsData.data.length} commitments` :
+                  'Latest donor commitments and delivery progress'
+                }
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              {commitmentsLoading ? (
+                <div className="space-y-4">
+                  {[...Array(5)].map((_, i) => (
+                    <div key={i} className="flex items-center space-x-4">
+                      <Skeleton className="h-12 w-12 rounded-full" />
+                      <div className="space-y-2 flex-1">
+                        <Skeleton className="h-4 w-48" />
+                        <Skeleton className="h-4 w-32" />
+                      </div>
+                      <Skeleton className="h-8 w-24" />
+                    </div>
+                  ))}
+                </div>
+              ) : displayCommitments.length === 0 ? (
+                <div className="text-center py-12">
+                  <Package className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+                  <h3 className="text-lg font-medium text-muted-foreground mb-2">
+                    No commitments found
+                  </h3>
+                  <p className="text-muted-foreground">
+                    No commitments match the current filters.
+                  </p>
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  {displayCommitments.map((commitment) => (
+                    <Card key={commitment.id} className="border-l-4 border-l-blue-500">
+                      <CardContent className="p-6">
+                        <div className="flex items-start justify-between mb-4">
+                          <div className="flex-1">
+                            <div className="flex items-center gap-3 mb-2">
+                              <h3 className="font-semibold text-lg">
+                                {commitment.items.length === 1 
+                                  ? `${commitment.items[0].quantity} ${commitment.items[0].unit} of ${commitment.items[0].name}`
+                                  : `${commitment.items.length} items`
+                                }
+                              </h3>
+                              {getStatusBadge(commitment.status)}
+                            </div>
+                            
+                            <div className="grid gap-2 md:grid-cols-3 text-sm text-muted-foreground mb-3">
+                              <div className="flex items-center gap-2">
+                                <Users className="h-4 w-4" />
+                                <span>Donor: {commitment.donor.name}</span>
+                              </div>
+                              <div className="flex items-center gap-2">
+                                <Package className="h-4 w-4" />
+                                <span>Entity: {commitment.entity.name}</span>
+                              </div>
+                              <div>
+                                Created: {formatDate(commitment.commitmentDate)}
+                              </div>
+                            </div>
+
+                            {/* Delivery Progress */}
+                            <div className="mb-3">
+                              <div className="flex justify-between text-sm mb-1">
+                                <span>Delivery Progress</span>
+                                <span className="font-medium">
+                                  {commitment.deliveredQuantity} / {commitment.totalCommittedQuantity} units
+                                  ({calculateDeliveryProgress(commitment.totalCommittedQuantity, commitment.deliveredQuantity)}%)
+                                </span>
+                              </div>
+                              <Progress 
+                                value={calculateDeliveryProgress(commitment.totalCommittedQuantity, commitment.deliveredQuantity)} 
+                                className="h-2"
+                              />
+                            </div>
+
+                            {/* Items Summary */}
+                            <div className="bg-muted/50 rounded-lg p-3">
+                              <h4 className="font-medium text-sm mb-2">Commitment Items:</h4>
+                              <div className="grid gap-1 text-sm">
+                                {Array.isArray(commitment.items) && commitment.items.map((item: any, index: number) => (
+                                  <div key={index} className="flex justify-between">
+                                    <span>{item.quantity} {item.unit} of {item.name}</span>
+                                    <span className="text-muted-foreground">
+                                      ${(item.estimatedValue || 0) * item.quantity}
+                                    </span>
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          </div>
+
+                          <div className="flex items-center gap-2 ml-4">
+                            <Button variant="outline" size="sm">
+                              <Eye className="h-4 w-4 mr-1" />
+                              View
+                            </Button>
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* Gap Analysis Tab */}
+        <TabsContent value="gaps">
+          <ResourceGapAnalysis />
+        </TabsContent>
+      </Tabs>
+    </div>
+  );
+}

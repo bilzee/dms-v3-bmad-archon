@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
@@ -15,6 +15,7 @@ import { Badge } from '@/components/ui/badge'
 import { GPSCapture } from '@/components/shared/GPSCapture'
 import { MediaField } from '@/components/shared/MediaField'
 import { EntitySelector } from '@/components/shared/EntitySelector'
+import { IncidentSelector } from '@/components/shared/IncidentSelector'
 import { ShelterAssessmentFormProps, ShelterAssessment } from '@/types/rapid-assessment'
 import { cn } from '@/lib/utils'
 import { getCurrentUserName, getAssessmentLocationData } from '@/utils/assessment-utils'
@@ -73,24 +74,79 @@ export function ShelterAssessmentForm({
   onSubmit, 
   onCancel, 
   isSubmitting = false,
-  disabled = false 
+  disabled = false,
+  onIncidentEntityChange
 }: ShelterAssessmentFormProps) {
   const [gpsCoordinates, setGpsCoordinates] = useState<{ lat: number; lng: number } | null>(null)
   const [mediaFiles, setMediaFiles] = useState<string[]>((initialData as any)?.mediaAttachments || [])
   const [selectedEntity, setSelectedEntity] = useState<string>(entityId)
+  const [selectedIncident, setSelectedIncident] = useState<string>('')
   const [selectedEntityData, setSelectedEntityData] = useState<any>(null)
+
+  // Extract shelter data from initialData
+  const shelterData = (initialData as any)?.shelterAssessment || (initialData as any);
+  
+  // Parse array fields from JSON string if needed
+  const parseArrayField = (field: any): string[] => {
+    if (Array.isArray(field)) return field;
+    if (typeof field === 'string') {
+      try {
+        const parsed = JSON.parse(field);
+        return Array.isArray(parsed) ? parsed : [];
+      } catch {
+        return [];
+      }
+    }
+    return [];
+  };
+
+  // Track when initialData changes and update form
+  useEffect(() => {
+    console.log('ShelterAssessmentForm - initialData changed:', initialData);
+    
+    if (shelterData) {
+      const newValues = {
+        areSheltersSufficient: shelterData?.areSheltersSufficient || false,
+        hasSafeStructures: shelterData?.hasSafeStructures || false,
+        shelterTypes: parseArrayField(shelterData?.shelterTypes),
+        requiredShelterType: parseArrayField(shelterData?.requiredShelterType),
+        numberSheltersRequired: shelterData?.numberSheltersRequired || 0,
+        areOvercrowded: shelterData?.areOvercrowded || false,
+        provideWeatherProtection: shelterData?.provideWeatherProtection || false,
+        additionalShelterDetails: shelterData?.additionalShelterDetails || ''
+      };
+      
+      console.log('ShelterAssessmentForm - updating form with values:', newValues);
+      form.reset(newValues);
+    }
+  }, [initialData, shelterData]);
+
+  // Handle incident and entity changes
+  const handleIncidentChange = (incidentId: string) => {
+    setSelectedIncident(incidentId);
+    if (selectedEntity && onIncidentEntityChange) {
+      onIncidentEntityChange(incidentId, selectedEntity);
+    }
+  };
+
+  const handleEntityChange = (entityId: string) => {
+    setSelectedEntity(entityId);
+    if (selectedIncident && onIncidentEntityChange) {
+      onIncidentEntityChange(selectedIncident, entityId);
+    }
+  };
 
   const form = useForm<FormData>({
     resolver: zodResolver(ShelterAssessmentSchema),
     defaultValues: {
-      areSheltersSufficient: initialData?.areSheltersSufficient || false,
-      hasSafeStructures: initialData?.hasSafeStructures || false,
-      shelterTypes: initialData?.shelterTypes || [],
-      requiredShelterType: initialData?.requiredShelterType || [],
-      numberSheltersRequired: initialData?.numberSheltersRequired || 0,
-      areOvercrowded: initialData?.areOvercrowded || false,
-      provideWeatherProtection: initialData?.provideWeatherProtection || false,
-      additionalShelterDetails: initialData?.additionalShelterDetails || ''
+      areSheltersSufficient: shelterData?.areSheltersSufficient || false,
+      hasSafeStructures: shelterData?.hasSafeStructures || false,
+      shelterTypes: parseArrayField(shelterData?.shelterTypes),
+      requiredShelterType: parseArrayField(shelterData?.requiredShelterType),
+      numberSheltersRequired: shelterData?.numberSheltersRequired || 0,
+      areOvercrowded: shelterData?.areOvercrowded || false,
+      provideWeatherProtection: shelterData?.provideWeatherProtection || false,
+      additionalShelterDetails: shelterData?.additionalShelterDetails || ''
     }
   })
 
@@ -115,12 +171,17 @@ export function ShelterAssessmentForm({
     if (!selectedEntity) {
       return
     }
+    
+    if (!selectedIncident) {
+      throw new Error('Please select an incident for this assessment')
+    }
 
     const assessmentData = {
       type: 'SHELTER' as const,
       rapidAssessmentDate: new Date(),
       assessorName: getCurrentUserName(),
       entityId: selectedEntity,
+      incidentId: selectedIncident,
       ...getAssessmentLocationData(selectedEntityData, gpsCoordinates ? { latitude: gpsCoordinates.lat, longitude: gpsCoordinates.lng } : undefined),
       mediaAttachments: mediaFiles,
       shelterData: data
@@ -181,16 +242,37 @@ export function ShelterAssessmentForm({
 
       <Form {...form}>
         <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-6">
+          {/* Incident Selection */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Incident Information</CardTitle>
+              <CardDescription>
+                Select the incident this assessment is related to
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <IncidentSelector
+                value={selectedIncident}
+                onValueChange={handleIncidentChange}
+                disabled={disabled}
+                required
+              />
+            </CardContent>
+          </Card>
+
           {/* Entity Selection */}
           <Card>
             <CardHeader>
               <CardTitle>Assessment Location</CardTitle>
+              <CardDescription>
+                Select the entity being assessed
+              </CardDescription>
             </CardHeader>
             <CardContent>
               <EntitySelector
                 value={selectedEntity}
                 onValueChange={(value) => {
-                  setSelectedEntity(value)
+                  handleEntityChange(value)
                   setSelectedEntityData(null)
                 }}
                 disabled={disabled}
