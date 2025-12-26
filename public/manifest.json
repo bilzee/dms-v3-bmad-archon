@@ -1,7 +1,7 @@
 {
-  "name": "Disaster Management System - Borno State",
-  "short_name": "DMS Borno",
-  "description": "Offline-first disaster management and humanitarian assessment PWA for Borno State, Nigeria",
+  "name": "Disaster Response Management System (DRMS)",
+  "short_name": "DRMS",
+  "description": "Comprehensive disaster response management and humanitarian assessment PWA",
   "start_url": "/",
   "display": "standalone",
   "orientation": "portrait",

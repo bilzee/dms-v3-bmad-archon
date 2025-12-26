@@ -3,6 +3,7 @@
 import { useState, useEffect, Suspense } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { RoleBasedRoute } from '@/components/shared/RoleBasedRoute'
+import { AssessmentOfflineGuard } from '@/components/offline/OfflineGuard'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -236,17 +237,18 @@ function NewAssessmentContent() {
 
   return (
     <RoleBasedRoute requiredRole="ASSESSOR">
-      <div className="space-y-6">
-        {/* Header */}
-        <div className="flex items-center gap-4">
-          <Button 
-            variant="outline" 
-            size="sm"
-            onClick={handleGoBack}
-          >
-            <ArrowLeft className="h-4 w-4 mr-2" />
-            {showForm ? 'Back to Selection' : 'Back to Assessments'}
-          </Button>
+      <AssessmentOfflineGuard>
+        <div className="space-y-6">
+          {/* Header */}
+          <div className="flex items-center gap-4">
+            <Button 
+              variant="outline" 
+              size="sm"
+              onClick={handleGoBack}
+            >
+              <ArrowLeft className="h-4 w-4 mr-2" />
+              {showForm ? 'Back to Selection' : 'Back to Assessments'}
+            </Button>
           
           <div>
             <h1 className="text-3xl font-bold text-gray-900">
@@ -321,7 +323,8 @@ function NewAssessmentContent() {
             </CardContent>
           </Card>
         )}
-      </div>
+        </div>
+      </AssessmentOfflineGuard>
     </RoleBasedRoute>
   )
 }

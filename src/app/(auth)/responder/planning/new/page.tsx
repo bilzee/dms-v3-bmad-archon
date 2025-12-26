@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 
 // UI components
 import { RoleBasedRoute } from '@/components/shared/RoleBasedRoute'
+import { ResponseOfflineGuard } from '@/components/offline/OfflineGuard'
 import { useAuth } from '@/hooks/useAuth'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -131,7 +132,9 @@ export default function NewResponsePlanningPage() {
       fallbackPath="/dashboard"
       errorComponent={<RoleAccessError />}
     >
-      <NewResponsePlanningPageContent />
+      <ResponseOfflineGuard>
+        <NewResponsePlanningPageContent />
+      </ResponseOfflineGuard>
     </RoleBasedRoute>
   )
 }
