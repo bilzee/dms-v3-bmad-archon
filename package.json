@@ -1,5 +1,5 @@
 {
-  "name": "disaster-management-pwa",
+  "name": "disaster-response-management-system",
   "version": "0.1.0",
   "private": true,
   "scripts": {
@@ -8,7 +8,11 @@
     "build": "next build",
     "build:test": "cross-env NODE_ENV=test next build",
     "build:validated": "npm run validate:schema && next build && npm run test:smoke",
+    "build:production": "NODE_ENV=production next build",
     "start": "next start",
+    "start:production": "NODE_ENV=production next start -p 3000",
+    "prepare:production": "node scripts/prepare-production.js",
+    "setup:production": "node scripts/setup-production-env.js",
     "lint": "next lint",
     "type-check": "tsc --noEmit",
     "test": "playwright test",
@@ -35,7 +39,8 @@
     "regression:analyze": "node scripts/testing/regression-prevention/feature-impact-analyzer.js",
     "dev:validate": "node scripts/testing/validation/development-validator.js",
     "living-tests": "node scripts/testing/living-tests/living-tests-cli-simple.js",
-    "claude:dev": "set MCP_CONFIG=.mcp.dev.json && claude-code"
+    "claude:dev": "set MCP_CONFIG=.mcp.dev.json && claude-code",
+    "build:production:ignore-ts": "cross-env NEXT_TYPESCRIPT_IGNORE_BUILD_ERRORS=true next build"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.9.1",

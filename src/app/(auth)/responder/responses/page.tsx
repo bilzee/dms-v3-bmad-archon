@@ -20,7 +20,7 @@ import { SafeDataLoader } from '@/components/shared/SafeDataLoader'
 import { EmptyResponses, EmptySearchResults } from '@/components/shared/EmptyState'
 
 // Icons
-import { Package, Truck, Search, Filter, Clock, CheckCircle, ArrowLeft, Plus, AlertTriangle, User, X, Edit, Info } from 'lucide-react'
+import { Package, Truck, Search, Filter, Clock, CheckCircle, ArrowLeft, Plus, AlertTriangle, User, X, Edit, Info, Shield } from 'lucide-react'
 
 // Token utilities
 import { getAuthToken } from '@/lib/auth/token-utils'

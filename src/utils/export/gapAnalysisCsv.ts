@@ -145,9 +145,9 @@ export function exportGapAnalysisToCsv(
     URL.revokeObjectURL(url);
   } else {
     // Fallback for older browsers
-    if (navigator.msSaveBlob) {
+    if ((navigator as any).msSaveBlob) {
       // For IE 10+
-      navigator.msSaveBlob(blob, generateFilename());
+      (navigator as any).msSaveBlob(blob, generateFilename());
     } else {
       // Other browsers - open in new window
       const url = URL.createObjectURL(blob);

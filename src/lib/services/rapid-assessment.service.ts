@@ -24,7 +24,7 @@ export type RapidAssessmentWithData = RapidAssessment & {
   healthAssessment?: any
   populationAssessment?: any
   foodAssessment?: any
-  washAssessment?: any
+  wASHAssessment?: any
   shelterAssessment?: any
   securityAssessment?: any
 }
@@ -116,7 +116,7 @@ export class RapidAssessmentService {
           if (!washData) {
             throw new Error('WASH assessment data (washData) is required but missing from input')
           }
-          typeSpecificAssessment = await tx.washAssessment.create({
+          typeSpecificAssessment = await tx.wASHAssessment.create({
             data: {
               rapidAssessmentId: rapidAssessment.id,
               ...washData,
@@ -171,7 +171,7 @@ export class RapidAssessmentService {
         healthAssessment: true,
         populationAssessment: true,
         foodAssessment: true,
-        washAssessment: true,
+        wASHAssessment: true,
         shelterAssessment: true,
         securityAssessment: true,
         assessor: {
@@ -239,7 +239,7 @@ export class RapidAssessmentService {
         healthAssessment: true,
         populationAssessment: true,
         foodAssessment: true,
-        washAssessment: true,
+        wASHAssessment: true,
         shelterAssessment: true,
         securityAssessment: true,
         entity: {
@@ -308,7 +308,7 @@ export class RapidAssessmentService {
         healthAssessment: true,
         populationAssessment: true,
         foodAssessment: true,
-        washAssessment: true,
+        wASHAssessment: true,
         shelterAssessment: true,
         securityAssessment: true,
         assessor: {
@@ -376,7 +376,7 @@ export class RapidAssessmentService {
         healthAssessment: true,
         populationAssessment: true,
         foodAssessment: true,
-        washAssessment: true,
+        wASHAssessment: true,
         shelterAssessment: true,
         securityAssessment: true
       }
@@ -426,7 +426,7 @@ export class RapidAssessmentService {
         healthAssessment: true,
         populationAssessment: true,
         foodAssessment: true,
-        washAssessment: true,
+        wASHAssessment: true,
         shelterAssessment: true,
         securityAssessment: true
       }
@@ -468,8 +468,8 @@ export class RapidAssessmentService {
           }
           break
         case 'WASH':
-          if (assessment.washAssessment) {
-            gapAnalysisData.gapAnalysis = await analyzeWASHGaps(assessment.washAssessment)
+          if (assessment.wASHAssessment) {
+            gapAnalysisData.gapAnalysis = await analyzeWASHGaps(assessment.wASHAssessment)
             calculatedSeverity = gapAnalysisData.gapAnalysis.severity
           }
           break
@@ -525,7 +525,7 @@ export class RapidAssessmentService {
           healthAssessment: true,
           populationAssessment: true,
           foodAssessment: true,
-          washAssessment: true,
+          wASHAssessment: true,
           shelterAssessment: true,
           securityAssessment: true
         }
@@ -556,8 +556,8 @@ export class RapidAssessmentService {
               }
               break
             case 'WASH':
-              if (assessment.washAssessment) {
-                gapAnalysisData.gapAnalysis = await analyzeWASHGaps(assessment.washAssessment)
+              if (assessment.wASHAssessment) {
+                gapAnalysisData.gapAnalysis = await analyzeWASHGaps(assessment.wASHAssessment)
                 calculatedSeverity = gapAnalysisData.gapAnalysis.severity
               }
               break
@@ -659,7 +659,7 @@ export class RapidAssessmentService {
       'HEALTH': 'healthAssessment',
       'POPULATION': 'populationAssessment',
       'FOOD': 'foodAssessment',
-      'WASH': 'washAssessment',
+      'WASH': 'wASHAssessment',
       'SHELTER': 'shelterAssessment',
       'SECURITY': 'securityAssessment'
     }

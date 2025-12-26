@@ -1,0 +1,89 @@
+# Example: Complete GitHub Actions CI/CD Pipeline for DRMS
+name: Deploy DRMS to Production
+
+# TRIGGER: When this workflow runs
+on:
+  push:
+    branches: [main]  # When code is pushed to main branch
+  pull_request:
+    branches: [main]  # When someone creates a pull request
+
+# JOBS: What tasks to perform
+jobs:
+  # JOB 1: Test the code before deploying
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+        
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '18'
+          cache: 'npm'
+          
+      - name: Install dependencies
+        run: npm install
+        
+      - name: Run tests
+        run: npm run test:unit
+        
+      - name: Run linting
+        run: npm run lint
+        
+  # JOB 2: Build and Deploy (only if tests pass)
+  deploy:
+    needs: test  # Wait for test job to complete successfully
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main'  # Only deploy from main branch
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+        
+      - name: Build Docker image
+        run: |
+          # Create unique tag using git commit hash
+          docker build -t drms:${{ github.sha }} .
+          docker tag drms:${{ github.sha }} drms:latest
+          
+      - name: Login to Docker Registry
+        uses: docker/login-action@v2
+        with:
+          registry: registry.digitalocean.com
+          username: ${{ secrets.REGISTRY_USERNAME }}
+          password: ${{ secrets.REGISTRY_PASSWORD }}
+          
+      - name: Push Docker image
+        run: |
+          docker tag drms:latest registry.digitalocean.com/your-registry/drms:${{ github.sha }}
+          docker tag drms:latest registry.digitalocean.com/your-registry/drms:latest
+          docker push registry.digitalocean.com/your-registry/drms:${{ github.sha }}
+          docker push registry.digitalocean.com/your-registry/drms:latest
+          
+      - name: Deploy to production server
+        uses: appleboy/ssh-action@v0.1.5
+        with:
+          host: ${{ secrets.DEPLOY_HOST }}      # Your VPS IP address
+          username: ${{ secrets.DEPLOY_USER }}  # SSH username
+          key: ${{ secrets.DEPLOY_KEY }}        # SSH private key
+          script: |
+            # Commands to run on your server
+            cd /app
+            docker pull registry.digitalocean.com/your-registry/drms:latest
+            docker-compose down
+            docker-compose up -d
+            docker image prune -f  # Clean up old images
+            
+      - name: Notify team of deployment
+        if: success()
+        run: |
+          echo "✅ DRMS deployed successfully to production!"
+          # Could send Slack/email notification here
+          
+      - name: Notify team of failure
+        if: failure()
+        run: |
+          echo "❌ Deployment failed! Check logs."
+          # Could send alert notification here

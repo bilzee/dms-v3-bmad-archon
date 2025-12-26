@@ -7,13 +7,13 @@ import { AuthInitializer } from '@/components/providers/AuthInitializer';
 import { ThemeProvider } from '@/components/providers/ThemeProvider';
 
 export const metadata: Metadata = {
-  title: 'Disaster Management System - Borno State',
-  description: 'Offline-first disaster management and humanitarian assessment PWA for Borno State, Nigeria',
+  title: 'Disaster Response Management System (DRMS)',
+  description: 'Comprehensive disaster response management and humanitarian assessment PWA',
   manifest: '/manifest.json',
   appleWebApp: {
     capable: true,
     statusBarStyle: 'default',
-    title: 'DMS Borno',
+    title: 'DRMS',
   },
 };
 

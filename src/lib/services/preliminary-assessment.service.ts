@@ -21,6 +21,7 @@ export class PreliminaryAssessmentService {
     if (createIncident && incidentData) {
       incident = await prisma.incident.create({
         data: {
+          name: incidentData.description,
           type: incidentData.type,
           subType: incidentData.subType,
           severity: incidentData.severity,

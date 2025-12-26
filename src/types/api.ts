@@ -23,7 +23,7 @@ export interface PaginatedResponse<T> {
   pagination: PaginationParams;
 }
 
-export interface ApiError {
+export interface ApiErrorResponse {
   success: false;
   data: null;
   message: string;

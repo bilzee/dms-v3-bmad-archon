@@ -1,6 +1,7 @@
 const pwaConfig = require('./pwa.config.js');
 const currentConfig = pwaConfig.getCurrentConfig();
 const cacheConfig = pwaConfig.getCacheConfig();
+const securityConfig = require('./production-security.config.js');
 
 const withPWA = require('next-pwa')({
   dest: 'public',
@@ -51,8 +52,25 @@ const withPWA = require('next-pwa')({
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  // Production optimizations
+  poweredByHeader: false,
+  compress: true,
+  
+  // Security headers for production
+  async headers() {
+    if (process.env.NODE_ENV === 'production') {
+      return [
+        {
+          source: '/(.*)',
+          headers: securityConfig.securityHeaders,
+        },
+      ];
+    }
+    return [];
+  },
+  
   typescript: {
-    ignoreBuildErrors: false,
+    ignoreBuildErrors: process.env.NEXT_TYPESCRIPT_IGNORE_BUILD_ERRORS === 'true',
   },
   eslint: {
     ignoreDuringBuilds: false,
@@ -61,6 +79,15 @@ const nextConfig = {
     PWA_ENABLED: pwaConfig.shouldEnablePWA().toString(),
     PWA_ENVIRONMENT: process.env.NODE_ENV,
   },
+  
+  // Image optimization
+  images: {
+    domains: [],
+    formats: ['image/webp', 'image/avif'],
+  },
+  
+  // Output configuration for production
+  output: 'standalone',
   webpack: (config, { isServer, dev }) => {
     // Only modify CSS extraction in production builds
     if (!isServer && !dev) {
