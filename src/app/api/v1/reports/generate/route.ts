@@ -9,7 +9,7 @@ import { z } from 'zod';
 import { db } from '@/lib/db/client';
 import { DataAggregator, ReportFilters } from '@/lib/reports/data-aggregator';
 import { ReportTemplateEngine } from '@/lib/reports/template-engine';
-import { ApiResponse } from '@/types/api';
+import { createApiResponse } from '@/types/api';
 import { exec } from 'child_process';
 import { promises as fs } from 'fs';
 import path from 'path';
@@ -77,7 +77,7 @@ export async function POST(request: NextRequest) {
     const session = await getServerSession();
     if (!session?.user) {
       return NextResponse.json(
-        new ApiResponse(false, null, 'Unauthorized'),
+        createApiResponse(false, null, 'Unauthorized'),
         { status: 401 }
       );
     }
@@ -105,7 +105,7 @@ export async function POST(request: NextRequest) {
 
     if (!hasPermission) {
       return NextResponse.json(
-        new ApiResponse(false, null, 'Insufficient permissions to generate reports'),
+        createApiResponse(false, null, 'Insufficient permissions to generate reports'),
         { status: 403 }
       );
     }
@@ -134,7 +134,7 @@ export async function POST(request: NextRequest) {
 
       if (!configuration) {
         return NextResponse.json(
-          new ApiResponse(false, null, 'Report configuration not found or access denied'),
+          createApiResponse(false, null, 'Report configuration not found or access denied'),
           { status: 404 }
         );
       }
@@ -154,7 +154,7 @@ export async function POST(request: NextRequest) {
 
       if (!templateResult.ok) {
         return NextResponse.json(
-          new ApiResponse(false, null, 'Report template not found or access denied'),
+          createApiResponse(false, null, 'Report template not found or access denied'),
           { status: 404 }
         );
       }
@@ -168,7 +168,7 @@ export async function POST(request: NextRequest) {
       filters = validatedData.filters || {};
     } else {
       return NextResponse.json(
-        new ApiResponse(false, null, 'Either configurationId, templateId, or template is required'),
+        createApiResponse(false, null, 'Either configurationId, templateId, or template is required'),
         { status: 400 }
       );
     }
@@ -210,7 +210,7 @@ export async function POST(request: NextRequest) {
     });
 
     return NextResponse.json(
-      new ApiResponse(true, {
+      createApiResponse(true, {
         executionId: execution.id,
         jobId,
         status: 'PENDING',
@@ -226,13 +226,13 @@ export async function POST(request: NextRequest) {
     
     if (error instanceof z.ZodError) {
       return NextResponse.json(
-        new ApiResponse(false, null, 'Invalid request data', error.errors),
+        createApiResponse(false, null, 'Invalid request data', error.errors),
         { status: 400 }
       );
     }
 
     return NextResponse.json(
-      new ApiResponse(false, null, 'Failed to generate report'),
+      createApiResponse(false, null, 'Failed to generate report'),
       { status: 500 }
     );
   }
@@ -247,7 +247,7 @@ export async function PUT(request: NextRequest) {
     const session = await getServerSession();
     if (!session?.user) {
       return NextResponse.json(
-        new ApiResponse(false, null, 'Unauthorized'),
+        createApiResponse(false, null, 'Unauthorized'),
         { status: 401 }
       );
     }
@@ -275,7 +275,7 @@ export async function PUT(request: NextRequest) {
 
     if (!hasPermission) {
       return NextResponse.json(
-        new ApiResponse(false, null, 'Insufficient permissions to schedule reports'),
+        createApiResponse(false, null, 'Insufficient permissions to schedule reports'),
         { status: 403 }
       );
     }
@@ -296,7 +296,7 @@ export async function PUT(request: NextRequest) {
 
     if (!configuration) {
       return NextResponse.json(
-        new ApiResponse(false, null, 'Report configuration not found or access denied'),
+        createApiResponse(false, null, 'Report configuration not found or access denied'),
         { status: 404 }
       );
     }
@@ -326,7 +326,7 @@ export async function PUT(request: NextRequest) {
     await fs.writeFile(scheduleFile, JSON.stringify(scheduleData, null, 2));
 
     return NextResponse.json(
-      new ApiResponse(true, {
+      createApiResponse(true, {
         executionId: scheduledExecution.id,
         schedule: validatedData.schedule,
         nextRun: getNextScheduledRun(validatedData.schedule),
@@ -340,13 +340,13 @@ export async function PUT(request: NextRequest) {
     
     if (error instanceof z.ZodError) {
       return NextResponse.json(
-        new ApiResponse(false, null, 'Invalid schedule data', error.errors),
+        createApiResponse(false, null, 'Invalid schedule data', error.errors),
         { status: 400 }
       );
     }
 
     return NextResponse.json(
-      new ApiResponse(false, null, 'Failed to schedule report'),
+      createApiResponse(false, null, 'Failed to schedule report'),
       { status: 500 }
     );
   }

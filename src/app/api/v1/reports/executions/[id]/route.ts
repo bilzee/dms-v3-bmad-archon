@@ -6,7 +6,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { db } from '@/lib/db/client';
-import { ApiResponse } from '@/types/api';
+import { createApiResponse } from '@/types/api';
 import { promises as fs } from 'fs';
 import path from 'path';
 
@@ -22,7 +22,7 @@ export async function GET(
     const session = await getServerSession();
     if (!session?.user) {
       return NextResponse.json(
-        new ApiResponse(false, null, 'Unauthorized'),
+        createApiResponse(false, null, 'Unauthorized'),
         { status: 401 }
       );
     }
@@ -50,7 +50,7 @@ export async function GET(
 
     if (!execution) {
       return NextResponse.json(
-        new ApiResponse(false, null, 'Report execution not found'),
+        createApiResponse(false, null, 'Report execution not found'),
         { status: 404 }
       );
     }
@@ -61,7 +61,7 @@ export async function GET(
 
     if (!hasAccess) {
       return NextResponse.json(
-        new ApiResponse(false, null, 'Access denied to this report execution'),
+        createApiResponse(false, null, 'Access denied to this report execution'),
         { status: 403 }
       );
     }
@@ -91,7 +91,7 @@ export async function GET(
     const estimatedCompletionTime = getEstimatedCompletionTime(execution);
 
     return NextResponse.json(
-      new ApiResponse(true, {
+      createApiResponse(true, {
         execution: {
           id: execution.id,
           status: execution.status,
@@ -118,7 +118,7 @@ export async function GET(
   } catch (error) {
     console.error('Error getting report execution:', error);
     return NextResponse.json(
-      new ApiResponse(false, null, 'Failed to retrieve report execution'),
+      createApiResponse(false, null, 'Failed to retrieve report execution'),
       { status: 500 }
     );
   }
@@ -136,7 +136,7 @@ export async function POST(
     const session = await getServerSession();
     if (!session?.user) {
       return NextResponse.json(
-        new ApiResponse(false, null, 'Unauthorized'),
+        createApiResponse(false, null, 'Unauthorized'),
         { status: 401 }
       );
     }
@@ -153,7 +153,7 @@ export async function POST(
 
     if (!execution) {
       return NextResponse.json(
-        new ApiResponse(false, null, 'Report execution not found'),
+        createApiResponse(false, null, 'Report execution not found'),
         { status: 404 }
       );
     }
@@ -164,7 +164,7 @@ export async function POST(
 
     if (!canCancel) {
       return NextResponse.json(
-        new ApiResponse(false, null, 'Cannot cancel this report execution'),
+        createApiResponse(false, null, 'Cannot cancel this report execution'),
         { status: 403 }
       );
     }
@@ -219,14 +219,14 @@ export async function POST(
     }
 
     return NextResponse.json(
-      new ApiResponse(true, updatedExecution, 'Report execution cancelled successfully'),
+      createApiResponse(true, updatedExecution, 'Report execution cancelled successfully'),
       { status: 200 }
     );
 
   } catch (error) {
     console.error('Error cancelling report execution:', error);
     return NextResponse.json(
-      new ApiResponse(false, null, 'Failed to cancel report execution'),
+      createApiResponse(false, null, 'Failed to cancel report execution'),
       { status: 500 }
     );
   }
@@ -244,7 +244,7 @@ export async function DELETE(
     const session = await getServerSession();
     if (!session?.user) {
       return NextResponse.json(
-        new ApiResponse(false, null, 'Unauthorized'),
+        createApiResponse(false, null, 'Unauthorized'),
         { status: 401 }
       );
     }
@@ -261,7 +261,7 @@ export async function DELETE(
 
     if (!execution) {
       return NextResponse.json(
-        new ApiResponse(false, null, 'Report execution not found'),
+        createApiResponse(false, null, 'Report execution not found'),
         { status: 404 }
       );
     }
@@ -271,7 +271,7 @@ export async function DELETE(
 
     if (!canDelete) {
       return NextResponse.json(
-        new ApiResponse(false, null, 'Cannot delete this report execution'),
+        createApiResponse(false, null, 'Cannot delete this report execution'),
         { status: 403 }
       );
     }
@@ -295,14 +295,14 @@ export async function DELETE(
     });
 
     return NextResponse.json(
-      new ApiResponse(true, null, 'Report execution deleted successfully'),
+      createApiResponse(true, null, 'Report execution deleted successfully'),
       { status: 200 }
     );
 
   } catch (error) {
     console.error('Error deleting report execution:', error);
     return NextResponse.json(
-      new ApiResponse(false, null, 'Failed to delete report execution'),
+      createApiResponse(false, null, 'Failed to delete report execution'),
       { status: 500 }
     );
   }
