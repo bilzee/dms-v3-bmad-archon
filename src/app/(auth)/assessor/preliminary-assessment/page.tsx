@@ -13,7 +13,12 @@ import { PlusCircle, FileText, Clock, CheckCircle, AlertTriangle, Filter, X, Map
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { useAuth } from '@/hooks/useAuth'
-import { PreliminaryAssessment } from '@prisma/client'
+import { PreliminaryAssessment, Incident } from '@prisma/client'
+
+// Type for assessment with incident relation
+type PreliminaryAssessmentWithIncident = PreliminaryAssessment & {
+  incident?: Incident | null
+}
 
 // Status filtering removed for Preliminary Assessments since they don't have status field
 
@@ -25,8 +30,8 @@ const dateFilterOptions = [
 ]
 
 export default function PreliminaryAssessmentPage() {
-  const [assessments, setAssessments] = useState<PreliminaryAssessment[]>([])
-  const [filteredAssessments, setFilteredAssessments] = useState<PreliminaryAssessment[]>([])
+  const [assessments, setAssessments] = useState<PreliminaryAssessmentWithIncident[]>([])
+  const [filteredAssessments, setFilteredAssessments] = useState<PreliminaryAssessmentWithIncident[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const router = useRouter()
   const { token, user } = useAuth()
@@ -53,7 +58,7 @@ export default function PreliminaryAssessmentPage() {
         
         if (response.ok) {
           const result = await response.json()
-          const allAssessments: PreliminaryAssessment[] = result.data || []
+          const allAssessments: PreliminaryAssessmentWithIncident[] = result.data || []
           setAssessments(allAssessments)
           
           // Apply client-side filtering
