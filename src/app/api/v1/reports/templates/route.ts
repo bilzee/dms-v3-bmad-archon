@@ -9,7 +9,7 @@ import { getServerSession } from 'next-auth';
 import { z } from 'zod';
 import { db } from '@/lib/db/client';
 import { ReportTemplateEngine, DEFAULT_TEMPLATES } from '@/lib/reports/template-engine';
-import { ApiResponse } from '@/types/api';
+import { createApiResponse } from '@/types/api';
 
 // Validation schemas
 const CreateTemplateSchema = z.object({
@@ -37,7 +37,7 @@ export async function GET(request: NextRequest) {
     const session = await getServerSession();
     if (!session?.user) {
       return NextResponse.json(
-        new ApiResponse(false, null, 'Unauthorized'),
+        createApiResponse(false, null, 'Unauthorized'),
         { status: 401 }
       );
     }
@@ -144,7 +144,7 @@ export async function GET(request: NextRequest) {
     const allTemplates = [...defaultTemplates, ...templates];
 
     return NextResponse.json(
-      new ApiResponse(true, {
+      createApiResponse(true, {
         templates: allTemplates,
         pagination: {
           page: params.page,
@@ -161,13 +161,13 @@ export async function GET(request: NextRequest) {
     
     if (error instanceof z.ZodError) {
       return NextResponse.json(
-        new ApiResponse(false, null, 'Invalid request parameters', error.errors),
+        createApiResponse(false, null, 'Invalid request parameters', error.errors),
         { status: 400 }
       );
     }
 
     return NextResponse.json(
-      new ApiResponse(false, null, 'Failed to retrieve report templates'),
+      createApiResponse(false, null, 'Failed to retrieve report templates'),
       { status: 500 }
     );
   }
@@ -182,7 +182,7 @@ export async function POST(request: NextRequest) {
     const session = await getServerSession();
     if (!session?.user) {
       return NextResponse.json(
-        new ApiResponse(false, null, 'Unauthorized'),
+        createApiResponse(false, null, 'Unauthorized'),
         { status: 401 }
       );
     }
@@ -210,7 +210,7 @@ export async function POST(request: NextRequest) {
 
     if (!hasPermission) {
       return NextResponse.json(
-        new ApiResponse(false, null, 'Insufficient permissions to create report templates'),
+        createApiResponse(false, null, 'Insufficient permissions to create report templates'),
         { status: 403 }
       );
     }
@@ -222,7 +222,7 @@ export async function POST(request: NextRequest) {
     const templateValidation = ReportTemplateEngine.validateTemplate(validatedData);
     if (!templateValidation.valid) {
       return NextResponse.json(
-        new ApiResponse(false, null, 'Template validation failed', templateValidation.errors),
+        createApiResponse(false, null, 'Template validation failed', templateValidation.errors),
         { status: 400 }
       );
     }
@@ -249,7 +249,7 @@ export async function POST(request: NextRequest) {
     });
 
     return NextResponse.json(
-      new ApiResponse(true, template, 'Report template created successfully'),
+      createApiResponse(true, template, 'Report template created successfully'),
       { status: 201 }
     );
 
@@ -258,13 +258,13 @@ export async function POST(request: NextRequest) {
     
     if (error instanceof z.ZodError) {
       return NextResponse.json(
-        new ApiResponse(false, null, 'Invalid request data', error.errors),
+        createApiResponse(false, null, 'Invalid request data', error.errors),
         { status: 400 }
       );
     }
 
     return NextResponse.json(
-      new ApiResponse(false, null, 'Failed to create report template'),
+      createApiResponse(false, null, 'Failed to create report template'),
       { status: 500 }
     );
   }
