@@ -38,7 +38,7 @@ import { RoleBasedRoute } from '@/components/shared/RoleBasedRoute'
 // Token utilities
 import { getAuthToken } from '@/lib/auth/token-utils'
 
-export function AdminDashboard() {
+function AdminDashboard() {
   const { user } = useAuth()
   const [activeTab, setActiveTab] = React.useState('overview')
 
