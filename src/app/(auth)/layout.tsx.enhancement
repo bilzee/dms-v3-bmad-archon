@@ -1,0 +1,43 @@
+// Add these imports to your existing layout:
+import { OfflineLayout } from '@/components/layouts/OfflineLayout';
+import { offlineBootstrap } from '@/lib/offline/bootstrap';
+
+// Enhance your existing layout component:
+export default function AuthLayout({ children }: { children: React.ReactNode }) {
+  return (
+    <div>
+      {/* Your existing layout code */}
+      
+      {/* Wrap children with offline-first layout */}
+      <OfflineLayout>
+        {children}
+      </OfflineLayout>
+    </div>
+  );
+}
+
+// Example: Enhanced Assessment Creation Page
+// src/app/(auth)/assessor/rapid-assessments/new/page.tsx
+import { AssessmentOfflineGuard } from '@/components/offline/OfflineGuard';
+
+export default function NewAssessmentPage() {
+  return (
+    <AssessmentOfflineGuard>
+      {/* Your existing assessment form */}
+      <YourAssessmentForm />
+    </AssessmentOfflineGuard>
+  );
+}
+
+// Example: Enhanced Response Planning Page  
+// src/app/(auth)/responder/planning/new/page.tsx
+import { ResponseOfflineGuard } from '@/components/offline/OfflineGuard';
+
+export default function NewResponsePage() {
+  return (
+    <ResponseOfflineGuard>
+      {/* Your existing response form */}
+      <YourResponseForm />
+    </ResponseOfflineGuard>
+  );
+}

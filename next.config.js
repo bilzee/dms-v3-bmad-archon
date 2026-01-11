@@ -89,6 +89,20 @@ const nextConfig = {
   // Output configuration for production
   output: 'standalone',
   webpack: (config, { isServer, dev }) => {
+    // Exclude test files and directories from production build
+    if (!dev) {
+      config.module.rules.push({
+        test: /[\\/](tests?|__tests__|spec|__spec__)[\\/]/,
+        loader: 'ignore-loader'
+      });
+      
+      // Exclude specific test-related files in production
+      config.module.rules.push({
+        test: /living-test-system\.(js|ts|tsx?)$/,
+        loader: 'ignore-loader'
+      });
+    }
+    
     // Only modify CSS extraction in production builds
     if (!isServer && !dev) {
       // Client-side webpack configuration for production only
