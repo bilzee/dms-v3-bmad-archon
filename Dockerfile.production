@@ -24,6 +24,9 @@ COPY . .
 # Set production environment
 ENV NODE_ENV=production
 
+# Enable pnpm in builder stage
+RUN corepack enable pnpm
+
 # Generate Prisma client
 RUN npx prisma generate
 
