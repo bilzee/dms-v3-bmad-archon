@@ -231,7 +231,7 @@ export async function GET(
  * GET /api/v1/reports/download/[id]/info
  * Get download information for a report
  */
-export async function GET_INFO(
+async function GET_INFO(
   request: NextRequest,
   { params }: { params: { id: string } }
 ) {
