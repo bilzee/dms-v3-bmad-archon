@@ -8,8 +8,8 @@ FROM node:18-alpine AS deps
 WORKDIR /app
 
 # Install dependencies based on the preferred package manager
-COPY package.json package-lock.json* ./
-RUN npm ci --only=production && npm cache clean --force
+COPY package.json pnpm-lock.yaml ./
+RUN corepack enable pnpm && pnpm install --prod --frozen-lockfile
 
 # =======================================
 # Stage 2: Builder
@@ -28,7 +28,7 @@ ENV NODE_ENV=production
 RUN npx prisma generate
 
 # Build the application
-RUN npm run build:production
+RUN pnpm run build:production
 
 # =======================================
 # Stage 3: Runner (Production)
