@@ -6,6 +6,7 @@ import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
+import { User } from '@prisma/client'
 
 // Error handling components
 import { SafeDataLoader } from '@/components/shared/SafeDataLoader'
@@ -63,7 +64,7 @@ function AdminDashboard() {
     const usersData = await usersResponse.json()
     const entitiesData = await entitiesResponse.json()
     
-    const users = usersData.data?.users || []
+    const users: User[] = usersData.data?.users || []
     const entities = entitiesData.data?.entities || []
     
     return {

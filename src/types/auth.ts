@@ -82,15 +82,6 @@ export interface UserMeResponse {
   }
 }
 
-export interface ApiResponse<T = any> {
-  data?: T
-  error?: string
-  meta: {
-    timestamp: string
-    version: string
-    requestId: string
-  }
-}
 
 export interface AuthState {
   user: Omit<AuthUser, 'passwordHash'> | null
