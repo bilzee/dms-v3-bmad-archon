@@ -151,7 +151,6 @@ export default function NewPreliminaryAssessmentPage() {
         disabled={isLoading}
         showIncidentCreation={false}
         selectedDraftId={selectedDraftId}
-        onSuccess={() => router.push('/assessor/preliminary-assessment')}
       />
     </div>
   )
