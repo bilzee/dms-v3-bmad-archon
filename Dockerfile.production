@@ -33,7 +33,7 @@ RUN npm run build:production
 # =======================================
 # Stage 3: Runner (Production)
 # =======================================
-FROM node:18-alpine AS runner
+FROM node:18-alpine AS production
 WORKDIR /app
 
 # Set production environment
