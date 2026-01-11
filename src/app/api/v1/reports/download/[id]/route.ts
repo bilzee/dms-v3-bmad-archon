@@ -6,7 +6,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { db } from '@/lib/db/client';
-import { ApiResponse } from '@/types/api';
+import { createApiResponse } from '@/types/api';
 import { promises as fs } from 'fs';
 import path from 'path';
 
@@ -22,7 +22,7 @@ export async function GET(
     const session = await getServerSession();
     if (!session?.user) {
       return NextResponse.json(
-        new ApiResponse(false, null, 'Unauthorized'),
+        createApiResponse(false, null, 'Unauthorized'),
         { status: 401 }
       );
     }
@@ -57,7 +57,7 @@ export async function GET(
 
     if (!execution) {
       return NextResponse.json(
-        new ApiResponse(false, null, 'Report execution not found'),
+        createApiResponse(false, null, 'Report execution not found'),
         { status: 404 }
       );
     }
@@ -68,7 +68,7 @@ export async function GET(
 
     if (!hasAccess) {
       return NextResponse.json(
-        new ApiResponse(false, null, 'Access denied to this report'),
+        createApiResponse(false, null, 'Access denied to this report'),
         { status: 403 }
       );
     }
@@ -76,7 +76,7 @@ export async function GET(
     // Check if report generation is completed
     if (execution.status !== 'COMPLETED') {
       return NextResponse.json(
-        new ApiResponse(false, null, 'Report generation not completed', {
+        createApiResponse(false, null, 'Report generation not completed', {
           status: execution.status,
           generatedAt: execution.generatedAt,
           error: execution.error
@@ -88,7 +88,7 @@ export async function GET(
     // Check if file exists
     if (!execution.filePath) {
       return NextResponse.json(
-        new ApiResponse(false, null, 'Report file not found'),
+        createApiResponse(false, null, 'Report file not found'),
         { status: 404 }
       );
     }
@@ -107,7 +107,7 @@ export async function GET(
     
     if (!normalizedFilePath.startsWith(normalizedReportsDir)) {
       return NextResponse.json(
-        new ApiResponse(false, null, 'Invalid file path'),
+        createApiResponse(false, null, 'Invalid file path'),
         { status: 403 }
       );
     }
@@ -117,7 +117,7 @@ export async function GET(
       await fs.access(filePath);
     } catch (error) {
       return NextResponse.json(
-        new ApiResponse(false, null, 'Report file not found on disk'),
+        createApiResponse(false, null, 'Report file not found on disk'),
         { status: 404 }
       );
     }
@@ -221,7 +221,7 @@ export async function GET(
     console.error('Error downloading report:', error);
     
     return NextResponse.json(
-      new ApiResponse(false, null, 'Failed to download report'),
+      createApiResponse(false, null, 'Failed to download report'),
       { status: 500 }
     );
   }
@@ -239,7 +239,7 @@ async function GET_INFO(
     const session = await getServerSession();
     if (!session?.user) {
       return NextResponse.json(
-        new ApiResponse(false, null, 'Unauthorized'),
+        createApiResponse(false, null, 'Unauthorized'),
         { status: 401 }
       );
     }
@@ -275,7 +275,7 @@ async function GET_INFO(
 
     if (!execution) {
       return NextResponse.json(
-        new ApiResponse(false, null, 'Report execution not found'),
+        createApiResponse(false, null, 'Report execution not found'),
         { status: 404 }
       );
     }
@@ -286,7 +286,7 @@ async function GET_INFO(
 
     if (!hasAccess) {
       return NextResponse.json(
-        new ApiResponse(false, null, 'Access denied to this report'),
+        createApiResponse(false, null, 'Access denied to this report'),
         { status: 403 }
       );
     }
@@ -386,7 +386,7 @@ async function GET_INFO(
     };
 
     return NextResponse.json(
-      new ApiResponse(true, downloadInfo, 'Download information retrieved successfully'),
+      createApiResponse(true, downloadInfo, 'Download information retrieved successfully'),
       { status: 200 }
     );
 
@@ -394,7 +394,7 @@ async function GET_INFO(
     console.error('Error getting download info:', error);
     
     return NextResponse.json(
-      new ApiResponse(false, null, 'Failed to get download information'),
+      createApiResponse(false, null, 'Failed to get download information'),
       { status: 500 }
     );
   }

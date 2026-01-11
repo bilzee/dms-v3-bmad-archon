@@ -140,7 +140,7 @@ export default function NewPreliminaryAssessmentPage() {
         <Alert variant="destructive">
           <AlertTriangle className="h-4 w-4" />
           <AlertDescription>
-            {(error as unknown) instanceof Error ? (error as Error).message : String(error)}
+            {(error as unknown) instanceof Error ? (error as unknown as Error).message : String(error)}
           </AlertDescription>
         </Alert>
       )}
