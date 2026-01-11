@@ -100,6 +100,47 @@ interface ReportBuilderProps {
   className?: string;
 }
 
+// Separate component for draggable template cards to avoid hooks in callbacks
+function DraggableTemplateCard({ template, onAdd }: { 
+  template: ElementTemplate; 
+  onAdd: (type: string) => void; 
+}) {
+  const [{ isDragging }, drag] = useDrag({
+    type: 'element',
+    item: { type: template.type, fromSidebar: true },
+    collect: (monitor) => ({
+      isDragging: monitor.isDragging(),
+    }),
+  });
+
+  return (
+    <Card
+      key={template.type}
+      ref={drag}
+      className={cn(
+        "cursor-move transition-opacity",
+        isDragging && "opacity-50"
+      )}
+    >
+      <CardContent className="p-3 flex items-center gap-3">
+        <template.icon className="h-8 w-8 text-blue-600" />
+        <div className="flex-1">
+          <div className="text-sm font-medium">{template.title}</div>
+          <div className="text-xs text-gray-500">{template.description}</div>
+        </div>
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={() => onAdd(template.type)}
+          className="h-8 w-8 p-0"
+        >
+          <Plus className="h-4 w-4" />
+        </Button>
+      </CardContent>
+    </Card>
+  );
+}
+
 // Element templates for the sidebar
 const ELEMENT_TEMPLATES: Array<{
   type: ReportElementType;
@@ -478,23 +519,7 @@ export function ReportBuilder({
     }),
   });
 
-  // DND handlers for elements
-  const createDraggableElement = (element: ReportElement) => {
-    const [{ isDragging }, drag] = useDrag({
-      type: 'element',
-      item: { 
-        id: element.id, 
-        type: element.type,
-        position: element.position 
-      },
-      canDrag: !element.locked,
-      collect: (monitor) => ({
-        isDragging: monitor.isDragging(),
-      }),
-    });
-
-    return { isDragging, drag };
-  };
+  // DND handlers for elements - removed problematic hook function
 
   return (
     <div className={cn("flex h-screen bg-gray-50", className)}>
@@ -562,41 +587,13 @@ export function ReportBuilder({
                 <div className="space-y-2">
                   {ELEMENT_TEMPLATES
                     .filter(template => template.category === category)
-                    .map(template => {
-                      const [{ isDragging }, drag] = useDrag({
-                        type: 'element',
-                        item: { type: template.type, fromSidebar: true },
-                        collect: (monitor) => ({
-                          isDragging: monitor.isDragging(),
-                        }),
-                      });
-
-                      return (
-                        <Card
-                          key={template.type}
-                          ref={drag}
-                          className={cn(
-                            "cursor-move transition-opacity",
-                            isDragging && "opacity-50"
-                          )}
-                        >
-                          <CardContent className="p-3 flex items-center gap-3">
-                            <template.icon className="h-8 w-8 text-blue-600" />
-                            <div className="flex-1">
-                              <div className="text-sm font-medium">{template.title}</div>
-                              <div className="text-xs text-gray-500">{template.description}</div>
-                            </div>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => addElement(template.type)}
-                            >
-                              <Plus className="h-4 w-4" />
-                            </Button>
-                          </CardContent>
-                        </Card>
-                      );
-                    })}
+                    .map(template => (
+                      <DraggableTemplateCard
+                        key={template.type}
+                        template={template}
+                        onAdd={addElement}
+                      />
+                    ))}
                 </div>
               </div>
             ))}
@@ -715,12 +712,9 @@ export function ReportBuilder({
 
               {/* Elements */}
               {elements.map(element => {
-                const { isDragging, drag } = createDraggableElement(element);
-                
                 return (
                   <div
                     key={element.id}
-                    ref={drag}
                     className={cn(
                       "absolute border-2 rounded-md bg-white shadow-sm transition-all",
                       element.locked && "border-gray-400 cursor-not-allowed",
