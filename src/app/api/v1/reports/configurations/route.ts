@@ -10,7 +10,7 @@ import { z } from 'zod';
 import { db } from '@/lib/db/client';
 import { DataAggregator, ReportFilters, AggregationConfig, FilterConfig } from '@/lib/reports/data-aggregator';
 import { ReportTemplateEngine, ReportTemplate } from '@/lib/reports/template-engine';
-import { ApiResponse } from '@/types/api';
+import { createApiResponse } from '@/types/api';
 
 // Validation schemas
 const CreateConfigurationSchema = z.object({
@@ -85,7 +85,7 @@ export async function POST(request: NextRequest) {
     const session = await getServerSession();
     if (!session?.user) {
       return NextResponse.json(
-        new ApiResponse(false, null, 'Unauthorized'),
+        createApiResponse(false, null, 'Unauthorized'),
         { status: 401 }
       );
     }
@@ -113,7 +113,7 @@ export async function POST(request: NextRequest) {
 
     if (!hasPermission) {
       return NextResponse.json(
-        new ApiResponse(false, null, 'Insufficient permissions to create report configurations'),
+        createApiResponse(false, null, 'Insufficient permissions to create report configurations'),
         { status: 403 }
       );
     }
@@ -143,7 +143,7 @@ export async function POST(request: NextRequest) {
 
     if (!template) {
       return NextResponse.json(
-        new ApiResponse(false, null, 'Report template not found or access denied'),
+        createApiResponse(false, null, 'Report template not found or access denied'),
         { status: 404 }
       );
     }
@@ -165,7 +165,7 @@ export async function POST(request: NextRequest) {
 
       if (invalidFilters.length > 0) {
         return NextResponse.json(
-          new ApiResponse(false, null, 'Invalid filter fields', {
+          createApiResponse(false, null, 'Invalid filter fields', {
             invalidFields: invalidFilters.map(f => f.field)
           }),
           { status: 400 }
@@ -181,7 +181,7 @@ export async function POST(request: NextRequest) {
 
     if (invalidVisualizations.length > 0) {
       return NextResponse.json(
-        new ApiResponse(false, null, 'Invalid visualization data sources', {
+        createApiResponse(false, null, 'Invalid visualization data sources', {
           invalidDataSources: invalidVisualizations.map(v => v.dataSource)
         }),
         { status: 400 }
@@ -245,7 +245,7 @@ export async function POST(request: NextRequest) {
     });
 
     return NextResponse.json(
-      new ApiResponse(true, configuration, 'Report configuration created successfully'),
+      createApiResponse(true, configuration, 'Report configuration created successfully'),
       { status: 201 }
     );
 
@@ -254,13 +254,13 @@ export async function POST(request: NextRequest) {
     
     if (error instanceof z.ZodError) {
       return NextResponse.json(
-        new ApiResponse(false, null, 'Invalid request data', error.errors),
+        createApiResponse(false, null, 'Invalid request data', error.errors),
         { status: 400 }
       );
     }
 
     return NextResponse.json(
-      new ApiResponse(false, null, 'Failed to create report configuration'),
+      createApiResponse(false, null, 'Failed to create report configuration'),
       { status: 500 }
     );
   }
@@ -275,7 +275,7 @@ export async function GET(request: NextRequest) {
     const session = await getServerSession();
     if (!session?.user) {
       return NextResponse.json(
-        new ApiResponse(false, null, 'Unauthorized'),
+        createApiResponse(false, null, 'Unauthorized'),
         { status: 401 }
       );
     }
@@ -386,7 +386,7 @@ export async function GET(request: NextRequest) {
     });
 
     return NextResponse.json(
-      new ApiResponse(true, {
+      createApiResponse(true, {
         configurations: configurationsWithStatus,
         pagination: {
           page: params.page,
@@ -403,13 +403,13 @@ export async function GET(request: NextRequest) {
     
     if (error instanceof z.ZodError) {
       return NextResponse.json(
-        new ApiResponse(false, null, 'Invalid request parameters', error.errors),
+        createApiResponse(false, null, 'Invalid request parameters', error.errors),
         { status: 400 }
       );
     }
 
     return NextResponse.json(
-      new ApiResponse(false, null, 'Failed to retrieve report configurations'),
+      createApiResponse(false, null, 'Failed to retrieve report configurations'),
       { status: 500 }
     );
   }

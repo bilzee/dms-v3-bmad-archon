@@ -10,7 +10,7 @@ import { getServerSession } from 'next-auth';
 import { z } from 'zod';
 import { db } from '@/lib/db/client';
 import { ReportTemplateEngine } from '@/lib/reports/template-engine';
-import { ApiResponse } from '@/types/api';
+import { createApiResponse } from '@/types/api';
 
 // Validation schemas
 const UpdateTemplateSchema = z.object({
@@ -33,7 +33,7 @@ export async function GET(
     const session = await getServerSession();
     if (!session?.user) {
       return NextResponse.json(
-        new ApiResponse(false, null, 'Unauthorized'),
+        createApiResponse(false, null, 'Unauthorized'),
         { status: 401 }
       );
     }
@@ -53,7 +53,7 @@ export async function GET(
 
       if (!defaultTemplate) {
         return NextResponse.json(
-          new ApiResponse(false, null, 'Default template not found'),
+          createApiResponse(false, null, 'Default template not found'),
           { status: 404 }
         );
       }
@@ -62,7 +62,7 @@ export async function GET(
       const preview = ReportTemplateEngine.renderTemplatePreview(defaultTemplate);
 
       return NextResponse.json(
-        new ApiResponse(true, {
+        createApiResponse(true, {
           ...defaultTemplate,
           id: templateId,
           preview,
@@ -100,7 +100,7 @@ export async function GET(
 
     if (!template) {
       return NextResponse.json(
-        new ApiResponse(false, null, 'Template not found or access denied'),
+        createApiResponse(false, null, 'Template not found or access denied'),
         { status: 404 }
       );
     }
@@ -109,7 +109,7 @@ export async function GET(
     const preview = ReportTemplateEngine.renderTemplatePreview(template);
 
     return NextResponse.json(
-      new ApiResponse(true, {
+      createApiResponse(true, {
         ...template,
         preview
       }, 'Template retrieved successfully'),
@@ -119,7 +119,7 @@ export async function GET(
   } catch (error) {
     console.error('Error getting report template:', error);
     return NextResponse.json(
-      new ApiResponse(false, null, 'Failed to retrieve report template'),
+      createApiResponse(false, null, 'Failed to retrieve report template'),
       { status: 500 }
     );
   }
@@ -137,7 +137,7 @@ export async function PATCH(
     const session = await getServerSession();
     if (!session?.user) {
       return NextResponse.json(
-        new ApiResponse(false, null, 'Unauthorized'),
+        createApiResponse(false, null, 'Unauthorized'),
         { status: 401 }
       );
     }
@@ -147,7 +147,7 @@ export async function PATCH(
     // Don't allow updating default templates
     if (templateId.startsWith('default_')) {
       return NextResponse.json(
-        new ApiResponse(false, null, 'Default templates cannot be modified'),
+        createApiResponse(false, null, 'Default templates cannot be modified'),
         { status: 403 }
       );
     }
@@ -162,7 +162,7 @@ export async function PATCH(
 
     if (!existingTemplate) {
       return NextResponse.json(
-        new ApiResponse(false, null, 'Template not found or access denied'),
+        createApiResponse(false, null, 'Template not found or access denied'),
         { status: 404 }
       );
     }
@@ -190,7 +190,7 @@ export async function PATCH(
 
     if (!hasPermission) {
       return NextResponse.json(
-        new ApiResponse(false, null, 'Insufficient permissions to update report templates'),
+        createApiResponse(false, null, 'Insufficient permissions to update report templates'),
         { status: 403 }
       );
     }
@@ -208,7 +208,7 @@ export async function PATCH(
       const templateValidation = ReportTemplateEngine.validateTemplate(updatedTemplate);
       if (!templateValidation.valid) {
         return NextResponse.json(
-          new ApiResponse(false, null, 'Template validation failed', templateValidation.errors),
+          createApiResponse(false, null, 'Template validation failed', templateValidation.errors),
           { status: 400 }
         );
       }
@@ -235,7 +235,7 @@ export async function PATCH(
     });
 
     return NextResponse.json(
-      new ApiResponse(true, updatedTemplate, 'Report template updated successfully'),
+      createApiResponse(true, updatedTemplate, 'Report template updated successfully'),
       { status: 200 }
     );
 
@@ -244,13 +244,13 @@ export async function PATCH(
     
     if (error instanceof z.ZodError) {
       return NextResponse.json(
-        new ApiResponse(false, null, 'Invalid request data', error.errors),
+        createApiResponse(false, null, 'Invalid request data', error.errors),
         { status: 400 }
       );
     }
 
     return NextResponse.json(
-      new ApiResponse(false, null, 'Failed to update report template'),
+      createApiResponse(false, null, 'Failed to update report template'),
       { status: 500 }
     );
   }
@@ -268,7 +268,7 @@ export async function DELETE(
     const session = await getServerSession();
     if (!session?.user) {
       return NextResponse.json(
-        new ApiResponse(false, null, 'Unauthorized'),
+        createApiResponse(false, null, 'Unauthorized'),
         { status: 401 }
       );
     }
@@ -278,7 +278,7 @@ export async function DELETE(
     // Don't allow deleting default templates
     if (templateId.startsWith('default_')) {
       return NextResponse.json(
-        new ApiResponse(false, null, 'Default templates cannot be deleted'),
+        createApiResponse(false, null, 'Default templates cannot be deleted'),
         { status: 403 }
       );
     }
@@ -293,7 +293,7 @@ export async function DELETE(
 
     if (!existingTemplate) {
       return NextResponse.json(
-        new ApiResponse(false, null, 'Template not found or access denied'),
+        createApiResponse(false, null, 'Template not found or access denied'),
         { status: 404 }
       );
     }
@@ -321,7 +321,7 @@ export async function DELETE(
 
     if (!hasPermission) {
       return NextResponse.json(
-        new ApiResponse(false, null, 'Insufficient permissions to delete report templates'),
+        createApiResponse(false, null, 'Insufficient permissions to delete report templates'),
         { status: 403 }
       );
     }
@@ -333,7 +333,7 @@ export async function DELETE(
 
     if (configurationsCount > 0) {
       return NextResponse.json(
-        new ApiResponse(false, null, 'Cannot delete template with existing configurations', {
+        createApiResponse(false, null, 'Cannot delete template with existing configurations', {
           configurationsCount
         }),
         { status: 409 }
@@ -346,14 +346,14 @@ export async function DELETE(
     });
 
     return NextResponse.json(
-      new ApiResponse(true, null, 'Report template deleted successfully'),
+      createApiResponse(true, null, 'Report template deleted successfully'),
       { status: 200 }
     );
 
   } catch (error) {
     console.error('Error deleting report template:', error);
     return NextResponse.json(
-      new ApiResponse(false, null, 'Failed to delete report template'),
+      createApiResponse(false, null, 'Failed to delete report template'),
       { status: 500 }
     );
   }
