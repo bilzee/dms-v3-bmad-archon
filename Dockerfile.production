@@ -8,8 +8,8 @@ FROM node:18-alpine AS deps
 WORKDIR /app
 
 # Install dependencies based on the preferred package manager
-COPY package.json pnpm-lock.yaml ./
-RUN corepack enable pnpm && pnpm install --prod --frozen-lockfile
+COPY package.json ./
+RUN corepack enable pnpm && pnpm install --prod
 
 # =======================================
 # Stage 2: Builder
