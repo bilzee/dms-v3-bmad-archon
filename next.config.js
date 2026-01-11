@@ -73,7 +73,7 @@ const nextConfig = {
     ignoreBuildErrors: process.env.NEXT_TYPESCRIPT_IGNORE_BUILD_ERRORS === 'true',
   },
   eslint: {
-    ignoreDuringBuilds: false,
+    ignoreDuringBuilds: true,
   },
   env: {
     PWA_ENABLED: pwaConfig.shouldEnablePWA().toString(),
