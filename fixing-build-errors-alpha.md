@@ -407,9 +407,9 @@ ctx.json(createApiResponse(true, mockReportTemplate, 'Template retrieved success
 ### 22. Assessment Type-Specific Relation Access Errors
 **Files**: 
 - `src/app/api/v1/donors/entities/[id]/assessments/route.ts`
-- `src/lib/services/rapid-assessment.service.ts` (typo fixes)
-- `src/app/api/v1/dashboard/situation/route.ts` (typo fixes)
-- `prisma/seed.ts` (typo fixes)
+- `src/lib/services/rapid-assessment.service.ts` (naming fixes)
+- `src/app/api/v1/dashboard/situation/route.ts` (naming fixes)
+- `prisma/seed.ts` (naming fixes)
 
 **Error**: `Property 'healthAssessment' does not exist on type RapidAssessment`
 **Root Cause**: Prisma queries not including type-specific assessment relations
@@ -433,12 +433,39 @@ include: {
   populationAssessment: true
 }
 ```
-**Additional Fixes**:
-- Fixed `wASHAssessment` typos to `washAssessment` in 4 files
-- Ensured all assessment type switch cases can access their relations
 
-**Pattern**: Always include assessment type relations when accessing type-specific data
-**Impact**: Fixed assessment data access across donor entity routes and services
+### 23. Assessment Model Naming Convention Errors  
+**Files**:
+- `prisma/seed.ts`
+- `src/app/api/v1/dashboard/situation/route.ts` 
+- `src/lib/services/rapid-assessment.service.ts`
+
+**Error**: `Property 'washAssessment' does not exist on type 'PrismaClient'. Did you mean 'wASHAssessment'?`
+**Root Cause**: Inconsistent naming between model access and relation access
+**Fix**: Understand Prisma naming conventions for WASH assessment:
+```typescript
+// Model definition in schema.prisma
+model WASHAssessment {
+  // fields...
+}
+
+// Relation field in RapidAssessment  
+model RapidAssessment {
+  washAssessment WASHAssessment?  // lowercase 'w'
+}
+
+// Correct usage patterns:
+// 1. Direct model access (uppercase WASH)
+await prisma.wASHAssessment.create({ data: { ... } })
+await db.wASHAssessment.findFirst({ where: { ... } })
+
+// 2. Relation access (lowercase 'w') 
+assessment.washAssessment
+include: { washAssessment: true }
+```
+
+**Pattern**: Use `wASHAssessment` for direct model access, `washAssessment` for relations
+**Impact**: Fixed WASH assessment access across 4 files with proper naming conventions
 
 ## Current Build Status  
 - **✅ COMPLETED**: All documented TypeScript compilation errors have been systematically resolved

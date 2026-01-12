@@ -1104,7 +1104,7 @@ async function getLatestFoodAssessment(entityId: string): Promise<(FoodAssessmen
 }
 
 async function getLatestWASHAssessment(entityId: string): Promise<(WASHAssessmentData & { gapAnalysis: WASHGapAnalysis }) | null> {
-  const assessment = await db.washAssessment.findFirst({
+  const assessment = await db.wASHAssessment.findFirst({
     where: {
       rapidAssessment: {
         entityId: entityId,

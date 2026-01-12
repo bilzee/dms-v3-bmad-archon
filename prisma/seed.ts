@@ -685,7 +685,7 @@ async function main() {
         }
       })
     } else if (assessment.rapidAssessmentType === 'WASH') {
-      await prisma.washAssessment.create({
+      await prisma.wASHAssessment.create({
         data: {
           rapidAssessmentId: createdAssessment.id,
           waterSource: JSON.stringify(['Well', 'Borehole', 'River']),
