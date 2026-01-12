@@ -14,8 +14,6 @@ export default function IncidentsPage() {
         <IncidentManagement 
           showCreateButton={true}
           enableRealTimeUpdates={true}
-          autoSave={true}
-          gpsEnabled={true}
         />
       </Suspense>
     </div>
