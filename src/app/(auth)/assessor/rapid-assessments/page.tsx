@@ -666,7 +666,7 @@ export default function AssessorRapidAssessmentsPage() {
                     Rejection Reason
                   </h4>
                   <p className="text-sm text-red-800">
-                    {selectedAssessmentForReason.rejectionReason || selectedAssessmentForReason.verificationComment || 'No reason provided'}
+                    {selectedAssessmentForReason.rejectionReason || selectedAssessmentForReason.rejectionFeedback || 'No reason provided'}
                   </p>
                 </div>
                 
