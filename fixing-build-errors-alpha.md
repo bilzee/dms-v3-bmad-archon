@@ -327,6 +327,36 @@ where: {
 ```
 **Pattern**: Use conditional spread to ensure type safety with optional chaining
 
+### 19. Entity Model Field Access Errors
+**File**: `src/app/api/v1/donors/[id]/commitments/route.ts`
+**Error**: `'incidentId' does not exist in type 'EntitySelect<DefaultArgs>'`
+**Root Cause**: Entity model doesn't have an `incidentId` field according to Prisma schema
+**Fix**: Remove invalid field reference and associated validation logic:
+```typescript
+// Before - Accessing non-existent field
+prisma.entity.findUnique({
+  where: { id: validatedData.entityId },
+  select: { id: true, name: true, type: true, location: true, incidentId: true }
+});
+
+// Invalid validation based on non-existent field
+if (entity.incidentId && entity.incidentId !== validatedData.incidentId) {
+  return NextResponse.json(
+    { success: false, error: 'Entity is not part of the selected incident' },
+    { status: 400 }
+  );
+}
+
+// After - Remove non-existent field
+prisma.entity.findUnique({
+  where: { id: validatedData.entityId },
+  select: { id: true, name: true, type: true, location: true }
+});
+
+// Remove the incidentId validation logic entirely
+```
+**Pattern**: Always validate schema field existence before implementation
+
 ## Current Build Status  
 - **Major Progress**: EntityAssessment and GapAnalysis interfaces completely resolved
 - **Recently Fixed**: All situation dashboard TypeScript compilation errors

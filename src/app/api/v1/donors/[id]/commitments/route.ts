@@ -232,7 +232,7 @@ export const POST = withAuth(async (request: NextRequest, context, { params }: R
     const [entity, incident] = await Promise.all([
       prisma.entity.findUnique({
         where: { id: validatedData.entityId },
-        select: { id: true, name: true, type: true, location: true, incidentId: true }
+        select: { id: true, name: true, type: true, location: true }
       }),
       prisma.incident.findUnique({
         where: { id: validatedData.incidentId },
@@ -251,14 +251,6 @@ export const POST = withAuth(async (request: NextRequest, context, { params }: R
       return NextResponse.json(
         { success: false, error: 'Incident not found' },
         { status: 404 }
-      );
-    }
-
-    // If entity has an incidentId, ensure it matches the selected incident
-    if (entity.incidentId && entity.incidentId !== validatedData.incidentId) {
-      return NextResponse.json(
-        { success: false, error: 'Entity is not part of the selected incident' },
-        { status: 400 }
       );
     }
 
