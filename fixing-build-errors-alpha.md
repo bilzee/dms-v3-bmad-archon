@@ -468,45 +468,52 @@ include: { washAssessment: true }
 **Impact**: Fixed WASH assessment access across 4 files with proper naming conventions
 
 ### 24. Implicit Type Array Errors
-**File**: `src/app/api/v1/donors/entities/[id]/assessments/trends/route.ts`
-**Error**: `Variable 'insights' implicitly has type 'any[]' in some locations where its type cannot be determined.`
+**Files**: 
+- `src/app/api/v1/donors/entities/[id]/assessments/trends/route.ts`
+- `src/app/api/v1/donors/entities/[id]/gap-analysis/route.ts`
+
+**Error**: `Variable 'gaps/insights' implicitly has type 'any[]' in some locations where its type cannot be determined.`
 **Root Cause**: TypeScript strict mode cannot infer array type from empty array initialization
 **Fix**: Add explicit interface and type annotations:
 ```typescript
 // Before - Implicit any[] type
 function generateInsights(trends: any[], categories: string[]) {
   const insights = [];  // ❌ Implicit any[]
+  const gaps = [];      // ❌ Implicit any[]
   
-  insights.push({
-    category: trend.type,
-    trend: trendDescription,
-    recommendation
-  });
+  insights.push({ category: trend.type, trend: trendDescription, recommendation });
+  gaps.push({ category: 'HEALTH', severity: 'critical', description: '...' });
   
   return insights;
 }
 
-// After - Explicit type with interface
+// After - Explicit type with interfaces
 interface TrendInsight {
   category: string;
   trend: string;
   recommendation: string;
 }
 
+interface GapAnalysisItem {
+  category: 'HEALTH' | 'FOOD' | 'WASH' | 'SHELTER' | 'SECURITY' | 'POPULATION';
+  severity: 'critical' | 'high' | 'medium' | 'low';
+  description: string;
+  affectedPopulation: number;
+  recommendedActions: string[];
+}
+
 function generateInsights(trends: any[], categories: string[]): TrendInsight[] {
   const insights: TrendInsight[] = [];  // ✅ Explicit type
+  const gaps: GapAnalysisItem[] = [];   // ✅ Explicit type
   
-  insights.push({
-    category: trend.type,
-    trend: trendDescription,
-    recommendation
-  });
+  insights.push({ category: trend.type, trend: trendDescription, recommendation });
+  gaps.push({ category: 'HEALTH', severity: 'critical', description: '...' });
   
   return insights;
 }
 ```
 **Pattern**: Always provide explicit types for empty array initializations and function return types
-**Impact**: Fixed TypeScript strict mode compliance for array type inference
+**Impact**: Fixed TypeScript strict mode compliance for array type inference across 2 files
 
 ## Current Build Status  
 - **✅ COMPLETED**: All documented TypeScript compilation errors have been systematically resolved

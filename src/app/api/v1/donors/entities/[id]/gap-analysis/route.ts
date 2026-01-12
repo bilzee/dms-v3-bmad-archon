@@ -7,6 +7,14 @@ import {
   AssessmentTypeSchema
 } from '@/lib/validation/entity-insights';
 
+interface GapAnalysisItem {
+  category: 'HEALTH' | 'FOOD' | 'WASH' | 'SHELTER' | 'SECURITY' | 'POPULATION';
+  severity: 'critical' | 'high' | 'medium' | 'low';
+  description: string;
+  affectedPopulation: number;
+  recommendedActions: string[];
+}
+
 export const GET = withAuth(async (request: NextRequest, context, nextContext) => {
   try {
     const { userId, roles } = context;
@@ -81,7 +89,7 @@ export const GET = withAuth(async (request: NextRequest, context, nextContext) =
     const entityPopulation = metadata.population || metadata.totalPopulation || 1000; // Default fallback
 
     // Perform gap analysis for each category
-    const gaps = [];
+    const gaps: GapAnalysisItem[] = [];
     let totalGapScore = 0;
     let categoryCount = 0;
 
