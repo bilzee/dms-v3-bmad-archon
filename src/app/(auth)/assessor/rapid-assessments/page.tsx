@@ -13,6 +13,12 @@ import { PlusCircle, Activity, FileText, Clock, CheckCircle, AlertTriangle, Filt
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { useAuth } from '@/hooks/useAuth'
+import { RapidAssessment, Entity } from '@prisma/client'
+
+// Type for assessment with entity relation
+type RapidAssessmentWithEntity = RapidAssessment & {
+  entity?: Entity | null
+}
 
 const assessmentTypes = [
   { value: 'HEALTH', label: 'Health Assessment' },
@@ -48,8 +54,8 @@ const dateFilterOptions = [
 
 export default function AssessorRapidAssessmentsPage() {
   const [selectedType, setSelectedType] = useState<string>('')
-  const [assessments, setAssessments] = useState<any[]>([])
-  const [filteredAssessments, setFilteredAssessments] = useState<any[]>([])
+  const [assessments, setAssessments] = useState<RapidAssessmentWithEntity[]>([])
+  const [filteredAssessments, setFilteredAssessments] = useState<RapidAssessmentWithEntity[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const router = useRouter()
   const { token } = useAuth()
@@ -65,7 +71,7 @@ export default function AssessorRapidAssessmentsPage() {
   })
 
   const [showFilters, setShowFilters] = useState(false)
-  const [selectedAssessmentForReason, setSelectedAssessmentForReason] = useState<any>(null)
+  const [selectedAssessmentForReason, setSelectedAssessmentForReason] = useState<RapidAssessmentWithEntity | null>(null)
   const [showReasonDialog, setShowReasonDialog] = useState(false)
 
   // Build query params from filters
@@ -100,7 +106,7 @@ export default function AssessorRapidAssessmentsPage() {
         
         if (response.ok) {
           const result = await response.json()
-          const allAssessments = result.data || []
+          const allAssessments: RapidAssessmentWithEntity[] = result.data || []
           setAssessments(allAssessments)
           
           // Apply client-side filtering for entity name and date filtering
