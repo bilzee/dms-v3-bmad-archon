@@ -84,7 +84,13 @@ export const GET = withAuth(async (request: NextRequest, context, { params }: Ro
                     name: true,
                     type: true
                   }
-                }
+                },
+                healthAssessment: true,
+                foodAssessment: true,
+                washAssessment: true,
+                shelterAssessment: true,
+                securityAssessment: true,
+                populationAssessment: true
               },
               orderBy: { rapidAssessmentDate: 'desc' }
             }

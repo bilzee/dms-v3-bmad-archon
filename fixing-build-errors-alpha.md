@@ -404,6 +404,42 @@ ctx.json(createApiResponse(true, mockReportTemplate, 'Template retrieved success
 **Pattern**: Even test files must use createApiResponse function instead of constructor
 **Impact**: Fixed all 13 instances in the test file
 
+### 22. Assessment Type-Specific Relation Access Errors
+**Files**: 
+- `src/app/api/v1/donors/entities/[id]/assessments/route.ts`
+- `src/lib/services/rapid-assessment.service.ts` (typo fixes)
+- `src/app/api/v1/dashboard/situation/route.ts` (typo fixes)
+- `prisma/seed.ts` (typo fixes)
+
+**Error**: `Property 'healthAssessment' does not exist on type RapidAssessment`
+**Root Cause**: Prisma queries not including type-specific assessment relations
+**Fix**: Add all assessment type relations to Prisma include clause:
+```typescript
+// Before - Missing assessment relations
+include: {
+  assessor: { select: { id: true, name: true, organization: true } },
+  entity: { select: { id: true, name: true, type: true } }
+}
+
+// After - Include all assessment type relations
+include: {
+  assessor: { select: { id: true, name: true, organization: true } },
+  entity: { select: { id: true, name: true, type: true } },
+  healthAssessment: true,
+  foodAssessment: true,
+  washAssessment: true,
+  shelterAssessment: true,
+  securityAssessment: true,
+  populationAssessment: true
+}
+```
+**Additional Fixes**:
+- Fixed `wASHAssessment` typos to `washAssessment` in 4 files
+- Ensured all assessment type switch cases can access their relations
+
+**Pattern**: Always include assessment type relations when accessing type-specific data
+**Impact**: Fixed assessment data access across donor entity routes and services
+
 ## Current Build Status  
 - **✅ COMPLETED**: All documented TypeScript compilation errors have been systematically resolved
 - **✅ COMPLETED**: EntityAssessment and GapAnalysis interfaces completely resolved

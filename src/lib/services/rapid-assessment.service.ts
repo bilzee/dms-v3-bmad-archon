@@ -171,7 +171,7 @@ export class RapidAssessmentService {
         healthAssessment: true,
         populationAssessment: true,
         foodAssessment: true,
-        wASHAssessment: true,
+        washAssessment: true,
         shelterAssessment: true,
         securityAssessment: true,
         assessor: {
@@ -239,7 +239,7 @@ export class RapidAssessmentService {
         healthAssessment: true,
         populationAssessment: true,
         foodAssessment: true,
-        wASHAssessment: true,
+        washAssessment: true,
         shelterAssessment: true,
         securityAssessment: true,
         entity: {
@@ -308,7 +308,7 @@ export class RapidAssessmentService {
         healthAssessment: true,
         populationAssessment: true,
         foodAssessment: true,
-        wASHAssessment: true,
+        washAssessment: true,
         shelterAssessment: true,
         securityAssessment: true,
         assessor: {
@@ -376,7 +376,7 @@ export class RapidAssessmentService {
         healthAssessment: true,
         populationAssessment: true,
         foodAssessment: true,
-        wASHAssessment: true,
+        washAssessment: true,
         shelterAssessment: true,
         securityAssessment: true
       }
@@ -426,7 +426,7 @@ export class RapidAssessmentService {
         healthAssessment: true,
         populationAssessment: true,
         foodAssessment: true,
-        wASHAssessment: true,
+        washAssessment: true,
         shelterAssessment: true,
         securityAssessment: true
       }
@@ -525,7 +525,7 @@ export class RapidAssessmentService {
           healthAssessment: true,
           populationAssessment: true,
           foodAssessment: true,
-          wASHAssessment: true,
+          washAssessment: true,
           shelterAssessment: true,
           securityAssessment: true
         }
