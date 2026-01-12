@@ -202,8 +202,8 @@ async function analyzeCategoryGaps(
   assessment: any, 
   entityPopulation: number,
   entityId: string | null
-) {
-  const gaps = [];
+): Promise<GapAnalysisItem[]> {
+  const gaps: GapAnalysisItem[] = [];
   let assessmentData;
 
   switch (type) {
@@ -220,8 +220,9 @@ async function analyzeCategoryGaps(
               'Establish temporary health facility',
               'Deploy mobile health clinic',
               'Coordinate with local health authorities'
-            ]
-          });
+            ],
+            trend: undefined
+          } as GapAnalysisItem);
         }
         if (!assessmentData.hasMedicineSupply) {
           gaps.push({
@@ -233,8 +234,9 @@ async function analyzeCategoryGaps(
               'Emergency medicine supply distribution',
               'Establish essential drug supply chain',
               'Partner with health organizations'
-            ]
-          });
+            ],
+            trend: undefined
+          } as GapAnalysisItem);
         }
         if (!assessmentData.hasEmergencyServices) {
           gaps.push({
@@ -246,8 +248,9 @@ async function analyzeCategoryGaps(
               'Establish emergency response team',
               'Create emergency transport system',
               'Train community health workers'
-            ]
-          });
+            ],
+            trend: undefined
+          } as GapAnalysisItem);
         }
         if (assessmentData.qualifiedHealthWorkers === 0) {
           gaps.push({
@@ -259,8 +262,9 @@ async function analyzeCategoryGaps(
               'Deploy qualified health personnel',
               'Train community health volunteers',
               'Establish partnership with health agencies'
-            ]
-          });
+            ],
+            trend: undefined
+          } as GapAnalysisItem);
         }
       }
       break;
@@ -278,8 +282,9 @@ async function analyzeCategoryGaps(
               'Emergency food distribution',
               'Establish food supply chain',
               'Coordinate with World Food Programme'
-            ]
-          });
+            ],
+            trend: undefined
+          } as GapAnalysisItem);
         }
         if (!assessmentData.hasRegularMealAccess) {
           gaps.push({
@@ -291,8 +296,9 @@ async function analyzeCategoryGaps(
               'Set up community kitchens',
               'Distribute food parcels',
               'Establish meal programs'
-            ]
-          });
+            ],
+            trend: undefined
+          } as GapAnalysisItem);
         }
         if (assessmentData.availableFoodDurationDays < 7) {
           gaps.push({
@@ -304,8 +310,9 @@ async function analyzeCategoryGaps(
               'Increase emergency food reserves',
               'Establish regular food supply convoys',
               'Create local food storage facilities'
-            ]
-          });
+            ],
+            trend: undefined
+          } as GapAnalysisItem);
         }
       }
       break;
@@ -323,8 +330,9 @@ async function analyzeCategoryGaps(
               'Install water storage tanks',
               'Establish water trucking services',
               'Drill new boreholes or wells'
-            ]
-          });
+            ],
+            trend: undefined
+          } as GapAnalysisItem);
         }
         if (!assessmentData.hasCleanWaterAccess) {
           gaps.push({
@@ -336,8 +344,9 @@ async function analyzeCategoryGaps(
               'Establish water purification systems',
               'Distribute water purification tablets',
               'Create protected water points'
-            ]
-          });
+            ],
+            trend: undefined
+          } as GapAnalysisItem);
         }
         if (assessmentData.functionalLatrinesAvailable === 0) {
           gaps.push({
@@ -349,8 +358,9 @@ async function analyzeCategoryGaps(
               'Construct emergency latrines',
               'Establish sanitation facilities',
               'Promote community-led total sanitation'
-            ]
-          });
+            ],
+            trend: undefined
+          } as GapAnalysisItem);
         }
         if (!assessmentData.hasHandwashingFacilities) {
           gaps.push({
@@ -362,8 +372,9 @@ async function analyzeCategoryGaps(
               'Install handwashing stations',
               'Distribute soap and hand sanitizer',
               'Conduct hygiene promotion campaigns'
-            ]
-          });
+            ],
+            trend: undefined
+          } as GapAnalysisItem);
         }
       }
       break;
@@ -381,8 +392,9 @@ async function analyzeCategoryGaps(
               'Deploy emergency shelters',
               'Distribute shelter kits',
               'Establish temporary camps'
-            ]
-          });
+            ],
+            trend: undefined
+          } as GapAnalysisItem);
         }
         if (!assessmentData.hasSafeStructures) {
           gaps.push({
@@ -394,8 +406,9 @@ async function analyzeCategoryGaps(
               'Construct safe temporary shelters',
               'Reinforce existing structures',
               'Establish safe zones'
-            ]
-          });
+            ],
+            trend: undefined
+          } as GapAnalysisItem);
         }
         if (assessmentData.numberSheltersRequired > 0) {
           gaps.push({
@@ -407,8 +420,9 @@ async function analyzeCategoryGaps(
               'Urgent construction of additional shelters',
               'Request shelter assistance from partners',
               'Set up temporary accommodation'
-            ]
-          });
+            ],
+            trend: undefined
+          } as GapAnalysisItem);
         }
         if (assessmentData.areOvercrowded) {
           gaps.push({
@@ -420,8 +434,9 @@ async function analyzeCategoryGaps(
               'Decongest existing shelters',
               'Establish additional shelter sites',
               'Improve ventilation and space'
-            ]
-          });
+            ],
+            trend: undefined
+          } as GapAnalysisItem);
         }
       }
       break;
@@ -439,8 +454,9 @@ async function analyzeCategoryGaps(
               'Deploy security personnel',
               'Establish safe zones',
               'Implement protective measures'
-            ]
-          });
+            ],
+            trend: undefined
+          } as GapAnalysisItem);
         }
         if (!assessmentData.hasSecurityPresence) {
           gaps.push({
@@ -452,8 +468,9 @@ async function analyzeCategoryGaps(
               'Establish security patrol',
               'Set up security checkpoints',
               'Coordinate with local authorities'
-            ]
-          });
+            ],
+            trend: undefined
+          } as GapAnalysisItem);
         }
         if (!assessmentData.hasProtectionReportingMechanism) {
           gaps.push({
@@ -465,8 +482,9 @@ async function analyzeCategoryGaps(
               'Establish reporting hotlines',
               'Create community protection committees',
               'Set up feedback mechanisms'
-            ]
-          });
+            ],
+            trend: undefined
+          } as GapAnalysisItem);
         }
         if (!assessmentData.vulnerableGroupsHaveAccess) {
           gaps.push({
@@ -478,8 +496,9 @@ async function analyzeCategoryGaps(
               'Establish targeted protection programs',
               'Create safe spaces for vulnerable groups',
               'Provide specialized protection services'
-            ]
-          });
+            ],
+            trend: undefined
+          } as GapAnalysisItem);
         }
       }
       break;
@@ -497,8 +516,9 @@ async function analyzeCategoryGaps(
               'Provide emergency medical care',
               'Establish mortuary services',
               'Provide psychosocial support'
-            ]
-          });
+            ],
+            trend: undefined
+          } as GapAnalysisItem);
         }
         if (assessmentData.numberInjured > 0) {
           gaps.push({
@@ -510,8 +530,9 @@ async function analyzeCategoryGaps(
               'Establish emergency medical facilities',
               'Deploy medical personnel',
               'Provide trauma care services'
-            ]
-          });
+            ],
+            trend: undefined
+          } as GapAnalysisItem);
         }
       }
       break;

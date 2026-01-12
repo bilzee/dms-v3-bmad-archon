@@ -580,6 +580,42 @@ gaps.forEach(gap => {
 - ✅ Object.entries type errors
 - ✅ Null safety and optional chaining issues
 
+### 26. Gap Analysis Type Assignment Error ✅
+
+**Error**: Property 'trend' does not exist on type (line 524)
+```
+#15 102.6 > 524 |       gap.trend = trend;
+#15 102.6       |           ^
+```
+
+**Root Cause**: Gap objects in `analyzeCategoryGaps` function were being created without the optional `trend` property, making them incompatible for trend assignment.
+
+**Solution**: 
+1. **Updated all gap object definitions** to include `trend: undefined` property and cast as `GapAnalysisItem`
+2. **Updated function return type** to `Promise<GapAnalysisItem[]>` for type consistency
+3. **Fixed array type annotation** to `const gaps: GapAnalysisItem[] = []`
+
+**Pattern Applied**:
+```typescript
+// Before:
+gaps.push({
+  category: 'HEALTH' as const,
+  severity: classifyGapSeverity('critical', entityPopulation),
+  // ... other properties
+});
+
+// After:
+gaps.push({
+  category: 'HEALTH' as const,
+  severity: classifyGapSeverity('critical', entityPopulation),
+  // ... other properties
+  trend: undefined
+} as GapAnalysisItem);
+```
+
+**Files Fixed**:
+- ✅ `src/app/api/v1/donors/entities/[id]/gap-analysis/route.ts` - All gap object definitions across HEALTH, FOOD, WASH, SHELTER, SECURITY, POPULATION categories
+
 ## Next Steps
 - **READY FOR DEPLOYMENT**: Retry Dokploy deployment build to verify complete TypeScript compliance
 - All documented compilation errors have been resolved systematically
