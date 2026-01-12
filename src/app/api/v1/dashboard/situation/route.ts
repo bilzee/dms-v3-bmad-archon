@@ -419,7 +419,7 @@ interface GapAnalysis {
   entityId: string;
   entityName: string;
   entityType: 'COMMUNITY' | 'WARD' | 'LGA' | 'STATE' | 'FACILITY' | 'CAMP';
-  location?: string;
+  location: string | null | undefined;  // Allow both null and undefined for flexibility
   assessmentGaps: {
     [key: string]: {
       hasGap: boolean;
