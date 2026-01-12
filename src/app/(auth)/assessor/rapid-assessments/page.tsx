@@ -519,7 +519,11 @@ export default function AssessorRapidAssessmentsPage() {
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold text-red-600">
-                {filteredAssessments.reduce((sum, a) => sum + (a.gapCount || 0), 0)}
+                {filteredAssessments.reduce((sum, a) => {
+                  // Calculate gap count from gapAnalysis JSON or default to 0
+                  const gapCount = a.gapAnalysis ? Object.keys(a.gapAnalysis).length : 0
+                  return sum + gapCount
+                }, 0)}
               </div>
               <p className="text-xs text-muted-foreground">
                 Total gaps identified
@@ -582,18 +586,21 @@ export default function AssessorRapidAssessmentsPage() {
                     </div>
                     
                     <div className="flex items-center gap-4">
-                      {(assessment.gapCount || 0) > 0 && (
-                        <Badge 
-                          variant="destructive" 
-                          data-testid={`gap-indicator-${assessment.id}`}
-                        >
-                          {assessment.gapCount} Gaps
-                        </Badge>
-                      )}
+                      {(() => {
+                        const gapCount = assessment.gapAnalysis ? Object.keys(assessment.gapAnalysis).length : 0
+                        return gapCount > 0 && (
+                          <Badge 
+                            variant="destructive" 
+                            data-testid={`gap-indicator-${assessment.id}`}
+                          >
+                            {gapCount} Gaps
+                          </Badge>
+                        )
+                      })()}
                       {getStatusBadge(assessment)}
                       
                       {/* Show Edit and Reason buttons for rejected assessments */}
-                      {(assessment.status === 'REJECTED' || assessment.verificationStatus === 'REJECTED') && (
+                      {assessment.verificationStatus === 'REJECTED' && (
                         <>
                           <Button 
                             variant="outline" 
