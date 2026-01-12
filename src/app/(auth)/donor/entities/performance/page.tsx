@@ -117,8 +117,8 @@ export default function EntityPerformancePage() {
         const criticalGaps: string[] = [];
 
         // Process each assessment category
-        Object.entries(assessmentsByCategory).forEach(([category, assessments]: [string, any[]]) => {
-          const entityAssessment = assessments.find(a => a.entity.id === entity.id);
+        Object.entries(assessmentsByCategory).forEach(([category, assessments]) => {
+          const entityAssessment = Array.isArray(assessments) ? assessments.find(a => a.entity.id === entity.id) : null;
           if (entityAssessment && entityAssessment.summary) {
             const score = entityAssessment.summary.overallScore || 0;
             const categoryKey = category.toLowerCase() as keyof typeof scores;
