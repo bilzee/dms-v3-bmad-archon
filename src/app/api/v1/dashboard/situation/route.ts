@@ -2324,7 +2324,7 @@ export const GET = withAuth(async (request: NextRequest, context) => {
           location: entity.location,
           coordinates: entity.coordinates,
           affectedAt: new Date(), // Will be updated based on actual data
-          severity: 'LOW', // Will be calculated dynamically
+          severity: 'LOW' as 'CRITICAL' | 'HIGH' | 'MEDIUM' | 'LOW', // Will be calculated dynamically
           severityCount: 0, // Will be calculated dynamically
           latestAssessments,
           gapSummary: {
@@ -2345,7 +2345,7 @@ export const GET = withAuth(async (request: NextRequest, context) => {
           location: entity.location,
           coordinates: entity.coordinates,
           affectedAt: new Date(),
-          severity: 'LOW',
+          severity: 'LOW' as 'CRITICAL' | 'HIGH' | 'MEDIUM' | 'LOW',
           severityCount: 0,
           latestAssessments: {},
           gapSummary: {
