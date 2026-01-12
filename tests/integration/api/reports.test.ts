@@ -6,7 +6,7 @@ import userEvent from '@testing-library/user-event';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { z } from 'zod';
 import { CreateConfigurationSchema, ReportFiltersSchema } from '@/lib/reports/data-aggregator';
-import { ApiResponse } from '@/types/api';
+import { createApiResponse } from '@/types/api';
 
 // Test data
 const mockReportTemplate = {
@@ -107,7 +107,7 @@ const server = setupServer(
 
     return res(
       ctx.status(200),
-      ctx.json(new ApiResponse(true, {
+      ctx.json(createApiResponse(true, {
         templates: paginatedTemplates,
         pagination: {
           page,
@@ -123,20 +123,20 @@ const server = setupServer(
     if (req.params.id === 'test-template-1') {
       return res(
         ctx.status(200),
-        ctx.json(new ApiResponse(true, mockReportTemplate, 'Template retrieved successfully'))
+        ctx.json(createApiResponse(true, mockReportTemplate, 'Template retrieved successfully'))
       );
     }
 
     return res(
       ctx.status(404),
-      ctx.json(new ApiResponse(false, null, 'Template not found'))
+      ctx.json(createApiResponse(false, null, 'Template not found'))
     );
   }),
 
   rest.post('/api/v1/reports/templates', (req, res, ctx) => {
     return res(
       ctx.status(201),
-      ctx.json(new ApiResponse(true, {
+      ctx.json(createApiResponse(true, {
         ...mockReportTemplate,
         id: 'new-template-id'
       }, 'Template created successfully'))
@@ -169,7 +169,7 @@ const server = setupServer(
 
     return res(
       ctx.status(200),
-      ctx.json(new ApiResponse(true, {
+      ctx.json(createApiResponse(true, {
         configurations: paginatedConfigurations,
         pagination: {
           page,
@@ -184,7 +184,7 @@ const server = setupServer(
   rest.post('/api/v1/reports/configurations', (req, res, ctx) => {
     return res(
       ctx.status(201),
-      ctx.json(new ApiResponse(true, {
+      ctx.json(createApiResponse(true, {
         ...mockReportConfiguration,
         id: 'new-config-id'
       }, 'Configuration created successfully'))
@@ -195,20 +195,20 @@ const server = setupServer(
     if (req.params.id === 'test-config-1') {
       return res(
         ctx.status(200),
-        ctx.json(new ApiResponse(true, mockReportConfiguration, 'Configuration retrieved successfully'))
+        ctx.json(createApiResponse(true, mockReportConfiguration, 'Configuration retrieved successfully'))
       );
     }
 
     return res(
       ctx.status(404),
-      ctx.json(new ApiResponse(false, null, 'Configuration not found'))
+      ctx.json(createApiResponse(false, null, 'Configuration not found'))
     );
   }),
 
   rest.post('/api/v1/reports/generate', (req, res, ctx) => {
     return res(
       ctx.status(202),
-      ctx.json(new ApiResponse(true, {
+      ctx.json(createApiResponse(true, {
         executionId: 'test-execution-id',
         jobId: 'test-job-id',
         status: 'PENDING',
@@ -224,7 +224,7 @@ const server = setupServer(
 
     return res(
       ctx.status(200),
-      ctx.json(new ApiResponse(true, {
+      ctx.json(createApiResponse(true, {
         execution: {
           id: req.params.id,
           status: status.toUpperCase(),
@@ -243,7 +243,7 @@ const server = setupServer(
   rest.delete('/api/v1/reports/executions/:id', (req, res, ctx) => {
     return res(
       ctx.status(200),
-      ctx.json(new ApiResponse(true, null, 'Report execution cancelled successfully'))
+      ctx.json(createApiResponse(true, null, 'Report execution cancelled successfully'))
     );
   }),
 
@@ -261,7 +261,7 @@ const server = setupServer(
 
     return res(
       ctx.status(404),
-      ctx.json(new ApiResponse(false, null, 'Report file not found'))
+      ctx.json(createApiResponse(false, null, 'Report file not found'))
     );
   }
 );
@@ -713,7 +713,7 @@ describe('Reports API Integration Tests', () => {
       global.fetch = jest.fn(() =>
         Promise.resolve({
           status: 401,
-          json: () => Promise.resolve(new ApiResponse(false, null, 'Unauthorized'))
+          json: () => Promise.resolve(createApiResponse(false, null, 'Unauthorized'))
         })
       );
 
@@ -762,7 +762,7 @@ describe('Reports API Integration Tests', () => {
         rest.post('/api/v1/reports/templates', (req, res, ctx) => {
           return res(
             ctx.status(500),
-            ctx.json(new ApiResponse(false, null, 'Internal server error'))
+            ctx.json(createApiResponse(false, null, 'Internal server error'))
           );
         })
       );
