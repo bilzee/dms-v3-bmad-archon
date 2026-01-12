@@ -394,7 +394,7 @@ interface EntityAssessment {
   id: string;
   name: string;
   type: EntityType;
-  location: string;
+  location: string | null;  // Allow null for entities without location data
   coordinates?: any;
   affectedAt: Date;
   severity: 'CRITICAL' | 'HIGH' | 'MEDIUM' | 'LOW';
