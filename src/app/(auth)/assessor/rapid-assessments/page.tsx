@@ -13,11 +13,12 @@ import { PlusCircle, Activity, FileText, Clock, CheckCircle, AlertTriangle, Filt
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { useAuth } from '@/hooks/useAuth'
-import { RapidAssessment, Entity } from '@prisma/client'
+import { RapidAssessment, Entity, Incident } from '@prisma/client'
 
-// Type for assessment with entity relation
+// Type for assessment with entity and incident relations
 type RapidAssessmentWithEntity = RapidAssessment & {
   entity?: Entity | null
+  incident?: Incident | null
 }
 
 const assessmentTypes = [
