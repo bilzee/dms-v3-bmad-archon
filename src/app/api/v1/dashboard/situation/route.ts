@@ -2228,7 +2228,7 @@ export const GET = withAuth(async (request: NextRequest, context) => {
         let lastUpdated = new Date();
 
         if (healthAssessment) {
-          latestAssessments.HEALTH = {
+          latestAssessments.health = {
             id: healthAssessment.rapidAssessmentId,
             date: healthAssessment.rapidAssessmentDate,
             status: 'VERIFIED',
@@ -2243,7 +2243,7 @@ export const GET = withAuth(async (request: NextRequest, context) => {
         }
 
         if (foodAssessment) {
-          latestAssessments.FOOD = {
+          latestAssessments.food = {
             id: foodAssessment.rapidAssessmentId,
             date: foodAssessment.rapidAssessmentDate,
             status: 'VERIFIED',
@@ -2258,7 +2258,7 @@ export const GET = withAuth(async (request: NextRequest, context) => {
         }
 
         if (washAssessment) {
-          latestAssessments.WASH = {
+          latestAssessments.wash = {
             id: washAssessment.rapidAssessmentId,
             date: washAssessment.rapidAssessmentDate,
             status: 'VERIFIED',
@@ -2273,7 +2273,7 @@ export const GET = withAuth(async (request: NextRequest, context) => {
         }
 
         if (shelterAssessment) {
-          latestAssessments.SHELTER = {
+          latestAssessments.shelter = {
             id: shelterAssessment.rapidAssessmentId,
             date: shelterAssessment.rapidAssessmentDate,
             status: 'VERIFIED',
@@ -2288,7 +2288,7 @@ export const GET = withAuth(async (request: NextRequest, context) => {
         }
 
         if (securityAssessment) {
-          latestAssessments.SECURITY = {
+          latestAssessments.security = {
             id: securityAssessment.rapidAssessmentId,
             date: securityAssessment.rapidAssessmentDate,
             status: 'VERIFIED',
@@ -2303,7 +2303,7 @@ export const GET = withAuth(async (request: NextRequest, context) => {
         }
 
         if (populationAssessment) {
-          latestAssessments.POPULATION = {
+          latestAssessments.population = {
             id: populationAssessment.rapidAssessmentId,
             date: populationAssessment.rapidAssessmentDate,
             status: 'VERIFIED',
