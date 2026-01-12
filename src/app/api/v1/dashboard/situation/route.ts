@@ -537,7 +537,24 @@ async function getPopulationImpact(incidentId: string): Promise<PopulationImpact
       assessment !== null
   );
 
-  const populationAggregation = populationData.reduce(
+  type PopulationAggregation = {
+    totalPopulation: number;
+    totalHouseholds: number;
+    populationMale: number;
+    populationFemale: number;
+    under5: number;
+    elderly: number;
+    pwd: number;
+    pregnantWomen: number;
+    lactatingMothers: number;
+    separatedChildren: number;
+    populationLivesLost: number;
+    populationInjured: number;
+    populationCount: number;
+    latestDate: string | null;
+  };
+
+  const populationAggregation: PopulationAggregation = populationData.reduce<PopulationAggregation>(
     (acc, assessment) => ({
       totalPopulation: acc.totalPopulation + (assessment.totalPopulation || 0),
       totalHouseholds: acc.totalHouseholds + (assessment.totalHouseholds || 0),
@@ -554,8 +571,8 @@ async function getPopulationImpact(incidentId: string): Promise<PopulationImpact
       populationCount: acc.populationCount + 1,
       latestDate: acc.latestDate && assessment.rapidAssessment?.rapidAssessmentDate ? 
         (new Date(assessment.rapidAssessment.rapidAssessmentDate) > new Date(acc.latestDate) ? 
-          assessment.rapidAssessment.rapidAssessmentDate : acc.latestDate) : 
-        (assessment.rapidAssessment?.rapidAssessmentDate || acc.latestDate),
+          assessment.rapidAssessment.rapidAssessmentDate.toISOString() : acc.latestDate) : 
+        (assessment.rapidAssessment?.rapidAssessmentDate?.toISOString() || acc.latestDate),
     }),
     {
       totalPopulation: 0,
@@ -765,7 +782,7 @@ async function getEntityAssessments(incidentId: string, entityId?: string): Prom
         WHERE e."isActive" = true
           AND e.id = ${entityId}
         ORDER BY ra."rapidAssessmentDate" DESC
-      ` as any[]
+      ` as unknown as any[]
     : db.$queryRaw`
         SELECT 
           e.id,
@@ -785,7 +802,7 @@ async function getEntityAssessments(incidentId: string, entityId?: string): Prom
         WHERE e."isActive" = true
         ORDER BY e.name, ra."rapidAssessmentDate" DESC
         LIMIT 100
-      ` as any[];
+      ` as unknown as any[];
 
   const entities = await entitiesQuery;
   
@@ -839,7 +856,7 @@ async function getEntityAssessments(incidentId: string, entityId?: string): Prom
     const assessmentSeverities: ('CRITICAL' | 'HIGH' | 'MEDIUM' | 'LOW')[] = [];
     
     assessments.slice(0, 5).forEach(assessment => { // Exclude population from gap analysis
-      if (assessment && assessment.gapAnalysis.hasGap) {
+      if (assessment && 'gapAnalysis' in assessment && assessment.gapAnalysis.hasGap) {
         assessmentSeverities.push(assessment.gapAnalysis.severity as 'CRITICAL' | 'HIGH' | 'MEDIUM' | 'LOW');
       } else if (assessment) {
         assessmentSeverities.push('LOW'); // No gaps means LOW severity
@@ -877,7 +894,7 @@ async function getEntityAssessments(incidentId: string, entityId?: string): Prom
     let criticalGaps = 0;
 
     assessments.slice(0, 5).forEach(assessment => { // Exclude population from gap analysis
-      if (assessment) {
+      if (assessment && 'gapAnalysis' in assessment) {
         if (assessment.gapAnalysis.hasGap) {
           totalGaps++;
           if (assessment.gapAnalysis.severity === 'CRITICAL') {
@@ -902,12 +919,44 @@ async function getAggregatedAssessments(incidentId: string): Promise<AggregatedA
   }
 
   // Mock aggregated assessments for now
-  const aggregatedHealth = { totalEntities: 3, entitiesWithGaps: 2, entitiesWithoutGaps: 1 };
-  const aggregatedFood = { totalEntities: 3, entitiesWithGaps: 1, entitiesWithoutGaps: 2 };
-  const aggregatedWASH = { totalEntities: 3, entitiesWithGaps: 1, entitiesWithoutGaps: 2 };
-  const aggregatedShelter = { totalEntities: 3, entitiesWithGaps: 1, entitiesWithoutGaps: 2 };
-  const aggregatedSecurity = { totalEntities: 3, entitiesWithGaps: 0, entitiesWithoutGaps: 3 };
-  const aggregatedPopulation = { totalEntities: 3, totalPopulation: 25000, totalHouseholds: 5000, totalLivesLost: 0, totalInjured: 5 };
+  const aggregatedHealth = { 
+    totalEntities: 3, 
+    entitiesWithGaps: 2, 
+    entitiesWithoutGaps: 1,
+    totalHealthFacilities: 5,
+    totalQualifiedWorkers: 12
+  };
+  const aggregatedFood = { 
+    totalEntities: 3, 
+    entitiesWithGaps: 1, 
+    entitiesWithoutGaps: 2,
+    averageFoodDuration: 7,
+    totalAdditionalPersonsRequired: 500
+  };
+  const aggregatedWASH = { 
+    totalEntities: 3, 
+    entitiesWithGaps: 1, 
+    entitiesWithoutGaps: 2,
+    totalFunctionalLatrines: 25
+  };
+  const aggregatedShelter = { 
+    totalEntities: 3, 
+    entitiesWithGaps: 1, 
+    entitiesWithoutGaps: 2,
+    totalSheltersRequired: 150
+  };
+  const aggregatedSecurity = { 
+    totalEntities: 3, 
+    entitiesWithGaps: 0, 
+    entitiesWithoutGaps: 3
+  };
+  const aggregatedPopulation = { 
+    totalEntities: 3, 
+    totalPopulation: 25000, 
+    totalHouseholds: 5000, 
+    totalLivesLost: 0, 
+    totalInjured: 5 
+  };
 
   // Calculate aggregated gap summary
   let totalGaps = 0;
@@ -1420,10 +1469,10 @@ function aggregateHealthAssessments(entityAssessments: EntityAssessment[]): any 
   
   return {
     totalEntities: healthAssessments.length,
-    entitiesWithGaps: healthAssessments.filter(a => a.gapAnalysis.hasGap).length,
-    entitiesWithoutGaps: healthAssessments.filter(a => !a.gapAnalysis.hasGap).length,
-    totalHealthFacilities: healthAssessments.reduce((sum, a) => sum + (a.numberHealthFacilities || 0), 0),
-    totalQualifiedWorkers: healthAssessments.reduce((sum, a) => sum + (a.qualifiedHealthWorkers || 0), 0),
+    entitiesWithGaps: healthAssessments.filter(a => a && a.gapAnalysis.hasGap).length,
+    entitiesWithoutGaps: healthAssessments.filter(a => a && !a.gapAnalysis.hasGap).length,
+    totalHealthFacilities: healthAssessments.reduce((sum, a) => sum + (a?.numberHealthFacilities || 0), 0),
+    totalQualifiedWorkers: healthAssessments.reduce((sum, a) => sum + (a?.qualifiedHealthWorkers || 0), 0),
     fieldGapAnalysis
   };
 }
@@ -1447,10 +1496,10 @@ function aggregateFoodAssessments(entityAssessments: EntityAssessment[]): any {
   
   return {
     totalEntities: foodAssessments.length,
-    entitiesWithGaps: foodAssessments.filter(a => a.gapAnalysis.hasGap).length,
-    entitiesWithoutGaps: foodAssessments.filter(a => !a.gapAnalysis.hasGap).length,
-    totalFoodDurationDays: foodAssessments.reduce((sum, a) => sum + (a.availableFoodDurationDays || 0), 0),
-    additionalFoodRequiredPersons: foodAssessments.reduce((sum, a) => sum + (a.additionalFoodRequiredPersons || 0), 0),
+    entitiesWithGaps: foodAssessments.filter(a => a && a.gapAnalysis.hasGap).length,
+    entitiesWithoutGaps: foodAssessments.filter(a => a && !a.gapAnalysis.hasGap).length,
+    totalFoodDurationDays: foodAssessments.reduce((sum, a) => sum + (a?.availableFoodDurationDays || 0), 0),
+    additionalFoodRequiredPersons: foodAssessments.reduce((sum, a) => sum + (a?.additionalFoodRequiredPersons || 0), 0),
     fieldGapAnalysis
   };
 }
@@ -1476,9 +1525,9 @@ function aggregateWASHAssessments(entityAssessments: EntityAssessment[]): any {
   
   return {
     totalEntities: washAssessments.length,
-    entitiesWithGaps: washAssessments.filter(a => a.gapAnalysis.hasGap).length,
-    entitiesWithoutGaps: washAssessments.filter(a => !a.gapAnalysis.hasGap).length,
-    totalFunctionalLatrines: washAssessments.reduce((sum, a) => sum + (a.functionalLatrinesAvailable || 0), 0),
+    entitiesWithGaps: washAssessments.filter(a => a && a.gapAnalysis.hasGap).length,
+    entitiesWithoutGaps: washAssessments.filter(a => a && !a.gapAnalysis.hasGap).length,
+    totalFunctionalLatrines: washAssessments.reduce((sum, a) => sum + (a?.functionalLatrinesAvailable || 0), 0),
     fieldGapAnalysis
   };
 }
@@ -1503,9 +1552,9 @@ function aggregateShelterAssessments(entityAssessments: EntityAssessment[]): any
   
   return {
     totalEntities: shelterAssessments.length,
-    entitiesWithGaps: shelterAssessments.filter(a => a.gapAnalysis.hasGap).length,
-    entitiesWithoutGaps: shelterAssessments.filter(a => !a.gapAnalysis.hasGap).length,
-    totalSheltersRequired: shelterAssessments.reduce((sum, a) => sum + (a.numberSheltersRequired || 0), 0),
+    entitiesWithGaps: shelterAssessments.filter(a => a && a.gapAnalysis.hasGap).length,
+    entitiesWithoutGaps: shelterAssessments.filter(a => a && !a.gapAnalysis.hasGap).length,
+    totalSheltersRequired: shelterAssessments.reduce((sum, a) => sum + (a?.numberSheltersRequired || 0), 0),
     fieldGapAnalysis
   };
 }
@@ -1532,8 +1581,8 @@ function aggregateSecurityAssessments(entityAssessments: EntityAssessment[]): an
   
   return {
     totalEntities: securityAssessments.length,
-    entitiesWithGaps: securityAssessments.filter(a => a.gapAnalysis.hasGap).length,
-    entitiesWithoutGaps: securityAssessments.filter(a => !a.gapAnalysis.hasGap).length,
+    entitiesWithGaps: securityAssessments.filter(a => a && a.gapAnalysis.hasGap).length,
+    entitiesWithoutGaps: securityAssessments.filter(a => a && !a.gapAnalysis.hasGap).length,
     fieldGapAnalysis
   };
 }
@@ -1542,10 +1591,10 @@ function aggregatePopulationAssessments(entityAssessments: EntityAssessment[]): 
   const populationAssessments = entityAssessments.map(e => e.latestAssessments.population).filter(Boolean);
   return {
     totalEntities: populationAssessments.length,
-    totalPopulation: populationAssessments.reduce((sum, a) => sum + (a.totalPopulation || 0), 0),
-    totalHouseholds: populationAssessments.reduce((sum, a) => sum + (a.totalHouseholds || 0), 0),
-    totalLivesLost: populationAssessments.reduce((sum, a) => sum + (a.numberLivesLost || 0), 0),
-    totalInjured: populationAssessments.reduce((sum, a) => sum + (a.numberInjured || 0), 0)
+    totalPopulation: populationAssessments.reduce((sum, a) => sum + (a?.totalPopulation || 0), 0),
+    totalHouseholds: populationAssessments.reduce((sum, a) => sum + (a?.totalHouseholds || 0), 0),
+    totalLivesLost: populationAssessments.reduce((sum, a) => sum + (a?.numberLivesLost || 0), 0),
+    totalInjured: populationAssessments.reduce((sum, a) => sum + (a?.numberInjured || 0), 0)
   };
 }
 
@@ -1596,7 +1645,7 @@ async function getGapAnalysisSummary(incidentId: string): Promise<GapAnalysisSum
         assessmentTypeCounts.HEALTH.entitiesWithGaps++;
         if (healthGapData.severity === 'CRITICAL' || healthGapData.severity === 'HIGH') {
           entitySeverity = 'high';
-        } else if (healthGapData.severity === 'MEDIUM' && entitySeverity !== 'high') {
+        } else if (healthGapData.severity === 'MEDIUM' && (entitySeverity as string) !== 'high') {
           entitySeverity = 'medium';
         }
       }
@@ -1610,7 +1659,7 @@ async function getGapAnalysisSummary(incidentId: string): Promise<GapAnalysisSum
         assessmentTypeCounts.FOOD.entitiesWithGaps++;
         if (foodGapData.severity === 'CRITICAL' || foodGapData.severity === 'HIGH') {
           entitySeverity = 'high';
-        } else if (foodGapData.severity === 'MEDIUM' && entitySeverity !== 'high') {
+        } else if (foodGapData.severity === 'MEDIUM' && (entitySeverity as string) !== 'high') {
           entitySeverity = 'medium';
         }
       }
@@ -1624,7 +1673,7 @@ async function getGapAnalysisSummary(incidentId: string): Promise<GapAnalysisSum
         assessmentTypeCounts.WASH.entitiesWithGaps++;
         if (washGapData.severity === 'CRITICAL' || washGapData.severity === 'HIGH') {
           entitySeverity = 'high';
-        } else if (washGapData.severity === 'MEDIUM' && entitySeverity !== 'high') {
+        } else if (washGapData.severity === 'MEDIUM' && (entitySeverity as string) !== 'high') {
           entitySeverity = 'medium';
         }
       }
@@ -1638,7 +1687,7 @@ async function getGapAnalysisSummary(incidentId: string): Promise<GapAnalysisSum
         assessmentTypeCounts.SHELTER.entitiesWithGaps++;
         if (shelterGapData.severity === 'CRITICAL' || shelterGapData.severity === 'HIGH') {
           entitySeverity = 'high';
-        } else if (shelterGapData.severity === 'MEDIUM' && entitySeverity !== 'high') {
+        } else if (shelterGapData.severity === 'MEDIUM' && (entitySeverity as string) !== 'high') {
           entitySeverity = 'medium';
         }
       }
@@ -1652,7 +1701,7 @@ async function getGapAnalysisSummary(incidentId: string): Promise<GapAnalysisSum
         assessmentTypeCounts.SECURITY.entitiesWithGaps++;
         if (securityGapData.severity === 'CRITICAL' || securityGapData.severity === 'HIGH') {
           entitySeverity = 'high';
-        } else if (securityGapData.severity === 'MEDIUM' && entitySeverity !== 'high') {
+        } else if (securityGapData.severity === 'MEDIUM' && (entitySeverity as string) !== 'high') {
           entitySeverity = 'medium';
         }
       }
@@ -1729,7 +1778,7 @@ async function getEntityLocations(
               AND e.coordinates->>'longitude' IS NOT NULL
             ORDER BY e.name
             LIMIT 500
-          ` as Array<{
+          ` as unknown as Array<{
             id: string;
             name: string;
             type: string;
@@ -1755,7 +1804,7 @@ async function getEntityLocations(
               AND e.coordinates->>'longitude' IS NOT NULL
             ORDER BY e.name
             LIMIT 500
-          ` as Array<{
+          ` as unknown as Array<{
             id: string;
             name: string;
             type: string;
@@ -1782,7 +1831,7 @@ async function getEntityLocations(
               AND e.coordinates->>'longitude' IS NOT NULL
             ORDER BY e.name
             LIMIT 500
-          ` as Array<{
+          ` as unknown as Array<{
             id: string;
             name: string;
             type: string;
@@ -1808,7 +1857,7 @@ async function getEntityLocations(
               AND e.coordinates->>'longitude' IS NOT NULL
             ORDER BY e.name
             LIMIT 500
-          ` as Array<{
+          ` as unknown as Array<{
             id: string;
             name: string;
             type: string;
@@ -1835,7 +1884,7 @@ async function getEntityLocations(
             AND e.coordinates->>'longitude' IS NOT NULL
           ORDER BY e.name
           LIMIT 500
-        ` as Array<{
+        ` as unknown as Array<{
           id: string;
           name: string;
           type: string;
@@ -1860,7 +1909,7 @@ async function getEntityLocations(
         WHERE ra."entityId" = ${entity.id}
           AND ra."verificationStatus" IN ('VERIFIED', 'AUTO_VERIFIED')
         ORDER BY ra."assessmentDate" DESC
-      ` as Array<{
+      ` as unknown as Array<{
         rapidAssessmentType: string;
         gapAnalysis: any;
         verificationStatus: string;
@@ -1920,7 +1969,7 @@ async function getEntityLocations(
           WHERE dc."entityId" = ${entity.id}
             AND dc."incidentId" = ${incidentId}
           ORDER BY dc."createdAt" DESC
-        ` as Array<{
+        ` as unknown as Array<{
           id: string;
           donorName: string;
           commitmentStatus: string;
@@ -2098,7 +2147,7 @@ export const GET = withAuth(async (request: NextRequest, context) => {
         return {
           id: incident.id,
           type: incident.type,
-          subType: incident.subType,
+          subType: incident.subType || 'N/A',
           severity: incident.severity as 'CRITICAL' | 'HIGH' | 'MEDIUM' | 'LOW',
           status: incident.status as 'ACTIVE' | 'CONTAINED' | 'RESOLVED',
           description: incident.description,
@@ -2318,7 +2367,7 @@ export const GET = withAuth(async (request: NextRequest, context) => {
       });
 
       // Determine overall gap severity
-      let overallGapSeverity: 'LOW' = 'LOW';
+      let overallGapSeverity: 'CRITICAL' | 'HIGH' | 'MEDIUM' | 'LOW' = 'LOW';
       if (hasCriticalGaps) overallGapSeverity = 'CRITICAL';
       else if (hasHighGaps) overallGapSeverity = 'HIGH';
       else if (totalGapCount > 0) overallGapSeverity = 'MEDIUM';
@@ -2369,6 +2418,7 @@ export const GET = withAuth(async (request: NextRequest, context) => {
           wash: aggregateWASHAssessments(entityAssessments),
           shelter: aggregateShelterAssessments(entityAssessments),
           security: aggregateSecurityAssessments(entityAssessments),
+          population: aggregatePopulationAssessments(entityAssessments),
           gapSummary: {
             totalGaps: 0,
             totalNoGaps: 0,
@@ -2388,9 +2438,9 @@ export const GET = withAuth(async (request: NextRequest, context) => {
         ];
         
         aggregatedAssessments.gapSummary = {
-          totalGaps: allGapBasedAssessments.filter(a => a.gapAnalysis.hasGap).length,
-          totalNoGaps: allGapBasedAssessments.filter(a => !a.gapAnalysis.hasGap).length,
-          criticalGaps: allGapBasedAssessments.filter(a => a.gapAnalysis.severity === 'CRITICAL').length,
+          totalGaps: allGapBasedAssessments.filter(a => a && a.gapAnalysis.hasGap).length,
+          totalNoGaps: allGapBasedAssessments.filter(a => a && !a.gapAnalysis.hasGap).length,
+          criticalGaps: allGapBasedAssessments.filter(a => a && a.gapAnalysis.severity === 'CRITICAL').length,
           entitiesWithGaps: entityAssessments.filter(e => {
             const entityGaps = [
               e.latestAssessments.health?.gapAnalysis.hasGap,
