@@ -504,7 +504,7 @@ export default function AssessorRapidAssessmentsPage() {
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold text-red-600">
-                {filteredAssessments.filter(a => a.status === 'REJECTED' || a.verificationStatus === 'REJECTED').length}
+                {filteredAssessments.filter(a => a.verificationStatus === 'REJECTED').length}
               </div>
               <p className="text-xs text-muted-foreground">
                 Rejected assessments
