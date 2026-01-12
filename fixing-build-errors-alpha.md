@@ -304,13 +304,36 @@ entities.push({
 **Error**: `Type 'string | null' is not assignable to type 'string | undefined'`
 **Fix**: Update GapAnalysis interface to accept `location: string | null | undefined`
 
+### 18. Prisma Where Clause Type Safety
+**File**: `src/app/api/v1/donors/[id]/commitments/route.ts`
+**Error**: `Type 'string | null | undefined' is not assignable to Prisma where clause types`
+**Fix**: Add conditional spreading to exclude null values from where clauses:
+```typescript
+// Before - Prisma rejects null values
+where: {
+  OR: [
+    { name: currentUser?.organization },        // ❌ Can be null
+    { organization: currentUser?.organization }  // ❌ Can be null
+  ]
+}
+
+// After - Only include non-null values
+where: {
+  OR: [
+    ...(currentUser?.organization ? [{ name: currentUser.organization }] : []),
+    ...(currentUser?.organization ? [{ organization: currentUser.organization }] : [])
+  ]
+}
+```
+**Pattern**: Use conditional spread to ensure type safety with optional chaining
+
 ## Current Build Status  
-- **Major Progress**: EntityAssessment interface structure completely resolved
-- **Recently Fixed**: Location and severity property type compatibility
-- **Remaining**: GapAnalysis interface location property type mismatch
+- **Major Progress**: EntityAssessment and GapAnalysis interfaces completely resolved
+- **Recently Fixed**: All situation dashboard TypeScript compilation errors
+- **Active**: Fixing remaining TypeScript errors in other API routes
 
 ## Next Steps
-- Fix GapAnalysis interface location property type (null vs undefined)
-- Complete final situation dashboard TypeScript issues  
+- Fix remaining TypeScript errors in API routes (donor commitments, etc.)
+- Complete TypeScript compliance across entire codebase
 - Retry Dokploy deployment build to verify complete resolution
 - Monitor for any additional TypeScript issues in production build

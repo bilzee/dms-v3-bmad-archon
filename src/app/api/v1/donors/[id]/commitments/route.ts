@@ -85,8 +85,8 @@ export const GET = withAuth(async (request: NextRequest, context, { params }: Ro
       const userDonor = await prisma.donor.findFirst({
         where: {
           OR: [
-            { name: currentUser?.organization },
-            { organization: currentUser?.organization }
+            ...(currentUser?.organization ? [{ name: currentUser.organization }] : []),
+            ...(currentUser?.organization ? [{ organization: currentUser.organization }] : [])
           ],
           isActive: true
         }
