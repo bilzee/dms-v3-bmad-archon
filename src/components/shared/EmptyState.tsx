@@ -105,14 +105,16 @@ export function EmptyState({
 }
 
 // Specific empty state components for different use cases
-interface EmptyStateProps {
+interface SpecificEmptyStateProps {
   onRefresh?: () => void
   onCreate?: () => void
   onSearch?: () => void
+  onClearFilters?: () => void
+  onAssign?: () => void
   className?: string
 }
 
-export function EmptyAssessments({ onCreate, onRefresh }: EmptyStateProps) {
+export function EmptyAssessments({ onCreate, onRefresh }: SpecificEmptyStateProps) {
   return (
     <EmptyState
       type="data"
@@ -132,7 +134,7 @@ export function EmptyAssessments({ onCreate, onRefresh }: EmptyStateProps) {
   )
 }
 
-export function EmptyResponses({ onCreate, onRefresh }: EmptyStateProps) {
+export function EmptyResponses({ onCreate, onRefresh }: SpecificEmptyStateProps) {
   return (
     <EmptyState
       type="data"
@@ -148,7 +150,7 @@ export function EmptyResponses({ onCreate, onRefresh }: EmptyStateProps) {
   )
 }
 
-export function EmptyEntities({ onAssign, onRefresh }: EmptyStateProps) {
+export function EmptyEntities({ onAssign, onRefresh }: SpecificEmptyStateProps) {
   return (
     <EmptyState
       type="data"
@@ -164,7 +166,7 @@ export function EmptyEntities({ onAssign, onRefresh }: EmptyStateProps) {
   )
 }
 
-export function EmptyCommitments({ onCreate, onRefresh }: EmptyStateProps) {
+export function EmptyCommitments({ onCreate, onRefresh }: SpecificEmptyStateProps) {
   return (
     <EmptyState
       type="data"
@@ -184,7 +186,7 @@ export function EmptyCommitments({ onCreate, onRefresh }: EmptyStateProps) {
   )
 }
 
-export function EmptyIncidents({ onCreate, onRefresh }: EmptyStateProps) {
+export function EmptyIncidents({ onCreate, onRefresh }: SpecificEmptyStateProps) {
   return (
     <EmptyState
       type="data"
@@ -200,7 +202,7 @@ export function EmptyIncidents({ onCreate, onRefresh }: EmptyStateProps) {
   )
 }
 
-export function EmptySearchResults({ onClearFilters, onSearch }: EmptyStateProps) {
+export function EmptySearchResults({ onClearFilters, onSearch }: SpecificEmptyStateProps) {
   return (
     <EmptyState
       type="search"

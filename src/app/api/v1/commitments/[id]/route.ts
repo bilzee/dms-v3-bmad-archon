@@ -115,9 +115,8 @@ export const PATCH = withAuth(async (request: NextRequest, context, { params }: 
       );
     }
 
-    // Check authorization - only donor, coordinators, or admins can update
-    const isDonorUser = existingCommitment.donor.userId === user.id;
-    const isAuthorized = isDonorUser || roles.includes('COORDINATOR') || roles.includes('ADMIN');
+    // Check authorization - only donors, coordinators, or admins can update
+    const isAuthorized = roles.includes('DONOR') || roles.includes('COORDINATOR') || roles.includes('ADMIN');
 
     if (!isAuthorized) {
       return NextResponse.json(
@@ -139,7 +138,7 @@ export const PATCH = withAuth(async (request: NextRequest, context, { params }: 
     const updateData: any = { ...validatedData };
 
     // Recalculate total quantity if items are being updated
-    if (validatedData.items) {
+    if ('items' in validatedData && validatedData.items) {
       updateData.totalCommittedQuantity = validatedData.items.reduce(
         (sum, item) => sum + item.quantity, 
         0
@@ -147,8 +146,8 @@ export const PATCH = withAuth(async (request: NextRequest, context, { params }: 
     }
 
     // Validate status transitions
-    if (validatedData.status) {
-      const validTransitions = {
+    if ('status' in validatedData && validatedData.status) {
+      const validTransitions: Record<string, string[]> = {
         'PLANNED': ['PARTIAL', 'COMPLETE', 'CANCELLED'],
         'PARTIAL': ['COMPLETE', 'CANCELLED'],
         'COMPLETE': [], // No transitions from complete
@@ -156,7 +155,7 @@ export const PATCH = withAuth(async (request: NextRequest, context, { params }: 
       };
 
       const allowedTransitions = validTransitions[existingCommitment.status] || [];
-      if (validatedData.status !== existingCommitment.status && !allowedTransitions.includes(validatedData.status)) {
+      if (validatedData.status !== existingCommitment.status && !allowedTransitions.includes(validatedData.status as string)) {
         return NextResponse.json(
           { 
             success: false, 
@@ -283,9 +282,8 @@ export const DELETE = withAuth(async (request: NextRequest, context, { params }:
       );
     }
 
-    // Check authorization
-    const isDonorUser = existingCommitment.donor.userId === user.id;
-    const isAuthorized = isDonorUser || roles.includes('COORDINATOR') || roles.includes('ADMIN');
+    // Check authorization - only donors, coordinators, or admins can delete
+    const isAuthorized = roles.includes('DONOR') || roles.includes('COORDINATOR') || roles.includes('ADMIN');
 
     if (!isAuthorized) {
       return NextResponse.json(

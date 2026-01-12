@@ -1,6 +1,6 @@
 # Prisma Schema Reference
 
-_Auto-generated on 2025-12-16T14:25:55.022Z_
+_Auto-generated on 2026-01-12T11:45:38.638Z_
 
 ## ReportTemplate
 

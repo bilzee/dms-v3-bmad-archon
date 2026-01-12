@@ -10,7 +10,7 @@ export async function POST(
   try {
     // Authentication check
     const session = await getServerSession();
-    if (!session?.user?.id) {
+    if (!session?.user || !(session.user as any).id) {
       return NextResponse.json(
         { success: false, error: 'Unauthorized' },
         { status: 401 }
@@ -19,13 +19,21 @@ export async function POST(
 
     // Authorization check - COORDINATOR role required
     const user = await db.user.findUnique({
-      where: { id: session.user.id },
-      select: { role: true }
+      where: { id: (session.user as any).id },
+      include: {
+        roles: {
+          include: {
+            role: true
+          }
+        }
+      }
     });
 
-    if (!user || user.role !== 'COORDINATOR') {
+    const isCoordinator = user?.roles.some(userRole => userRole.role.name === 'COORDINATOR');
+    
+    if (!user || !isCoordinator) {
       await auditLog({
-        userId: session.user.id,
+        userId: (session.user as any).id,
         action: 'UNAUTHORIZED_NOTIFICATION',
         resource: 'COMMITMENT_NOTIFICATION',
         resourceId: params.id,
@@ -129,7 +137,7 @@ export async function POST(
 
     // Log successful notification
     await auditLog({
-      userId: session.user.id,
+      userId: (session.user as any).id,
       action: 'SEND_COMMITMENT_NOTIFICATION',
       resource: 'COMMITMENT_NOTIFICATION',
       resourceId: commitmentId,
@@ -161,9 +169,9 @@ export async function POST(
     // Log error
     try {
       const session = await getServerSession();
-      if (session?.user?.id) {
+      if (session?.user && (session.user as any).id) {
         await auditLog({
-          userId: session.user.id,
+          userId: (session.user as any).id,
           action: 'ERROR_SEND_NOTIFICATION',
           resource: 'COMMITMENT_NOTIFICATION',
           resourceId: params.id,

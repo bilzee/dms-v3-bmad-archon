@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { withAuth } from '@/lib/auth/middleware';
 import { db } from '@/lib/db/client';
 import { z } from 'zod';
-import type { Json, EntityType, DateTime } from '@prisma/client';
+import type { EntityType } from '@prisma/client';
 import {
   analyzeHealthGaps,
   analyzeFoodGaps,
@@ -192,7 +192,7 @@ interface HealthAssessmentData {
   hasMedicalSupplies: boolean;
   hasMaternalChildServices: boolean;
   commonHealthIssues: string;
-  additionalHealthDetails?: Json;
+  additionalHealthDetails?: any;
   rapidAssessmentDate: Date;
   verificationStatus: string;
   assessorName: string;
@@ -207,7 +207,7 @@ interface FoodAssessmentData {
   availableFoodDurationDays: number;
   additionalFoodRequiredPersons: number;
   additionalFoodRequiredHouseholds: number;
-  additionalFoodDetails?: Json;
+  additionalFoodDetails?: any;
   rapidAssessmentDate: Date;
   verificationStatus: string;
   assessorName: string;
@@ -222,7 +222,7 @@ interface WASHAssessmentData {
   areLatrinesSufficient: boolean;
   hasHandwashingFacilities: boolean;
   hasOpenDefecationConcerns: boolean;
-  additionalWashDetails?: Json;
+  additionalWashDetails?: any;
   rapidAssessmentDate: Date;
   verificationStatus: string;
   assessorName: string;
@@ -237,7 +237,7 @@ interface ShelterAssessmentData {
   numberSheltersRequired: number;
   areOvercrowded: boolean;
   provideWeatherProtection: boolean;
-  additionalShelterDetails?: Json;
+  additionalShelterDetails?: any;
   rapidAssessmentDate: Date;
   verificationStatus: string;
   assessorName: string;
@@ -251,7 +251,7 @@ interface SecurityAssessmentData {
   hasProtectionReportingMechanism: boolean;
   vulnerableGroupsHaveAccess: boolean;
   hasLighting: boolean;
-  additionalSecurityDetails?: Json;
+  additionalSecurityDetails?: any;
   rapidAssessmentDate: Date;
   verificationStatus: string;
   assessorName: string;
@@ -271,7 +271,7 @@ interface PopulationAssessmentData {
   separatedChildren: number;
   numberLivesLost: number;
   numberInjured: number;
-  additionalPopulationDetails?: Json;
+  additionalPopulationDetails?: any;
   rapidAssessmentDate: Date;
   verificationStatus: string;
   assessorName: string;
@@ -395,8 +395,8 @@ interface EntityAssessment {
   name: string;
   type: EntityType;
   location: string;
-  coordinates?: Json;
-  affectedAt: DateTime;
+  coordinates?: any;
+  affectedAt: Date;
   severity: 'CRITICAL' | 'HIGH' | 'MEDIUM' | 'LOW';
   severityCount: number;
   latestAssessments: {
@@ -1733,7 +1733,7 @@ async function getEntityLocations(
             id: string;
             name: string;
             type: string;
-            coordinates: Json;
+            coordinates: any;
             severity: 'CRITICAL' | 'HIGH' | 'MEDIUM' | 'LOW';
             affectedAt: Date;
           }>;
@@ -1759,7 +1759,7 @@ async function getEntityLocations(
             id: string;
             name: string;
             type: string;
-            coordinates: Json;
+            coordinates: any;
             severity: 'CRITICAL' | 'HIGH' | 'MEDIUM' | 'LOW';
             affectedAt: Date;
           }>;
@@ -1786,7 +1786,7 @@ async function getEntityLocations(
             id: string;
             name: string;
             type: string;
-            coordinates: Json;
+            coordinates: any;
             severity: 'CRITICAL' | 'HIGH' | 'MEDIUM' | 'LOW';
             affectedAt: Date;
           }>;
@@ -1812,7 +1812,7 @@ async function getEntityLocations(
             id: string;
             name: string;
             type: string;
-            coordinates: Json;
+            coordinates: any;
             severity: 'CRITICAL' | 'HIGH' | 'MEDIUM' | 'LOW';
             affectedAt: Date;
           }>;
@@ -1839,7 +1839,7 @@ async function getEntityLocations(
           id: string;
           name: string;
           type: string;
-          coordinates: Json;
+          coordinates: any;
           severity: 'CRITICAL' | 'HIGH' | 'MEDIUM' | 'LOW';
           affectedAt: Date;
         }>;
@@ -1862,7 +1862,7 @@ async function getEntityLocations(
         ORDER BY ra."assessmentDate" DESC
       ` as Array<{
         rapidAssessmentType: string;
-        gapAnalysis: Json;
+        gapAnalysis: any;
         verificationStatus: string;
       }>;
 
@@ -1924,7 +1924,7 @@ async function getEntityLocations(
           id: string;
           donorName: string;
           commitmentStatus: string;
-          items: Json;
+          items: any;
         }>;
 
         donorAssignments = donorData.map(donor => ({

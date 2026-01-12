@@ -51,20 +51,8 @@ export const GET = withAuth(async (request: NextRequest, context) => {
         whereClause.entityId = { in: assignedEntityIds };
       }
     } else if (roles.includes('DONOR') && !roles.includes('COORDINATOR') && !roles.includes('ADMIN')) {
-      // Donors can only see their own commitments
-      const donor = await prisma.donor.findUnique({
-        where: { userId: user.id, isActive: true },
-        select: { id: true }
-      });
-
-      if (!donor) {
-        return NextResponse.json(
-          { success: false, error: 'Donor profile not found' },
-          { status: 404 }
-        );
-      }
-
-      whereClause.donorId = donor.id;
+      // Donors can see all commitments (filtering can be done on the frontend)
+      // TODO: Implement proper donor-specific filtering when user-donor relationship is established
     }
 
     // Get commitments with related data

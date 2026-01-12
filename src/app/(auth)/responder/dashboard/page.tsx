@@ -212,10 +212,8 @@ function ResponderDashboardContent() {
             </div>
             
             <ResponsePlanningDashboard
-              responses={responses}
               onCreateResponse={handleCreateResponse}
               onEditResponse={handleEditResponse}
-              onRefresh={retry}
             />
           </div>
         )

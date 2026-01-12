@@ -24,20 +24,20 @@ export const GET = withAuth(async (request: NextRequest, context) => {
     const activeResponses = await prisma.incident.findMany({
       where: {
         status: {
-          in: ['ACTIVE', 'ONGOING', 'RESPONDING']
+          in: ['ACTIVE', 'CONTAINED']
         }
       },
       include: {
         _count: {
           select: {
-            rapidResponses: true
+            rapidAssessments: true
           }
         }
       }
     });
 
     const criticalResponses = activeResponses.filter(incident => 
-      incident.severity === 'CRITICAL' || incident.priority === 'CRITICAL'
+      incident.severity === 'CRITICAL'
     ).length;
 
     // Fetch responders data (users with RESPONDER role who are active)
@@ -53,7 +53,7 @@ export const GET = withAuth(async (request: NextRequest, context) => {
         isActive: true
       },
       include: {
-        rapidResponses: {
+        responses: {
           where: {
             createdAt: {
               gte: weekAgo
@@ -64,7 +64,7 @@ export const GET = withAuth(async (request: NextRequest, context) => {
     });
 
     const deployedResponders = responders.filter(responder => 
-      responder.rapidResponses.length > 0
+      responder.responses.length > 0
     ).length;
     const standbyResponders = responders.length - deployedResponders;
 
@@ -89,10 +89,7 @@ export const GET = withAuth(async (request: NextRequest, context) => {
       prisma.rapidAssessment.count({
         where: {
           verificationStatus: 'SUBMITTED',
-          OR: [
-            { priority: 'CRITICAL' },
-            { entity: { incident: { severity: 'CRITICAL' } } }
-          ]
+          priority: 'CRITICAL'
         }
       }),
       prisma.rapidResponse.count({
