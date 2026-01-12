@@ -190,11 +190,76 @@ All TypeScript compilation errors preventing successful deployment build have be
 **Error**: Invalid type imports (`Json`, `DateTime` not exported from `@prisma/client`)  
 **Fix**: Removed unused imports and replaced with `any` and `Date` types
 
-## Current Build Status
-- **Resolved**: All errors identified in original request and alpha fixing document
-- **Remaining**: Complex reduce type issues in situation dashboard (architectural)
+### 12. Situation Dashboard Complex Type Issues
+**File**: `src/app/api/v1/dashboard/situation/route.ts`  
+
+**Major Errors Fixed**:
+1. **Complex Reduce Type Error** (Line 540):
+   - **Error**: Union type mismatch in population aggregation reduce function
+   - **Fix**: Added explicit `PopulationAggregation` type with `reduce<PopulationAggregation>()`
+
+2. **Prisma Raw Query Type Conversions**:
+   - **Error**: `PrismaPromise<unknown>` to array type conversion
+   - **Fix**: Changed `as any[]` to `as unknown as any[]` for all raw queries
+
+3. **Union Type Property Access**:
+   - **Error**: Accessing `gapAnalysis` on types that don't have it
+   - **Fix**: Added `'gapAnalysis' in assessment` type guards
+
+4. **Interface Mismatches**:
+   - **Error**: Mock aggregated data missing required interface properties  
+   - **Fix**: Added missing properties (`totalHealthFacilities`, `averageFoodDuration`, etc.)
+
+5. **Null Safety Issues**:
+   - **Error**: `a` possibly undefined in filter/reduce operations
+   - **Fix**: Added null checks and optional chaining (`a?.property`)
+
+6. **Type Literal Conflicts**:
+   - **Error**: Comparing incompatible severity literal types
+   - **Fix**: Changed restrictive `'LOW'` type to full union type
+
+7. **Missing Interface Properties**:
+   - **Error**: `population` property missing from aggregated assessments
+   - **Fix**: Added `population: aggregatePopulationAssessments(entityAssessments)`
+
+## Current Build Status  
+- **Resolved**: All core compilation errors preventing deployment build
+- **Major Progress**: Situation dashboard now compiles with proper type safety
+- **Remaining**: Final interface mapping issues (EntityAssessment structure mismatch)
+
+## Recent Session Fixes
+
+### 13. EntityAssessment Interface Key Case Mismatch
+**File**: `src/app/api/v1/dashboard/situation/route.ts`
+**Error**: Uppercase keys (HEALTH, FOOD, etc.) vs lowercase interface expectations (health, food, etc.)
+**Fix**: Changed all uppercase assessment keys to lowercase to match EntityAssessment interface:
+```typescript
+// Before
+latestAssessments.HEALTH = { ... }
+latestAssessments.FOOD = { ... }
+// etc.
+
+// After  
+latestAssessments.health = { ... }
+latestAssessments.food = { ... }
+// etc.
+```
+**Impact**: Resolved EntityAssessment interface type compatibility issues
+
+### 14. Additional Property Access Fixes
+**Files**: Various assessment pages
+**Errors Fixed**:
+- Incident relation property access (preliminary assessments)
+- Non-existent schema property access (gapCount, verificationComment)
+- Object.entries type errors with proper type guards
+- Invalid component props (IncidentManagement, ResponsePlanningDashboard)
+
+## Current Build Status  
+- **Major Progress**: All previously mentioned TypeScript errors resolved
+- **Recently Fixed**: EntityAssessment interface key case mismatch
+- **Remaining**: Entity object structure mapping to EntityAssessment interface (line 2490)
 
 ## Next Steps
-- Retry Dokploy deployment build to verify resolution of target errors
-- Monitor for any additional TypeScript issues in production build  
-- Address complex typing issues in situation dashboard separately if needed
+- Fix remaining entity object structure mapping at line 2490
+- Retry Dokploy deployment build to verify complete resolution  
+- Monitor for any additional TypeScript issues in production build

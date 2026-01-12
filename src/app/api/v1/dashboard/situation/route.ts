@@ -2318,12 +2318,20 @@ export const GET = withAuth(async (request: NextRequest, context) => {
         }
 
         entities.push({
-          entityId: entity.id,
-          entityName: entity.name,
-          entityType: entity.type,
+          id: entity.id,
+          name: entity.name,
+          type: entity.type,
           location: entity.location,
           coordinates: entity.coordinates,
+          affectedAt: new Date(), // Will be updated based on actual data
+          severity: 'LOW', // Will be calculated dynamically
+          severityCount: 0, // Will be calculated dynamically
           latestAssessments,
+          gapSummary: {
+            totalGaps: 0,
+            totalNoGaps: 0,
+            criticalGaps: 0
+          },
           lastUpdated
         });
 
@@ -2331,12 +2339,20 @@ export const GET = withAuth(async (request: NextRequest, context) => {
         console.error(`Error fetching assessments for entity ${entity.id}:`, error);
         // Add entity with empty assessments if there's an error
         entities.push({
-          entityId: entity.id,
-          entityName: entity.name,
-          entityType: entity.type,
+          id: entity.id,
+          name: entity.name,
+          type: entity.type,
           location: entity.location,
           coordinates: entity.coordinates,
+          affectedAt: new Date(),
+          severity: 'LOW',
+          severityCount: 0,
           latestAssessments: {},
+          gapSummary: {
+            totalGaps: 0,
+            totalNoGaps: 0,
+            criticalGaps: 0
+          },
           lastUpdated: new Date()
         });
       }
@@ -2373,9 +2389,9 @@ export const GET = withAuth(async (request: NextRequest, context) => {
       else if (totalGapCount > 0) overallGapSeverity = 'MEDIUM';
 
       return {
-        entityId: entity.entityId,
-        entityName: entity.entityName,
-        entityType: entity.entityType,
+        entityId: entity.id,
+        entityName: entity.name,
+        entityType: entity.type,
         location: entity.location,
         assessmentGaps,
         overallGapSeverity,
