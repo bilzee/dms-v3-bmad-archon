@@ -467,6 +467,47 @@ include: { washAssessment: true }
 **Pattern**: Use `wASHAssessment` for direct model access, `washAssessment` for relations
 **Impact**: Fixed WASH assessment access across 4 files with proper naming conventions
 
+### 24. Implicit Type Array Errors
+**File**: `src/app/api/v1/donors/entities/[id]/assessments/trends/route.ts`
+**Error**: `Variable 'insights' implicitly has type 'any[]' in some locations where its type cannot be determined.`
+**Root Cause**: TypeScript strict mode cannot infer array type from empty array initialization
+**Fix**: Add explicit interface and type annotations:
+```typescript
+// Before - Implicit any[] type
+function generateInsights(trends: any[], categories: string[]) {
+  const insights = [];  // ❌ Implicit any[]
+  
+  insights.push({
+    category: trend.type,
+    trend: trendDescription,
+    recommendation
+  });
+  
+  return insights;
+}
+
+// After - Explicit type with interface
+interface TrendInsight {
+  category: string;
+  trend: string;
+  recommendation: string;
+}
+
+function generateInsights(trends: any[], categories: string[]): TrendInsight[] {
+  const insights: TrendInsight[] = [];  // ✅ Explicit type
+  
+  insights.push({
+    category: trend.type,
+    trend: trendDescription,
+    recommendation
+  });
+  
+  return insights;
+}
+```
+**Pattern**: Always provide explicit types for empty array initializations and function return types
+**Impact**: Fixed TypeScript strict mode compliance for array type inference
+
 ## Current Build Status  
 - **✅ COMPLETED**: All documented TypeScript compilation errors have been systematically resolved
 - **✅ COMPLETED**: EntityAssessment and GapAnalysis interfaces completely resolved

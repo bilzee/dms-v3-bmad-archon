@@ -11,6 +11,12 @@ interface RouteParams {
   params: { id: string }
 }
 
+interface TrendInsight {
+  category: string;
+  trend: string;
+  recommendation: string;
+}
+
 export const GET = withAuth(async (request: NextRequest, context, { params }: RouteParams) => {
   try {
     const { userId, roles } = context;
@@ -429,8 +435,8 @@ function calculateGapCount(type: string, assessment: any): number {
 }
 
 // Helper function to generate insights based on trends
-function generateInsights(trends: any[], categories: string[]) {
-  const insights = [];
+function generateInsights(trends: any[], categories: string[]): TrendInsight[] {
+  const insights: TrendInsight[] = [];
 
   trends.forEach(trend => {
     if (trend.dataPoints.length < 2) return;
