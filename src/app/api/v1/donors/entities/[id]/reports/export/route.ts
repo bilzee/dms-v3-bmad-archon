@@ -7,10 +7,13 @@ import {
 } from '@/lib/validation/entity-insights';
 import { generateEntityReport } from '@/lib/services/assessment-export.service';
 
-export const POST = withAuth(async (request: NextRequest, context) => {
+interface RouteParams {
+  params: { id: string }
+}
+
+export const POST = withAuth(async (request: NextRequest, context, { params }: RouteParams) => {
   try {
     const { userId, roles } = context;
-    const params = await context.params;
     const entityId = params.id;
 
     // Check if user has donor role
