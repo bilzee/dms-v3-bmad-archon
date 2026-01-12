@@ -13,6 +13,7 @@ interface GapAnalysisItem {
   description: string;
   affectedPopulation: number;
   recommendedActions: string[];
+  trend?: 'improving' | 'worsening' | 'stable';
 }
 
 export const GET = withAuth(async (request: NextRequest, context, nextContext) => {
