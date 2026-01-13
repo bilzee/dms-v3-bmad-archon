@@ -78,7 +78,7 @@ export async function GET(
       where: {
         id: templateId,
         OR: [
-          { createdById: session.user.id },
+          { createdById: (session.user as any).id },
           { isPublic: true }
         ]
       },
@@ -156,7 +156,7 @@ export async function PATCH(
     const existingTemplate = await db.reportTemplate.findFirst({
       where: {
         id: templateId,
-        createdById: session.user.id
+        createdById: (session.user as any).id
       }
     });
 
@@ -169,7 +169,7 @@ export async function PATCH(
 
     // Check user permissions
     const userRoles = await db.userRole.findMany({
-      where: { userId: session.user.id },
+      where: { userId: (session.user as any).id },
       include: {
         role: {
           include: {
@@ -287,7 +287,7 @@ export async function DELETE(
     const existingTemplate = await db.reportTemplate.findFirst({
       where: {
         id: templateId,
-        createdById: session.user.id
+        createdById: (session.user as any).id
       }
     });
 
@@ -300,7 +300,7 @@ export async function DELETE(
 
     // Check user permissions
     const userRoles = await db.userRole.findMany({
-      where: { userId: session.user.id },
+      where: { userId: (session.user as any).id },
       include: {
         role: {
           include: {

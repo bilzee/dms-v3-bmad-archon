@@ -104,7 +104,7 @@ export async function POST(request: NextRequest) {
     
     const scheduledReport: ScheduledReport = {
       id: scheduledReportId,
-      userId: session.user.id,
+      userId: (session.user as any).id,
       reportType: validatedData.reportType,
       schedule: validatedData.schedule,
       recipients: validatedData.recipients,
@@ -169,7 +169,7 @@ export async function GET(request: NextRequest) {
       }
 
       // Check ownership
-      if (report.userId !== session.user.id) {
+      if (report.userId !== (session.user as any).id) {
         return NextResponse.json(
           { success: false, error: 'Access denied' },
           { status: 403 }
@@ -183,7 +183,7 @@ export async function GET(request: NextRequest) {
     } else {
       // Get all scheduled reports for user
       const userReports = Array.from(scheduledReports.values())
-        .filter(report => report.userId === session.user.id);
+        .filter(report => report.userId === (session.user as any).id);
 
       return NextResponse.json({
         success: true,
@@ -237,7 +237,7 @@ export async function PUT(request: NextRequest) {
     }
 
     // Check ownership
-    if (existingReport.userId !== session.user.id) {
+    if (existingReport.userId !== (session.user as any).id) {
       return NextResponse.json(
         { success: false, error: 'Access denied' },
         { status: 403 }
@@ -325,7 +325,7 @@ export async function DELETE(request: NextRequest) {
     }
 
     // Check ownership
-    if (existingReport.userId !== session.user.id) {
+    if (existingReport.userId !== (session.user as any).id) {
       return NextResponse.json(
         { success: false, error: 'Access denied' },
         { status: 403 }

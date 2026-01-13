@@ -66,14 +66,14 @@ export async function GET(request: NextRequest) {
       } else {
         // User's own templates + public templates
         where.OR = [
-          { createdById: session.user.id },
+          { createdById: (session.user as any).id },
           { isPublic: true }
         ];
       }
     } else {
       // Default: user's templates + public templates
       where.OR = [
-        { createdById: session.user.id },
+        { createdById: (session.user as any).id },
         { isPublic: true }
       ];
     }
@@ -189,7 +189,7 @@ export async function POST(request: NextRequest) {
 
     // Check user permissions (coordinator or above)
     const userRoles = await db.userRole.findMany({
-      where: { userId: session.user.id },
+      where: { userId: (session.user as any).id },
       include: {
         role: {
           include: {
@@ -235,7 +235,7 @@ export async function POST(request: NextRequest) {
         type: validatedData.type,
         layout: validatedData.layout,
         isPublic: validatedData.isPublic,
-        createdById: session.user.id
+        createdById: (session.user as any).id
       },
       include: {
         createdBy: {

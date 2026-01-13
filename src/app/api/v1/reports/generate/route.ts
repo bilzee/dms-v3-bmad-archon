@@ -84,7 +84,7 @@ export async function POST(request: NextRequest) {
 
     // Check user permissions
     const userRoles = await db.userRole.findMany({
-      where: { userId: session.user.id },
+      where: { userId: (session.user as any).id },
       include: {
         role: {
           include: {
@@ -123,7 +123,7 @@ export async function POST(request: NextRequest) {
         where: {
           id: validatedData.configurationId,
           OR: [
-            { createdBy: session.user.id },
+            { createdBy: (session.user as any).id },
             { template: { isPublic: true } }
           ]
         },
@@ -193,7 +193,7 @@ export async function POST(request: NextRequest) {
       filters,
       format: validatedData.format,
       options: validatedData.options || {},
-      userId: session.user.id,
+      userId: (session.user as any).id,
       jobId
     }).catch(error => {
       console.error(`Background report generation failed for job ${jobId}:`, error);
@@ -254,7 +254,7 @@ export async function PUT(request: NextRequest) {
 
     // Check user permissions
     const userRoles = await db.userRole.findMany({
-      where: { userId: session.user.id },
+      where: { userId: (session.user as any).id },
       include: {
         role: {
           include: {
@@ -288,7 +288,7 @@ export async function PUT(request: NextRequest) {
       where: {
         id: validatedData.configurationId,
         OR: [
-          { createdBy: session.user.id },
+          { createdBy: (session.user as any).id },
           { template: { isPublic: true } }
         ]
       }
@@ -315,7 +315,7 @@ export async function PUT(request: NextRequest) {
     const scheduleData = {
       ...validatedData.schedule,
       executionId: scheduledExecution.id,
-      userId: session.user.id,
+      userId: (session.user as any).id,
       recipients: validatedData.recipients || [],
       options: validatedData.options || {}
     };

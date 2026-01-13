@@ -63,7 +63,7 @@ export async function GET(
     }
 
     // Check if user has access to this report
-    const hasAccess = execution.configuration.createdBy === session.user.id || 
+    const hasAccess = execution.configuration.createdBy === (session.user as any).id || 
                        execution.configuration.template?.isPublic;
 
     if (!hasAccess) {
@@ -159,7 +159,7 @@ export async function GET(
     // Log download for audit
     await db.auditLog.create({
       data: {
-        userId: session.user.id,
+        userId: (session.user as any).id,
         action: 'REPORT_DOWNLOADED',
         resource: 'ReportExecution',
         resourceId: executionId,
@@ -281,7 +281,7 @@ async function GET_INFO(
     }
 
     // Check if user has access to this report
-    const hasAccess = execution.configuration.createdBy === session.user.id || 
+    const hasAccess = execution.configuration.createdBy === (session.user as any).id || 
                        execution.configuration.template?.isPublic;
 
     if (!hasAccess) {
@@ -363,7 +363,7 @@ async function GET_INFO(
         templateName: execution.configuration.template?.name,
         creatorName: execution.configuration.creator?.name,
         createdBy: execution.configuration.createdBy,
-        isOwner: execution.configuration.createdBy === session.user.id,
+        isOwner: execution.configuration.createdBy === (session.user as any).id,
         hasPublicTemplate: execution.configuration.template?.isPublic
       },
       file: fileInfo,

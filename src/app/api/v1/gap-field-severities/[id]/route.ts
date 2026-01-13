@@ -27,7 +27,7 @@ async function checkPermissions(session: any, requiredRole: 'COORDINATOR' | 'ADM
   }
 
   const user = await prisma.user.findUnique({
-    where: { id: session.user.id },
+    where: { id: session!.user!.id },
     include: {
       roles: {
         include: {

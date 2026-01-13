@@ -92,7 +92,7 @@ export async function POST(request: NextRequest) {
 
     // Check user permissions
     const userRoles = await db.userRole.findMany({
-      where: { userId: session.user.id },
+      where: { userId: (session.user as any).id },
       include: {
         role: {
           include: {
@@ -126,7 +126,7 @@ export async function POST(request: NextRequest) {
       where: {
         id: validatedData.templateId,
         OR: [
-          { createdById: session.user.id },
+          { createdById: (session.user as any).id },
           { isPublic: true }
         ]
       },
@@ -199,7 +199,7 @@ export async function POST(request: NextRequest) {
         visualizations: validatedData.visualizations,
         schedule: validatedData.schedule,
         isPublic: validatedData.isPublic,
-        createdBy: session.user.id,
+        createdBy: (session.user as any).id,
         options: validatedData.options
       },
       include: {
@@ -230,7 +230,7 @@ export async function POST(request: NextRequest) {
     // Log configuration creation
     await db.auditLog.create({
       data: {
-        userId: session.user.id,
+        userId: (session.user as any).id,
         action: 'CREATE_REPORT_CONFIGURATION',
         resource: 'ReportConfiguration',
         resourceId: configuration.id,
@@ -316,13 +316,13 @@ export async function GET(request: NextRequest) {
         where.isPublic = true;
       } else {
         where.OR = [
-          { createdBy: session.user.id },
+          { createdBy: (session.user as any).id },
           { isPublic: true }
         ];
       }
     } else {
       where.OR = [
-        { createdBy: session.user.id },
+        { createdBy: (session.user as any).id },
         { isPublic: true }
       ];
     }

@@ -19,7 +19,7 @@ export async function GET(
 
     // Authorization check - COORDINATOR role required
     const user = await db.user.findUnique({
-      where: { id: (session.user as any).id },
+      where: { id: (session!.user as any).id },
       select: { 
         userRoles: { 
           select: { 
@@ -33,7 +33,7 @@ export async function GET(
 
     if (!user || !user.userRoles.some(ur => ur.role.name === 'COORDINATOR')) {
       await auditLog({
-        userId: (session.user as any).id,
+        userId: (session!.user as any).id,
         action: 'UNAUTHORIZED_ACCESS',
         resource: 'DONOR_RECOMMENDATIONS',
         resourceId: params.id,
@@ -145,7 +145,7 @@ export async function GET(
       const session = await getServerSession();
       if (session?.user?.id) {
         await auditLog({
-          userId: (session.user as any).id,
+          userId: (session!.user as any).id,
           action: 'ERROR_ACCESS_DONOR_RECOMMENDATIONS',
           resource: 'DONOR_RECOMMENDATIONS',
           resourceId: params.id,

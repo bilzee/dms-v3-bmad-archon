@@ -56,7 +56,7 @@ export async function GET(
     }
 
     // Check if user has access to this execution
-    const hasAccess = execution.configuration.createdBy === session.user.id || 
+    const hasAccess = execution.configuration.createdBy === (session.user as any).id || 
                       execution.configuration.template?.isPublic;
 
     if (!hasAccess) {
@@ -159,7 +159,7 @@ export async function POST(
     }
 
     // Check if user can cancel this execution
-    const canCancel = execution.configuration.createdBy === session.user.id && 
+    const canCancel = execution.configuration.createdBy === (session.user as any).id && 
                     (execution.status === 'PENDING' || execution.status === 'RUNNING');
 
     if (!canCancel) {
@@ -267,7 +267,7 @@ export async function DELETE(
     }
 
     // Check if user can delete this execution
-    const canDelete = execution.configuration.createdBy === session.user.id;
+    const canDelete = execution.configuration.createdBy === (session.user as any).id;
 
     if (!canDelete) {
       return NextResponse.json(

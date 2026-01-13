@@ -78,7 +78,7 @@ export async function POST(request: NextRequest) {
           // Store completed job
           await storeReportJob(jobId, {
             ...result,
-            userId: session.user.id,
+            userId: (session.user as any).id,
             createdAt: new Date(),
           });
         }
@@ -89,7 +89,7 @@ export async function POST(request: NextRequest) {
         storeReportJob(jobId, {
           success: false,
           error: error.message,
-          userId: session.user.id,
+          userId: (session.user as any).id,
           createdAt: new Date(),
         });
       });
