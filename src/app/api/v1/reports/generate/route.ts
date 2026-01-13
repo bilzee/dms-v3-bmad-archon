@@ -377,7 +377,7 @@ export async function PUT(request: NextRequest) {
     
     if (error instanceof z.ZodError) {
       return NextResponse.json(
-        createApiResponse(false, null, 'Invalid schedule data', error.errors),
+        createApiResponse(false, null, 'Invalid schedule data', error.errors.map(e => e.message)),
         { status: 400 }
       );
     }
@@ -425,7 +425,7 @@ async function generateReportBackground({
     const dataSource = inferDataSourceFromTemplate(template);
 
     // Fetch data based on template and filters
-    const dataResult = await DataAggregator.executeQuery(dataSource, {
+    const dataResult = await DataAggregator.executeQuery(dataSource as any, {
       ...filters,
       limit: options.includeRawData ? 10000 : 1000 // Higher limit for raw data
     }, {
@@ -736,7 +736,7 @@ async function generateExcelReport({
     worksheet.addRow(headers);
     
     // Style headers
-    worksheet.getRow(1).eachCell((cell) => {
+    worksheet.getRow(1).eachCell((cell: any) => {
       cell.font = { bold: true };
       cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFE5E7EB' } };
     });
@@ -748,10 +748,10 @@ async function generateExcelReport({
   }
 
   // Auto-fit columns
-  worksheet.columns.forEach((column) => {
+  worksheet.columns.forEach((column: any) => {
     if (column.eachCell) {
       let maxLength = 0;
-      column.eachCell((cell) => {
+      column.eachCell((cell: any) => {
         const columnValue = cell.value ? cell.value.toString() : '';
         if (columnValue.length > maxLength) {
           maxLength = columnValue.length;

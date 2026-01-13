@@ -127,7 +127,7 @@ export async function GET(request: NextRequest) {
       
       defaultTemplates = applicableDefaults.map(template => ({
         ...template,
-        id: `default_${template.name.toLowerCase().replace(/\s+/g, '_')}`,
+        id: `default_${template.name?.toLowerCase().replace(/\s+/g, '_')}`,
         createdAt: new Date(),
         updatedAt: new Date(),
         createdBy: {
@@ -161,7 +161,7 @@ export async function GET(request: NextRequest) {
     
     if (error instanceof z.ZodError) {
       return NextResponse.json(
-        createApiResponse(false, null, 'Invalid request parameters', error.errors),
+        createApiResponse(false, null, 'Invalid request parameters', error.errors.map(e => e.message)),
         { status: 400 }
       );
     }
@@ -258,7 +258,7 @@ export async function POST(request: NextRequest) {
     
     if (error instanceof z.ZodError) {
       return NextResponse.json(
-        createApiResponse(false, null, 'Invalid request data', error.errors),
+        createApiResponse(false, null, 'Invalid request data', error.errors.map(e => e.message)),
         { status: 400 }
       );
     }
