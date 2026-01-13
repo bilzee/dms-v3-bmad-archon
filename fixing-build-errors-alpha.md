@@ -857,8 +857,67 @@ model UserRole {
 **Files Fixed**:
 - ✅ `src/app/api/v1/entities/[id]/donor-recommendations/route.ts` - User-Role relation and NextAuth typing
 
+---
+
+## 31. Enum Filter Type Conversion Errors (Prisma Enum Compatibility)
+
+**Error Pattern**: `Type 'string[]' is not assignable to type 'Priority[]'`
+
+**Example Errors**:
+```
+Type '{ priorityFilter?: string[] | undefined; assessmentTypeFilter?: string[] | undefined; verificationStatusFilter?: string[] | undefined; ... }' is not assignable to type 'RelationshipQueryParams'.
+  Types of property 'priorityFilter' are incompatible.
+    Type 'string[]' is not assignable to type 'Priority[]'.
+      Type 'string' is not assignable to type 'Priority'.
+```
+
+**Root Cause**: Query parameter validation converts comma-separated strings to string arrays, but TypeScript interfaces expect Prisma enum arrays
+
+**Comprehensive Solution**:
+1. **Added Prisma enum imports**:
+   - Imported `Priority, AssessmentType, VerificationStatus` from `@prisma/client`
+
+2. **Enhanced Zod transformation with enum validation**:
+   - Filter string values against enum values using `Object.values(Priority).includes()`
+   - Convert validated strings to proper enum types with type assertion
+   - Applied to all enum filter fields: `priorityFilter`, `assessmentTypeFilter`, `verificationStatusFilter`
+
+**Pattern Applied**:
+```typescript
+// Before - String array transformation only:
+const QueryParamsSchema = z.object({
+  priorityFilter: z.string().optional().transform(val => val?.split(',').filter(Boolean)),
+  assessmentTypeFilter: z.string().optional().transform(val => val?.split(',').filter(Boolean)),
+  verificationStatusFilter: z.string().optional().transform(val => val?.split(',').filter(Boolean)),
+});
+
+// After - Enum validation and type conversion:
+import { Priority, AssessmentType, VerificationStatus } from '@prisma/client';
+
+const QueryParamsSchema = z.object({
+  priorityFilter: z.string().optional().transform(val => 
+    val?.split(',').filter(Boolean).filter(p => Object.values(Priority).includes(p as Priority)) as Priority[] | undefined
+  ),
+  assessmentTypeFilter: z.string().optional().transform(val => 
+    val?.split(',').filter(Boolean).filter(at => Object.values(AssessmentType).includes(at as AssessmentType)) as AssessmentType[] | undefined
+  ),
+  verificationStatusFilter: z.string().optional().transform(val => 
+    val?.split(',').filter(Boolean).filter(vs => Object.values(VerificationStatus).includes(vs as VerificationStatus)) as VerificationStatus[] | undefined
+  ),
+});
+```
+
+**Key Benefits**:
+- **Type Safety**: Proper enum types prevent runtime errors
+- **Validation**: Invalid enum values are filtered out automatically  
+- **Compatibility**: Transformed arrays match interface expectations
+- **Runtime Safety**: Only valid enum values are passed to service functions
+
+**Files Fixed**:
+- ✅ `src/app/api/v1/entities/[id]/incidents/route.ts` - Priority, AssessmentType, VerificationStatus enum filter conversion
+
 ## Next Steps
 - **READY FOR DEPLOYMENT**: Retry Dokploy deployment build to verify complete TypeScript compliance
-- All documented compilation errors have been resolved systematically (30 categories fixed)
+- All documented compilation errors have been resolved systematically (31 categories fixed)
 - Codebase now maintains strict TypeScript compliance with proper type safety
 - Monitor deployment build output for any remaining undocumented TypeScript issues

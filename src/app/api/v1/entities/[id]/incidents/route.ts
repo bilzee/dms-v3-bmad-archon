@@ -10,13 +10,20 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { getEntityIncidents, calculateRelationshipStatistics } from '@/lib/services/assessment-relationships.service';
 import type { RelationshipQueryParams } from '@/types/assessment-relationships';
+import { Priority, AssessmentType, VerificationStatus } from '@prisma/client';
 import { z } from 'zod';
 
 // Request validation schema
 const QueryParamsSchema = z.object({
-  priorityFilter: z.string().optional().transform(val => val?.split(',').filter(Boolean)),
-  assessmentTypeFilter: z.string().optional().transform(val => val?.split(',').filter(Boolean)),
-  verificationStatusFilter: z.string().optional().transform(val => val?.split(',').filter(Boolean)),
+  priorityFilter: z.string().optional().transform(val => 
+    val?.split(',').filter(Boolean).filter(p => Object.values(Priority).includes(p as Priority)) as Priority[] | undefined
+  ),
+  assessmentTypeFilter: z.string().optional().transform(val => 
+    val?.split(',').filter(Boolean).filter(at => Object.values(AssessmentType).includes(at as AssessmentType)) as AssessmentType[] | undefined
+  ),
+  verificationStatusFilter: z.string().optional().transform(val => 
+    val?.split(',').filter(Boolean).filter(vs => Object.values(VerificationStatus).includes(vs as VerificationStatus)) as VerificationStatus[] | undefined
+  ),
   startDate: z.string().optional().transform(val => val ? new Date(val) : undefined),
   endDate: z.string().optional().transform(val => val ? new Date(val) : undefined),
   limit: z.string().optional().transform(val => val ? parseInt(val) : undefined),
