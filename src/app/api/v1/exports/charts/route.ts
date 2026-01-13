@@ -90,8 +90,8 @@ export async function POST(request: NextRequest) {
     const timestamp = new Date().toISOString().replace(/[:.]/g, '-').split('T')[0];
     const filename = `${chartType}_chart_${timestamp}.${exportOptions.format}`;
 
-    // Return chart file
-    return new NextResponse(chartData, {
+    // Return chart file - Convert Buffer to ArrayBuffer for NextResponse
+    return new NextResponse(new Uint8Array(chartData).buffer, {
       headers: {
         'Content-Type': getContentType(exportOptions.format),
         'Content-Disposition': `attachment; filename="${filename}"`,

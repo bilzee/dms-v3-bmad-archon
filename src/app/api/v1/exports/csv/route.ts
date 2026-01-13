@@ -69,7 +69,7 @@ export async function POST(request: NextRequest) {
   }
 }
 
-async function generateCSVData(request: CSVExportRequestSchema, userRole: string): Promise<string> {
+async function generateCSVData(request: z.infer<typeof CSVExportRequestSchema>, userRole: string): Promise<string> {
   const { dataType, startDate, endDate, filters } = request;
 
   switch (dataType) {
@@ -100,8 +100,7 @@ async function generateAssessmentsCSV(startDate?: string, endDate?: string, filt
       }),
     },
     include: {
-      location: true,
-      assignedTo: {
+      assessor: {
         select: {
           id: true,
           name: true,
@@ -113,39 +112,34 @@ async function generateAssessmentsCSV(startDate?: string, endDate?: string, filt
   });
 
   const headers = [
-    'ID', 'Assessment Type', 'Status', 'Location Name', 'Coordinates',
-    'Created Date', 'Last Updated', 'Assigned To', 'Priority Level',
-    'Population Affected', 'Severity Score', 'Access Road Condition',
-    'Communication Status', 'Power Supply Status', 'Water Supply Status',
-    'Medical Facility Status', 'Shelter Capacity Status', 'Food Security Status'
+    'ID', 'Assessment Type', 'Assessment Date', 'Status', 'Location', 'Coordinates',
+    'Created Date', 'Last Updated', 'Assessor Name', 'Priority', 'Version',
+    'Is Offline Created', 'Sync Status', 'Verification Status', 'Verified At'
   ];
 
   const csvRows = assessments.map(assessment => [
     assessment.id,
-    assessment.assessmentType,
-    assessment.verificationStatus,
-    assessment.location?.name || 'Unknown',
-    assessment.location?.coordinates || 'N/A',
+    assessment.rapidAssessmentType,
+    assessment.rapidAssessmentDate.toISOString(),
+    assessment.status,
+    assessment.location || 'Unknown',
+    assessment.coordinates ? JSON.stringify(assessment.coordinates) : 'N/A',
     assessment.createdAt.toISOString(),
     assessment.updatedAt.toISOString(),
-    assessment.assignedTo?.name || 'Unassigned',
-    assessment.priorityLevel || 'Medium',
-    assessment.populationAffected || 0,
-    assessment.severityScore || 0,
-    assessment.accessRoadCondition || 'Unknown',
-    assessment.communicationStatus || 'Unknown',
-    assessment.powerSupplyStatus || 'Unknown',
-    assessment.waterSupplyStatus || 'Unknown',
-    assessment.medicalFacilityStatus || 'Unknown',
-    assessment.shelterCapacityStatus || 'Unknown',
-    assessment.foodSecurityStatus || 'Unknown',
+    assessment.assessor?.name || assessment.assessorName || 'Unassigned',
+    assessment.priority,
+    assessment.versionNumber,
+    assessment.isOfflineCreated,
+    assessment.syncStatus,
+    assessment.verificationStatus,
+    assessment.verifiedAt?.toISOString() || '',
   ]);
 
   return [headers, ...csvRows].map(row => row.join(',')).join('\n');
 }
 
 async function generateResponsesCSV(startDate?: string, endDate?: string, filters?: Record<any, any>): Promise<string> {
-  const responses = await db.response.findMany({
+  const responses = await db.rapidResponse.findMany({
     where: {
       ...(startDate && { createdAt: { gte: new Date(startDate) } }),
       ...(endDate && { createdAt: { lte: new Date(endDate) } }),

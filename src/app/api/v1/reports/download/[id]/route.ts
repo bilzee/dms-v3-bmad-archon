@@ -209,8 +209,8 @@ export async function GET(
       headers['Referrer-Policy'] = 'no-referrer';
     }
 
-    // Create response
-    const response = new NextResponse(fileBuffer, {
+    // Create response - Convert Buffer to ArrayBuffer for NextResponse
+    const response = new NextResponse(new Uint8Array(fileBuffer).buffer, {
       status: 200,
       headers
     });

@@ -959,8 +959,115 @@ const userRole = (session.user as any).role as string;  // ✅ Type safe with ca
 - ✅ `src/app/api/v1/exports/reports/route.ts` - Role-based report generation permissions (2 instances)
 - ✅ `src/app/api/v1/exports/csv/route.ts` - Role-based CSV export permissions (2 instances)
 
+**Key Benefits**:
+- **Type Safety**: Proper type casting eliminates TypeScript compilation errors
+- **Consistency**: Applied same pattern across all export routes
+- **Backward Compatibility**: Preserves existing authentication and permission logic
+- **Maintainability**: Clear, consistent pattern for future session.user property access
+
+---
+
+## 33. Buffer Type Compatibility for NextResponse (Body Type Conversion)
+
+**Error Pattern**: `Argument of type 'Buffer<ArrayBufferLike>' is not assignable to parameter of type 'BodyInit | null | undefined'`
+
+**Example Errors**:
+```
+Type error: Argument of type 'Buffer<ArrayBufferLike>' is not assignable to parameter of type 'BodyInit | null | undefined'.
+  Type 'Buffer<ArrayBufferLike>' is missing the following properties from type 'URLSearchParams': size, append, delete, get, and 2 more.
+```
+
+**Root Cause**: NextResponse constructor expects BodyInit type but Node.js Buffer isn't directly compatible with this interface
+
+**Comprehensive Solution**:
+1. **Convert Buffer to ArrayBuffer**: Use `buffer.buffer` property to access underlying ArrayBuffer
+2. **Applied to both chart and file download routes**: Consistent pattern across file serving endpoints
+
+**Pattern Applied**:
+```typescript
+// Before - TypeScript error:
+return new NextResponse(chartData, { headers });  // ❌ Buffer not compatible with BodyInit
+
+// After - Buffer to ArrayBuffer conversion:
+return new NextResponse(chartData.buffer, { headers });  // ✅ ArrayBuffer compatible with BodyInit
+```
+
+**Technical Details**:
+- NextResponse accepts ArrayBuffer, Blob, FormData, URLSearchParams, or ReadableStream as body
+- Node.js Buffer has `.buffer` property that returns underlying ArrayBuffer
+- This maintains binary data integrity for file downloads
+- ArrayBuffer is optimized for HTTP response body transmission
+
+**Files Fixed**:
+- ✅ `src/app/api/v1/exports/charts/route.ts:94` - Chart data Buffer to ArrayBuffer conversion  
+- ✅ `src/app/api/v1/reports/download/[id]/route.ts:213` - File download Buffer to ArrayBuffer conversion
+
+**Key Benefits**:
+- **Type Safety**: Eliminates Buffer type compatibility errors
+- **Binary Integrity**: Preserves file data during transmission
+- **HTTP Optimization**: ArrayBuffer is optimized for web response bodies
+- **Consistency**: Applied same pattern across all file-serving routes
+
+---
+
+## 34. Schema Field and Model Reference Errors (Prisma Model Mismatch)
+
+**Error Pattern**: Prisma model field access and type mismatch errors due to incorrect model references
+
+**Example Errors**:
+```
+Type error: 'CSVExportRequestSchema' refers to a value, but is being used as a type here. Did you mean 'typeof CSVExportRequestSchema'?
+Object literal may only specify known properties, and 'location' does not exist in type 'RapidAssessmentInclude<DefaultArgs>'.
+Property 'response' does not exist on type 'PrismaClient'
+```
+
+**Root Cause**: CSV export route using incorrect schema references and non-existent model relations
+
+**Comprehensive Solution**:
+1. **Fixed Zod type inference**: Changed `CSVExportRequestSchema` type usage to `z.infer<typeof CSVExportRequestSchema>`
+2. **Corrected Prisma model relations**: 
+   - RapidAssessment uses `assessor` relation, not `assignedTo`  
+   - Location is a field, not relation on RapidAssessment
+   - Model is `rapidResponse`, not `response`
+3. **Updated field references**: Used actual schema fields instead of assumed names
+
+**Pattern Applied**:
+```typescript
+// Before - Zod schema used as type:
+function generateCSVData(request: CSVExportRequestSchema, userRole: string)  // ❌
+
+// After - Proper type inference:
+function generateCSVData(request: z.infer<typeof CSVExportRequestSchema>, userRole: string)  // ✅
+
+// Before - Non-existent relation:
+include: { location: true, assignedTo: { select: {...} } }  // ❌
+
+// After - Correct relation based on schema:
+include: { assessor: { select: {...} } }  // ✅
+```
+
+**Schema Corrections Applied**:
+- **RapidAssessment Model**: 
+  - `location` is string field, not relation
+  - `assignedTo` → `assessor` (User relation)
+  - Updated field references to match actual schema
+- **Response Model**: `db.response` → `db.rapidResponse`
+
+**Files Fixed**:
+- ✅ `src/app/api/v1/exports/csv/route.ts:72` - Zod schema type inference
+- ✅ `src/app/api/v1/exports/csv/route.ts:103` - Prisma relation corrections
+- ✅ `src/app/api/v1/exports/csv/route.ts:142` - Correct model reference
+
+**Key Benefits**:
+- **Schema Compliance**: All Prisma queries match actual database schema
+- **Type Safety**: Proper Zod type inference eliminates compilation errors  
+- **Data Integrity**: Correct relations ensure valid data retrieval
+- **Maintainability**: Schema-first approach prevents future mismatches
+
+---
+
 ## Next Steps
-- **READY FOR DEPLOYMENT**: Retry Dokploy deployment build to verify complete TypeScript compliance
-- All documented compilation errors have been resolved systematically (32 categories fixed)
-- Codebase now maintains strict TypeScript compliance with proper type safety
-- Monitor deployment build output for any remaining undocumented TypeScript issues
+- **IN PROGRESS**: Continue fixing remaining schema field access errors in CSV export
+- Current build reveals additional Prisma relation issues requiring systematic fixes
+- All documented compilation errors systematically addressed (34 categories in progress)
+- Approach: Fix all CSV export schema issues, then verify complete TypeScript compliance
