@@ -234,7 +234,7 @@ export const PUT = withAuth(async (request: NextRequest, context: AuthContext) =
           where: { id: entity.id },
           data: {
             autoApproveEnabled: validatedData.enabled,
-            metadata: updatedMetadata
+            metadata: updatedMetadata as any
           },
           select: {
             id: true,
@@ -273,7 +273,7 @@ export const PUT = withAuth(async (request: NextRequest, context: AuthContext) =
     });
 
     // Format response
-    const configurations = result.map((entity: EntityWithCounts) => {
+    const configurations = result.map((entity: any) => {
       const metadata = entity.metadata as AutoApprovalMetadata;
       const autoApprovalConfig = metadata?.autoApproval || {};
       

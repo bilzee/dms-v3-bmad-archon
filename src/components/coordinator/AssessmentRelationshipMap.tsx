@@ -80,6 +80,7 @@ export function AssessmentRelationshipMap({
 }: AssessmentRelationshipMapProps) {
   // State management
   const [selectedPriorities, setSelectedPriorities] = useState<Priority[]>(priorityFilter);
+  const [selectedAssessmentTypes, setSelectedAssessmentTypes] = useState<AssessmentType[]>([]);
   const [dateRange, setDateRange] = useState<{ start: Date | null; end: Date | null }>({
     start: null,
     end: null,
@@ -315,7 +316,7 @@ export function AssessmentRelationshipMap({
   const hoveredEntity = useMemo(() => {
     if (!hoveredEntityId || !detailedRelationships) return null;
     
-    const relationship = detailedRelationships.find(rel => rel.entityId === hoveredEntityId);
+    const relationship = detailedRelationships.find((rel: any) => rel.entityId === hoveredEntityId);
     return relationship?.entity || null;
   }, [hoveredEntityId, detailedRelationships]);
 
@@ -345,8 +346,8 @@ export function AssessmentRelationshipMap({
     }
 
     // Use Entity Severity only - no fallback colors
-    const entitySeverity = entity.severity?.toUpperCase() as keyof typeof ENTITY_SEVERITY_COLORS;
-    const markerColor = entitySeverity ? ENTITY_SEVERITY_COLORS[entitySeverity] : null;
+    const entitySeverity = null; // Entity model doesn't have severity field
+    const markerColor = null;
 
     console.log(`Creating CircleMarker at [${coordinates.lat}, ${coordinates.lng}] with severity ${entitySeverity || 'no severity'} for ${entity.name}`);
     console.log('Entity severity:', entitySeverity);
@@ -360,7 +361,7 @@ export function AssessmentRelationshipMap({
         center={[coordinates.lat, coordinates.lng]}
         radius={12}
         pathOptions={{
-          fillColor: markerColor,
+          fillColor: markerColor || '#9ca3af',
           color: '#666666', // Gray border for entities without severity
           weight: 3,
           opacity: 1,
@@ -744,7 +745,7 @@ export function AssessmentRelationshipMap({
                     center={mapCenter}
                     zoom={zoomLevel}
                     className="w-full h-full rounded-lg"
-                    whenCreated={(mapInstance) => {
+                    whenReady={(mapInstance) => {
                       mapInstance.invalidateSize();
                     }}
                   >

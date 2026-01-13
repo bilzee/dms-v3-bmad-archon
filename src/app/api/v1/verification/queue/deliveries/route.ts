@@ -138,7 +138,7 @@ export const GET = withAuth(
         critical: await db.rapidResponse.count({
           where: { 
             status: 'DELIVERED',
-            verificationStatus: { in: status },
+            verificationStatus: { in: status as any },
             priority: 'CRITICAL',
             ...(entityId && { entityId }),
             ...(responderId && { responderId })
@@ -147,7 +147,7 @@ export const GET = withAuth(
         high: await db.rapidResponse.count({
           where: { 
             status: 'DELIVERED',
-            verificationStatus: { in: status },
+            verificationStatus: { in: status as any },
             priority: 'HIGH',
             ...(entityId && { entityId }),
             ...(responderId && { responderId })
@@ -156,7 +156,7 @@ export const GET = withAuth(
         medium: await db.rapidResponse.count({
           where: { 
             status: 'DELIVERED',
-            verificationStatus: { in: status },
+            verificationStatus: { in: status as any },
             priority: 'MEDIUM',
             ...(entityId && { entityId }),
             ...(responderId && { responderId })
@@ -165,7 +165,7 @@ export const GET = withAuth(
         low: await db.rapidResponse.count({
           where: { 
             status: 'DELIVERED',
-            verificationStatus: { in: status },
+            verificationStatus: { in: status as any },
             priority: 'LOW',
             ...(entityId && { entityId }),
             ...(responderId && { responderId })

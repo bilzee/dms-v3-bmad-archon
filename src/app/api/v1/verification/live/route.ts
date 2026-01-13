@@ -62,7 +62,7 @@ export const GET = withAuth(async (request: NextRequest, context) => {
         }
       });
 
-      return new Response(stream, {
+      return new NextResponse(stream, {
         status: 200,
         headers: {
           'Content-Type': 'text/event-stream',

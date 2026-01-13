@@ -114,35 +114,35 @@ export const GET = withAuth(async (request, context) => {
       total: total,
       critical: await db.rapidAssessment.count({
         where: { 
-          verificationStatus: { in: status },
+          verificationStatus: { in: status as any },
           priority: 'CRITICAL',
           ...(entityId && { entityId }),
           ...(assessmentType && { rapidAssessmentType: { in: assessmentType } })
-        }
+        } as any
       }),
       high: await db.rapidAssessment.count({
         where: { 
-          verificationStatus: { in: status },
+          verificationStatus: { in: status as any },
           priority: 'HIGH',
           ...(entityId && { entityId }),
           ...(assessmentType && { rapidAssessmentType: { in: assessmentType } })
-        }
+        } as any
       }),
       medium: await db.rapidAssessment.count({
         where: { 
-          verificationStatus: { in: status },
+          verificationStatus: { in: status as any },
           priority: 'MEDIUM',
           ...(entityId && { entityId }),
           ...(assessmentType && { rapidAssessmentType: { in: assessmentType } })
-        }
+        } as any
       }),
       low: await db.rapidAssessment.count({
         where: { 
-          verificationStatus: { in: status },
+          verificationStatus: { in: status as any },
           priority: 'LOW',
           ...(entityId && { entityId }),
           ...(assessmentType && { rapidAssessmentType: { in: assessmentType } })
-        }
+        } as any
       })
     };
 
@@ -217,7 +217,7 @@ async function calculateVerificationRate(): Promise<number> {
       db.rapidAssessment.count({
         where: {
           createdAt: { gte: last24Hours }
-        }
+        } as any
       }),
       db.rapidAssessment.count({
         where: {
