@@ -5,7 +5,7 @@ import { cn } from '@/lib/utils';
 import { PanelResizer } from './PanelResizer';
 import { useDashboardLayoutStore } from '@/stores/dashboardLayout.store';
 
-interface PanelConfiguration {
+export interface PanelConfiguration {
   leftPanelWidth: number;
   centerPanelWidth: number;
   rightPanelWidth: number;

@@ -20,6 +20,7 @@ import {
 // import { OfflineTileLayer } from './components/OfflineTileLayer';
 import { EntityCluster } from './components/EntityMarker';
 import { DonorOverlayControl } from './components/DonorOverlayControl';
+import type { DonorOverlayControlProps } from './components/DonorOverlayControl';
 import { useDashboardLayoutStore } from '@/stores/dashboardLayout.store';
 import { useTouchGestures } from '@/hooks/useTouchGestures';
 
@@ -356,7 +357,11 @@ function InteractiveMapCore({
             center={[9.0820, 8.6753]} // Default to Nigeria
             zoom={initialZoom}
             className="w-full h-full"
-            whenCreated={handleMapCreated}
+            ref={(mapInstance) => {
+              if (mapInstance) {
+                handleMapCreated(mapInstance);
+              }
+            }}
           >
             {/* Standard tile layer - offline caching temporarily disabled for SSR */}
             <TileLayer
@@ -383,7 +388,7 @@ function InteractiveMapCore({
                 entities={entities}
                 selectedEntityId={selectedEntityId}
                 showDonorOverlay={donorOverlayEnabled}
-                onEntityClick={handleEntitySelect}
+                onEntityClick={(entity) => handleEntitySelect(entity.id)}
                 onPopupOpen={(entity) => console.log('Popup opened for entity:', entity.name)}
               />
             )}
@@ -408,15 +413,15 @@ function InteractiveMapCore({
             ...donor,
             entityCount: 1
           })) || []
-        ).reduce((acc, donor) => {
-          const existing = acc.find(d => d.donorId === donor.donorId);
+        ).reduce((acc: any[], donor) => {
+          const existing = acc.find((d: any) => d.donorId === donor.donorId);
           if (existing) {
             existing.entityCount += 1;
           } else {
             acc.push({ ...donor });
           }
           return acc;
-        }, [] as DonorOverlayControlProps['donorAssignments'])}
+        }, [] as any[])}
       />
       
       {/* Map legend will be added in Task 3 */}

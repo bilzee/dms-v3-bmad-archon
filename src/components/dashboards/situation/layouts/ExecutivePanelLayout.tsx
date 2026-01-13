@@ -55,7 +55,6 @@ export function ExecutivePanelLayout({
           incidentId={incidentId}
           showTimeline={false}
           priorityFilter={[]}
-          assessmentTypeFilter={[]}
           onEntitySelect={(entityId) => {
             console.log('Map entity selected:', entityId);
           }}

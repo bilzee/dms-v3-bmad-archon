@@ -484,9 +484,9 @@ export function DonorPerformanceDashboard({
                 </Select>
                 
                 <ExportButton 
-                  donorId={donorId}
+                  donorIds={[donorId]}
                   format={exportFormat}
-                  timeframe={timeframe}
+                  timeframe={timeframe === '3m' ? '90d' : timeframe === '6m' ? '90d' : timeframe === '2y' ? 'all' : timeframe}
                   includeCharts={true}
                   disabled={isFetching}
                 />

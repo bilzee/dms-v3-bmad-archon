@@ -15,7 +15,7 @@ import {
   X
 } from 'lucide-react';
 
-interface DonorOverlayControlProps {
+export interface DonorOverlayControlProps {
   enabled: boolean;
   onEnabledChange: (enabled: boolean) => void;
   donorAssignments?: Array<{

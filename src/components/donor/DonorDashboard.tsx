@@ -678,7 +678,7 @@ export function DonorDashboard() {
                                       {user ? (
                                         <DonorPerformanceDashboard 
                                           donorId={user.id}
-                                          donorName={user.name || user.organization}
+                                          donorName={(user.name || user.organization) || undefined}
                                           showRanking={true}
                                           showBadges={true}
                                           showTrends={true}

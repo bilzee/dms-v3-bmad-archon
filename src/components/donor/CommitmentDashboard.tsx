@@ -231,7 +231,7 @@ export function CommitmentDashboard({ donorId, preSelectedEntityId }: Commitment
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold">
-                {Object.values(commitmentsData.statistics.byStatus).reduce((a: number, b: number) => a + b, 0)}
+                {Object.values(commitmentsData.statistics.byStatus).reduce((a: number, b) => a + (b as number), 0)}
               </div>
             </CardContent>
           </Card>

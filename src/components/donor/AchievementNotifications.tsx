@@ -164,7 +164,7 @@ export function AchievementNotifications({
             <Button
               variant="ghost"
               size="sm"
-              onClick={() => setNotifications(false)}
+              onClick={() => setNotifications([])}
               className="text-blue-600 hover:text-blue-800 mt-2"
             >
               Hide all

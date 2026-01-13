@@ -167,7 +167,7 @@ export function IncidentOverviewPanel({
     refetch
   } = useQuery({
     queryKey: ['api-v1-dashboard-situation', currentIncidentId, 'overview'],
-    queryFn: () => fetchDashboardData(currentIncidentId),
+    queryFn: () => fetchDashboardData(currentIncidentId || undefined),
     staleTime: 2 * 60 * 1000, // 2 minutes
     gcTime: 10 * 60 * 1000, // 10 minutes (formerly cacheTime)
   });
@@ -208,7 +208,7 @@ export function IncidentOverviewPanel({
       
       {/* Incident Selector */}
       <IncidentSelector
-        selectedIncidentId={currentIncidentId}
+        selectedIncidentId={currentIncidentId || undefined}
         onIncidentChange={handleIncidentChange}
         includeHistorical={false}
         className="px-1"
@@ -227,7 +227,7 @@ export function IncidentOverviewPanel({
 
           {/* Population Impact Statistics (Verified) */}
           <PopulationImpact
-            incidentId={currentIncidentId}
+            incidentId={currentIncidentId || undefined}
             className="px-1"
           />
 
@@ -235,7 +235,7 @@ export function IncidentOverviewPanel({
           {dashboardMode !== 'executive' && (
             <div className="animate-fade-in transition-opacity duration-300 ease-in-out">
               <PreliminaryImpact
-                incidentId={currentIncidentId}
+                incidentId={currentIncidentId || undefined}
                 className="px-1"
               />
             </div>
