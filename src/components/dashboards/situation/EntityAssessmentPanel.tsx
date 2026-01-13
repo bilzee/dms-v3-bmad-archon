@@ -289,7 +289,7 @@ export function EntityAssessmentPanel({
         {/* Entity Selector */}
         <EntitySelector
           incidentId={effectiveIncidentId}
-          selectedEntityId={effectiveEntityId}
+          selectedEntityId={effectiveEntityId || undefined}
           onEntityChange={handleEntityChange}
           includeAllOption={true}
         />
