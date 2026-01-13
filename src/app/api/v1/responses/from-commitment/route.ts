@@ -123,6 +123,7 @@ export const POST = withAuth(async (request: NextRequest, context) => {
             rapidAssessmentDate: new Date(),
             assessorId: user.id,
             entityId: commitment.entityId,
+            incidentId: commitment.incidentId,
             assessorName: user.name || 'System',
             location: commitment.entity.location,
             verificationStatus: 'VERIFIED',

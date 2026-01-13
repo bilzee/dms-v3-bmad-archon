@@ -109,8 +109,7 @@ export const GET = withAuth(async (request: NextRequest, context) => {
           select: {
             id: true,
             name: true,
-            email: true,
-            role: true
+            email: true
           }
         }
       },
@@ -124,7 +123,7 @@ export const GET = withAuth(async (request: NextRequest, context) => {
       id: entry.id,
       userId: entry.userId || 'system',
       userName: entry.user?.name || 'System User',
-      userRole: entry.user?.role || 'SYSTEM',
+      userRole: 'UNKNOWN', // Role would require additional query to roles relation
       action: entry.action,
       resource: entry.resource,
       resourceId: entry.resourceId || '',

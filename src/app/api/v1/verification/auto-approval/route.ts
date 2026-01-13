@@ -77,7 +77,7 @@ export const GET = withAuth(async (request: NextRequest, context: AuthContext) =
     };
 
     if (entityType) {
-      whereClause.type = entityType;
+      whereClause.type = entityType as any;
     }
 
     if (enabledOnly) {
@@ -86,7 +86,7 @@ export const GET = withAuth(async (request: NextRequest, context: AuthContext) =
 
     // Get entities with auto-approval configurations
     const entities = await prisma.entity.findMany({
-      where: whereClause,
+      where: whereClause as any,
       select: {
         id: true,
         name: true,
