@@ -511,7 +511,7 @@ export function AssessmentCategorySummary({
   };
 
   const gapFieldElements = fieldConfig.gapIndicators.map(field => 
-    renderField(field.key, field.label, field.boolean, field.invert)
+    renderField(field.key, field.label, field.boolean, (field as any).invert)
   );
   
   const nonGapFieldElements = fieldConfig.nonGapIndicators.map(field => 

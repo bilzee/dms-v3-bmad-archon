@@ -33,7 +33,7 @@ import {
 } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { ResourceGapAnalysis } from './ResourceGapAnalysis';
-import { DonorCommitment, Donor, Entity, Incident } from '@/types/entities';
+import { DonorCommitment, Donor, Entity, Incident } from '@/types/commitment';
 
 interface ResourceManagementProps {
   className?: string;
@@ -278,10 +278,10 @@ export function ResourceManagement({ className }: ResourceManagementProps) {
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold text-green-600">
-                {displayStats.byStatus?.PLANNED || 0} planned
+                {(displayStats.byStatus as any)?.PLANNED || 0} planned
               </div>
               <p className="text-xs text-muted-foreground">
-                {displayStats.byStatus?.PARTIAL || 0} in progress
+                {(displayStats.byStatus as any)?.PARTIAL || 0} in progress
               </p>
             </CardContent>
           </Card>

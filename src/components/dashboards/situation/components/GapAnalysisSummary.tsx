@@ -221,13 +221,13 @@ export function GapAnalysisSummary({
             {/* Overall status indicator */}
             <div className="flex items-center gap-2">
               <GapIndicator 
-                hasGap={metrics.gapCoverageRate > 0}
-                severity={metrics.overallStatus.toUpperCase() as any}
+                hasGap={(metrics?.gapCoverageRate || 0) > 0}
+                severity={(metrics?.overallStatus || 'low').toUpperCase() as any}
                 size="sm"
                 showLabel={false}
               />
               <span className="text-sm font-medium">
-                {metrics.overallStatus.toUpperCase()}
+                {(metrics?.overallStatus || 'low').toUpperCase()}
               </span>
             </div>
             
@@ -249,11 +249,11 @@ export function GapAnalysisSummary({
         <div className="flex items-center gap-4 text-sm text-gray-600">
           <div className="flex items-center gap-1">
             <Activity className="h-3 w-3" />
-            {metrics.entitiesWithGaps} of {metrics.totalEntities} entities have gaps
+            {metrics?.entitiesWithGaps || 0} of {metrics?.totalEntities || 0} entities have gaps
           </div>
           <div className="flex items-center gap-1">
             <TrendingUp className="h-3 w-3" />
-            {metrics.gapCoverageRate.toFixed(1)}% coverage rate
+            {(metrics?.gapCoverageRate || 0).toFixed(1)}% coverage rate
           </div>
         </div>
       </CardHeader>
@@ -273,13 +273,12 @@ export function GapAnalysisSummary({
                 <span className="text-sm font-medium">High Priority</span>
               </div>
               <span className="text-sm text-gray-600">
-                {data.severityDistribution.high} entities ({metrics.severityPercentages.high.toFixed(1)}%)
+                {data?.severityDistribution.high || 0} entities ({(metrics?.severityPercentages.high || 0).toFixed(1)}%)
               </span>
             </div>
             <Progress 
-              value={metrics.severityPercentages.high} 
+              value={metrics?.severityPercentages.high || 0} 
               className="h-1.5"  // Reduced from h-2
-              indicatorclassname="bg-orange-500"
             />
 
             {/* Medium severity */}
@@ -289,13 +288,12 @@ export function GapAnalysisSummary({
                 <span className="text-sm font-medium">Medium Priority</span>
               </div>
               <span className="text-sm text-gray-600">
-                {data.severityDistribution.medium} entities ({metrics.severityPercentages.medium.toFixed(1)}%)
+                {data?.severityDistribution.medium || 0} entities ({(metrics?.severityPercentages.medium || 0).toFixed(1)}%)
               </span>
             </div>
             <Progress 
-              value={metrics.severityPercentages.medium} 
+              value={metrics?.severityPercentages.medium || 0} 
               className="h-1.5"  // Reduced from h-2
-              indicatorclassname="bg-yellow-500"
             />
 
             {/* Low severity */}
@@ -305,13 +303,12 @@ export function GapAnalysisSummary({
                 <span className="text-sm font-medium">Low Priority</span>
               </div>
               <span className="text-sm text-gray-600">
-                {data.severityDistribution.low} entities ({metrics.severityPercentages.low.toFixed(1)}%)
+                {data?.severityDistribution.low || 0} entities ({(metrics?.severityPercentages.low || 0).toFixed(1)}%)
               </span>
             </div>
             <Progress 
-              value={metrics.severityPercentages.low} 
+              value={metrics?.severityPercentages.low || 0} 
               className="h-1.5"  // Reduced from h-2
-              indicatorclassname="bg-green-500"
             />
           </div>
         </div>
@@ -323,7 +320,7 @@ export function GapAnalysisSummary({
             Assessment Type Gaps
           </h3>
           <div className="grid grid-cols-1 gap-2"> {/* Single column to prevent text overflow - wider tiles */}
-            {Object.entries(data.assessmentTypeGaps).map(([type, gapData]) => {
+            {Object.entries(data?.assessmentTypeGaps || {}).map(([type, gapData]) => {
               const config = assessmentTypeConfig[type as keyof typeof assessmentTypeConfig];
               if (!config) return null;
 
@@ -364,10 +361,6 @@ export function GapAnalysisSummary({
                   <Progress 
                     value={gapData.percentage} 
                     className="h-1.5"
-                    indicatorClassName={cn(
-                      gapData.severity === 'high' ? 'bg-orange-500' :
-                      gapData.severity === 'medium' ? 'bg-yellow-500' : 'bg-green-500'
-                    )}
                   />
                 </div>
               );
@@ -376,11 +369,11 @@ export function GapAnalysisSummary({
         </div>
 
         {/* Last updated info */}
-        {data.lastUpdated && (
+        {data?.lastUpdated && (
           <div className="mt-4 pt-4 border-t">
             <div className="text-xs text-gray-500 flex items-center gap-2">
               <RefreshCw className="h-3 w-3" />
-              Last updated: {new Date(data.lastUpdated).toLocaleString()}
+              Last updated: {new Date(data?.lastUpdated || Date.now()).toLocaleString()}
             </div>
           </div>
         )}

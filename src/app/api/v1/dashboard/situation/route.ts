@@ -180,7 +180,7 @@ interface PopulationImpact {
 }
 
 // Enhanced assessment data interfaces
-interface HealthAssessmentData {
+export interface HealthAssessmentData {
   rapidAssessmentId: string;
   hasFunctionalClinic: boolean;
   hasEmergencyServices: boolean;
@@ -198,7 +198,7 @@ interface HealthAssessmentData {
   assessorName: string;
 }
 
-interface FoodAssessmentData {
+export interface FoodAssessmentData {
   rapidAssessmentId: string;
   isFoodSufficient: boolean;
   hasRegularMealAccess: boolean;
@@ -213,7 +213,7 @@ interface FoodAssessmentData {
   assessorName: string;
 }
 
-interface WASHAssessmentData {
+export interface WASHAssessmentData {
   rapidAssessmentId: string;
   waterSource: string;
   isWaterSufficient: boolean;
@@ -228,7 +228,7 @@ interface WASHAssessmentData {
   assessorName: string;
 }
 
-interface ShelterAssessmentData {
+export interface ShelterAssessmentData {
   rapidAssessmentId: string;
   areSheltersSufficient: boolean;
   hasSafeStructures: boolean;
@@ -243,7 +243,7 @@ interface ShelterAssessmentData {
   assessorName: string;
 }
 
-interface SecurityAssessmentData {
+export interface SecurityAssessmentData {
   rapidAssessmentId: string;
   isSafeFromViolence: boolean;
   gbvCasesReported: boolean;
@@ -257,7 +257,7 @@ interface SecurityAssessmentData {
   assessorName: string;
 }
 
-interface PopulationAssessmentData {
+export interface PopulationAssessmentData {
   rapidAssessmentId: string;
   totalHouseholds: number;
   totalPopulation: number;

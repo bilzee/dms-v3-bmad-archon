@@ -61,7 +61,7 @@ const ExportButton = ({
   const exportStatus = getExportStatus(dataType);
   const isExporting = exportStatus?.status === 'processing' || loading;
 
-  const handleExport = async (format: string) => {
+  const handleExport = async (format: "png" | "svg" | "pdf" | "csv" | "xlsx") => {
     try {
       await startExport({
         dataType,

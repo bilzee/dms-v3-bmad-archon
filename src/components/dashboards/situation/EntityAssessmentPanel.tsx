@@ -130,7 +130,7 @@ export function EntityAssessmentPanel({
   } = useQuery({
     queryKey: ['api-v1-dashboard-situation', effectiveIncidentId, entityIdForApi],
     queryFn: () => {
-      return fetchDashboardData(effectiveIncidentId!, entityIdForApi);
+      return fetchDashboardData(effectiveIncidentId!, entityIdForApi || undefined);
     },
     enabled: !!effectiveIncidentId,
     staleTime: 2 * 60 * 1000, // 2 minutes

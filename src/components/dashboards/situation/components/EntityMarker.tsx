@@ -61,10 +61,10 @@ const SEVERITY_COLORS = {
 } as const;
 
 // Memoized icon cache to improve performance
-const iconCache = new Map<string, Icon>();
+const iconCache = new Map<string, Icon | DivIcon>();
 
 // Custom icon for entities (memoized)
-const createEntityIcon = (entity: EntityLocation, isSelected: boolean, showDonorOverlay: boolean): Icon => {
+const createEntityIcon = (entity: EntityLocation, isSelected: boolean, showDonorOverlay: boolean): Icon | DivIcon => {
   const cacheKey = `${entity.id}-${isSelected}-${showDonorOverlay}-${entity.gapSummary.severity}`;
   
   if (iconCache.has(cacheKey)) {
@@ -156,7 +156,9 @@ const createEntityIcon = (entity: EntityLocation, isSelected: boolean, showDonor
   // Limit cache size to prevent memory leaks
   if (iconCache.size > 1000) {
     const firstKey = iconCache.keys().next().value;
-    iconCache.delete(firstKey);
+    if (firstKey) {
+      iconCache.delete(firstKey);
+    }
   }
 
   return icon;

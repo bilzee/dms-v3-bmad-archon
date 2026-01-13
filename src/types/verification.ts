@@ -33,6 +33,8 @@ export interface VerificationQueueItem {
   rapidAssessmentDate: Date;
   verificationStatus: VerificationStatus;
   priority: 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL';
+  location?: string;
+  responseDate?: Date;
   entity: {
     id: string;
     name: string;
@@ -41,6 +43,11 @@ export interface VerificationQueueItem {
     autoApproveEnabled: boolean;
   };
   assessor: {
+    id: string;
+    name: string;
+    email: string;
+  };
+  responder?: {
     id: string;
     name: string;
     email: string;
@@ -57,6 +64,8 @@ export interface VerificationQueueFilters {
   assessorId?: string;
   dateFrom?: Date;
   dateTo?: Date;
+  sortBy?: string;
+  sortOrder?: string;
 }
 
 export interface VerificationQueueResponse {
@@ -66,6 +75,18 @@ export interface VerificationQueueResponse {
     limit: number;
     total: number;
     totalPages: number;
+  };
+  queueDepth?: {
+    total: number;
+    critical: number;
+    high: number;
+    medium: number;
+    low: number;
+  };
+  metrics?: {
+    averageWaitTime: number;
+    verificationRate: number;
+    oldestPending: string | null;
   };
   meta: {
     timestamp: string;

@@ -218,12 +218,22 @@ export function AdvancedFilters({ incidentId, onFiltersChange, className }: Adva
   // Export filtered data
   const exportFilteredData = useCallback(async () => {
     try {
-      const exportParams = new URLSearchParams({
-        ...filters,
-        incidentId,
-        exportFormat: 'csv',
-        includeTimestamp: new Date().toISOString()
+      const exportParams = new URLSearchParams();
+      
+      // Add filters as string values
+      Object.entries(filters).forEach(([key, value]) => {
+        if (Array.isArray(value)) {
+          exportParams.set(key, value.join(','));
+        } else if (typeof value === 'object' && value !== null) {
+          exportParams.set(key, JSON.stringify(value));
+        } else {
+          exportParams.set(key, String(value));
+        }
       });
+      
+      if (incidentId) exportParams.set('incidentId', incidentId);
+      exportParams.set('exportFormat', 'csv');
+      exportParams.set('includeTimestamp', new Date().toISOString());
 
       const response = await apiGet(`/api/v1/dashboard/situation/export?${exportParams}`);
       

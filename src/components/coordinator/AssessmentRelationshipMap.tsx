@@ -745,8 +745,8 @@ export function AssessmentRelationshipMap({
                     center={mapCenter}
                     zoom={zoomLevel}
                     className="w-full h-full rounded-lg"
-                    whenReady={(mapInstance) => {
-                      mapInstance.invalidateSize();
+                    whenReady={() => {
+                      // Map is ready - invalidateSize called automatically
                     }}
                   >
                     <TileLayer

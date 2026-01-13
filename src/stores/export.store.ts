@@ -89,6 +89,7 @@ interface ExportState {
   downloadExport: (exportId: string) => void;
   getExportStatus: (exportId: string) => ExportStatus | undefined;
   updateExportStatus: (exportId: string, status: Partial<ExportStatus>) => void;
+  getExportOptions: (dataType: string) => any;
   
   // Modal actions
   openExportModal: (data: { dataType?: string; initialValues?: Partial<ExportRequest> }) => void;
@@ -355,6 +356,15 @@ export const useExportStore = create<ExportState>()(
               },
             },
           }));
+        },
+
+        getExportOptions: (dataType: string) => {
+          // Return export options for the specified data type
+          const state = get();
+          return {
+            availableFormats: state.availableFormats[dataType] || ['csv', 'xlsx'],
+            defaultFormat: 'csv',
+          };
         },
 
         // Modal actions

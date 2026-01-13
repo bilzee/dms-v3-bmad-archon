@@ -166,7 +166,7 @@ export default function CoordinatorEntitiesPage() {
           body: JSON.stringify({
             userId,
             entityId: selectedEntity,
-            assignedBy: user.id
+            assignedBy: user?.id || ''
           })
         })
       );
@@ -183,7 +183,7 @@ export default function CoordinatorEntitiesPage() {
           body: JSON.stringify({
             userId: donor?.user.id,
             entityId: selectedEntity,
-            assignedBy: user.id
+            assignedBy: user?.id || ''
           })
         });
       });

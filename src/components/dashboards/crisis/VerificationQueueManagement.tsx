@@ -312,13 +312,14 @@ export function VerificationQueueManagement({ className }: VerificationQueueMana
           <AssessmentQueueContent
             assessments={assessmentsData?.data || []}
             loading={assessmentsLoading}
-            error={assessmentsError}
+            error={assessmentsError?.message || null}
             pagination={assessmentsPagination}
             queueDepth={assessmentsData?.queueDepth}
             metrics={assessmentsData?.metrics}
             selectedItem={selectedItem}
             setSelectedItem={setSelectedItem}
             showFilters={showFilters}
+            onRefresh={refetchAssessments}
           />
         </TabsContent>
 
@@ -344,7 +345,8 @@ function AssessmentQueueContent({
   metrics,
   selectedItem,
   setSelectedItem,
-  showFilters
+  showFilters,
+  onRefresh
 }: {
   assessments: VerificationQueueItem[];
   loading: boolean;
@@ -355,6 +357,7 @@ function AssessmentQueueContent({
   selectedItem: VerificationQueueItem | null;
   setSelectedItem: (item: VerificationQueueItem | null) => void;
   showFilters: boolean;
+  onRefresh?: () => void;
 }) {
   if (error) {
     return (
@@ -363,7 +366,7 @@ function AssessmentQueueContent({
           <div className="text-center text-red-600">
             <AlertTriangle className="h-8 w-8 mx-auto mb-2" />
             <h3 className="text-lg font-semibold">Error Loading Queue</h3>
-            <p className="text-sm">{error instanceof Error ? error.message : String(error)}</p>
+            <p className="text-sm">{error || 'Unknown error occurred'}</p>
           </div>
         </CardContent>
       </Card>
@@ -416,6 +419,7 @@ function AssessmentQueueContent({
           <AssessmentDetailsPanel
             assessment={selectedItem}
             onClose={() => setSelectedItem(null)}
+            onRefresh={onRefresh}
           />
         ) : (
           <Card className="h-96 flex items-center justify-center">
@@ -459,7 +463,7 @@ function DeliveryQueueContent({
           <div className="text-center text-red-600">
             <AlertTriangle className="h-8 w-8 mx-auto mb-2" />
             <h3 className="text-lg font-semibold">Error Loading Queue</h3>
-            <p className="text-sm">{error instanceof Error ? error.message : String(error)}</p>
+            <p className="text-sm">{error || 'Unknown error occurred'}</p>
           </div>
         </CardContent>
       </Card>
@@ -685,10 +689,12 @@ function DeliveryQueueItem({
 // Assessment Details Panel Component
 function AssessmentDetailsPanel({
   assessment,
-  onClose
+  onClose,
+  onRefresh
 }: {
   assessment: VerificationQueueItem;
   onClose: () => void;
+  onRefresh?: () => void;
 }) {
   return (
     <Card>
@@ -769,7 +775,7 @@ function AssessmentDetailsPanel({
           onActionComplete={() => {
             onClose();
             // Refresh the queue
-            refetchAssessments(); // Use hook-based refresh instead of store-based
+            onRefresh?.(); // Use hook-based refresh instead of store-based
           }}
         />
       </CardContent>

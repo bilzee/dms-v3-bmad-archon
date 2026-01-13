@@ -28,7 +28,7 @@ import {
   Eye
 } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
-import { Entity, Incident, Donor } from '@/types/entities';
+import { Entity, Incident, Donor } from '@/types/commitment';
 
 interface ResourceGapAnalysisProps {
   className?: string;

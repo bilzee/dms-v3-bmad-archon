@@ -157,7 +157,7 @@ const ExportModal = ({
 
   const handleNext = async () => {
     const currentStepFields = getStepFields(step);
-    const isStepValid = await form.trigger(currentStepFields);
+    const isStepValid = await form.trigger(currentStepFields as any);
     
     if (isStepValid) {
       if (step < 3) {
@@ -194,7 +194,7 @@ const ExportModal = ({
         await scheduleExport({
           ...formData,
           dateRange: getDateRangeFromForm(formData.dateRange),
-        });
+        } as any);
       }
       
       onClose();
@@ -322,7 +322,7 @@ const ExportModal = ({
                 <Label>Export Format</Label>
                 <RadioGroup
                   value={selectedFormat}
-                  onValueChange={(value) => form.setValue('format', value as any)}
+                  onValueChange={(value: any) => form.setValue('format', value as any)}
                   className="grid grid-cols-1 gap-3"
                 >
                   {formatOptions
@@ -379,14 +379,14 @@ const ExportModal = ({
                       >
                         <CalendarIcon className="mr-2 h-4 w-4" />
                         {form.getValues('dateRange.startDate')
-                          ? format(new Date(form.getValues('dateRange.startDate')), "PPP")
+                          ? format(new Date(form.getValues('dateRange.startDate')!), "PPP")
                           : "Pick a date"}
                       </Button>
                     </PopoverTrigger>
                     <PopoverContent className="w-auto p-0">
                       <Calendar
                         mode="single"
-                        selected={form.getValues('dateRange.startDate') ? new Date(form.getValues('dateRange.startDate')) : undefined}
+                        selected={form.getValues('dateRange.startDate') ? new Date(form.getValues('dateRange.startDate')!) : undefined}
                         onSelect={(date) => 
                           form.setValue('dateRange.startDate', date?.toISOString())
                         }
@@ -414,14 +414,14 @@ const ExportModal = ({
                       >
                         <CalendarIcon className="mr-2 h-4 w-4" />
                         {form.getValues('dateRange.endDate')
-                          ? format(new Date(form.getValues('dateRange.endDate')), "PPP")
+                          ? format(new Date(form.getValues('dateRange.endDate')!), "PPP")
                           : "Pick a date"}
                       </Button>
                     </PopoverTrigger>
                     <PopoverContent className="w-auto p-0">
                       <Calendar
                         mode="single"
-                        selected={form.getValues('dateRange.endDate') ? new Date(form.getValues('dateRange.endDate')) : undefined}
+                        selected={form.getValues('dateRange.endDate') ? new Date(form.getValues('dateRange.endDate')!) : undefined}
                         onSelect={(date) => 
                           form.setValue('dateRange.endDate', date?.toISOString())
                         }
@@ -496,7 +496,7 @@ const ExportModal = ({
                 </div>
               </div>
 
-              {(selectedFormat === 'pdf' || selectedFormat === 'html') && (
+              {selectedFormat === 'pdf' && (
                 <div className="space-y-3">
                   <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-2">
@@ -571,7 +571,7 @@ const ExportModal = ({
                 <Label>Export Frequency</Label>
                 <RadioGroup
                   value={selectedFrequency}
-                  onValueChange={(value) => form.setValue('schedule.frequency', value as any)}
+                  onValueChange={(value: any) => form.setValue('schedule.frequency', value as any)}
                   className="grid grid-cols-1 gap-3"
                 >
                   {frequencyOptions.map((option) => (

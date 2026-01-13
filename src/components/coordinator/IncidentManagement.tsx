@@ -83,6 +83,8 @@ interface IncidentFilters {
   }
   location?: string
   hasAssessments?: boolean
+  page?: number
+  limit?: number
 }
 
 interface IncidentManagementState {
@@ -490,7 +492,7 @@ export function IncidentManagement({
             >
               {(incidentTypes, isLoadingTypes, typesError, retryTypes) => {
                 // Filter incidents based on state filters
-                const filteredIncidents = incidents.filter(incident => {
+                const filteredIncidents = incidents.filter((incident: any) => {
                   if (!state.filters) return true
                   
                   if (state.filters.status && !state.filters.status.includes(incident.status)) {
@@ -636,7 +638,7 @@ export function IncidentManagement({
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">All Types</SelectItem>
-                  {incidentTypes?.map((type) => (
+                  {incidentTypes?.map((type: any) => (
                     <SelectItem key={type} value={type}>
                       {type}
                     </SelectItem>
@@ -675,7 +677,7 @@ export function IncidentManagement({
               }} />
             ) : (
               <EmptyState
-                type="empty"
+                type="data"
                 title="No incidents created yet"
                 description="Create your first incident to get started with crisis management."
                 action={{
@@ -700,7 +702,7 @@ export function IncidentManagement({
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {filteredIncidents.map((incident) => {
+                {filteredIncidents.map((incident: any) => {
                   const impact = formatPopulationImpact(incident.populationImpact || {})
                   
                   return (
@@ -724,12 +726,12 @@ export function IncidentManagement({
                         </div>
                       </TableCell>
                       <TableCell>
-                        <Badge className={severityColors[incident.severity]}>
+                        <Badge className={severityColors[incident.severity as keyof typeof severityColors]}>
                           {incident.severity}
                         </Badge>
                       </TableCell>
                       <TableCell>
-                        <Badge className={statusColors[incident.status]}>
+                        <Badge className={statusColors[incident.status as keyof typeof statusColors]}>
                           {incident.status}
                         </Badge>
                       </TableCell>
