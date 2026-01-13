@@ -21,7 +21,7 @@ export async function GET(
     const user = await db.user.findUnique({
       where: { id: (session!.user as any).id },
       select: { 
-        userRoles: { 
+        roles: { 
           select: { 
             role: { 
               select: { name: true } 
@@ -31,7 +31,7 @@ export async function GET(
       }
     });
 
-    if (!user || !user.userRoles.some(ur => ur.role.name === 'COORDINATOR')) {
+    if (!user || !user.roles.some(ur => ur.role.name === 'COORDINATOR')) {
       await auditLog({
         userId: (session!.user as any).id,
         action: 'UNAUTHORIZED_ACCESS',
@@ -143,7 +143,7 @@ export async function GET(
     // Log error
     try {
       const session = await getServerSession();
-      if (session?.user?.id) {
+      if (session?.user && (session.user as any).id) {
         await auditLog({
           userId: (session!.user as any).id,
           action: 'ERROR_ACCESS_DONOR_RECOMMENDATIONS',

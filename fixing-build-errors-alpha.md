@@ -777,8 +777,88 @@ const user = await prisma.user.findUnique({
 - ✅ `src/app/api/v1/reports/download/[id]/route.ts` - Download access validation
 - ✅ `src/app/api/v1/reports/configurations/route.ts` - Configuration ownership
 
+---
+
+## 30. User-Role Relation Type Errors (Prisma Model Relations)
+
+**Error Pattern**: `'userRoles' does not exist in type 'UserSelect<DefaultArgs>'`
+
+**Example Errors**:
+```
+Object literal may only specify known properties, and 'userRoles' does not exist in type 'UserSelect<DefaultArgs>'
+Property 'id' does not exist on type '{name?: string | null | undefined; email?: string | null | undefined; image?: string | null | undefined}'
+```
+
+**Root Cause**: Incorrect Prisma relation field names and NextAuth type inconsistencies
+
+**Comprehensive Solution**:
+1. **Fixed User-Role relation field naming**:
+   - Corrected `select: { userRoles: { ... } }` to `select: { roles: { ... } }`
+   - Updated field access `user.userRoles.some(...)` to `user.roles.some(...)`
+
+2. **Fixed NextAuth session.user type inconsistencies**:
+   - Updated conditional checks to use type casting: `session?.user && (session.user as any).id`
+   - Applied consistent typing pattern across session access
+
+**Pattern Applied**:
+```typescript
+// Before - Wrong relation field name:
+const user = await db.user.findUnique({
+  where: { id: userId },
+  select: { 
+    userRoles: {  // ❌ Wrong: doesn't exist on User model
+      select: { 
+        role: { select: { name: true } } 
+      } 
+    } 
+  }
+});
+
+// After - Correct relation field name:
+const user = await db.user.findUnique({
+  where: { id: userId },
+  select: { 
+    roles: {  // ✅ Correct: User has 'roles' field → UserRole[]
+      select: { 
+        role: { select: { name: true } } 
+      } 
+    } 
+  }
+});
+
+// Before - Wrong field access:
+if (!user.userRoles.some(ur => ur.role.name === 'COORDINATOR')) // ❌
+
+// After - Correct field access:
+if (!user.roles.some(ur => ur.role.name === 'COORDINATOR')) // ✅
+
+// Before - NextAuth type inconsistency:
+if (session?.user?.id) {  // ❌ TypeScript error: id doesn't exist
+
+// After - Consistent type casting:
+if (session?.user && (session.user as any).id) {  // ✅
+```
+
+**Prisma Schema Reference**:
+```prisma
+model User {
+  // ... other fields
+  roles UserRole[]  // ✅ Correct relation name
+}
+
+model UserRole {
+  userId String
+  roleId String
+  user   User @relation(fields: [userId], references: [id])
+  role   Role @relation(fields: [roleId], references: [id])
+}
+```
+
+**Files Fixed**:
+- ✅ `src/app/api/v1/entities/[id]/donor-recommendations/route.ts` - User-Role relation and NextAuth typing
+
 ## Next Steps
 - **READY FOR DEPLOYMENT**: Retry Dokploy deployment build to verify complete TypeScript compliance
-- All documented compilation errors have been resolved systematically (29 categories fixed)
+- All documented compilation errors have been resolved systematically (30 categories fixed)
 - Codebase now maintains strict TypeScript compliance with proper type safety
 - Monitor deployment build output for any remaining undocumented TypeScript issues
