@@ -144,7 +144,7 @@ export function EntityAssessmentPanel({
     if (includeAllEntities || !effectiveEntityId || effectiveEntityId === 'all') {
       return allEntityAssessments;
     }
-    return allEntityAssessments.filter(entity => entity.id === effectiveEntityId);
+    return allEntityAssessments.filter((entity: any) => entity.id === effectiveEntityId);
   }, [dashboardData?.data?.entityAssessments, includeAllEntities, effectiveEntityId]);
 
   const aggregatedAssessments = dashboardData?.data?.aggregatedAssessments;
