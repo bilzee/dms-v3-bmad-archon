@@ -22,12 +22,12 @@ const updateGapFieldSchema = z.object({
 
 // Helper to check user permissions
 async function checkPermissions(session: any, requiredRole: 'COORDINATOR' | 'ADMIN') {
-  if (!session?.user?.id) {
+  if (!(session?.user as any)?.id) {
     return { hasPermission: false, user: null }
   }
 
   const user = await prisma.user.findUnique({
-    where: { id: session!.user!.id },
+    where: { id: (session!.user as any)!.id },
     include: {
       roles: {
         include: {
@@ -174,10 +174,10 @@ export async function PUT(
     })
 
     // Log the severity change for audit trail (skip in development if no user)
-    if (process.env.NODE_ENV !== 'development' || session?.user?.id) {
+    if (process.env.NODE_ENV !== 'development' || (session?.user as any)?.id) {
       await prisma.auditLog.create({
         data: {
-          userId: session?.user?.id || 'development-user',
+          userId: (session?.user as any)?.id || 'development-user',
           action: 'UPDATE_GAP_FIELD_SEVERITY',
           resource: 'gap_field_severities',
           resourceId: params.id,

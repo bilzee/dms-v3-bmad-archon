@@ -81,7 +81,7 @@ export async function GET(request: NextRequest) {
     const session = await getServerSession(authOptions)
     
     // Debug logging
-    console.log('Gap Field API - Session:', session?.user ? { userId: session.user.id, email: session.user.email } : 'No session')
+    console.log('Gap Field API - Session:', session?.user ? { userId: (session.user as any).id, email: (session.user as any).email } : 'No session')
     
     // If no session, check if we're in development and allow access
     if (!session && process.env.NODE_ENV === 'development') {

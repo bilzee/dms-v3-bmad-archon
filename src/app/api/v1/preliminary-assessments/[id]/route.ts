@@ -7,7 +7,7 @@ import {
   QueryPreliminaryAssessmentSchema,
   UpdatePreliminaryAssessmentSchema
 } from '@/lib/validation/preliminary-assessment';
-import { PreliminaryAssessmentResponse } from '@/types/preliminary-assessment';
+import { PreliminaryAssessmentResponse, PreliminaryAssessmentListResponse } from '@/types/preliminary-assessment';
 
 interface RouteParams {
   params: { id: string }

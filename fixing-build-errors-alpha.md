@@ -1148,6 +1148,56 @@ _count: { select: { rapidAssessments: true, preliminaryAssessments: true } }  //
 - **Enum Values**: All enum comparisons use correct values from schema
 - **Relation Fixes**: Removed non-existent relations, corrected field vs relation usage
 
+---
+
+## Section 36: NextAuth Session User Property Type Safety
+**Error**: TypeScript compilation error accessing session.user.id property  
+**Location**: `src/app/api/v1/gap-field-severities/[id]/route.ts:177,25,30`  
+**Issue**: NextAuth user type doesn't include custom `id` property  
+
+**Root Cause**: 
+NextAuth's default user type only includes `{ name?, email?, image? }` but our app extends this with custom properties like `id`, `role`, etc. TypeScript strict mode requires explicit type assertions for these extended properties.
+
+**Solution Applied**:
+1. **Type Casting Pattern**: Use `(session?.user as any)?.id` to access custom properties
+2. **Consistent Application**: Applied to all session.user property access patterns
+3. **Safe Access**: Maintained null-checking with optional chaining
+
+**Pattern Applied**:
+```typescript
+// Before - TypeScript error on custom properties:
+if (session?.user?.id) {  // ❌ Property 'id' does not exist on type DefaultUser
+  userId: session?.user?.id  // ❌ Same error
+}
+
+// After - Type-safe custom property access:
+if ((session?.user as any)?.id) {  // ✅ Type assertion allows access
+  userId: (session?.user as any)?.id  // ✅ Consistent pattern
+}
+
+// Permission check function:
+if (!(session?.user as any)?.id) {  // ✅ Negation with type assertion
+  return { hasPermission: false, user: null }
+}
+
+const user = await prisma.user.findUnique({
+  where: { id: (session!.user as any)!.id }  // ✅ Non-null assertion + type casting
+})
+```
+
+**Files Fixed**:
+- ✅ `src/app/api/v1/gap-field-severities/[id]/route.ts:25` - Permission check condition
+- ✅ `src/app/api/v1/gap-field-severities/[id]/route.ts:30` - User lookup by session ID
+- ✅ `src/app/api/v1/gap-field-severities/[id]/route.ts:177` - Audit log condition check
+- ✅ `src/app/api/v1/gap-field-severities/[id]/route.ts:180` - Audit log userId assignment
+
+**Technical Details**:
+- **NextAuth Integration**: Default user type `{ name?, email?, image? }` extended with custom properties
+- **Type Safety**: Explicit type assertion `(session?.user as any)` preserves compile-time safety
+- **Null Safety**: Maintained `?.` optional chaining for runtime safety
+- **Permission Pattern**: Common pattern across authentication-required routes
+- **Consistency**: Applied same pattern throughout checkPermissions helper function
+
 **Key Benefits**:
 - **Type Safety**: Proper error handling eliminates `unknown` type errors
 - **Schema Compliance**: 100% alignment with actual database schema

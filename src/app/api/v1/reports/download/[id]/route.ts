@@ -341,7 +341,7 @@ async function GET_INFO(
       where: {
         action: 'REPORT_DOWNLOADED',
         resourceId: executionId,
-        userId: session.user.id
+        userId: (session.user as any).id
       },
       orderBy: { timestamp: 'desc' },
       take: 10
