@@ -100,16 +100,18 @@ export const GET = withAuth(async (request: NextRequest, context) => {
         ]);
 
         // Extract population data from latest population assessment
-        const population = latestPopulationAssessment?.populationAssessment?.totalPopulation || 
-                          latestPopulationAssessment?.populationAssessment?.numberDisplaced || 0;
+        const population = latestPopulationAssessment?.populationAssessment?.totalPopulation || 0;
 
         return {
           ...entity,
           demographics: {
             population: population,
-            vulnerableCount: latestPopulationAssessment?.populationAssessment?.vulnerablePopulation || 0,
-            lga: entity.metadata?.lga || null,
-            ward: entity.metadata?.ward || null,
+            vulnerableCount: (latestPopulationAssessment?.populationAssessment?.pregnantWomen || 0) + 
+                           (latestPopulationAssessment?.populationAssessment?.populationUnder5 || 0) + 
+                           (latestPopulationAssessment?.populationAssessment?.personWithDisability || 0) + 
+                           (latestPopulationAssessment?.populationAssessment?.elderlyPersons || 0),
+            lga: (entity.metadata as any)?.lga || null,
+            ward: (entity.metadata as any)?.ward || null,
             campDetails: entity.type === 'CAMP' ? entity.metadata : null,
             communityDetails: entity.type === 'COMMUNITY' ? entity.metadata : null,
             facilityDetails: entity.type === 'FACILITY' ? entity.metadata : null
