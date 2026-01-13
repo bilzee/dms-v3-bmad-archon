@@ -320,12 +320,12 @@ async function collectResponseActivityData(startDate: string, endDate: string, f
     where: whereClause,
     include: {
       assessment: {
-        select: { id: true, assessmentType: true, location: { select: { name: true } } },
+        select: { id: true, rapidAssessmentType: true, location: true },
       },
       entity: {
         select: { id: true, name: true, type: true, coordinates: true },
       },
-      assignedTo: {
+      responder: {
         select: { id: true, name: true, email: true },
       },
       commitment: {
@@ -335,8 +335,8 @@ async function collectResponseActivityData(startDate: string, endDate: string, f
     orderBy: { createdAt: 'desc' },
   });
 
-  const responseStats = await db.response.groupBy({
-    by: ['status', 'responsePriority'],
+  const responseStats = await db.rapidResponse.groupBy({
+    by: ['status', 'priority'],
     where: {
       createdAt: { gte: new Date(startDate), lte: new Date(endDate) },
     },
@@ -348,17 +348,20 @@ async function collectResponseActivityData(startDate: string, endDate: string, f
     stats: responseStats,
     summary: {
       totalResponses: responses.length,
-      completedResponses: responses.filter(r => r.status === 'COMPLETED').length,
-      inProgressResponses: responses.filter(r => r.status === 'IN_PROGRESS').length,
-      averageProgress: responses.reduce((sum, r) => sum + (r.progressPercentage || 0), 0) / responses.length,
+      deliveredResponses: responses.filter(r => r.status === 'DELIVERED').length,
+      plannedResponses: responses.filter(r => r.status === 'PLANNED').length,
+      responsesByPriority: responses.reduce((acc, r) => {
+        acc[r.priority] = (acc[r.priority] || 0) + 1;
+        return acc;
+      }, {} as Record<string, number>),
     },
   };
 }
 
 async function collectResourceAllocationData(startDate: string, endDate: string, filters?: Record<any, any>) {
-  const commitments = await db.commitment.findMany({
+  const commitments = await db.donorCommitment.findMany({
     where: {
-      createdAt: { gte: new Date(startDate), lte: new Date(endDate) },
+      commitmentDate: { gte: new Date(startDate), lte: new Date(endDate) },
       ...(filters && {
         status: filters.status,
         donorId: filters.donorId,
@@ -374,30 +377,23 @@ async function collectResourceAllocationData(startDate: string, endDate: string,
         select: { id: true, name: true, type: true, coordinates: true },
       },
       incident: {
-        select: { id: true, title: true, type: true, severity: true },
-      },
-      commitmentItems: {
-        select: { id: true, name: true, unit: true, quantity: true, deliveredQuantity: true },
+        select: { id: true, name: true, type: true, severity: true },
       },
     },
-    orderBy: { createdAt: 'desc' },
+    orderBy: { commitmentDate: 'desc' },
   });
 
-  const resourceStats = await db.commitment.groupBy({
-    by: ['status', 'priorityLevel'],
+  const resourceStats = await db.donorCommitment.groupBy({
+    by: ['status'],
     where: {
-      createdAt: { gte: new Date(startDate), lte: new Date(endDate) },
+      commitmentDate: { gte: new Date(startDate), lte: new Date(endDate) },
     },
     _count: true,
   });
 
-  const totalCommitted = commitments.reduce((sum, c) => {
-    return sum + c.commitmentItems.reduce((itemSum, item) => itemSum + item.quantity, 0);
-  }, 0);
-
-  const totalDelivered = commitments.reduce((sum, c) => {
-    return sum + c.commitmentItems.reduce((itemSum, item) => itemSum + (item.deliveredQuantity || 0), 0);
-  }, 0);
+  const totalCommitted = commitments.reduce((sum, c) => sum + c.totalCommittedQuantity, 0);
+  
+  const totalDelivered = commitments.reduce((sum, c) => sum + c.deliveredQuantity, 0);
 
   return {
     commitments,
@@ -407,7 +403,7 @@ async function collectResourceAllocationData(startDate: string, endDate: string,
       totalCommitted,
       totalDelivered,
       fulfillmentRate: totalCommitted > 0 ? (totalDelivered / totalCommitted) * 100 : 0,
-      activeCommitments: commitments.filter(c => c.status === 'ACTIVE').length,
+      plannedCommitments: commitments.filter(c => c.status === 'PLANNED').length,
     },
   };
 }
@@ -422,15 +418,9 @@ async function collectEntityStatusData(startDate: string, endDate: string, filte
       }),
     },
     include: {
-      jurisdiction: {
-        select: { id: true, name: true, level: true },
-      },
-      assignedAssessors: {
-        select: { id: true, name: true, email: true },
-      },
       _count: {
         select: {
-          assessments: true,
+          rapidAssessments: true,
           responses: true,
           commitments: true,
         },
@@ -440,7 +430,7 @@ async function collectEntityStatusData(startDate: string, endDate: string, filte
   });
 
   const entityStats = await db.entity.groupBy({
-    by: ['type', 'status'],
+    by: ['type'],
     _count: true,
   });
 
@@ -449,7 +439,7 @@ async function collectEntityStatusData(startDate: string, endDate: string, filte
     stats: entityStats,
     summary: {
       totalEntities: entities.length,
-      activeEntities: entities.filter(e => e.status === 'ACTIVE').length,
+      activeEntities: entities.filter(e => e.isActive).length,
       entitiesByType: entityStats.reduce((acc, stat) => {
         acc[stat.type] = (acc[stat.type] || 0) + stat._count;
         return acc;

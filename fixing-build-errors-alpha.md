@@ -1130,16 +1130,34 @@ _count: { select: { rapidAssessments: true, preliminaryAssessments: true } }  //
 - ✅ `src/app/api/v1/exports/reports/route.ts:263` - RapidAssessment relations corrections
 - ✅ `src/app/api/v1/exports/reports/route.ts:271` - GroupBy field name corrections
 - ✅ `src/app/api/v1/exports/reports/route.ts:319` - Model reference `db.response` → `db.rapidResponse`
+- ✅ `src/app/api/v1/exports/reports/route.ts:323` - RapidAssessment location field corrections
+- ✅ `src/app/api/v1/exports/reports/route.ts:338` - GroupBy field corrections for RapidResponse
+- ✅ `src/app/api/v1/exports/reports/route.ts:351` - ResponseStatus enum value corrections
+- ✅ `src/app/api/v1/exports/reports/route.ts:362` - DonorCommitment model corrections
+- ✅ `src/app/api/v1/exports/reports/route.ts:380` - Incident field name (`title` → `name`)
+- ✅ `src/app/api/v1/exports/reports/route.ts:394` - DonorCommitment field access corrections
+- ✅ `src/app/api/v1/exports/reports/route.ts:406` - CommitmentStatus enum corrections
+- ✅ `src/app/api/v1/exports/reports/route.ts:421` - Entity relation removals (`jurisdiction`, `assignedAssessors`)
+- ✅ `src/app/api/v1/exports/reports/route.ts:433` - Entity groupBy field corrections
+
+**Comprehensive Reports Route Corrections**:
+- **Error Type Safety**: Applied `instanceof Error` pattern for safe error handling
+- **Schema Consistency**: Complete alignment with actual Prisma schema definitions
+- **Model References**: All model names corrected (`response` → `rapidResponse`, `commitment` → `donorCommitment`)
+- **Field Corrections**: All field names match actual schema (no hallucinated fields)
+- **Enum Values**: All enum comparisons use correct values from schema
+- **Relation Fixes**: Removed non-existent relations, corrected field vs relation usage
 
 **Key Benefits**:
 - **Type Safety**: Proper error handling eliminates `unknown` type errors
-- **Consistency**: Same schema correction patterns as CSV route (Section 34)
+- **Schema Compliance**: 100% alignment with actual database schema
+- **Consistency**: Same comprehensive correction patterns as CSV route (Section 34)
 - **Maintainability**: Standardized error handling and schema access patterns
 
 ---
 
 ## Next Steps
-- **IN PROGRESS**: Continue fixing remaining schema relation issues in reports route
-- Both error handling and core schema issues addressed (Section 35 in progress)
-- Pattern established: Error type safety + schema field corrections
-- Approach: Complete reports route fixes, then continue systematic error resolution
+- **NEW ERROR**: NextAuth session.user.id type error in gap-field-severities route
+- Reports route completely resolved (Section 35 complete for reports)
+- Pattern established: Error type safety + comprehensive schema field corrections
+- Approach: Continue systematic error resolution applying same correction patterns
