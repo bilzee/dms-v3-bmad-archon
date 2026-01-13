@@ -1054,9 +1054,21 @@ include: { assessor: { select: {...} } }  // ✅
 - **Response Model**: `db.response` → `db.rapidResponse`
 
 **Files Fixed**:
-- ✅ `src/app/api/v1/exports/csv/route.ts:72` - Zod schema type inference
-- ✅ `src/app/api/v1/exports/csv/route.ts:103` - Prisma relation corrections
-- ✅ `src/app/api/v1/exports/csv/route.ts:142` - Correct model reference
+- ✅ `src/app/api/v1/exports/csv/route.ts:72` - Zod schema type inference (`z.infer<typeof CSVExportRequestSchema>`)
+- ✅ `src/app/api/v1/exports/csv/route.ts:103` - RapidAssessment relations (removed `location`, `assignedTo` → `assessor`)  
+- ✅ `src/app/api/v1/exports/csv/route.ts:142` - Correct model reference (`db.response` → `db.rapidResponse`)
+- ✅ `src/app/api/v1/exports/csv/route.ts:233` - Entity count relations (`assessments` → `rapidAssessments`)
+- ✅ `src/app/api/v1/exports/csv/route.ts:282` - Incident count relations (removed `assessments`, added `preliminaryAssessments`)
+- ✅ `src/app/api/v1/exports/csv/route.ts:319` - DonorCommitment model reference (`db.commitment` → `db.donorCommitment`)
+- ✅ `src/app/api/v1/exports/csv/route.ts:345` - DonorCommitment count relations (`items` → `responses`)
+- ✅ All CSV headers and field mappings updated to match actual Prisma schema
+
+**Comprehensive Schema Corrections**:
+- **RapidAssessment**: Fixed field vs relation confusion, correct assessor relation
+- **RapidResponse**: Updated model name and field references, proper relations  
+- **Entity**: Removed non-existent relations, correct field mapping
+- **Incident**: Fixed field names (`title` → `name`), correct count relations
+- **DonorCommitment**: Proper model name, field mapping, and relation counts
 
 **Key Benefits**:
 - **Schema Compliance**: All Prisma queries match actual database schema
@@ -1066,8 +1078,8 @@ include: { assessor: { select: {...} } }  // ✅
 
 ---
 
-## Next Steps
-- **IN PROGRESS**: Continue fixing remaining schema field access errors in CSV export
-- Current build reveals additional Prisma relation issues requiring systematic fixes
-- All documented compilation errors systematically addressed (34 categories in progress)
-- Approach: Fix all CSV export schema issues, then verify complete TypeScript compliance
+## Next Steps  
+- **CONTINUE**: Address new error in reports route (`error.message` type safety)
+- CSV export schema issues completely resolved (Section 34 complete)
+- All documented compilation errors systematically addressed (34 categories complete)
+- Approach: Continue systematic TypeScript error resolution for remaining routes

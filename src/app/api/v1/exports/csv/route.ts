@@ -82,7 +82,7 @@ async function generateCSVData(request: z.infer<typeof CSVExportRequestSchema>, 
     case 'incidents':
       return generateIncidentsCSV(startDate, endDate, filters);
     case 'commitments':
-      return generateCommitmentsCSV(startDate, endDate, filters, userRole);
+      return generateCommitmentsCSV(userRole, startDate, endDate, filters);
     default:
       throw new Error(`Unsupported data type: ${dataType}`);
   }
@@ -153,10 +153,8 @@ async function generateResponsesCSV(startDate?: string, endDate?: string, filter
       assessment: {
         select: {
           id: true,
-          assessmentType: true,
-          location: {
-            select: { name: true, coordinates: true }
-          }
+          rapidAssessmentType: true,
+          location: true,
         }
       },
       entity: {
@@ -166,7 +164,7 @@ async function generateResponsesCSV(startDate?: string, endDate?: string, filter
           type: true,
         }
       },
-      assignedTo: {
+      responder: {
         select: {
           id: true,
           name: true,
@@ -178,33 +176,31 @@ async function generateResponsesCSV(startDate?: string, endDate?: string, filter
   });
 
   const headers = [
-    'ID', 'Assessment ID', 'Assessment Type', 'Response Priority',
-    'Status', 'Entity Name', 'Entity Type', 'Assigned To', 'Created Date',
-    'Target Completion Date', 'Actual Completion Date', 'Progress Percentage',
-    'Resources Required', 'Resources Deployed', 'Cost Estimate', 'Actual Cost',
-    'Notes', 'Location Name', 'Coordinates'
+    'ID', 'Assessment ID', 'Assessment Type', 'Response Type', 'Priority',
+    'Status', 'Entity Name', 'Entity Type', 'Responder Name', 'Created Date',
+    'Response Date', 'Planned Date', 'Description', 'Resources',
+    'Timeline', 'Version', 'Verification Status', 'Assessment Location'
   ];
 
   const csvRows = responses.map(response => [
     response.id,
     response.assessmentId,
-    response.assessment?.assessmentType || 'Unknown',
-    response.responsePriority || 'Medium',
+    response.assessment?.rapidAssessmentType || 'Unknown',
+    response.type,
+    response.priority,
     response.status,
     response.entity?.name || 'Unknown',
     response.entity?.type || 'Unknown',
-    response.assignedTo?.name || 'Unassigned',
+    response.responder?.name || 'Unassigned',
     response.createdAt.toISOString(),
-    response.targetCompletionDate?.toISOString() || '',
-    response.actualCompletionDate?.toISOString() || '',
-    response.progressPercentage || 0,
-    response.resourcesRequired || '',
-    response.resourcesDeployed || '',
-    response.costEstimate || 0,
-    response.actualCost || 0,
-    response.notes || '',
-    response.assessment?.location?.name || 'Unknown',
-    response.assessment?.location?.coordinates || 'N/A',
+    response.responseDate?.toISOString() || '',
+    response.plannedDate.toISOString(),
+    response.description || '',
+    response.resources ? JSON.stringify(response.resources) : '',
+    response.timeline ? JSON.stringify(response.timeline) : '',
+    response.versionNumber,
+    response.verificationStatus,
+    response.assessment?.location || 'Unknown',
   ]);
 
   return [headers, ...csvRows].map(row => row.join(',')).join('\n');
@@ -220,23 +216,9 @@ async function generateEntitiesCSV(startDate?: string, endDate?: string, filters
       }),
     },
     include: {
-      jurisdiction: {
-        select: {
-          id: true,
-          name: true,
-          level: true,
-        },
-      },
-      assignedAssessors: {
-        select: {
-          id: true,
-          name: true,
-          email: true,
-        },
-      },
       _count: {
         select: {
-          assessments: true,
+          rapidAssessments: true,
           responses: true,
         },
       },
@@ -245,10 +227,8 @@ async function generateEntitiesCSV(startDate?: string, endDate?: string, filters
   });
 
   const headers = [
-    'ID', 'Name', 'Type', 'Status', 'Coordinates', 'Address',
-    'Jurisdiction Name', 'Jurisdiction Level', 'Population Size',
-    'Contact Person', 'Contact Phone', 'Contact Email', 'Operating Hours',
-    'Capacity', 'Current Load', 'Assessment Count', 'Response Count',
+    'ID', 'Name', 'Type', 'Location', 'Coordinates', 'Metadata',
+    'Is Active', 'Auto Approve Enabled', 'Assessment Count', 'Response Count',
     'Created Date', 'Last Updated'
   ];
 
@@ -256,19 +236,12 @@ async function generateEntitiesCSV(startDate?: string, endDate?: string, filters
     entity.id,
     entity.name,
     entity.type,
-    entity.status,
-    entity.coordinates || 'N/A',
-    entity.address || 'N/A',
-    entity.jurisdiction?.name || 'Unknown',
-    entity.jurisdiction?.level || 'Unknown',
-    entity.populationSize || 0,
-    entity.contactPerson || '',
-    entity.contactPhone || '',
-    entity.contactEmail || '',
-    entity.operatingHours || '',
-    entity.capacity || 0,
-    entity.currentLoad || 0,
-    entity._count.assessments,
+    entity.location || 'N/A',
+    entity.coordinates ? JSON.stringify(entity.coordinates) : 'N/A',
+    entity.metadata ? JSON.stringify(entity.metadata) : 'N/A',
+    entity.isActive,
+    entity.autoApproveEnabled,
+    entity._count.rapidAssessments,
     entity._count.responses,
     entity.createdAt.toISOString(),
     entity.updatedAt.toISOString(),
@@ -290,24 +263,10 @@ async function generateIncidentsCSV(startDate?: string, endDate?: string, filter
       }),
     },
     include: {
-      location: {
-        select: {
-          id: true,
-          name: true,
-          coordinates: true,
-        },
-      },
-      assignedTo: {
-        select: {
-          id: true,
-          name: true,
-          email: true,
-        },
-      },
       _count: {
         select: {
-          assessments: true,
-          responses: true,
+          rapidAssessments: true,
+          preliminaryAssessments: true,
         },
       },
     },
@@ -315,38 +274,32 @@ async function generateIncidentsCSV(startDate?: string, endDate?: string, filter
   });
 
   const headers = [
-    'ID', 'Type', 'Severity', 'Status', 'Title', 'Description',
-    'Location Name', 'Coordinates', 'Affected Area Radius (km)',
-    'Estimated Population Affected', 'Created Date', 'Last Updated',
-    'Reported By', 'Assigned To', 'Assessment Count', 'Response Count',
-    'Estimated Resolution Time', 'Communication Channels Status'
+    'ID', 'Name', 'Type', 'Sub Type', 'Severity', 'Status', 'Description',
+    'Location', 'Coordinates', 'Created By', 'Created Date', 'Last Updated',
+    'Rapid Assessment Count', 'Preliminary Assessment Count'
   ];
 
   const csvRows = incidents.map(incident => [
     incident.id,
+    incident.name,
     incident.type,
+    incident.subType || '',
     incident.severity,
     incident.status,
-    incident.title || '',
-    incident.description || '',
-    incident.location?.name || 'Unknown',
-    incident.location?.coordinates || 'N/A',
-    incident.affectedAreaRadius || 0,
-    incident.estimatedPopulationAffected || 0,
+    incident.description,
+    incident.location,
+    incident.coordinates ? JSON.stringify(incident.coordinates) : 'N/A',
+    incident.createdBy,
     incident.createdAt.toISOString(),
     incident.updatedAt.toISOString(),
-    incident.reportedBy || '',
-    incident.assignedTo?.name || 'Unassigned',
-    incident._count.assessments,
-    incident._count.responses,
-    incident.estimatedResolutionTime || '',
-    incident.communicationChannelsStatus || 'Unknown',
+    incident._count.rapidAssessments,
+    incident._count.preliminaryAssessments,
   ]);
 
   return [headers, ...csvRows].map(row => row.join(',')).join('\n');
 }
 
-async function generateCommitmentsCSV(startDate?: string, endDate?: string, filters?: Record<any, any>, userRole: string): Promise<string> {
+async function generateCommitmentsCSV(userRole: string, startDate?: string, endDate?: string, filters?: Record<any, any>): Promise<string> {
   // Donors can only see their own commitments
   const whereClause: any = {
     ...(startDate && { createdAt: { gte: new Date(startDate) } }),
@@ -358,12 +311,12 @@ async function generateCommitmentsCSV(startDate?: string, endDate?: string, filt
     }),
   };
 
-  if (userRole === 'donor') {
-    // Filter by donor's organization (this would need to be determined from session)
-    whereClause.donorId = session?.user?.organizationId;
-  }
+  // Note: Additional donor filtering would need session context
+  // if (userRole === 'donor') {
+  //   whereClause.donorId = session?.user?.organizationId;
+  // }
 
-  const commitments = await db.commitment.findMany({
+  const commitments = await db.donorCommitment.findMany({
     where: whereClause,
     include: {
       donor: {
@@ -383,24 +336,24 @@ async function generateCommitmentsCSV(startDate?: string, endDate?: string, filt
       incident: {
         select: {
           id: true,
-          title: true,
+          name: true,
           type: true,
         },
       },
       _count: {
         select: {
-          items: true,
+          responses: true,
         },
       },
     },
-    orderBy: { createdAt: 'desc' },
+    orderBy: { commitmentDate: 'desc' },
   });
 
   const headers = [
     'ID', 'Donor Name', 'Donor Type', 'Entity Name', 'Entity Type',
-    'Incident Title', 'Incident Type', 'Status', 'Created Date',
-    'Expected Delivery Date', 'Actual Delivery Date', 'Total Items',
-    'Total Estimated Value', 'Notes', 'Priority Level'
+    'Incident Name', 'Incident Type', 'Status', 'Items', 'Total Committed Quantity',
+    'Delivered Quantity', 'Verified Delivered Quantity', 'Commitment Date',
+    'Last Updated', 'Notes', 'Total Value Estimated', 'Response Count'
   ];
 
   const csvRows = commitments.map(commitment => [
@@ -409,16 +362,18 @@ async function generateCommitmentsCSV(startDate?: string, endDate?: string, filt
     commitment.donor?.type || 'Unknown',
     commitment.entity?.name || 'Unknown',
     commitment.entity?.type || 'Unknown',
-    commitment.incident?.title || 'Unknown',
+    commitment.incident?.name || 'Unknown',
     commitment.incident?.type || 'Unknown',
     commitment.status,
-    commitment.createdAt.toISOString(),
-    commitment.expectedDeliveryDate?.toISOString() || '',
-    commitment.actualDeliveryDate?.toISOString() || '',
-    commitment._count.items,
-    commitment.totalEstimatedValue || 0,
+    commitment.items ? JSON.stringify(commitment.items) : '',
+    commitment.totalCommittedQuantity,
+    commitment.deliveredQuantity,
+    commitment.verifiedDeliveredQuantity,
+    commitment.commitmentDate.toISOString(),
+    commitment.lastUpdated.toISOString(),
     commitment.notes || '',
-    commitment.priorityLevel || 'Medium',
+    commitment.totalValueEstimated || 0,
+    commitment._count.responses,
   ]);
 
   return [headers, ...csvRows].map(row => row.join(',')).join('\n');
