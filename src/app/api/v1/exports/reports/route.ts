@@ -160,7 +160,7 @@ async function generatePDFReport(
     console.error('PDF generation error:', error);
     return {
       success: false,
-      error: error.message,
+      error: error instanceof Error ? error.message : 'Unknown error occurred',
     };
   }
 }
@@ -203,16 +203,10 @@ async function collectIncidentOverviewData(startDate: string, endDate: string, f
       }),
     },
     include: {
-      location: {
-        select: { name: true, coordinates: true, address: true },
-      },
-      assignedTo: {
-        select: { id: true, name: true, email: true },
-      },
       _count: {
         select: {
-          assessments: true,
-          responses: true,
+          rapidAssessments: true,
+          preliminaryAssessments: true,
         },
       },
     },
@@ -236,9 +230,8 @@ async function collectIncidentOverviewData(startDate: string, endDate: string, f
       type: true,
       severity: true,
       createdAt: true,
-      location: {
-        select: { name: true, coordinates: true },
-      },
+      location: true,
+      coordinates: true,
     },
     orderBy: { createdAt: 'asc' },
   });
@@ -267,10 +260,7 @@ async function collectAssessmentSummaryData(startDate: string, endDate: string, 
       }),
     },
     include: {
-      location: {
-        select: { name: true, coordinates: true, jurisdiction: { select: { name: true } } },
-      },
-      assignedTo: {
+      assessor: {
         select: { id: true, name: true, email: true },
       },
     },
@@ -278,7 +268,7 @@ async function collectAssessmentSummaryData(startDate: string, endDate: string, 
   });
 
   const assessmentStats = await db.rapidAssessment.groupBy({
-    by: ['assessmentType', 'verificationStatus', 'priorityLevel'],
+    by: ['rapidAssessmentType', 'verificationStatus', 'priority'],
     where: {
       createdAt: { gte: new Date(startDate), lte: new Date(endDate) },
     },
@@ -286,11 +276,11 @@ async function collectAssessmentSummaryData(startDate: string, endDate: string, 
   });
 
   const needsAnalysis = {
-    totalPopulationAffected: assessments.reduce((sum, a) => sum + (a.populationAffected || 0), 0),
-    highPriorityAssessments: assessments.filter(a => a.priorityLevel === 'HIGH').length,
-    unverifiedAssessments: assessments.filter(a => a.verificationStatus === 'PENDING').length,
+    totalAssessments: assessments.length,
+    highPriorityAssessments: assessments.filter(a => a.priority === 'HIGH').length,
+    unverifiedAssessments: assessments.filter(a => a.verificationStatus === 'DRAFT').length,
     assessmentsByType: assessmentStats.reduce((acc, stat) => {
-      acc[stat.assessmentType] = (acc[stat.assessmentType] || 0) + stat._count;
+      acc[stat.rapidAssessmentType] = (acc[stat.rapidAssessmentType] || 0) + stat._count;
       return acc;
     }, {} as Record<string, number>),
   };
@@ -302,7 +292,7 @@ async function collectAssessmentSummaryData(startDate: string, endDate: string, 
     summary: {
       totalAssessments: assessments.length,
       verifiedAssessments: assessments.filter(a => a.verificationStatus === 'VERIFIED').length,
-      averageSeverity: assessments.reduce((sum, a) => sum + (a.severityScore || 0), 0) / assessments.length,
+      averagePriority: assessments.filter(a => a.priority === 'HIGH').length / assessments.length * 100,
       completionRate: assessments.filter(a => a.verificationStatus === 'VERIFIED').length / assessments.length * 100,
     },
   };
@@ -326,7 +316,7 @@ async function collectResponseActivityData(startDate: string, endDate: string, f
     };
   }
 
-  const responses = await db.response.findMany({
+  const responses = await db.rapidResponse.findMany({
     where: whereClause,
     include: {
       assessment: {

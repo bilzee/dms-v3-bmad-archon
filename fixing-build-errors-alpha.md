@@ -1078,8 +1078,68 @@ include: { assessor: { select: {...} } }  // ✅
 
 ---
 
-## Next Steps  
-- **CONTINUE**: Address new error in reports route (`error.message` type safety)
-- CSV export schema issues completely resolved (Section 34 complete)
-- All documented compilation errors systematically addressed (34 categories complete)
-- Approach: Continue systematic TypeScript error resolution for remaining routes
+## 35. Error Handling Type Safety and Reports Route Schema Corrections
+
+**Error Pattern**: TypeScript strict mode error handling and duplicate schema issues in reports export route
+
+**Example Errors**:
+```
+Type error: 'error' is of type 'unknown'.
+  161 |     return {
+  162 |       success: false,
+> 163 |       error: error.message,
+Property 'response' does not exist on type 'PrismaClient'
+Object literal may only specify known properties, and 'assessments' does not exist in type 'IncidentCountOutputTypeSelect'
+```
+
+**Root Cause**: 
+1. **Error Type Safety**: Caught errors are `unknown` type in TypeScript strict mode
+2. **Reports Route Schema**: Same schema field/relation issues as CSV route (Section 34)
+
+**Comprehensive Solution**:
+1. **Error Type Safety Pattern**: Use `instanceof Error` check for type-safe error message access
+2. **Reports Schema Corrections**: Applied same fixes as CSV route:
+   - Incident count relations: `assessments` → `rapidAssessments`, `preliminaryAssessments`  
+   - RapidAssessment relations: removed `location`, `assignedTo` → `assessor`
+   - Model references: `db.response` → `db.rapidResponse`
+   - Field names: correct schema field references
+
+**Pattern Applied**:
+```typescript
+// Before - Unsafe error access:
+catch (error) {
+  return { error: error.message };  // ❌ Type 'unknown'
+}
+
+// After - Type-safe error handling:
+catch (error) {
+  return { error: error instanceof Error ? error.message : 'Unknown error occurred' };  // ✅
+}
+
+// Before - Incorrect schema references (same as CSV):
+_count: { select: { assessments: true, responses: true } }  // ❌
+
+// After - Correct schema references:
+_count: { select: { rapidAssessments: true, preliminaryAssessments: true } }  // ✅
+```
+
+**Files Fixed**:
+- ✅ `src/app/api/v1/exports/reports/route.ts:163` - Error type safety with `instanceof Error` check
+- ✅ `src/app/api/v1/exports/reports/route.ts:214` - Incident count relations corrections  
+- ✅ `src/app/api/v1/exports/reports/route.ts:233` - Location field vs relation fix
+- ✅ `src/app/api/v1/exports/reports/route.ts:263` - RapidAssessment relations corrections
+- ✅ `src/app/api/v1/exports/reports/route.ts:271` - GroupBy field name corrections
+- ✅ `src/app/api/v1/exports/reports/route.ts:319` - Model reference `db.response` → `db.rapidResponse`
+
+**Key Benefits**:
+- **Type Safety**: Proper error handling eliminates `unknown` type errors
+- **Consistency**: Same schema correction patterns as CSV route (Section 34)
+- **Maintainability**: Standardized error handling and schema access patterns
+
+---
+
+## Next Steps
+- **IN PROGRESS**: Continue fixing remaining schema relation issues in reports route
+- Both error handling and core schema issues addressed (Section 35 in progress)
+- Pattern established: Error type safety + schema field corrections
+- Approach: Complete reports route fixes, then continue systematic error resolution
