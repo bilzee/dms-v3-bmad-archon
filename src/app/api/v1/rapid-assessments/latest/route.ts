@@ -36,7 +36,7 @@ export const GET = withAuth(async (request, context) => {
     const latestAssessment = await RapidAssessmentService.findLatestByIncidentEntityAndType(
       incidentId,
       entityId,
-      type
+      type as any
     )
 
     if (!latestAssessment) {

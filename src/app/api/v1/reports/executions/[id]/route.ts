@@ -177,13 +177,13 @@ export async function POST(
       try {
         // Kill the background process
         if (process.platform === 'win32') {
-          exec(`taskkill /F /PID $(get-wmiobject Win32_Process | where "CommandLine like '%${jobId}%'" get ProcessId)`, (error, stdout, stderr) => {
+          exec(`taskkill /F /PID $(get-wmiobject Win32_Process | where "CommandLine like '%${jobId}%'" get ProcessId)`, (error: any, stdout: any, stderr: any) => {
             if (error) {
               console.error('Error killing Windows process:', error);
             }
           });
         } else {
-          exec(`pkill -f "${jobId}"`, (error, stdout, stderr) => {
+          exec(`pkill -f "${jobId}"`, (error: any, stdout: any, stderr: any) => {
             if (error) {
               console.error('Error killing Unix process:', error);
             }
@@ -199,7 +199,7 @@ export async function POST(
     const updatedExecution = await db.reportExecution.update({
       where: { id: executionId },
       data: {
-        status: 'CANCELLED',
+        status: 'FAILED',
         generatedAt: new Date(),
         error: execution.status === 'RUNNING' ? 'Cancelled by user' : 'Cancelled before execution'
       }

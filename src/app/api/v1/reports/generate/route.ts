@@ -7,7 +7,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { z } from 'zod';
 import { db } from '@/lib/db/client';
-import { DataAggregator, ReportFilters } from '@/lib/reports/data-aggregator';
+import { DataAggregator, ReportFilters, ReportFiltersSchema } from '@/lib/reports/data-aggregator';
 import { ReportTemplateEngine } from '@/lib/reports/template-engine';
 import { createApiResponse } from '@/types/api';
 import { exec } from 'child_process';
@@ -116,6 +116,7 @@ export async function POST(request: NextRequest) {
     // Get or create report configuration
     let template;
     let filters;
+    let configurationId = validatedData.configurationId;
 
     if (validatedData.configurationId) {
       // Use existing configuration
@@ -161,11 +162,47 @@ export async function POST(request: NextRequest) {
 
       const templateResponse = await templateResult.json();
       template = templateResponse.data;
-      filters = validatedData.filters || {};
+      filters = validatedData.filters || { filters: [], aggregations: [], limit: 100 };
+      
+      // Create temporary configuration for templateId
+      const tempConfig = await db.reportConfiguration.create({
+        data: {
+          templateId: validatedData.templateId,
+          name: `Temp config ${Date.now()}`,
+          filters: filters,
+          aggregations: [],
+          visualizations: [],
+          createdBy: (session.user as any).id
+        }
+      });
+      configurationId = tempConfig.id;
     } else if (validatedData.template) {
-      // Use inline template
-      template = validatedData.template;
-      filters = validatedData.filters || {};
+      // Use inline template - need to save as temporary template first
+      const tempTemplate = await db.reportTemplate.create({
+        data: {
+          name: `Temp template ${Date.now()}`,
+          type: 'CUSTOM',
+          layout: validatedData.template,
+          createdById: (session.user as any).id,
+          isPublic: false
+        }
+      });
+      
+      template = tempTemplate;
+      filters = validatedData.filters || { filters: [], aggregations: [], limit: 100 };
+      
+      // Create temporary configuration for inline template
+      const tempConfig = await db.reportConfiguration.create({
+        data: {
+          templateId: tempTemplate.id,
+          name: `Temp config ${Date.now()}`,
+          filters: filters,
+          aggregations: [],
+          visualizations: [],
+          createdBy: (session.user as any).id
+        }
+      });
+      configurationId = tempConfig.id;
     } else {
       return NextResponse.json(
         createApiResponse(false, null, 'Either configurationId, templateId, or template is required'),
@@ -176,7 +213,7 @@ export async function POST(request: NextRequest) {
     // Create report execution record
     const execution = await db.reportExecution.create({
       data: {
-        configurationId: validatedData.configurationId,
+        configurationId: configurationId!,
         status: 'RUNNING',
         format: validatedData.format,
         createdAt: new Date()
@@ -226,7 +263,7 @@ export async function POST(request: NextRequest) {
     
     if (error instanceof z.ZodError) {
       return NextResponse.json(
-        createApiResponse(false, null, 'Invalid request data', error.errors),
+        createApiResponse(false, null, 'Invalid request data', error.errors.map(e => e.message)),
         { status: 400 }
       );
     }

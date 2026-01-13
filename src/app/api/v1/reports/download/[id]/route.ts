@@ -40,7 +40,8 @@ export async function GET(
                 id: true,
                 name: true,
                 type: true,
-                createdById: true
+                createdById: true,
+                isPublic: true
               }
             },
             creator: {
@@ -76,11 +77,9 @@ export async function GET(
     // Check if report generation is completed
     if (execution.status !== 'COMPLETED') {
       return NextResponse.json(
-        createApiResponse(false, null, 'Report generation not completed', {
-          status: execution.status,
-          generatedAt: execution.generatedAt,
-          error: execution.error
-        }),
+        createApiResponse(false, null, `Report generation not completed. Status: ${execution.status}`, 
+          execution.error ? [execution.error] : []
+        ),
         { status: 400 }
       );
     }

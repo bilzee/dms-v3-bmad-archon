@@ -8,7 +8,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { z } from 'zod';
 import { db } from '@/lib/db/client';
-import { DataAggregator, ReportFilters, AggregationConfig, FilterConfig } from '@/lib/reports/data-aggregator';
+import { DataAggregator, ReportFilters, AggregationConfig, FilterConfig, ReportFiltersSchema, AggregationConfigSchema } from '@/lib/reports/data-aggregator';
 import { ReportTemplateEngine, ReportTemplate } from '@/lib/reports/template-engine';
 import { createApiResponse } from '@/types/api';
 
@@ -16,7 +16,6 @@ import { createApiResponse } from '@/types/api';
 const CreateConfigurationSchema = z.object({
   templateId: z.string().min(1, 'Template ID is required'),
   name: z.string().min(1, 'Configuration name is required'),
-  description: z.string().optional(),
   filters: ReportFiltersSchema,
   aggregations: z.array(AggregationConfigSchema).default([]),
   visualizations: z.array(z.object({
@@ -42,21 +41,11 @@ const CreateConfigurationSchema = z.object({
     dayOfMonth: z.number().min(1).max(31).optional(),
     timezone: z.string().default('UTC'),
     enabled: z.boolean().default(true)
-  }).optional(),
-  isPublic: z.boolean().default(false),
-  options: z.object({
-    cacheMinutes: z.number().min(0).max(1440).default(60),
-    retryAttempts: z.number().min(1).max(5).default(3),
-    timeoutSeconds: z.number().min(30).max(600).default(300),
-    compression: z.enum(['none', 'gzip', 'deflate']).default('none'),
-    encryption: z.boolean().default(false),
-    retentionDays: z.number().min(1).max(365).default(30)
-  }).default({})
+  }).optional()
 });
 
 const UpdateConfigurationSchema = z.object({
   name: z.string().min(1).optional(),
-  description: z.string().optional(),
   filters: ReportFiltersSchema.optional(),
   aggregations: z.array(AggregationConfigSchema).optional(),
   visualizations: z.array(z.any()).optional(),
@@ -165,9 +154,9 @@ export async function POST(request: NextRequest) {
 
       if (invalidFilters.length > 0) {
         return NextResponse.json(
-          createApiResponse(false, null, 'Invalid filter fields', {
-            invalidFields: invalidFilters.map(f => f.field)
-          }),
+          createApiResponse(false, null, 'Invalid filter fields', 
+            invalidFilters.map(f => f.field)
+          ),
           { status: 400 }
         );
       }
@@ -181,9 +170,9 @@ export async function POST(request: NextRequest) {
 
     if (invalidVisualizations.length > 0) {
       return NextResponse.json(
-        createApiResponse(false, null, 'Invalid visualization data sources', {
-          invalidDataSources: invalidVisualizations.map(v => v.dataSource)
-        }),
+        createApiResponse(false, null, 'Invalid visualization data sources',
+          invalidVisualizations.map(v => v.dataSource)
+        ),
         { status: 400 }
       );
     }
@@ -193,14 +182,11 @@ export async function POST(request: NextRequest) {
       data: {
         templateId: validatedData.templateId,
         name: validatedData.name,
-        description: validatedData.description,
         filters: validatedData.filters,
         aggregations: validatedData.aggregations,
         visualizations: validatedData.visualizations,
         schedule: validatedData.schedule,
-        isPublic: validatedData.isPublic,
-        createdBy: (session.user as any).id,
-        options: validatedData.options
+        createdBy: (session.user as any).id
       },
       include: {
         template: {
@@ -220,8 +206,7 @@ export async function POST(request: NextRequest) {
         },
         _count: {
           select: {
-            executions: true,
-            sharedWith: true
+            executions: true
           }
         }
       }
@@ -236,8 +221,7 @@ export async function POST(request: NextRequest) {
         resourceId: configuration.id,
         newValues: {
           templateId: validatedData.templateId,
-          name: validatedData.name,
-          isPublic: validatedData.isPublic
+          name: validatedData.name
         },
         ipAddress: request.ip,
         userAgent: request.headers.get('user-agent')
@@ -254,7 +238,7 @@ export async function POST(request: NextRequest) {
     
     if (error instanceof z.ZodError) {
       return NextResponse.json(
-        createApiResponse(false, null, 'Invalid request data', error.errors),
+        createApiResponse(false, null, 'Invalid request data', error.errors.map(e => e.message)),
         { status: 400 }
       );
     }
@@ -365,8 +349,7 @@ export async function GET(request: NextRequest) {
           },
           _count: {
             select: {
-              executions: true,
-              sharedWith: true
+              executions: true
             }
           }
         }
@@ -403,7 +386,7 @@ export async function GET(request: NextRequest) {
     
     if (error instanceof z.ZodError) {
       return NextResponse.json(
-        createApiResponse(false, null, 'Invalid request parameters', error.errors),
+        createApiResponse(false, null, 'Invalid request parameters', error.errors.map(e => e.message)),
         { status: 400 }
       );
     }
