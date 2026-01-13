@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { withAuth } from '@/lib/auth/middleware';
 import { prisma } from '@/lib/db/client';
+import { AssessmentType } from '@prisma/client';
 import { 
   GapAnalysisQuerySchema, 
   GapAnalysisResponseSchema,
@@ -198,7 +199,7 @@ export const GET = withAuth(async (request: NextRequest, context, nextContext) =
 
 // Helper function to analyze gaps for a specific category
 async function analyzeCategoryGaps(
-  type: string, 
+  type: AssessmentType, 
   assessment: any, 
   entityPopulation: number,
   entityId: string | null
@@ -575,7 +576,7 @@ function getSeverityWeight(severity: string): number {
 }
 
 // Helper function to analyze gap trends over time
-async function analyzeGapTrend(type: string, entityId: string): Promise<'improving' | 'worsening' | 'stable'> {
+async function analyzeGapTrend(type: AssessmentType, entityId: string): Promise<'improving' | 'worsening' | 'stable'> {
   try {
     // Get last 3 assessments for this category
     const recentAssessments = await prisma.rapidAssessment.findMany({
@@ -619,7 +620,7 @@ async function analyzeGapTrend(type: string, entityId: string): Promise<'improvi
 }
 
 // Helper function to calculate gap count for an assessment
-function calculateGapCount(type: string, assessment: any): number {
+function calculateGapCount(type: AssessmentType, assessment: any): number {
   let gapCount = 0;
   let assessmentData;
 

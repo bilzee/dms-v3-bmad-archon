@@ -1,4 +1,5 @@
 import { prisma } from '@/lib/db/client';
+import { AssessmentType } from '@prisma/client';
 
 interface ExportRequest {
   format: 'pdf' | 'csv';
@@ -524,7 +525,7 @@ function analyzeGaps(assessments: any[], population: number): any[] {
 /**
  * Get recommended actions based on gap analysis
  */
-function getRecommendedActions(type: string, gaps: string): string[] {
+function getRecommendedActions(type: AssessmentType, gaps: string): string[] {
   const actions: string[] = [];
   
   if (gaps.includes('clinic') || gaps.includes('medical')) {

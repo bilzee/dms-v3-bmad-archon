@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { withAuth } from '@/lib/auth/middleware';
 import { prisma } from '@/lib/db/client';
+import { AssessmentType } from '@prisma/client';
 import { 
   AssessmentTrendsQuerySchema, 
   AssessmentTrendsResponseSchema,
@@ -298,7 +299,7 @@ function isAssessmentInPeriod(assessmentDate: Date, period: any, granularity: st
 }
 
 // Helper function to calculate assessment score (0-100)
-function calculateAssessmentScore(type: string, assessment: any): number | null {
+function calculateAssessmentScore(type: AssessmentType, assessment: any): number | null {
   let totalScore = 0;
   let maxScore = 0;
 
@@ -372,7 +373,7 @@ function calculateAssessmentScore(type: string, assessment: any): number | null 
 }
 
 // Helper function to calculate gap count for an assessment
-function calculateGapCount(type: string, assessment: any): number {
+function calculateGapCount(type: AssessmentType, assessment: any): number {
   let gapCount = 0;
 
   try {

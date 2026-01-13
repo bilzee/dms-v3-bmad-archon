@@ -8,6 +8,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { withAuth } from '@/lib/auth/middleware';
 import { db } from '@/lib/db/client';
+import { AssessmentType } from '@prisma/client';
 import { z } from 'zod';
 
 interface RouteParams {
@@ -169,7 +170,7 @@ export const GET = withAuth(async (request: NextRequest, context, { params }: Ro
 });
 
 // Helper function to calculate assessment summary and gap analysis
-async function calculateAssessmentSummary(type: string, data: any): Promise<{
+async function calculateAssessmentSummary(type: AssessmentType, data: any): Promise<{
   overallScore?: number;
   criticalGaps: string[];
   keyMetrics: Record<string, any>;

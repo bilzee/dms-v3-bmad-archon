@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { withAuth } from '@/lib/auth/middleware';
 import { prisma } from '@/lib/db/client';
+import { AssessmentType } from '@prisma/client';
 import { 
   LatestAssessmentsQuerySchema, 
   LatestAssessmentsResponseSchema,
@@ -194,7 +195,7 @@ export const GET = withAuth(async (request: NextRequest, context, nextContext) =
 });
 
 // Helper function to calculate assessment summary and gap analysis
-async function calculateAssessmentSummary(type: string, data: any): Promise<{
+async function calculateAssessmentSummary(type: AssessmentType, data: any): Promise<{
   overallScore?: number;
   criticalGaps: string[];
   keyMetrics: Record<string, any>;
