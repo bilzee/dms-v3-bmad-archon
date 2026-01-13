@@ -34,7 +34,7 @@ export async function POST(request: NextRequest) {
     const validatedData = CSVExportRequestSchema.parse(body);
 
     // Check role-based permissions
-    const userRole = session.user.role as string;
+    const userRole = (session.user as any).role as string;
     const allowedDataTypes = ROLE_PERMISSIONS[userRole as keyof typeof ROLE_PERMISSIONS] || [];
     
     if (!allowedDataTypes.includes(validatedData.dataType)) {
@@ -441,7 +441,7 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    const userRole = session.user.role as string;
+    const userRole = (session.user as any).role as string;
     const allowedDataTypes = ROLE_PERMISSIONS[userRole as keyof typeof ROLE_PERMISSIONS] || [];
 
     return NextResponse.json({

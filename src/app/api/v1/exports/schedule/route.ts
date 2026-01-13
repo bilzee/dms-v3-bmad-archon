@@ -85,7 +85,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const userRole = session.user.role as string;
+    const userRole = (session.user as any).role as string;
     const allowedReports = ROLE_PERMISSIONS[userRole as keyof typeof ROLE_PERMISSIONS] || [];
 
     const body = await request.json();
