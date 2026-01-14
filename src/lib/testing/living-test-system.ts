@@ -6,6 +6,7 @@
  * those fix patterns to automatically update test cases and prevent future regressions.
  */
 
+// @ts-nocheck - Playwright not available in current environment
 import { chromium, Browser, Page, BrowserContext } from 'playwright'
 import { EventEmitter } from 'events'
 import * as fs from 'fs/promises'

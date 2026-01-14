@@ -619,7 +619,7 @@ export class FixValidator {
     return recommendations
   }
 
-  private generateDataFlowRecommendationS(flows: string[], validated: string[]): string[] {
+  private generateDataFlowRecommendations(flows: string[], validated: string[]): string[] {
     const recommendations: string[] = []
     
     const unvalidated = flows.filter(f => !validated.includes(f))
@@ -841,16 +841,6 @@ export class FixValidator {
     })
   }
 
-  private generateDataFlowRecommendations(dataFlows: string[], validatedFlows: string[]): string[] {
-    const recommendations: string[] = []
-    
-    const unvalidated = dataFlows.filter(f => !validatedFlows.includes(f))
-    if (unvalidated.length > 0) {
-      recommendations.push(`Add validation for these data flows: ${unvalidated.join(', ')}`)
-    }
-
-    return recommendations
-  }
 }
 
 // ==================== Supporting Classes ====================
