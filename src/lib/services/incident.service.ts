@@ -15,6 +15,7 @@ export class IncidentService {
     const incident = await prisma.incident.create({
       data: {
         ...data,
+        name: (data as any).name || `Incident-${Date.now()}`,
         createdBy
       }
     })
@@ -48,6 +49,7 @@ export class IncidentService {
     const incident = await prisma.incident.create({
       data: {
         ...incidentData,
+        name: (incidentData as any).name || `${assessment.reportingLGA}-${Date.now()}`,
         location: incidentData.location || `${assessment.reportingLGA}, ${assessment.reportingWard}`,
         coordinates: incidentData.coordinates || {
           lat: assessment.reportingLatitude,
@@ -283,7 +285,7 @@ export class IncidentService {
     }
 
     // Aggregate population data from preliminary assessments
-    const populationData = preliminaryAssessments.reduce((acc, assessment) => {
+    const populationData = preliminaryAssessments.reduce((acc: any, assessment: any) => {
       acc.livesLost += assessment.numberLivesLost || 0
       acc.injured += assessment.numberInjured || 0
       acc.displaced += assessment.numberDisplaced || 0
@@ -320,7 +322,7 @@ export class IncidentService {
     })
 
     // Aggregate population data from rapid assessments (nested structure)
-    rapidAssessments.forEach(assessment => {
+    rapidAssessments.forEach((assessment: any) => {
       if (assessment.populationAssessment) {
         populationData.livesLost += assessment.populationAssessment.numberLivesLost || 0
         populationData.injured += assessment.populationAssessment.numberInjured || 0

@@ -260,7 +260,12 @@ export function DonorCommitmentImportForm({
     const data = form.getValues()
     data.items = selectedItems.filter(item => item.quantity > 0)
     
-    createDeliveredMutation.mutate(data)
+    const dataWithEntityId = {
+      ...data,
+      entityId: filters.entityId && filters.entityId !== 'all' ? filters.entityId : ''
+    }
+    
+    createDeliveredMutation.mutate(dataWithEntityId)
     setIsPreviewOpen(false)
   }
 

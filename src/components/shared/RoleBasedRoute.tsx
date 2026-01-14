@@ -67,7 +67,7 @@ export const RoleBasedRoute = ({
       }
 
       // Check if user has any of the required roles
-      if (requiredRoles.length > 0 && !requiredRoles.includes(currentRole)) {
+      if (requiredRoles.length > 0 && (!currentRole || !requiredRoles.includes(currentRole))) {
         // If custom error component provided, don't redirect, show error instead
         if (errorComponent) {
           setIsChecking(false);
@@ -93,7 +93,7 @@ export const RoleBasedRoute = ({
     return errorComponent || <>{children}</>;
   }
 
-  if (requiredRoles.length > 0 && !requiredRoles.includes(currentRole)) {
+  if (requiredRoles.length > 0 && (!currentRole || !requiredRoles.includes(currentRole))) {
     return errorComponent || <>{children}</>;
   }
 

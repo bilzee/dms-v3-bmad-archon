@@ -104,7 +104,7 @@ export function useRealTimeVerification({
         
         // For other errors after max retries, wait longer before retrying
         const backoffTime = Math.min(1000 * Math.pow(2, retryCountRef.current - maxRetries), 60000);
-        console.log(`Retrying in ${backoffTime}ms due to error:`, error.message);
+        console.log(`Retrying in ${backoffTime}ms due to error:`, error instanceof Error ? error.message : String(error));
         setTimeout(pollUpdates, backoffTime);
       } else {
         setConnectionStatus('disconnected');

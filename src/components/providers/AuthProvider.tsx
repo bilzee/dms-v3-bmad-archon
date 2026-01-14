@@ -2,14 +2,13 @@
 
 import { createContext, useContext, ReactNode } from 'react'
 import { useAuthStore } from '@/stores/auth.store'
-import type { User } from '@/types/auth'
+import type { AuthUser } from '@/types/auth'
 
 interface AuthContextType {
-  user: User | null
+  user: Omit<AuthUser, 'passwordHash'> | null
   isAuthenticated: boolean
   login: (email: string, password: string) => Promise<any>
   logout: () => void
-  register: (userData: any) => Promise<any>
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined)
@@ -19,16 +18,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     user, 
     isAuthenticated, 
     login, 
-    logout, 
-    register 
+    logout 
   } = useAuthStore()
 
   const contextValue: AuthContextType = {
     user,
     isAuthenticated,
     login,
-    logout,
-    register
+    logout
   }
 
   return (

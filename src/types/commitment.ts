@@ -16,7 +16,7 @@ export interface DonorCommitment {
   donor: Donor
   entity: Entity
   incident: Incident
-  responses: RapidResponse[]
+  responses: any[]
 }
 
 export interface CommitmentItem {

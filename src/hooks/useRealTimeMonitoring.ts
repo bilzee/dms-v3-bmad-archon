@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useRef, useState, useCallback } from 'react';
-import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useQuery, useQueryClient, QueryClient } from '@tanstack/react-query';
 
 // Types for real-time updates
 interface RealTimeConfig {
@@ -179,7 +179,7 @@ class PollingManager {
   private pollTimer: NodeJS.Timeout | null = null;
   private lastPollTime = 0;
 
-  constructor(private config: RealTimeConfig, private queryClient: useQueryClient) {}
+  constructor(private config: RealTimeConfig, private queryClient: QueryClient) {}
 
   /**
    * Start polling for updates

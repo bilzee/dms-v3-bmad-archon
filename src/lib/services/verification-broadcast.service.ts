@@ -8,7 +8,7 @@ export function broadcastVerificationUpdate(update: {
   data: any;
 }) {
   const message = JSON.stringify({
-    type: 'verification_update',
+    messageType: 'verification_update',
     timestamp: new Date().toISOString(),
     ...update
   });

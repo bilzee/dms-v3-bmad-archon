@@ -97,7 +97,7 @@ async function updateGapFieldSeverities() {
       const gapField = await prisma.gapFieldSeverity.findFirst({
         where: {
           fieldName: update.fieldName,
-          assessmentType: update.assessmentType,
+          assessmentType: update.assessmentType as any,
           isActive: true
         }
       })

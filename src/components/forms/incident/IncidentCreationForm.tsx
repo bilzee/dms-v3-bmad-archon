@@ -276,7 +276,7 @@ export function IncidentCreationForm({
           <Alert variant="destructive" className="mb-4">
             <AlertTriangle className="h-4 w-4" />
             <AlertDescription>
-              {error instanceof Error ? error.message : String(error)}
+              {(error as any)?.message || String(error)}
             </AlertDescription>
           </Alert>
         )}

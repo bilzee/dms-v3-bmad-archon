@@ -95,18 +95,20 @@ export function useMapPerformance(options: MapPerformanceOptions = {}) {
     func: T,
     delay: number
   ): (...args: Parameters<T>) => void => {
-    const now = Date.now();
-    
-    if (debouncedRef.current.timeout) {
-      clearTimeout(debouncedRef.current.timeout);
-    }
-    
-    debouncedRef.current.timeout = setTimeout(() => {
-      func();
-      debouncedRef.current.timeout = null;
-    }, delay - Math.min(0, now - debouncedRef.current.lastCall));
-    
-    debouncedRef.current.lastCall = now;
+    return (...args: Parameters<T>) => {
+      const now = Date.now();
+      
+      if (debouncedRef.current.timeout) {
+        clearTimeout(debouncedRef.current.timeout);
+      }
+      
+      debouncedRef.current.timeout = setTimeout(() => {
+        func(...args);
+        debouncedRef.current.timeout = null;
+      }, delay - Math.min(0, now - debouncedRef.current.lastCall));
+      
+      debouncedRef.current.lastCall = now;
+    };
   }, []);
 
   // Virtualization: Only render entities that are visible in viewport

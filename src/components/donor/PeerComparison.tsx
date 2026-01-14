@@ -7,21 +7,22 @@ import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
-import { 
-  Radar as RadarChart,
-  Radar,
-  PolarGrid,
-  PolarAngleAxis,
-  PolarRadiusAxis,
-  ResponsiveContainer,
-  BarChart,
-  Bar,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  Legend
-} from 'recharts';
+// TODO: Replace recharts with Chart.js/react-chartjs-2
+// import { 
+//   Radar as RadarChart,
+//   Radar,
+//   PolarGrid,
+//   PolarAngleAxis,
+//   PolarRadiusAxis,
+//   ResponsiveContainer,
+//   BarChart,
+//   Bar,
+//   XAxis,
+//   YAxis,
+//   CartesianGrid,
+//   Tooltip,
+//   Legend
+// } from 'recharts';
 import { 
   Users, 
   TrendingUp, 
@@ -65,6 +66,7 @@ export function PeerComparison({
 }: PeerComparisonProps) {
   const [comparisonType, setComparisonType] = useState<'regional' | 'national' | 'global'>('regional');
   const [metricFocus, setMetricFocus] = useState<'delivery_rate' | 'commitment_value' | 'consistency' | 'overall'>('overall');
+  const [currentChartType, setCurrentChartType] = useState<'radar' | 'bar'>(chartType);
 
   // Fetch leaderboard data for comparison
   const { data: leaderboardData, isLoading } = useQuery<LeaderboardResponse>({
@@ -104,16 +106,16 @@ export function PeerComparison({
     const consistencyScores = rankings.map(r => r.metrics.performance.activityFrequency);
     const overallScores = rankings.map(r => r.metrics.performance.overallScore);
 
-    const top25DeliveryRate = this.calculatePercentile(deliveryRates, 75);
+    const top25DeliveryRate = calculatePercentile(deliveryRates, 75);
     const averageDeliveryRate = deliveryRates.reduce((a, b) => a + b, 0) / deliveryRates.length;
 
-    const top25CommitmentValue = this.calculatePercentile(commitmentValues, 75);
+    const top25CommitmentValue = calculatePercentile(commitmentValues, 75);
     const averageCommitmentValue = commitmentValues.reduce((a, b) => a + b, 0) / commitmentValues.length;
 
-    const top25Consistency = this.calculatePercentile(consistencyScores, 75);
+    const top25Consistency = calculatePercentile(consistencyScores, 75);
     const averageConsistency = consistencyScores.reduce((a, b) => a + b, 0) / consistencyScores.length;
 
-    const top25Overall = this.calculatePercentile(overallScores, 75);
+    const top25Overall = calculatePercentile(overallScores, 75);
     const averageOverall = overallScores.reduce((a, b) => a + b, 0) / overallScores.length;
 
     // Prepare comparison metrics
@@ -123,32 +125,32 @@ export function PeerComparison({
         user: userRanking.metrics.deliveryRates.verified,
         average: averageDeliveryRate,
         top25: top25DeliveryRate,
-        rank: this.getMetricRank(userRanking.metrics.deliveryRates.verified, deliveryRates),
-        trend: this.getTrend(userRanking.metrics.deliveryRates.verified, averageDeliveryRate)
+        rank: getMetricRank(userRanking.metrics.deliveryRates.verified, deliveryRates),
+        trend: getTrend(userRanking.metrics.deliveryRates.verified, averageDeliveryRate)
       },
       {
         metric: 'Commitment Value',
         user: userRanking.metrics.commitments.totalValue,
         average: averageCommitmentValue,
         top25: top25CommitmentValue,
-        rank: this.getMetricRank(userRanking.metrics.commitments.totalValue, commitmentValues),
-        trend: this.getTrend(userRanking.metrics.commitments.totalValue, averageCommitmentValue)
+        rank: getMetricRank(userRanking.metrics.commitments.totalValue, commitmentValues),
+        trend: getTrend(userRanking.metrics.commitments.totalValue, averageCommitmentValue)
       },
       {
         metric: 'Consistency',
         user: userRanking.metrics.performance.activityFrequency,
         average: averageConsistency,
         top25: top25Consistency,
-        rank: this.getMetricRank(userRanking.metrics.performance.activityFrequency, consistencyScores),
-        trend: this.getTrend(userRanking.metrics.performance.activityFrequency, averageConsistency)
+        rank: getMetricRank(userRanking.metrics.performance.activityFrequency, consistencyScores),
+        trend: getTrend(userRanking.metrics.performance.activityFrequency, averageConsistency)
       },
       {
         metric: 'Overall Score',
         user: userRanking.metrics.performance.overallScore,
         average: averageOverall,
         top25: top25Overall,
-        rank: this.getMetricRank(userRanking.metrics.performance.overallScore, overallScores),
-        trend: this.getTrend(userRanking.metrics.performance.overallScore, averageOverall)
+        rank: getMetricRank(userRanking.metrics.performance.overallScore, overallScores),
+        trend: getTrend(userRanking.metrics.performance.overallScore, averageOverall)
       }
     ];
 
@@ -267,7 +269,7 @@ export function PeerComparison({
                 </SelectContent>
               </Select>
               
-              <Select value={chartType} onValueChange={(value: any) => setChartType(value)}>
+              <Select value={currentChartType} onValueChange={(value: any) => setCurrentChartType(value)}>
                 <SelectTrigger className="w-32">
                   <SelectValue />
                 </SelectTrigger>
@@ -328,55 +330,24 @@ export function PeerComparison({
         </CardHeader>
         <CardContent>
           <div className="h-80">
-            {chartType === 'radar' && radarData && (
-              <ResponsiveContainer width="100%" height="100%">
-                <RadarChart data={radarData}>
-                  <PolarGrid />
-                  <PolarAngleAxis dataKey="metric" />
-                  <PolarRadiusAxis angle={90} domain={[0, 100]} />
-                  <Radar 
-                    name="You" 
-                    dataKey="You" 
-                    stroke="#3b82f6" 
-                    fill="#3b82f6" 
-                    fillOpacity={0.3} 
-                    strokeWidth={2}
-                  />
-                  <Radar 
-                    name="Top 25%" 
-                    dataKey="Top 25%" 
-                    stroke="#f59e0b" 
-                    fill="#f59e0b" 
-                    fillOpacity={0.1} 
-                    strokeWidth={1}
-                  />
-                  <Radar 
-                    name="Average" 
-                    dataKey="Average" 
-                    stroke="#6b7280" 
-                    fill="#6b7280" 
-                    fillOpacity={0.1} 
-                    strokeWidth={1}
-                  />
-                  <Tooltip />
-                  <Legend />
-                </RadarChart>
-              </ResponsiveContainer>
+            {currentChartType === 'radar' && radarData && (
+              <div className="flex items-center justify-center h-full text-gray-500">
+                <div className="text-center">
+                  <Activity className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                  <p>Radar Chart Placeholder</p>
+                  <p className="text-xs mt-1">TODO: Implement with Chart.js</p>
+                </div>
+              </div>
             )}
             
-            {chartType === 'bar' && barData && (
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={barData}>
-                  <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis dataKey="metric" />
-                  <YAxis />
-                  <Tooltip />
-                  <Legend />
-                  <Bar dataKey="Your Score" fill="#3b82f6" />
-                  <Bar dataKey="Top 25%" fill="#f59e0b" opacity={0.7} />
-                  <Bar dataKey="Average" fill="#6b7280" opacity={0.5} />
-                </BarChart>
-              </ResponsiveContainer>
+            {currentChartType === 'bar' && barData && (
+              <div className="flex items-center justify-center h-full text-gray-500">
+                <div className="text-center">
+                  <Activity className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                  <p>Bar Chart Placeholder</p>
+                  <p className="text-xs mt-1">TODO: Implement with Chart.js</p>
+                </div>
+              </div>
             )}
           </div>
         </CardContent>

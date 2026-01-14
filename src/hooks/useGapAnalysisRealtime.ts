@@ -133,7 +133,7 @@ export function useGapAnalysisRealtime({
     refetchOnWindowFocus: true,
     refetchOnReconnect: true,
     // Keep previous data while fetching new data
-    keepPreviousData: true,
+    placeholderData: (previousData) => previousData,
   });
 
   // Manual invalidate function

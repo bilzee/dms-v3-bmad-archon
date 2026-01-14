@@ -203,14 +203,13 @@ export function SeverityThresholdTable({ impactType }: SeverityThresholdTablePro
   return (
     <SafeDataLoader
       queryFn={fetchSeverityThresholds}
-      queryKey={['severityThresholds', impactType]}
       fallbackData={defaultThresholds[impactType] || []}
       loadingMessage="Loading severity thresholds..."
       errorTitle="Failed to load severity thresholds"
     >
       {(thresholds, isLoading, error, retry) => (
         <div className="space-y-4">
-          {thresholds.length === 0 ? (
+          {!thresholds || thresholds.length === 0 ? (
             <Card className="border-dashed">
               <CardContent className="p-6 text-center">
                 <AlertCircle className="h-12 w-12 mx-auto mb-4 text-gray-400" />
@@ -224,7 +223,7 @@ export function SeverityThresholdTable({ impactType }: SeverityThresholdTablePro
             <>
               {/* Severity Level Cards */}
               <div className="space-y-4">
-                {thresholds
+                {(thresholds || [])
                   .sort((a, b) => {
                     const order = { 'MEDIUM': 1, 'HIGH': 2, 'CRITICAL': 3 }
                     return order[a.severityLevel] - order[b.severityLevel]

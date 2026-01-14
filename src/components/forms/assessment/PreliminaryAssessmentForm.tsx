@@ -89,8 +89,8 @@ export function PreliminaryAssessmentForm({
     resolver: zodResolver(PreliminaryAssessmentSchema),
     defaultValues: {
       reportingDate: initialData?.reportingDate 
-        ? new Date(initialData.reportingDate).toISOString().slice(0, 16)
-        : new Date().toISOString().slice(0, 16), // Always set to today's date in correct format
+        ? new Date(initialData.reportingDate)
+        : new Date(), // Always set to today's date in correct format
       reportingLatitude: initialData?.reportingLatitude || 0,
       reportingLongitude: initialData?.reportingLongitude || 0,
       reportingLGA: initialData?.reportingLGA || '',
@@ -99,8 +99,6 @@ export function PreliminaryAssessmentForm({
       numberInjured: initialData?.numberInjured || 0,
       numberDisplaced: initialData?.numberDisplaced || 0,
       numberHousesAffected: initialData?.numberHousesAffected || 0,
-      numberSchoolsAffected: initialData?.numberSchoolsAffected || 0,
-      numberMedicalFacilitiesAffected: initialData?.numberMedicalFacilitiesAffected || 0,
       schoolsAffected: initialData?.schoolsAffected || '',
       medicalFacilitiesAffected: initialData?.medicalFacilitiesAffected || '',
       estimatedAgriculturalLandsAffected: initialData?.estimatedAgriculturalLandsAffected || '',
@@ -155,8 +153,12 @@ export function PreliminaryAssessmentForm({
 
     const interval = setInterval(() => {
       const formData = watch()
-      saveDraft(formData, true) // auto-save
-      onDraftSave?.(formData)
+      const cleanedData = {
+        ...formData,
+        incidentId: selectedIncidentId || undefined
+      }
+      saveDraft(cleanedData, true) // auto-save
+      onDraftSave?.(cleanedData)
     }, 30000) // 30 seconds
 
     return () => clearInterval(interval)
@@ -181,8 +183,12 @@ export function PreliminaryAssessmentForm({
 
   const handleSaveDraft = () => {
     const formData = watch()
-    saveDraft(formData, false) // manual save
-    onDraftSave?.(formData)
+    const cleanedData = {
+      ...formData,
+      incidentId: selectedIncidentId || undefined
+    }
+    saveDraft(cleanedData, false) // manual save
+    onDraftSave?.(cleanedData)
     setFeedbackMessage({ type: 'success', message: 'Draft saved successfully!' })
   }
 
@@ -206,7 +212,7 @@ export function PreliminaryAssessmentForm({
         ...data,
         reportingDate: new Date(data.reportingDate), // Convert string back to Date for backend
         estimatedAgriculturalLandsAffected: data.estimatedAgriculturalLandsAffected ? String(data.estimatedAgriculturalLandsAffected) : undefined,
-        incidentId: selectedIncidentId || undefined,
+        incidentId: selectedIncidentId || '',
         mediaFiles
       }
 
@@ -250,7 +256,7 @@ export function PreliminaryAssessmentForm({
         <Alert variant="destructive">
           <AlertTriangle className="h-4 w-4" />
           <AlertDescription>
-            {error instanceof Error ? error.message : String(error)}
+            {(error as any)?.message || String(error)}
           </AlertDescription>
         </Alert>
       )}

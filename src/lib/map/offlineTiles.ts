@@ -373,7 +373,7 @@ export class OfflineTileLayer {
   /**
    * Create a custom tile URL function for Leaflet
    */
-  createTileUrlFunction(): (coords: { z: number; x: number; y: number }) => string {
+  createTileUrlFunction(): (coords: { z: number; x: number; y: number }) => Promise<string> {
     return async (coords) => {
       const url = `https://tile.openstreetmap.org/${coords.z}/${coords.x}/${coords.y}.png`;
       const cachedUrl = await this.manager.getTile(url, coords.z, coords.x, coords.y);

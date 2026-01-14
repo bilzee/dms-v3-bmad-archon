@@ -187,7 +187,7 @@ export function ConfigurationAnalytics({ className, timeRange: defaultTimeRange 
         </div>
         
         <div className="flex items-center gap-2">
-          <Select value={timeRange} onValueChange={setTimeRange}>
+          <Select value={timeRange} onValueChange={(value) => setTimeRange(value as any)}>
             <SelectTrigger className="w-40">
               <SelectValue />
             </SelectTrigger>

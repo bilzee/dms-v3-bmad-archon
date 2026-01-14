@@ -92,7 +92,7 @@ class DownloadManager {
       url,
     };
 
-    this.set((state) => ({
+    this.set((state: any) => ({
       downloads: {
         ...state.downloads,
         [downloadId]: downloadRecord,
@@ -202,7 +202,7 @@ class DownloadManager {
       }
 
       // Complete download
-      const blob = new Blob(chunks);
+      const blob = new Blob(chunks as BlobPart[]);
       this.completeDownload(downloadId, blob, options);
 
     } catch (error) {
@@ -230,7 +230,7 @@ class DownloadManager {
       progress: 100,
       downloaded: blob.size,
       size: blob.size,
-      downloadUrl,
+      url: downloadUrl,
       speed: 0,
       estimatedTimeRemaining: 0,
       completedAt: new Date(),
@@ -396,8 +396,8 @@ class DownloadManager {
     });
 
     // Update active downloads
-    this.set((state) => ({
-      activeDownloads: state.activeDownloads.filter(id => id !== downloadId),
+    this.set((state: any) => ({
+      activeDownloads: state.activeDownloads.filter((id: string) => id !== downloadId),
     }));
   }
 
@@ -417,14 +417,14 @@ class DownloadManager {
   removeDownload(downloadId: string): void {
     this.cancelDownload(downloadId);
     
-    this.set((state) => {
+    this.set((state: any) => {
       const updatedDownloads = { ...state.downloads };
       delete updatedDownloads[downloadId];
       
       return {
         downloads: updatedDownloads,
-        activeDownloads: state.activeDownloads.filter(id => id !== downloadId),
-        downloadHistory: state.downloadHistory.filter(d => d.id !== downloadId),
+        activeDownloads: state.activeDownloads.filter((id: string) => id !== downloadId),
+        downloadHistory: state.downloadHistory.filter((d: any) => d.id !== downloadId),
       };
     });
   }
@@ -435,11 +435,11 @@ class DownloadManager {
       .filter(([_, download]) => download.status === 'completed')
       .map(([id]) => id);
 
-    this.set((state) => ({
+    this.set((state: any) => ({
       downloads: Object.fromEntries(
         Object.entries(state.downloads).filter(([id]) => !completedIds.includes(id))
       ),
-      downloadHistory: state.downloadHistory.filter(d => !completedIds.includes(d.id)),
+      downloadHistory: state.downloadHistory.filter((d: any) => !completedIds.includes(d.id)),
     }));
   }
 
@@ -449,7 +449,7 @@ class DownloadManager {
       this.cancelDownload(downloadId);
     });
 
-    this.set((state) => ({
+    this.set((state: any) => ({
       downloads: {},
       activeDownloads: [],
       downloadHistory: [],
@@ -461,7 +461,7 @@ class DownloadManager {
   }
 
   updateDownloadProgress(downloadId: string, progress: Partial<DownloadProgress>): void {
-    this.set((state) => ({
+    this.set((state: any) => ({
       downloads: {
         ...state.downloads,
         [downloadId]: {
@@ -504,8 +504,8 @@ class DownloadManager {
     // This would require additional libraries like JSZip
     const downloadPromises = exportIds.map(async (exportId) => {
       const download = this.get().downloads[exportId];
-      if (download?.downloadUrl && download.status === 'completed') {
-        return this.startDownload(download.downloadUrl, download.filename, {
+      if (download?.url && download.status === 'completed') {
+        return this.startDownload(download.url, download.filename, {
           concurrent: true,
         });
       }
@@ -584,7 +584,7 @@ export const useDownloadStore = create<DownloadState>()(
     },
     {
       name: 'download-store',
-      partialize: (state) => ({
+      partialize: (state: any) => ({
         downloads: state.downloads,
         activeDownloads: state.activeDownloads,
         downloadHistory: state.downloadHistory,

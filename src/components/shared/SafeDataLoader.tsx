@@ -28,7 +28,7 @@ interface SafeDataLoaderState<T> {
 export function SafeDataLoader<T = any>({
   children,
   queryFn,
-  fallbackData = null,
+  fallbackData = undefined as T,
   enabled = true,
   retryCount: maxRetries = 3,
   showError = true,

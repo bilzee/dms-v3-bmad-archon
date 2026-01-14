@@ -305,7 +305,7 @@ export function GapAnalysis({ entityId }: GapAnalysisProps) {
                             <Badge variant="outline" className="capitalize">
                               {gap.severity}
                             </Badge>
-                            {trendConfig && (
+                            {trendConfig && TrendIcon && (
                               <div className={`flex items-center gap-1 ${trendConfig.color}`}>
                                 <TrendIcon className="h-4 w-4" />
                                 <span className="text-xs">{trendConfig.label}</span>

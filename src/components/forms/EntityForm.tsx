@@ -211,7 +211,7 @@ export function EntityForm({ onSubmit, onCancel, initialData, isEditing = false 
                         placeholder="e.g., 11.8311"
                         value={watchedCoordinates?.latitude || ''}
                         onChange={(e) => {
-                          const value = e.target.value ? parseFloat(e.target.value) : undefined;
+                          const value = e.target.value ? parseFloat(e.target.value) : 0;
                           setValue('coordinates.latitude', value);
                         }}
                         className={errors.coordinates?.latitude ? 'border-red-500' : ''}
@@ -229,7 +229,7 @@ export function EntityForm({ onSubmit, onCancel, initialData, isEditing = false 
                         placeholder="e.g., 13.1511"
                         value={watchedCoordinates?.longitude || ''}
                         onChange={(e) => {
-                          const value = e.target.value ? parseFloat(e.target.value) : undefined;
+                          const value = e.target.value ? parseFloat(e.target.value) : 0;
                           setValue('coordinates.longitude', value);
                         }}
                         className={errors.coordinates?.longitude ? 'border-red-500' : ''}

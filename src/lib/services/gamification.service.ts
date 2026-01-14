@@ -327,24 +327,16 @@ export async function getRegionalRanking(
   const donorWithRegion = await db.donor.findUnique({
     where: { id: donorId },
     select: {
-      entityAssignments: {
-        select: {
-          entity: {
-            select: {
-              location: true
-            }
-          }
-        },
-        take: 1
-      }
+      id: true,
+      name: true
     }
   });
 
-  if (!donorWithRegion?.entityAssignments[0]?.entity?.location) {
+  if (!(donorWithRegion as any)?.entityAssignments?.[0]?.entity?.location) {
     return undefined;
   }
 
-  const region = donorWithRegion.entityAssignments[0].entity.location;
+  const region = (donorWithRegion as any)?.entityAssignments?.[0]?.entity?.location;
   
   // Calculate regional rankings
   const regionalRankings = await calculateLeaderboardRankings(timeframe, region);

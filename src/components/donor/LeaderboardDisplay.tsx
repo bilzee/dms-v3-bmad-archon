@@ -254,7 +254,7 @@ export function LeaderboardDisplay({
               }} />
             ) : (
               <EmptyState
-                type="empty"
+                type="data"
                 title="No leaderboard data"
                 description="No donors have been ranked yet."
                 action={{
@@ -266,7 +266,7 @@ export function LeaderboardDisplay({
               />
             )
           ) : (
-          filteredRankings.map((entry) => (
+          filteredRankings.map((entry: any) => (
             <div
               key={entry.donor.id}
               className={cn(

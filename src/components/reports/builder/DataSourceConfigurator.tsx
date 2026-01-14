@@ -27,7 +27,7 @@ import {
   CheckCircle2
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { DataSourceType, ReportFiltersSchema, ReportFilters, FilterConfig, AggregationConfig } from '@/lib/reports/data-aggregator';
+import { DataSourceType, ReportFiltersSchema, ReportFilters, FilterConfig, AggregationConfig, AggregationFunction } from '@/lib/reports/data-aggregator';
 import { DataAggregator } from '@/lib/reports/data-aggregator';
 
 interface DataSourceConfiguratorProps {
@@ -79,7 +79,7 @@ export function DataSourceConfigurator({
     queryKey: ['data-preview', dataSourceType, filters],
     queryFn: () => DataAggregator.getDataPreview(dataSourceType, filters, 50),
     enabled: showPreview && activeTab === 'preview',
-    keepPreviousData: true
+    placeholderData: (previousData) => previousData
   });
 
   // Update parent when filters change
@@ -180,7 +180,7 @@ export function DataSourceConfigurator({
     const newAggregation: AggregationConfig = {
       id: `agg_${Date.now()}`,
       field: '',
-      function: 'count',
+      function: AggregationFunction.COUNT,
       groupBy: [],
       alias: ''
     };
@@ -280,8 +280,9 @@ export function DataSourceConfigurator({
                 onChange={(e) => setFilters(prev => ({
                   ...prev,
                   dateRange: {
-                    ...prev.dateRange,
-                    startDate: e.target.value
+                    field: 'createdAt',
+                    startDate: e.target.value,
+                    endDate: prev.dateRange?.endDate || ''
                   }
                 }))}
               />
@@ -295,7 +296,8 @@ export function DataSourceConfigurator({
                 onChange={(e) => setFilters(prev => ({
                   ...prev,
                   dateRange: {
-                    ...prev.dateRange,
+                    field: 'createdAt',
+                    startDate: prev.dateRange?.startDate || '',
                     endDate: e.target.value
                   }
                 }))}

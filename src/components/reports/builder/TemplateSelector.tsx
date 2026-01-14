@@ -16,7 +16,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { BadgeList, Filter, Plus, Search, Eye, Edit } from 'lucide-react';
+import { List, Filter, Plus, Search, Eye, Edit } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { ReportTemplate, DEFAULT_TEMPLATES } from '@/lib/reports/template-engine';
 
@@ -77,7 +77,7 @@ export function TemplateSelector({
       if (!response.ok) throw new Error('Failed to fetch templates');
       return response.json();
     },
-    keepPreviousData: true,
+    placeholderData: (previousData) => previousData,
     enabled: !disabled
   });
 
@@ -91,12 +91,12 @@ export function TemplateSelector({
     let templates = data.data.templates;
     
     if (filters.type !== 'all') {
-      templates = templates.filter(t => t.type === filters.type);
+      templates = templates.filter((t: any) => t.type === filters.type);
     }
     
     if (debouncedSearch) {
-      templates = templates.filter(t => 
-        t.name.toLowerCase().includes(debouncedSearch.toLowerCase()) ||
+      templates = templates.filter((t: any) => 
+        t.name?.toLowerCase().includes(debouncedSearch.toLowerCase()) ||
         t.description?.toLowerCase().includes(debouncedSearch.toLowerCase())
       );
     }
@@ -109,12 +109,12 @@ export function TemplateSelector({
     let defaults = DEFAULT_TEMPLATES;
     
     if (filters.type !== 'all') {
-      defaults = defaults.filter(t => t.type === filters.type);
+      defaults = defaults.filter((t: any) => t.type === filters.type);
     }
     
     if (debouncedSearch) {
-      defaults = defaults.filter(t => 
-        t.name.toLowerCase().includes(debouncedSearch.toLowerCase()) ||
+      defaults = defaults.filter((t: any) => 
+        t.name?.toLowerCase().includes(debouncedSearch.toLowerCase()) ||
         t.description?.toLowerCase().includes(debouncedSearch.toLowerCase())
       );
     }
@@ -167,7 +167,7 @@ export function TemplateSelector({
             <div 
               className="text-[10px] leading-none"
               dangerouslySetInnerHTML={{ 
-                __html: template.preview?.replace(/<style[^>]*>[\s\S]*?<\/style>/gi, '') || 'No preview available' 
+                __html: (template as any).preview?.replace(/<style[^>]*>[\s\S]*?<\/style>/gi, '') || 'No preview available' 
               }}
             />
           </div>
@@ -178,7 +178,7 @@ export function TemplateSelector({
               {template.layout?.length || 0} elements
             </span>
             <span>
-              {isDefault ? 'System Template' : `By ${template.createdBy?.name || 'Unknown'}`}
+              {isDefault ? 'System Template' : `By ${(template as any).createdById || 'Unknown'}`}
             </span>
           </div>
         </div>
@@ -278,12 +278,12 @@ export function TemplateSelector({
             {filteredDefaultTemplates.length > 0 && (
               <div className="space-y-3">
                 <h3 className="text-sm font-medium text-gray-700 flex items-center gap-2">
-                  <BadgeList className="h-4 w-4" />
+                  <List className="h-4 w-4" />
                   System Templates
                 </h3>
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                   {filteredDefaultTemplates.map(template => 
-                    renderTemplateCard({ ...template, id: `default_${template.name.toLowerCase().replace(/\s+/g, '_')}` }, true)
+                    renderTemplateCard({ ...template, name: template.name || 'unnamed', id: `default_${(template.name || 'unnamed').toLowerCase().replace(/\s+/g, '_')}` } as any, true)
                   )}
                 </div>
               </div>
@@ -296,7 +296,7 @@ export function TemplateSelector({
                   Custom Templates
                 </h3>
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                  {filteredTemplates.map(template => renderTemplateCard(template))}
+                  {filteredTemplates.map((template: any) => renderTemplateCard(template))}
                 </div>
               </div>
             )}

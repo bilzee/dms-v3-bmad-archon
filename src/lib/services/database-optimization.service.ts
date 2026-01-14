@@ -226,9 +226,9 @@ export class DatabaseOptimizationService {
       const metric = metrics[0];
       const activityScore = this.calculateActivityScore(metric.total_activities, timeframe);
       const overallScore = this.calculateOverallScore({
-        ...metric,
         verifiedDeliveryRate: metric.verified_delivery_rate,
         selfReportedDeliveryRate: metric.self_reported_delivery_rate,
+        totalValue: metric.total_commitment_value,
         activityScore
       });
 
@@ -435,7 +435,7 @@ export class DatabaseOptimizationService {
       message: string;
     }>;
   }> {
-    const checks = [];
+    const checks: Array<{ name: string; status: 'pass' | 'fail' | 'warning'; message: string; }> = [];
 
     try {
       // Check database connection
@@ -508,15 +508,15 @@ export class DatabaseOptimizationService {
           SELECT 
             EXTRACT(EPOCH FROM (NOW() - MAX(calculated_at))) as age_seconds
           FROM leaderboard_snapshot
-        ` as Array<{ age_seconds: number | null }>,
+        `,
         db.$queryRaw`
           SELECT COUNT(*) as count
           FROM audit_logs
           WHERE action = 'LEADERBOARD_REFRESH'
           ORDER BY timestamp DESC
           LIMIT 1
-        ` as Array<{ count: number }>
-      ]);
+        `
+      ]) as [Array<{ age_seconds: number | null }>, Array<{ count: number }>];
 
       return {
         leaderboardCacheAge: lastSnapshot[0]?.age_seconds || null,

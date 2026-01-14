@@ -97,7 +97,7 @@ export class ResponseOfflineService {
       
       // Get the existing response to extract the entityId
       const existingResponse = await offlineDB.getResponse(id)
-      const entityId = data.entityId || existingResponse?.data?.entityId
+      const entityId = (data as any).entityId || (existingResponse?.data as any)?.entityId
       
       // Add to sync queue
       await offlineDB.addToSyncQueue({

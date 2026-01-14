@@ -314,7 +314,7 @@ export function ResponsePlanningForm({
         dataWithUser.donorId = data.donorId
       }
       
-      return await ResponseService.createDeliveredResponse(dataWithUser, (user as any).id)
+      return await ResponseService.createDeliveredResponse(dataWithUser)
     },
     onSuccess: (response) => {
       queryClient.invalidateQueries({ queryKey: ['responses'] })
@@ -324,7 +324,7 @@ export function ResponsePlanningForm({
       
       // Stop collaboration on successful creation
       if (collaboration.isCurrentUserCollaborating) {
-        collaboration.stopCollaboration()
+        collaboration.actions?.leaveCollaboration?.()
       }
       
       onSuccess?.(response)

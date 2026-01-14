@@ -103,19 +103,10 @@ export function GapFieldTable({ assessmentType }: GapFieldTableProps) {
         return newChanges
       })
       
-      toast({
-        title: "Severity Updated",
-        description: `Field severity changed to ${variables.severity}`,
-        duration: 3000,
-      })
+      toast.success(`Field severity changed to ${variables.severity}`)
     },
     onError: (error) => {
-      toast({
-        title: "Update Failed",
-        description: error.message,
-        variant: "destructive",
-        duration: 5000,
-      })
+      toast.error(`Update Failed: ${error.message}`)
     }
   })
 
@@ -148,7 +139,7 @@ export function GapFieldTable({ assessmentType }: GapFieldTableProps) {
   }, [])
 
   // Define functions that need access to gapFields as regular functions, not hooks
-  const handleSelectAll = (gapFields: GapField[] | undefined, checked: boolean) => {
+  const handleSelectAll = (gapFields: GapField[] | null | undefined, checked: boolean) => {
     if (checked && gapFields) {
       setSelectedFields(gapFields.map(field => field.id))
     } else {
@@ -166,11 +157,7 @@ export function GapFieldTable({ assessmentType }: GapFieldTableProps) {
 
   const applyBulkChange = useCallback(() => {
     if (selectedFields.length === 0 || !bulkSeverity) {
-      toast({
-        title: "Selection Required",
-        description: "Please select fields and choose a severity level",
-        variant: "destructive"
-      })
+      toast.error("Please select fields and choose a severity level")
       return
     }
 
@@ -180,10 +167,7 @@ export function GapFieldTable({ assessmentType }: GapFieldTableProps) {
     })
     setPendingChanges(newChanges)
     
-    toast({
-      title: "Bulk Changes Applied",
-      description: `${selectedFields.length} fields updated. Click Save to confirm.`,
-    })
+    toast.success(`${selectedFields.length} fields updated. Click Save to confirm.`)
   }, [selectedFields, bulkSeverity, pendingChanges])
 
   return (
@@ -196,7 +180,7 @@ export function GapFieldTable({ assessmentType }: GapFieldTableProps) {
     >
       {(gapFields, isLoading, error, retry) => {
         const hasChanges = Object.keys(pendingChanges).length > 0
-        const allSelected = gapFields?.length > 0 && selectedFields.length === gapFields.length
+        const allSelected = (gapFields?.length || 0) > 0 && selectedFields.length === (gapFields?.length || 0)
         const someSelected = selectedFields.length > 0 && selectedFields.length < (gapFields?.length || 0)
 
         return (
@@ -216,9 +200,9 @@ export function GapFieldTable({ assessmentType }: GapFieldTableProps) {
                 id="select-all"
                 checked={allSelected}
                 ref={(element) => {
-                  if (element) element.indeterminate = someSelected
+                  if (element) (element as any).indeterminate = someSelected
                 }}
-                onCheckedChange={(checked) => handleSelectAll(gapFields, checked)}
+                onCheckedChange={(checked) => handleSelectAll(gapFields, checked === true)}
               />
               <label htmlFor="select-all" className="text-sm font-medium">
                 Select All ({selectedFields.length} of {gapFields?.length || 0})
@@ -290,9 +274,9 @@ export function GapFieldTable({ assessmentType }: GapFieldTableProps) {
                     <Checkbox
                       checked={allSelected}
                       ref={(element) => {
-                        if (element) element.indeterminate = someSelected
+                        if (element) (element as any).indeterminate = someSelected
                       }}
-                      onCheckedChange={(checked) => handleSelectAll(gapFields, checked)}
+                      onCheckedChange={(checked) => handleSelectAll(gapFields, checked === true)}
                     />
                   </th>
                   <th className="text-left p-4 font-medium text-sm text-gray-700">Field Name</th>
@@ -382,7 +366,7 @@ export function GapFieldTable({ assessmentType }: GapFieldTableProps) {
           
           {!gapFields?.length && (
             <EmptyState
-              type="empty"
+              type="data"
               title="No gap fields configured"
               description={`No gap fields found for ${assessmentType} assessment type`}
               action={{

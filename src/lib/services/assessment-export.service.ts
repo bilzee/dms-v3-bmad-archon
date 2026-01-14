@@ -494,7 +494,7 @@ function extractGaps(assessment: any): string {
  * Analyze gaps across all assessments
  */
 function analyzeGaps(assessments: any[], population: number): any[] {
-  const gaps = [];
+  const gaps: any[] = [];
   const latestAssessments = new Map<string, any>();
 
   // Get latest assessment for each category
@@ -514,7 +514,7 @@ function analyzeGaps(assessments: any[], population: number): any[] {
         category: type,
         severity: 'high', // Simplified severity classification
         description: categoryGaps,
-        recommendedActions: getRecommendedActions(type, categoryGaps)
+        recommendedActions: getRecommendedActions(type as any, categoryGaps)
       });
     }
   });
@@ -553,5 +553,5 @@ function getRecommendedActions(type: AssessmentType, gaps: string): string[] {
     actions.push('Create protection mechanisms');
   }
 
-  return actions.length > 0 ? actions : 'Address identified gaps through targeted interventions';
+  return actions.length > 0 ? actions : ['Address identified gaps through targeted interventions'];
 }

@@ -31,7 +31,7 @@ import {
   X
 } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
-import { Donor, Entity, Incident, DonorCommitment } from '@/types/entities';
+import type { Donor, Entity, Incident, DonorCommitment } from '@prisma/client';
 
 interface EntityDonorAssignmentProps {
   className?: string;
@@ -562,9 +562,9 @@ export function EntityDonorAssignment({ className }: EntityDonorAssignmentProps)
                       <div className="flex-1">
                         <div className="flex items-center gap-3 mb-3">
                           <h3 className="font-semibold text-lg">
-                            {commitment.items.length === 1 
-                              ? `${commitment.items[0].quantity} ${commitment.items[0].unit} of ${commitment.items[0].name}`
-                              : `${commitment.items.length} items`
+                            {(commitment.items as any)?.length === 1 
+                              ? `${(commitment.items as any)[0]?.quantity} ${(commitment.items as any)[0]?.unit} of ${(commitment.items as any)[0]?.name}`
+                              : `${(commitment.items as any)?.length || 0} items`
                             }
                           </h3>
                           {getStatusBadge(commitment.status)}
@@ -585,7 +585,7 @@ export function EntityDonorAssignment({ className }: EntityDonorAssignmentProps)
                           </div>
                           <div className="flex items-center gap-2">
                             <Calendar className="h-4 w-4 text-muted-foreground" />
-                            <span><strong>Committed:</strong> {formatDate(commitment.commitmentDate)}</span>
+                            <span><strong>Committed:</strong> {formatDate(commitment.commitmentDate.toISOString())}</span>
                           </div>
                         </div>
 
@@ -606,7 +606,7 @@ export function EntityDonorAssignment({ className }: EntityDonorAssignmentProps)
                         </div>
 
                         {/* Items Summary */}
-                        {commitment.items.length > 0 && (
+                        {(commitment.items as any)?.length > 0 && (
                           <div className="bg-muted/50 rounded-lg p-3 mb-3">
                             <h4 className="font-medium text-sm mb-2">Committed Items:</h4>
                             <div className="grid gap-1 text-sm">

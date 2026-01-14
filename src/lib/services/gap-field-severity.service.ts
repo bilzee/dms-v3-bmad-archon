@@ -161,7 +161,7 @@ class GapFieldSeverityService {
         if (fieldSeverity) {
           // Compare severities (CRITICAL > HIGH > MEDIUM > LOW)
           if (this.compareSeverities(fieldSeverity, highestSeverity) > 0) {
-            highestSeverity = fieldSeverity
+            highestSeverity = fieldSeverity as any
           }
         }
       }

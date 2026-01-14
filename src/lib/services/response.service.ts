@@ -141,7 +141,7 @@ export class ResponseService {
           verificationStatus: 'SUBMITTED', // Delivered responses go straight to verification queue
           verifiedAt: new Date(), // Mark as verified for delivery timestamp
           items: items,
-          resources: deliveryNotes ? { deliveryNotes } : null,
+          resources: deliveryNotes ? { deliveryNotes } : undefined,
           versionNumber: 1,
           isOfflineCreated: false,
           syncStatus: 'SYNCED'

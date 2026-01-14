@@ -264,6 +264,35 @@ export function DonorPerformanceDashboard({
     }
   };
 
+  // Radar chart options (different scale structure)
+  const radarChartOptions = {
+    responsive: true,
+    maintainAspectRatio: false,
+    plugins: {
+      legend: {
+        position: 'top' as const,
+      },
+      title: {
+        display: !compact,
+        text: 'Performance Overview'
+      }
+    },
+    scales: {
+      r: {
+        beginAtZero: true,
+        max: 100,
+        title: {
+          display: true,
+          text: 'Performance (%)'
+        }
+      }
+    },
+    interaction: {
+      intersect: false,
+      mode: 'index' as const,
+    }
+  };
+
   // Loading state
   if (isLoading) {
     return (
@@ -497,7 +526,7 @@ export function DonorPerformanceDashboard({
             <div className="h-80">
               {chartType === 'line' && <Line data={chartData} options={chartOptions} />}
               {chartType === 'bar' && <Bar data={chartData} options={barChartOptions} />}
-              {chartType === 'radar' && <Radar data={chartData} options={chartOptions} />}
+              {chartType === 'radar' && <Radar data={chartData} options={radarChartOptions} />}
             </div>
           </CardContent>
         </Card>

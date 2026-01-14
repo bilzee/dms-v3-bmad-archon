@@ -285,18 +285,24 @@ export const useVerificationStore = create<VerificationQueueState>()(
       set({ assessmentLoading: true, assessmentError: null });
       
       try {
-        const params = new URLSearchParams({
+        const searchParams: Record<string, string> = {
           page: assessmentPagination.page.toString(),
-          limit: assessmentPagination.limit.toString(),
-          ...assessmentFilters
+          limit: assessmentPagination.limit.toString()
+        };
+
+        // Add non-array filters
+        Object.entries(assessmentFilters).forEach(([key, value]) => {
+          if (!Array.isArray(value) && value !== undefined && value !== null) {
+            searchParams[key] = value.toString();
+          }
         });
 
-        // Convert arrays to comma-separated strings for URL
+        const params = new URLSearchParams(searchParams);
+
+        // Add array filters as comma-separated strings
         Object.entries(assessmentFilters).forEach(([key, value]) => {
-          if (Array.isArray(value)) {
+          if (Array.isArray(value) && value.length > 0) {
             params.set(key, value.join(','));
-          } else if (value !== undefined && value !== null) {
-            params.set(key, value.toString());
           }
         });
 
@@ -334,18 +340,24 @@ export const useVerificationStore = create<VerificationQueueState>()(
       set({ deliveryLoading: true, deliveryError: null });
       
       try {
-        const params = new URLSearchParams({
+        const searchParams: Record<string, string> = {
           page: deliveryPagination.page.toString(),
-          limit: deliveryPagination.limit.toString(),
-          ...deliveryFilters
+          limit: deliveryPagination.limit.toString()
+        };
+
+        // Add non-array filters
+        Object.entries(deliveryFilters).forEach(([key, value]) => {
+          if (!Array.isArray(value) && value !== undefined && value !== null) {
+            searchParams[key] = value.toString();
+          }
         });
 
-        // Convert arrays to comma-separated strings for URL
+        const params = new URLSearchParams(searchParams);
+
+        // Add array filters as comma-separated strings
         Object.entries(deliveryFilters).forEach(([key, value]) => {
-          if (Array.isArray(value)) {
+          if (Array.isArray(value) && value.length > 0) {
             params.set(key, value.join(','));
-          } else if (value !== undefined && value !== null) {
-            params.set(key, value.toString());
           }
         });
 

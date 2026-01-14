@@ -125,7 +125,7 @@ export const useAuthStore = create<AuthState>()(
         // This ensures donor-only users always get DONOR role even if currentRole was previously set to something else
         const currentRole = roles.length === 1 
           ? roles[0] 
-          : (get().currentRole && roles.includes(get().currentRole) ? get().currentRole : getHighestPriorityRole(roles)) || null;
+          : (get().currentRole && roles.includes(get().currentRole!) ? get().currentRole! : getHighestPriorityRole(roles) || roles[0]);
 
         set({
           user,

@@ -35,8 +35,8 @@ export function VerificationAnalytics({ className }: VerificationAnalyticsProps)
   
   const { combined: metrics, assessmentQueueDepth, deliveryQueueDepth } = useVerificationMetrics();
   const { 
-    assessmentQueue: assessments, 
-    deliveryQueue: deliveries,
+    assessments, 
+    deliveries,
     refreshAssessments,
     refreshDeliveries 
   } = useVerificationStore();
@@ -182,7 +182,7 @@ export function VerificationAnalytics({ className }: VerificationAnalyticsProps)
           title="Items Processed"
           value={performanceMetrics.totalProcessed}
           icon={CheckCircle}
-          trend={performanceMetrics.backlogTrend}
+          trend={{ trend: (performanceMetrics.backlogTrend as any) || "neutral", value: 0 }}
           format="number"
         />
         
@@ -190,6 +190,7 @@ export function VerificationAnalytics({ className }: VerificationAnalyticsProps)
           title="Avg Processing Time"
           value={performanceMetrics.averageProcessingTime}
           icon={Clock}
+          trend={{ trend: "neutral", value: 0 }}
           format="duration"
           unit="minutes"
         />
@@ -198,6 +199,7 @@ export function VerificationAnalytics({ className }: VerificationAnalyticsProps)
           title="Throughput"
           value={performanceMetrics.throughput}
           icon={BarChart3}
+          trend={{ trend: "neutral", value: 0 }}
           format="number"
           unit="items/hr"
         />
@@ -206,6 +208,7 @@ export function VerificationAnalytics({ className }: VerificationAnalyticsProps)
           title="Verification Rate"
           value={metrics.verificationRate * 100}
           icon={TrendingUp}
+          trend={{ trend: "neutral", value: 0 }}
           format="percentage"
           unit="%"
         />

@@ -998,5 +998,4 @@ export const generateCommitmentsCSV = (commitments: any[], options?: CSVExportOp
   return csvGenerator.generateFromCommitments(commitments, options);
 };
 
-// Export for testing
-export { CSVGenerator, type CSVData };
+// CSVGenerator and CSVData are already exported above

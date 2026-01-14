@@ -162,7 +162,7 @@ export class OfflineBootstrapService {
 
       // Check if core data exists
       const entitiesCount = await offlineDB.entities.count();
-      const incidentsCount = await offlineDB.incident ? await offlineDB.incident.count() : 0;
+      const incidentsCount = await (offlineDB as any).incident ? await (offlineDB as any).incident.count() : 0;
       
       return entitiesCount === 0 || incidentsCount === 0;
 

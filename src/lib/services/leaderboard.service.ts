@@ -407,8 +407,8 @@ class LeaderboardService {
   private async updateGlobalRankings(timeframe: { start: Date; end: Date }): Promise<void> {
     const rankings = await db.donor.findMany({
       where: { isActive: true },
-      select: { id: true, overallScore: true },
-      orderBy: { overallScore: 'desc' }
+      select: { id: true, name: true },
+      orderBy: { name: 'asc' }
     });
 
     await Promise.all(

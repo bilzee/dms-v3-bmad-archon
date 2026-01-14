@@ -99,7 +99,7 @@ export function HealthAssessmentForm({
   const [gpsCoordinates, setGpsCoordinates] = useState<{ lat: number; lng: number } | null>(null)
   const [mediaFiles, setMediaFiles] = useState<string[]>((initialData as any)?.mediaAttachments || [])
   const [selectedEntity, setSelectedEntity] = useState<string>(entityId)
-  const [selectedIncident, setSelectedIncident] = useState<string>(initialData?.incidentId || '')
+  const [selectedIncident, setSelectedIncident] = useState<string>((initialData as any)?.rapidAssessment?.incidentId || '')
   const [selectedEntityData, setSelectedEntityData] = useState<any>(null)
 
   // Extract health data from initialData

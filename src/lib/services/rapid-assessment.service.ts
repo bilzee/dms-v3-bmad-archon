@@ -468,8 +468,8 @@ export class RapidAssessmentService {
           }
           break
         case 'WASH':
-          if (assessment.washAssessment) {
-            gapAnalysisData.gapAnalysis = await analyzeWASHGaps(assessment.washAssessment)
+          if (assessment.wASHAssessment) {
+            gapAnalysisData.gapAnalysis = await analyzeWASHGaps(assessment.wASHAssessment)
             calculatedSeverity = gapAnalysisData.gapAnalysis.severity
           }
           break

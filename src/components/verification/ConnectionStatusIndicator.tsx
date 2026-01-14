@@ -111,7 +111,6 @@ export function ConnectionStatusIndicator({
 export function RealTimeStatusPanel() {
   const { 
     isConnected, 
-    connectionStatus, 
     lastUpdate, 
     lastUpdateText,
     statusText,
@@ -181,7 +180,7 @@ export function RealTimeStatusPanel() {
 
       <div className="pt-2 border-t">
         <p className="text-xs text-muted-foreground mb-3">
-          {getStatusDescription(connectionStatus)}
+          {getStatusDescription(statusText)}
         </p>
 
         {!isConnected && (

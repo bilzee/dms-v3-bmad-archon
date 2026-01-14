@@ -45,6 +45,8 @@ import { cn } from '@/lib/utils';
 interface EnhancedAutoApprovalConfigProps {
   className?: string;
   compactMode?: boolean;
+  pageSize?: number;
+  enableVirtualization?: boolean;
 }
 
 interface ApiResponseMeta {
@@ -295,8 +297,8 @@ export function EnhancedAutoApprovalConfig({
           'Authorization': `Bearer ${token}`
         },
         body: JSON.stringify({
-          entityIds,
-          ...config
+          ...config,
+          entityIds
         }),
       });
       
@@ -396,7 +398,7 @@ export function EnhancedAutoApprovalConfig({
 
     bulkUpdateMutation.mutate({
       entityIds: Array.from(selectedEntities),
-      config: bulkConfig
+      config: { ...bulkConfig, entityIds: Array.from(selectedEntities) }
     });
   };
 
@@ -1018,7 +1020,7 @@ function EnhancedBulkConfigDialog({
                   onValueChange={(value) =>
                     onConfigChange({
                       ...config,
-                      scope: value
+                      scope: value as any
                     })
                   }
                 >
@@ -1040,7 +1042,7 @@ function EnhancedBulkConfigDialog({
                   onValueChange={(value) =>
                     onConfigChange({
                       ...config,
-                      conditions: { ...config.conditions, maxPriority: value }
+                      conditions: { ...config.conditions, maxPriority: value as any }
                     })
                   }
                 >
@@ -1063,7 +1065,7 @@ function EnhancedBulkConfigDialog({
                   onCheckedChange={(checked) =>
                     onConfigChange({
                       ...config,
-                      conditions: { ...config.conditions, requiresDocumentation: checked }
+                      conditions: { ...config.conditions, requiresDocumentation: checked === true }
                     })
                   }
                   className="border-2 border-gray-500 data-[state=checked]:bg-blue-600 data-[state=checked]:border-blue-600 data-[state=checked]:text-white"

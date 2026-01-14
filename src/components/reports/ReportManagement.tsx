@@ -42,7 +42,15 @@ import {
   DownloadCloud
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { FormatType, ReportExecutionStatus } from '@prisma/client';
+import { ReportExecutionStatus } from '@prisma/client';
+
+// Local enum for format types until Prisma schema is updated
+enum FormatType {
+  PDF = 'pdf',
+  CSV = 'csv', 
+  EXCEL = 'excel',
+  JSON = 'json'
+}
 
 interface ReportManagementProps {
   className?: string;
@@ -102,11 +110,14 @@ export function ReportManagement({ className }: ReportManagementProps) {
   const { data: configurations, isLoading: configsLoading, error: configsError } = useQuery({
     queryKey: ['report-configurations', debouncedSearch, statusFilter, formatFilter, timeRange.days],
     queryFn: async () => {
-      const params = new URLSearchParams({
+      const searchParams: Record<string, string> = {
         search: debouncedSearch,
-        status: statusFilter === 'all' ? undefined : statusFilter,
         timeRange: timeRange.days.toString()
-      });
+      };
+      if (statusFilter !== 'all') {
+        searchParams.status = statusFilter;
+      }
+      const params = new URLSearchParams(searchParams);
 
       const response = await fetch(`/api/v1/reports/configurations?${params}`);
       if (!response.ok) throw new Error('Failed to fetch configurations');
@@ -114,7 +125,7 @@ export function ReportManagement({ className }: ReportManagementProps) {
       const result = await response.json();
       return result.data;
     },
-    keepPreviousData: true,
+    placeholderData: (previousData) => previousData,
     staleTime: 30 * 1000 // 30 seconds
   });
 
@@ -122,12 +133,17 @@ export function ReportManagement({ className }: ReportManagementProps) {
   const { data: executions, isLoading: executionsLoading, error: executionsError } = useQuery({
     queryKey: ['report-executions', debouncedSearch, statusFilter, formatFilter, timeRange.days],
     queryFn: async () => {
-      const params = new URLSearchParams({
+      const searchParams: Record<string, string> = {
         search: debouncedSearch,
-        status: statusFilter === 'all' ? undefined : statusFilter,
-        format: formatFilter === 'all' ? undefined : formatFilter,
         timeRange: timeRange.days.toString()
-      });
+      };
+      if (statusFilter !== 'all') {
+        searchParams.status = statusFilter;
+      }
+      if (formatFilter !== 'all') {
+        searchParams.format = formatFilter;
+      }
+      const params = new URLSearchParams(searchParams);
 
       const response = await fetch(`/api/v1/reports/executions?${params}`);
       if (!response.ok) throw new Error('Failed to fetch executions');
@@ -135,7 +151,7 @@ export function ReportManagement({ className }: ReportManagementProps) {
       const result = await response.json();
       return result.data;
     },
-    keepPreviousData: true,
+    placeholderData: (previousData) => previousData,
     staleTime: 10 * 1000 // 10 seconds
   });
 
@@ -153,7 +169,7 @@ export function ReportManagement({ className }: ReportManagementProps) {
       const result = await response.json();
       return result.data;
     },
-    keepPreviousData: true,
+    placeholderData: (previousData) => previousData,
     staleTime: 60 * 1000 // 1 minute
   });
 
@@ -167,7 +183,7 @@ export function ReportManagement({ className }: ReportManagementProps) {
       return response.json();
     },
     onSuccess: () => {
-      queryClient.invalidateQueries(['report-configurations']);
+      queryClient.invalidateQueries({ queryKey: ['report-configurations'] });
     }
   });
 
@@ -180,7 +196,7 @@ export function ReportManagement({ className }: ReportManagementProps) {
       return response.json();
     },
     onSuccess: () => {
-      queryClient.invalidateQueries(['report-executions']);
+      queryClient.invalidateQueries({ queryKey: ['report-executions'] });
     }
   });
 
@@ -193,13 +209,15 @@ export function ReportManagement({ className }: ReportManagementProps) {
       return response.json();
     },
     onSuccess: () => {
-      queryClient.invalidateQueries(['report-configurations']);
+      queryClient.invalidateQueries({ queryKey: ['report-configurations'] });
     }
   });
 
   // Refresh data
   const refreshData = useCallback(() => {
-    queryClient.invalidateQueries(['report-configurations', 'report-executions', 'report-statistics']);
+    queryClient.invalidateQueries({ queryKey: ['report-configurations'] });
+    queryClient.invalidateQueries({ queryKey: ['report-executions'] });
+    queryClient.invalidateQueries({ queryKey: ['report-statistics'] });
   }, [queryClient]);
 
   // Download report
@@ -207,8 +225,8 @@ export function ReportManagement({ className }: ReportManagementProps) {
     try {
       const response = await fetch(`/api/v1/reports/download/${executionId}`, {
         headers: {
-          'Accept': format === 'PDF' ? 'application/pdf' : 
-                  format === 'CSV' ? 'text/csv' : 
+          'Accept': format === FormatType.PDF ? 'application/pdf' : 
+                  format === FormatType.CSV ? 'text/csv' : 
                   'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
         }
       });
@@ -467,7 +485,7 @@ export function ReportManagement({ className }: ReportManagementProps) {
           ) : (
             <ScrollArea className="h-[600px]">
               <div className="space-y-4">
-                {configurations.items.map((config) => (
+                {configurations.items.map((config: any) => (
                   <Card key={config.id} className="p-6">
                     <div className="flex items-start justify-between">
                       <div className="space-y-3 flex-1">
@@ -553,7 +571,7 @@ export function ReportManagement({ className }: ReportManagementProps) {
                           variant="outline"
                           size="sm"
                           onClick={() => duplicateConfigurationMutation.mutate(config.id)}
-                          disabled={duplicateConfigurationMutation.isLoading}
+                          disabled={duplicateConfigurationMutation.isPending}
                         >
                           <Copy className="h-4 w-4 mr-1" />
                           Duplicate
@@ -575,7 +593,7 @@ export function ReportManagement({ className }: ReportManagementProps) {
                           variant="destructive"
                           size="sm"
                           onClick={() => deleteConfigurationMutation.mutate(config.id)}
-                          disabled={deleteConfigurationMutation.isLoading}
+                          disabled={deleteConfigurationMutation.isPending}
                         >
                           <Trash2 className="h-4 w-4 mr-1" />
                           Delete
@@ -628,7 +646,7 @@ export function ReportManagement({ className }: ReportManagementProps) {
           ) : (
             <ScrollArea className="h-[600px]">
               <div className="space-y-4">
-                {executions.items.map((execution) => (
+                {executions.items.map((execution: any) => (
                   <Card key={execution.id} className="p-6">
                     <div className="flex items-start justify-between">
                       <div className="space-y-3 flex-1">
@@ -733,7 +751,7 @@ export function ReportManagement({ className }: ReportManagementProps) {
                             variant="destructive"
                             size="sm"
                             onClick={() => deleteExecutionMutation.mutate(execution.id)}
-                            disabled={deleteExecutionMutation.isLoading}
+                            disabled={deleteExecutionMutation.isPending}
                           >
                             <Square className="h-4 w-4 mr-1" />
                             Cancel
@@ -744,7 +762,7 @@ export function ReportManagement({ className }: ReportManagementProps) {
                             variant="outline"
                             size="sm"
                             onClick={() => deleteExecutionMutation.mutate(execution.id)}
-                            disabled={deleteExecutionMutation.isLoading}
+                            disabled={deleteExecutionMutation.isPending}
                           >
                             <Trash2 className="h-4 w-4 mr-1" />
                             Delete

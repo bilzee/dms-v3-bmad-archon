@@ -135,7 +135,7 @@ export function MultipleEntitySelector({
           <Card>
             <CardContent className="pt-4">
               <div className="flex flex-wrap gap-2">
-                {selectedEntities.map((entity) => (
+                {selectedEntities.map((entity: any) => (
                   <Badge
                     key={entity.id}
                     variant="secondary"
