@@ -17,6 +17,10 @@ RUN corepack enable pnpm && pnpm install
 FROM node:18-alpine AS builder
 WORKDIR /app
 
+# ** Fix error caused by build stage running Prisma before environmental variables exist. The solution is to provide a dummy DATABASE_URL before the real one in Dockploy
+ARG DATABASE_URL="postgresql://user:pass@localhost:5432/db"
+ENV DATABASE_URL=$DATABASE_URL
+
 # Copy dependencies
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
