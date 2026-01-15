@@ -17,6 +17,9 @@ RUN corepack enable pnpm && pnpm install
 FROM node:18-alpine AS builder
 WORKDIR /app
 
+# ** Add Bash shell to the alpine linux image since it is not available by default
+RUN apk add --no-cache bash
+
 # ** Fix error caused by build stage running Prisma before environmental variables exist. The solution is to provide a dummy DATABASE_URL before the real one in Dockploy
 ARG DATABASE_URL="postgresql://user:pass@localhost:5432/db"
 ENV DATABASE_URL=$DATABASE_URL
@@ -80,4 +83,4 @@ ENV PORT=3000
 ENV HOSTNAME="0.0.0.0"
 
 # Start the application
-CMD ["node", "server.js"]
+CMD ["node", "node_modules/next/dist/bin/next", "start"]
