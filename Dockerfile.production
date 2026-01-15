@@ -21,6 +21,9 @@ WORKDIR /app
 ARG DATABASE_URL="postgresql://user:pass@localhost:5432/db"
 ENV DATABASE_URL=$DATABASE_URL
 
+# ** Still fixing error by creating a flag that will defer calls to db until runtime
+ENV NEXT_BUILD=true
+
 # Copy dependencies
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .

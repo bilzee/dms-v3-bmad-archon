@@ -7,6 +7,11 @@ import { entityService } from '@/lib/services/entity.service';
  */
 export async function GET(request: NextRequest) {
   try {
+    // Skip database calls during Docker build phase
+    if (process.env.NEXT_BUILD === "true") {
+      return NextResponse.json({ success: true, data: [] });
+    }
+
     const result = await entityService.getAllEntities();
     
     if (!result.success) {
