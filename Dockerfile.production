@@ -82,5 +82,10 @@ EXPOSE 3000
 ENV PORT=3000
 ENV HOSTNAME="0.0.0.0"
 
+# Debug: Check what files exist in the standalone build
+RUN echo "=== Contents of /app ===" && ls -la /app || true
+RUN echo "=== Looking for server.js ===" && find /app -name "server.js" -type f || echo "server.js not found"
+RUN echo "=== Contents of /app if exists ===" && ls -la /app/.next/standalone || true
+
 # Start the application
-CMD ["node", "node_modules/next/dist/bin/next", "start"]
+CMD ["node", "server.js"]
