@@ -1,6 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 
+// Prevent static generation during build
+export const dynamic = 'force-dynamic';
+
 // Define the pull sync request schema
 const PullSyncRequestSchema = z.object({
   lastSyncTimestamp: z.string().optional(),

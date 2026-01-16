@@ -1,6 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { conflictResolver } from '@/lib/sync/conflict';
 
+// Prevent static generation during build
+export const dynamic = 'force-dynamic';
+
 export async function GET(request: NextRequest) {
   try {
     // Authorization check (coordinator role required)
