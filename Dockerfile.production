@@ -107,5 +107,5 @@ RUN echo "=== Production stage files ===" && ls -la /app || true
 RUN echo "=== Checking for server.js ===" && ls -la /app/server.js || true
 RUN echo "=== User permissions ===" && whoami && id
 
-# Start the application with debug script
-CMD ["/app/start-debug.sh"]
+# Start the application (debug script showed successful startup, reverting to direct call)
+CMD ["node", "server.js"]
