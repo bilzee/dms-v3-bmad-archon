@@ -43,6 +43,12 @@ RUN npx prisma generate
 # Build the application
 RUN pnpm run build:production
 
+# Debug: Check if standalone build was generated
+RUN echo "=== Checking if .next/standalone exists ===" && ls -la /app/.next/ || echo ".next directory not found"
+RUN echo "=== Checking for standalone folder ===" && ls -la /app/.next/standalone/ || echo "standalone folder not found"
+RUN echo "=== Looking for server.js ===" && find /app/.next -name "server.js" -type f || echo "server.js not found in .next"
+RUN echo "=== Contents of .next directory ===" && ls -R /app/.next/ | head -50
+
 # =======================================
 # Stage 3: Runner (Production)
 # =======================================
@@ -81,11 +87,6 @@ EXPOSE 3000
 # Set environment variables
 ENV PORT=3000
 ENV HOSTNAME="0.0.0.0"
-
-# Debug: Check what files exist in the standalone build
-RUN echo "=== Contents of /app ===" && ls -la /app || true
-RUN echo "=== Looking for server.js ===" && find /app -name "server.js" -type f || echo "server.js not found"
-RUN echo "=== Contents of /app if exists ===" && ls -la /app/.next/standalone || true
 
 # Start the application
 CMD ["node", "server.js"]
