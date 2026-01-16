@@ -82,6 +82,10 @@ COPY --from=builder --chown=nextjs:nodejs /app/prisma ./prisma
 # Fix ownership of public directory (was owned by root)
 RUN chown -R nextjs:nodejs /app/public
 
+# Copy debug startup script
+COPY start-debug.sh /app/start-debug.sh
+RUN chmod +x /app/start-debug.sh && chown nextjs:nodejs /app/start-debug.sh
+
 # Health check - use root endpoint since /api/health might not exist
 HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
   CMD curl -f http://localhost:3000/ || exit 1
@@ -96,11 +100,12 @@ EXPOSE 3000
 ENV NODE_ENV=production
 ENV PORT=3000
 ENV HOSTNAME="0.0.0.0"
+ENV NEXT_TELEMETRY_DISABLED=1
 
 # Debug: Check what files exist before starting
 RUN echo "=== Production stage files ===" && ls -la /app || true
 RUN echo "=== Checking for server.js ===" && ls -la /app/server.js || true
 RUN echo "=== User permissions ===" && whoami && id
 
-# Start the application
-CMD ["node", "server.js"]
+# Start the application with debug script
+CMD ["/app/start-debug.sh"]
