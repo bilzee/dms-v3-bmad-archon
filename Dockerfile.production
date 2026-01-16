@@ -17,6 +17,11 @@ RUN corepack enable pnpm && pnpm install
 FROM node:18-alpine AS builder
 WORKDIR /app
 
+# Early debug to confirm builder stage is running
+RUN echo "=== BUILDER STAGE STARTED ==="
+RUN echo "=== Working directory: $(pwd) ==="
+RUN echo "=== Node version: $(node --version) ==="
+
 # ** Add Bash shell to the alpine linux image since it is not available by default
 RUN apk add --no-cache bash
 
