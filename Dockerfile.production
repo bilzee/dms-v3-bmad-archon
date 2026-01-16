@@ -90,6 +90,7 @@ USER nextjs
 EXPOSE 3000
 
 # Set environment variables
+ENV NODE_ENV=production
 ENV PORT=3000
 ENV HOSTNAME="0.0.0.0"
 
@@ -98,5 +99,5 @@ RUN echo "=== Production stage files ===" && ls -la /app || true
 RUN echo "=== Checking for server.js ===" && ls -la /app/server.js || true
 RUN echo "=== User permissions ===" && whoami && id
 
-# Start the application with error catching
-CMD ["sh", "-c", "node server.js 2>&1 | tee /tmp/server.log || echo 'Server startup failed with exit code: $?']"
+# Start the application
+CMD ["node", "server.js"]
