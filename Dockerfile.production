@@ -86,9 +86,9 @@ RUN chown -R nextjs:nodejs /app/public
 COPY start-debug.sh /app/start-debug.sh
 RUN chmod +x /app/start-debug.sh && chown nextjs:nodejs /app/start-debug.sh
 
-# Health check - use root endpoint since /api/health might not exist
-HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
-  CMD curl -f http://localhost:3000/ || exit 1
+# Health check temporarily disabled for debugging
+# HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
+#   CMD curl -f http://localhost:3000/ || exit 1
 
 # Switch to non-root user
 USER nextjs

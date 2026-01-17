@@ -17,4 +17,7 @@ fi
 # Start the application
 echo ""
 echo "=== Starting Next.js Server ==="
+echo "Container will stay alive as long as server.js runs"
+
+# Use exec to replace shell with node process (proper signal handling)
 exec node server.js
