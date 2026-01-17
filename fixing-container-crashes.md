@@ -23,12 +23,21 @@ Docker containers were building successfully on Dockploy but immediately crashin
 - **Cause**: API routes that should always be dynamic were being statically generated during build
 - **Resolution**: Fixed with `export const dynamic = 'force-dynamic'` on all problematic routes
 
-### **4. Docker Signal Handling Issues (CRITICAL FINAL FIX)**
+### **4. Docker Signal Handling Issues (CRITICAL FIX)**
 - **Issue**: Shell command format in CMD was breaking Docker's signal handling
 - **Symptoms**: Container would start but immediately crash with signal handling errors
 - **Cause**: Complex shell command `["sh", "-c", "..."]` format caused "JSONArgsRecommended" warning and signal problems
 - **Resolution**: Reverted to simple JSON array format `["node", "server.js"]` and added explicit NODE_ENV
 - **Build logs showed**: `JSONArgsRecommended: JSON arguments recommended for CMD to prevent unintended behavior related to OS signals`
+
+### **5. Missing Database Migrations (THE ACTUAL ROOT CAUSE)**
+- **Issue**: Database tables don't exist, causing application crashes after successful startup
+- **Symptoms**: Container starts successfully ("Ready in 96ms") but crashes when first database query is made
+- **Cause**: Prisma migration files exist in `prisma/migrations/` but were never being executed
+- **Build evidence**: "Conflict tracking table not found - would need database migration"
+- **Runtime evidence**: App starts, Next.js loads, but crashes when accessing database tables
+- **Resolution**: Created `start-with-migrations.sh` script that runs `npx prisma migrate deploy` before starting the server
+- **Impact**: This was the TRUE root cause - all other issues were secondary or already resolved
 
 ## **Solutions Implemented**
 
@@ -260,24 +269,33 @@ export const dynamic = 'force-dynamic';
 - Test changes incrementally and monitor both build and runtime behavior
 - Pay attention to Docker warnings - they often indicate root causes of crashes
 
-## **Status: ✅ RESOLVED**
+## **Status: ✅ FINALLY RESOLVED**
 
-The Docker container crash issue has been fully resolved through systematic debugging and fixing of multiple interconnected issues:
+The Docker container crash issue has been fully resolved through systematic debugging and the discovery of the **TRUE root cause**:
 
-### **Final Root Cause:**
-The primary cause was **Docker signal handling issues** caused by improper CMD format. The complex shell command `["sh", "-c", "node server.js 2>&1 | tee /tmp/server.log..."]` was breaking Docker's ability to properly manage the container process, causing immediate crashes after startup.
+### **FINAL ROOT CAUSE: Missing Database Migrations**
+The actual cause was **missing database tables**. The container would start successfully ("Ready in 96ms") but crash immediately when the application tried to access database tables that didn't exist because Prisma migrations were never executed.
+
+**Key Evidence:**
+- Build logs: "Conflict tracking table not found - would need database migration"  
+- Runtime logs: Successful startup but immediate crashes after startup
+- Root cause files: `prisma/migrations/` directory existed but migrations never ran
 
 ### **Complete Resolution Summary:**
 1. ✅ **Build-time database issues** - Fixed with NEXT_BUILD flag and dummy DATABASE_URL
 2. ✅ **Static generation conflicts** - Fixed with `dynamic = 'force-dynamic'` exports  
-3. ✅ **Docker signal handling** - Fixed by using proper JSON array CMD format
-4. ✅ **Environment variables** - Added explicit NODE_ENV=production
-5. ✅ **Health monitoring** - Added simple health check endpoint
+3. ✅ **File permissions** - Fixed with proper `--chown=nextjs:nodejs` flags
+4. ✅ **Docker signal handling** - Fixed by using proper JSON array CMD format
+5. ✅ **Environment variables** - Added explicit NODE_ENV=production
+6. ✅ **Database migrations** - **THE KEY FIX**: Added `start-with-migrations.sh` to run Prisma migrations at startup
+7. ✅ **Health monitoring** - Added simple health check endpoint
 
 ### **Application Now:**
 - Builds successfully without database connection errors
 - Generates proper standalone build output with all files present
+- **Runs database migrations automatically on container startup**
 - Starts and runs without crashes or restart loops
+- Has all required database tables properly created
 - Handles all API routes correctly at runtime
 - Uses real database connections only during runtime
 - Has proper signal handling for container management
