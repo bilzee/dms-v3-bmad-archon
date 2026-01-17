@@ -93,8 +93,8 @@ HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
 # Switch to non-root user
 USER nextjs
 
-# Copy startup script that runs migrations
-COPY start-with-migrations.sh /app/start-with-migrations.sh
+# Copy startup script that runs migrations and set permissions
+COPY --chown=nextjs:nodejs start-with-migrations.sh /app/start-with-migrations.sh
 RUN chmod +x /app/start-with-migrations.sh
 
 # Expose port
