@@ -82,7 +82,7 @@ COPY --from=builder --chown=nextjs:nodejs /app/prisma ./prisma
 # Fix ownership of public directory (was owned by root)
 RUN chown -R nextjs:nodejs /app/public
 
-# Copy debug startup script
+# Copy debug startup script (kept for debugging but not used)
 COPY start-debug.sh /app/start-debug.sh
 RUN chmod +x /app/start-debug.sh && chown nextjs:nodejs /app/start-debug.sh
 
@@ -92,6 +92,10 @@ HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
 
 # Switch to non-root user
 USER nextjs
+
+# Copy startup script that runs migrations
+COPY start-with-migrations.sh /app/start-with-migrations.sh
+RUN chmod +x /app/start-with-migrations.sh
 
 # Expose port
 EXPOSE 3000
@@ -107,5 +111,5 @@ RUN echo "=== Production stage files ===" && ls -la /app || true
 RUN echo "=== Checking for server.js ===" && ls -la /app/server.js || true
 RUN echo "=== User permissions ===" && whoami && id
 
-# Start the application (debug script showed successful startup, reverting to direct call)
-CMD ["node", "server.js"]
+# Start the application with database migrations
+CMD ["/app/start-with-migrations.sh"]
