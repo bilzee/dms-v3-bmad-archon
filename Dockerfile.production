@@ -60,6 +60,9 @@ RUN echo "=== Contents of .next directory ===" && ls -R /app/.next/ | head -50
 FROM node:18-alpine AS production
 WORKDIR /app
 
+# ** Add wget for health checks
+RUN apk add --no-cache wget
+
 # Set production environment
 ENV NODE_ENV=production
 ENV NEXT_TELEMETRY_DISABLED=1
@@ -86,9 +89,9 @@ RUN chown -R nextjs:nodejs /app/public
 COPY start-debug.sh /app/start-debug.sh
 RUN chmod +x /app/start-debug.sh && chown nextjs:nodejs /app/start-debug.sh
 
-# Health check with proper startup period and fallback
+# Health check using wget (more reliable than curl in Alpine)
 HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \
-  CMD node -e "require('http').get('http://localhost:3000/api/health', (res) => { process.exit(res.statusCode === 200 ? 0 : 1) }).on('error', () => process.exit(1))" || exit 1
+  CMD wget --no-verbose --tries=1 --spider http://localhost:3000/api/health || exit 1
 
 # Switch to non-root user
 USER nextjs
