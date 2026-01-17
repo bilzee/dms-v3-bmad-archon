@@ -39,6 +39,15 @@ Docker containers were building successfully on Dockploy but immediately crashin
 - **Resolution**: Created `start-with-migrations.sh` script that runs `npx prisma migrate deploy` before starting the server
 - **Impact**: This was the TRUE root cause - all other issues were secondary or already resolved
 
+### **6. Route Conflicts and Health Check Implementation**
+- **Issue**: Initially created conflicting route `/` that duplicated main application page
+- **Symptoms**: Build failure with "You cannot have two parallel pages that resolve to the same path"
+- **Cause**: Created `src/app/route.ts` when `src/app/page.tsx` already existed for root path
+- **Resolution**: Deleted redundant `src/app/route.ts`, kept existing `/api/health` endpoint
+- **Health Check**: Implemented using wget in Dockerfile with 60s startup grace period
+- **Final Configuration**: `HEALTHCHECK CMD wget --spider http://localhost:3000/api/health`
+- **Technical Debt Avoided**: Proper health checks instead of disabling monitoring
+
 ## **Solutions Implemented**
 
 ### **Phase 1: Initial Debugging**
@@ -236,7 +245,15 @@ export const dynamic = 'force-dynamic';
 9. `fix: Add dynamic exports to all sync API routes to prevent static generation`
 10. `debug: Add production stage debug commands to investigate container startup`
 11. `fix: Add health endpoint and better error handling for container startup`
-12. `fix: Remove problematic shell command CMD and add NODE_ENV` (FINAL FIX)
+12. `fix: Remove problematic shell command CMD and add NODE_ENV`
+13. `fix: Correct file permissions for prisma and public directories`
+14. `debug: Add comprehensive startup debugging script`
+15. `fix: Revert to direct CMD after debug confirmed successful container startup`
+16. `fix: Add database migrations to container startup to prevent crashes`
+17. `fix: Correct startup script permissions for nextjs user`
+18. `debug: Disable health check and improve startup script to isolate crash cause`
+19. `fix: Implement proper health check system to replace temporary workaround` (CONFLICTING ROUTE)
+20. `fix: Remove conflicting route and implement proper health check with wget` (FINAL WORKING SOLUTION)
 
 ## **Lessons Learned**
 
@@ -288,7 +305,8 @@ The actual cause was **missing database tables**. The container would start succ
 4. ✅ **Docker signal handling** - Fixed by using proper JSON array CMD format
 5. ✅ **Environment variables** - Added explicit NODE_ENV=production
 6. ✅ **Database migrations** - **THE KEY FIX**: Added `start-with-migrations.sh` to run Prisma migrations at startup
-7. ✅ **Health monitoring** - Added simple health check endpoint
+7. ✅ **Health monitoring** - Proper health checks using wget and `/api/health` endpoint
+8. ✅ **Route conflicts resolved** - Removed conflicting root route, kept main application page
 
 ### **Application Now:**
 - Builds successfully without database connection errors
@@ -299,7 +317,9 @@ The actual cause was **missing database tables**. The container would start succ
 - Handles all API routes correctly at runtime
 - Uses real database connections only during runtime
 - Has proper signal handling for container management
-- Provides health check endpoint for monitoring
+- **Provides working health check endpoint for monitoring** (`/api/health`)
+- **Docker health checks properly configured** using wget with 60s startup grace period
+- **Container stable for 5+ hours** after initial migration runs
 
 ### **Key Success Indicators:**
 - Build logs show perfect file structure: `server.js` (4546 bytes) correctly owned
