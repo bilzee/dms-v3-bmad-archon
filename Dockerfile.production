@@ -84,9 +84,10 @@ COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
 # Copy Prisma schema and generated client with proper ownership
 COPY --from=builder --chown=nextjs:nodejs /app/prisma ./prisma
 
-# Check if Prisma client is in standalone node_modules
-COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone/node_modules/.prisma ./node_modules/.prisma
-COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone/node_modules/@prisma ./node_modules/@prisma
+# Install Prisma CLI and generate client in production stage
+RUN apk add --no-cache openssl && corepack enable pnpm
+RUN npm install -g prisma
+RUN npx prisma generate
 
 # Fix ownership of public directory (was owned by root)
 RUN chown -R nextjs:nodejs /app/public
