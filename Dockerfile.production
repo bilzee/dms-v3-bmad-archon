@@ -42,16 +42,18 @@ ENV NODE_ENV=production
 # Enable pnpm in builder stage
 RUN corepack enable pnpm
 
-# Generate Prisma client
-RUN npx prisma generate
-
 # Build the application
 RUN pnpm run build:production
+
+# Generate Prisma client AFTER build (for standalone output)
+RUN npx prisma generate
 
 # Debug: Check if standalone build was generated
 RUN echo "=== Checking if .next/standalone exists ===" && ls -la /app/.next/ || echo ".next directory not found"
 RUN echo "=== Checking for standalone folder ===" && ls -la /app/.next/standalone/ || echo "standalone folder not found"
 RUN echo "=== Looking for server.js ===" && find /app/.next -name "server.js" -type f || echo "server.js not found in .next"
+RUN echo "=== Checking for Prisma client ===" && ls -la /app/node_modules/.prisma/ || echo "Prisma client not found"
+RUN echo "=== Checking for @prisma ===" && ls -la /app/node_modules/@prisma/ || echo "@prisma not found"
 RUN echo "=== Contents of .next directory ===" && ls -R /app/.next/ | head -50
 
 # =======================================
