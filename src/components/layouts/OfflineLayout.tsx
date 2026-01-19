@@ -5,7 +5,7 @@ import { useEffect, useState } from 'react';
 import { InstallPrompt } from '@/components/pwa/InstallPrompt';
 import { offlineBootstrap } from '@/lib/offline/bootstrap';
 import { useSyncStore } from '@/stores/sync.store';
-import { useAuth } from '@/components/providers/AuthProvider';
+import { useAuth } from '@/hooks/useAuth';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { 

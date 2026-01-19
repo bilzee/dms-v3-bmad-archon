@@ -9,7 +9,7 @@ import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
 import { AlertTriangle, Download, RefreshCw, WifiOff, CheckCircle } from 'lucide-react';
 import { offlineBootstrap, BootstrapProgress } from '@/lib/offline/bootstrap';
-import { useAuth } from '@/components/providers/AuthProvider';
+import { useAuth } from '@/hooks/useAuth';
 
 interface OfflineGuardProps {
   children: React.ReactNode;

@@ -4,7 +4,7 @@ import { AppShell } from '@/components/layouts/AppShell';
 import { InstallPrompt } from '@/components/pwa/InstallPrompt';
 import { usePathname } from 'next/navigation';
 import { useEffect, useState } from 'react';
-import { useAuth } from '@/components/providers/AuthProvider';
+import { useAuth } from '@/hooks/useAuth';
 import { offlineBootstrap } from '@/lib/offline/bootstrap';
 
 export default function AuthLayout({
