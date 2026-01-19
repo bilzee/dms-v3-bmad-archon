@@ -1,0 +1,47 @@
+# Dependencies
+node_modules
+npm-debug.log
+yarn-error.log
+pnpm-lock.yaml
+
+# Next.js
+.next
+out
+
+# Testing
+coverage
+.nyc_output
+
+# Misc
+.DS_Store
+*.pem
+.env*.local
+
+# Debug
+*.log
+logs
+
+# VPS
+.vscode
+.idea
+
+# Git
+.git
+.gitignore
+
+# Documentation
+docs
+*.md
+!README.md
+
+# OS files
+Thumbs.db
+
+# Docker
+docker-compose*.yml
+Dockerfile*
+
+# Files that shouldn't be in production
+.env.local
+.env.development
+.env.test
