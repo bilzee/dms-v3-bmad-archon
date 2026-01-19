@@ -86,7 +86,7 @@ COPY --from=builder --chown=nextjs:nodejs /app/prisma ./prisma
 
 # Install Prisma CLI and generate client in production stage
 RUN apk add --no-cache openssl && corepack enable pnpm
-RUN npm install -g prisma
+RUN pnpm add -D prisma
 RUN npx prisma generate
 
 # Fix ownership of public directory (was owned by root)
