@@ -42,19 +42,19 @@ ENV NODE_ENV=production
 # Enable pnpm in builder stage
 RUN corepack enable pnpm
 
+# Generate Prisma client BEFORE build (required for Next.js build)
+RUN npx prisma generate
+
 # Build the application
 RUN pnpm run build:production
-
-# Generate Prisma client AFTER build (for standalone output)
-RUN npx prisma generate
 
 # Debug: Check if standalone build was generated
 RUN echo "=== Checking if .next/standalone exists ===" && ls -la /app/.next/ || echo ".next directory not found"
 RUN echo "=== Checking for standalone folder ===" && ls -la /app/.next/standalone/ || echo "standalone folder not found"
 RUN echo "=== Looking for server.js ===" && find /app/.next -name "server.js" -type f || echo "server.js not found in .next"
-RUN echo "=== Checking for Prisma client ===" && ls -la /app/node_modules/.prisma/ || echo "Prisma client not found"
-RUN echo "=== Checking for @prisma ===" && ls -la /app/node_modules/@prisma/ || echo "@prisma not found"
-RUN echo "=== Contents of .next directory ===" && ls -R /app/.next/ | head -50
+RUN echo "=== Checking for Prisma client in main node_modules ===" && ls -la /app/node_modules/.prisma/ || echo "Prisma client not found in main node_modules"
+RUN echo "=== Checking for Prisma client in standalone node_modules ===" && ls -la /app/.next/standalone/node_modules/.prisma/ || echo "Prisma client not found in standalone node_modules"
+RUN echo "=== Contents of .next/standalone directory ===" && ls -R /app/.next/standalone/ | head -50
 
 # =======================================
 # Stage 3: Runner (Production)
@@ -83,8 +83,10 @@ COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
 
 # Copy Prisma schema and generated client with proper ownership
 COPY --from=builder --chown=nextjs:nodejs /app/prisma ./prisma
-COPY --from=builder --chown=nextjs:nodejs /app/node_modules/.prisma ./node_modules/.prisma
-COPY --from=builder --chown=nextjs:nodejs /app/node_modules/@prisma ./node_modules/@prisma
+
+# Check if Prisma client is in standalone node_modules
+COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone/node_modules/.prisma ./node_modules/.prisma
+COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone/node_modules/@prisma ./node_modules/@prisma
 
 # Fix ownership of public directory (was owned by root)
 RUN chown -R nextjs:nodejs /app/public
