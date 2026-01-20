@@ -73,3 +73,6 @@ package-lock.json
 # Temporary folders
 tmp/
 temp/
+
+# Consulting brainstorm
+docs/consulting
