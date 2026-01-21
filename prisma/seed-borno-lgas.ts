@@ -70,7 +70,6 @@ async function main() {
           id: lga.id,
           name: lga.name,
           type: 'LGA',
-          parentId: bornoState.id,
           isActive: true,
         },
       });
@@ -115,7 +114,6 @@ async function main() {
           id: ward.id,
           name: ward.name,
           type: 'WARD',
-          parentId: 'maiduguri-lga',
           isActive: true,
         },
       });
@@ -138,13 +136,13 @@ async function main() {
   console.log(`   - Local Governments: ${bornoLGAs.length} LGAs created/updated`);
   console.log(`   - Sample Wards: ${wardCount} wards in Maiduguri LGA`);
   console.log('');
-  console.log('🗺️  Geographic Hierarchy:');
-  console.log(`   Borno State`);
-  console.log(`   └── 27 Local Governments (Abadam, Askira/Uba, ... Shani)`);
-  console.log(`       └── Maiduguri LGA`);
-  console.log(`           └── 5 Sample Wards`);
+  console.log('🗺️  Geographic Structure (Flat Entity Model):');
+  console.log(`   - 1 STATE entity: Borno State`);
+  console.log(`   - 27 LGA entities: Abadam, Askira/Uba, ... Shani`);
+  console.log(`   - 5 WARD entities: Sample wards in Maiduguri LGA`);
   console.log('');
-  console.log('📍 Ready for disaster response operations in Borno State!');
+  console.log('📍 Note: Entities use flat structure without parent-child relationships.');
+  console.log('   Geographic hierarchy is implied by entity naming conventions.');
 }
 
 main()
