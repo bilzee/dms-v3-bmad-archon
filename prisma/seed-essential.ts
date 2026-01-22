@@ -405,7 +405,6 @@ async function main() {
       id: 'maiduguri-lga',
       name: 'Maiduguri LGA',
       type: 'LGA',
-      parentId: bornoState.id,
       isActive: true,
     },
   });
