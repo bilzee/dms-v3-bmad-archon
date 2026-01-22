@@ -98,7 +98,7 @@ async function checkCurrentGapFields() {
   console.log('🔍 ANALYSIS:');
   console.log('');
 
-  const currentFieldsByType = {};
+  const currentFieldsByType: Record<string, string[]> = {};
   currentGapFields.forEach(field => {
     if (!currentFieldsByType[field.assessmentType]) {
       currentFieldsByType[field.assessmentType] = [];
