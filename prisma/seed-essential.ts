@@ -352,7 +352,7 @@ async function main() {
       id: 'daily-sitrep-template',
       name: 'Daily Situation Report',
       description: 'Daily summary of disaster response activities and situation',
-      type: 'DAILY_SITREP',
+      type: 'CUSTOM',
       layout: {
         sections: [
           {
